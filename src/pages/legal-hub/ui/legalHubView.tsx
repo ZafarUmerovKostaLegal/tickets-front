@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
+import { listAllClientProjectsMerged, type TimeManagerClientProjectRow } from '@entities/time-tracking/api/domains/projects';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
+import { readProjectParticipantAuthUserIds, readProjectPartnerAuthUserIds } from '@entities/time-tracking/lib/partnerReportProjectScope';
 import { useCurrentUser } from '@shared/hooks';
 
 export type LegalHubPerson = {
@@ -10,9 +12,15 @@ export type LegalHubPerson = {
     code: string;
 };
 
+export type LegalHubProject = {
+    id: string;
+    name: string;
+};
+
 type LegalHubViewValue = {
     people: LegalHubPerson[];
     memberIds: number[];
+    projects: LegalHubProject[];
     viewAs: LegalHubPerson | null;
     setViewAsId: (id: number | null) => void;
 };
@@ -58,10 +66,30 @@ function ledRoster(teams: TimeTrackingTeamRow[], users: TimeTrackingUserRow[], p
     return people;
 }
 
+function projectsOfTeam(rows: TimeManagerClientProjectRow[], partnerId: number, memberIds: number[]): LegalHubProject[] {
+    const team = new Set([partnerId, ...memberIds]);
+    const projects: LegalHubProject[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+        const id = row.id.trim();
+        if (!id || seen.has(id))
+            continue;
+        const people = [...readProjectPartnerAuthUserIds(row), ...readProjectParticipantAuthUserIds(row)];
+        if (!people.some((personId) => team.has(personId)))
+            continue;
+        seen.add(id);
+        const name = row.name.trim() || id;
+        projects.push({ id, name });
+    }
+    projects.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    return projects;
+}
+
 export function LegalHubViewProvider({ children }: { children: ReactNode }) {
     const { user, loading } = useCurrentUser();
     const userId = user?.id ?? null;
     const [people, setPeople] = useState<LegalHubPerson[]>([]);
+    const [projects, setProjects] = useState<LegalHubProject[]>([]);
     const [viewAsId, setViewAsId] = useState<number | null>(null);
 
     useEffect(() => {
@@ -69,21 +97,28 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
             return undefined;
         if (userId == null) {
             setPeople([]);
+            setProjects([]);
             return undefined;
         }
         let cancelled = false;
         void (async () => {
             try {
-                const [teams, users] = await Promise.all([
+                const [teams, users, projectRows] = await Promise.all([
                     listTimeTrackingTeams(),
                     listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
+                    listAllClientProjectsMerged(false).catch(() => [] as TimeManagerClientProjectRow[]),
                 ]);
-                if (!cancelled)
-                    setPeople(ledRoster(teams, users, userId));
+                if (cancelled)
+                    return;
+                const roster = ledRoster(teams, users, userId);
+                setPeople(roster);
+                setProjects(projectsOfTeam(projectRows, userId, roster.map((person) => person.id)));
             }
             catch {
-                if (!cancelled)
+                if (!cancelled) {
                     setPeople([]);
+                    setProjects([]);
+                }
             }
         })();
         return () => {
@@ -101,10 +136,11 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         return {
             people,
             memberIds: people.map((person) => person.id),
+            projects,
             viewAs,
             setViewAsId,
         };
-    }, [people, viewAsId]);
+    }, [people, projects, viewAsId]);
 
     return <LegalHubViewContext.Provider value={value}>{children}</LegalHubViewContext.Provider>;
 }

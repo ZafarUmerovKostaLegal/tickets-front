@@ -5,10 +5,9 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMemberTasks } from './LegalHubMemberTasks';
 import { LegalHubMyTasks } from './LegalHubMyTasks';
-import { LegalHubProjects } from './LegalHubProjects';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
-import { HUB_TASKS, isTaskProjectId, MOCK_DONE_IDS, PROJECT_TITLE, tasksForMember, type TaskProjectId } from './legalHubTasks';
+import { HUB_TASKS, MOCK_DONE_IDS, tasksForMember } from './legalHubTasks';
 import { dayDelta, HeadActionsContext, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
 import { LegalHubChromeProvider } from './legalHubChrome';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
@@ -19,8 +18,6 @@ const MINE_ITEMS: { id: 'myTasks' | 'reviewQueue'; labelKey: TranslationKey; ico
     { id: 'myTasks', labelKey: 'legalHub.myTasks', icon: IconTasks },
     { id: 'reviewQueue', labelKey: 'legalHub.sideReview', icon: IconShield },
 ];
-
-const MATTERS: TaskProjectId[] = ['solar', 'wind', 'infrastructure', 'bess', 'healthcare'];
 
 function IconMark() {
     return (
@@ -131,7 +128,7 @@ function sectionFromState(state: unknown): LegalHubNavId | null {
 
 function LegalHubPageBody() {
     const { t } = useI18n();
-    const { people, memberIds, viewAs, setViewAsId } = useLegalHubView();
+    const { people, memberIds, projects, viewAs, setViewAsId } = useLegalHubView();
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -140,7 +137,10 @@ function LegalHubPageBody() {
     const onMemberPage = memberIdParam != null;
     const section: LegalHubNavId = parseSection(searchParams.get('view')) ?? sectionFromState(location.state) ?? 'myTasks';
     const projectParam = searchParams.get('project');
-    const openProjectId = section === 'projects' && isTaskProjectId(projectParam) ? projectParam : null;
+    const openProject = section === 'projects' && projectParam
+        ? projects.find((project) => project.id === projectParam) ?? null
+        : null;
+    const openProjectId = openProject?.id ?? null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
     const [projectQuery, setProjectQuery] = useState('');
@@ -189,22 +189,12 @@ function LegalHubPageBody() {
         () => boardTasks.filter((task) => !MOCK_DONE_IDS.includes(task.id)),
         [boardTasks],
     );
-    const matterStats = useMemo(() => MATTERS.flatMap((id) => {
-        const rows = openTasks.filter((task) => task.project === id);
-        if (rows.length === 0)
-            return [];
-        return [{
-            id,
-            count: rows.length,
-            hot: rows.some((task) => dayDelta(task.clientOn) < 0),
-        }];
-    }), [openTasks]);
-    const visibleMatters = useMemo(() => {
+    const visibleProjects = useMemo(() => {
         const needle = projectQuery.trim().toLowerCase();
         if (!needle)
-            return matterStats;
-        return matterStats.filter((matter) => PROJECT_TITLE[matter.id].toLowerCase().includes(needle));
-    }, [matterStats, projectQuery]);
+            return projects;
+        return projects.filter((project) => project.name.toLowerCase().includes(needle));
+    }, [projects, projectQuery]);
     const lateCount = openTasks.filter((task) => dayDelta(task.clientOn) < 0).length;
     const reviewCount = boardTasks.filter((task) => task.status === 'associate' || task.status === 'partner' || task.status === 'changes').length;
     const memberOptions = useMemo(
@@ -241,10 +231,11 @@ function LegalHubPageBody() {
             navigate(legalHubSectionUrl(id));
         });
     }, [navigate, onMemberPage, openProjectId, section]);
-    const openMatter = useCallback((id: TaskProjectId) => {
+    const openMatter = useCallback((id: string) => {
         setMenuOpen(false);
+        const projectId = encodeURIComponent(id);
         if (onMemberPage) {
-            navigate(`${legalHubSectionUrl('projects')}&project=${id}`);
+            navigate(`${legalHubSectionUrl('projects')}&project=${projectId}`);
             return;
         }
         const next = new URLSearchParams(searchParams);
@@ -255,13 +246,10 @@ function LegalHubPageBody() {
             setSearchParams(next);
         });
     }, [navigate, onMemberPage, searchParams, setSearchParams]);
-    const openProject = useCallback((id: TaskProjectId | null) => {
+    const closeProject = useCallback(() => {
         const next = new URLSearchParams(searchParams);
         next.set('view', 'projects');
-        if (id == null)
-            next.delete('project');
-        else
-            next.set('project', id);
+        next.delete('project');
         setSearchParams(next);
     }, [searchParams, setSearchParams]);
 
@@ -359,26 +347,22 @@ function LegalHubPageBody() {
                             />
                         </label>
                         <ul className="lh-side__list">
-                            {visibleMatters.length === 0 && projectQuery.trim() ? (
+                            {visibleProjects.length === 0 && projectQuery.trim() ? (
                                 <li className="lh-side__find-empty">{t('legalHub.projectSearchEmpty')}</li>
                             ) : null}
-                            {visibleMatters.map((matter) => {
-                                const selected = openProjectId === matter.id;
-                                const label = PROJECT_TITLE[matter.id];
+                            {visibleProjects.map((project) => {
+                                const selected = openProjectId === project.id;
                                 return (
-                                    <li key={matter.id}>
+                                    <li key={project.id}>
                                         <button
                                             type="button"
                                             className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
                                             aria-current={selected ? 'page' : undefined}
-                                            title={label}
-                                            onClick={() => openMatter(matter.id)}
+                                            title={project.name}
+                                            onClick={() => openMatter(project.id)}
                                         >
-                                            <span className={`lh-side__sw lh-side__sw--${matter.id}`} aria-hidden />
-                                            <span className="lh-side__item-label">{label}</span>
-                                            {matter.count > 0 ? (
-                                                <span className={`lh-side__badge${matter.hot ? ' lh-side__badge--hot' : ''}`} aria-hidden>{matter.count}</span>
-                                            ) : null}
+                                            <span className="lh-side__sw lh-side__sw--project" aria-hidden />
+                                            <span className="lh-side__item-label">{project.name}</span>
                                         </button>
                                     </li>
                                 );
@@ -518,29 +502,34 @@ function LegalHubPageBody() {
                                 {section === 'myTasks' || section === 'reviewQueue' || openProjectId != null ? null : (
                                 <header className="lh-page__head">
                                     <div className="lh-page__head-text">
-                                        {openProjectId != null ? (
-                                            <nav className="lh-crumbs" aria-label={t('legalHub.projects')}>
-                                                <button type="button" onClick={() => openProject(null)}>{t('legalHub.projectsBack')}</button>
-                                                <span aria-hidden>/</span>
-                                            </nav>
-                                        ) : null}
-                                        <h1 className="lh-page__title">{openProjectId != null ? PROJECT_TITLE[openProjectId] : t(sectionTitle)}</h1>
-                                        {openProjectId == null ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
+                                        <h1 className="lh-page__title">{t(sectionTitle)}</h1>
+                                        <p className="lh-page__hint">{t(SECTION_HINT[section])}</p>
                                     </div>
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />
                                 </header>
                                 )}
                                 {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} layout="board" /> : null}
                                 {section === 'reviewQueue' ? <LegalHubMyTasks key={`queue-${viewAs?.id ?? 'me'}`} query={query} source={viewedTasks} layout="board" mode="queue" /> : null}
-                                {section === 'projects' ? (
-                                    <LegalHubProjects
-                                        key={viewAs?.id ?? 'me'}
+                                {section === 'projects' && openProject ? (
+                                    <LegalHubMyTasks
+                                        key={openProject.id}
                                         query={query}
-                                        source={viewedTasks}
-                                        selected={openProjectId}
-                                        onSelect={openProject}
-                                       
+                                        layout="board"
+                                        heading={openProject.name}
+                                        scope={openProject.id}
+                                        onBack={closeProject}
                                     />
+                                ) : null}
+                                {section === 'projects' && !openProject ? (
+                                    <ul className="lh-project-list">
+                                        {visibleProjects.map((project) => (
+                                            <li key={project.id}>
+                                                <button type="button" className="lh-project-list__item" onClick={() => openMatter(project.id)}>
+                                                    {project.name}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 ) : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                             </HeadActionsContext.Provider>

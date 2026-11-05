@@ -175,6 +175,7 @@
   flex-shrink: 0;
 }
 
+.lh-side__sw--project { background: var(--app-meta); }
 .lh-side__sw--solar { background: var(--app-warning); }
 .lh-side__sw--wind { background: var(--app-accent); }
 .lh-side__sw--infrastructure { background: var(--app-meta); }
@@ -6972,6 +6973,36 @@ body[data-theme='dark'] .lh-page {
   margin: 0;
   color: var(--app-text-dim);
   font-size: 0.86rem;
+}
+
+.lh-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lh-project-list__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: -0.011em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-project-list__item:hover {
+  border-color: color-mix(in srgb, var(--app-text) 22%, var(--app-border));
 }
 
 .lh-rows ul {

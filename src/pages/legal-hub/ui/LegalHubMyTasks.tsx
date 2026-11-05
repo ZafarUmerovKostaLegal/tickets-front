@@ -261,6 +261,8 @@ export function LegalHubMyTasks({
     onTasks,
     createSignal = 0,
     onBack,
+    heading = null,
+    scope = null,
 }: {
     query: string;
     source?: HubTask[] | null;
@@ -273,6 +275,9 @@ export function LegalHubMyTasks({
     createSignal?: number;
     /** Project board: return to the list of projects. */
     onBack?: () => void;
+    heading?: string | null;
+    /** Separate stored board title from the personal board. */
+    scope?: string | null;
 }) {
     const { t, locale } = useI18n();
     const [inner, setInner] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
@@ -320,7 +325,7 @@ export function LegalHubMyTasks({
     const [priorityFilter, setPriorityFilter] = useState<TaskPriorityId | ''>('');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const filtersRef = useRef<HTMLDivElement>(null);
-    const boardScope = project ?? 'mine';
+    const boardScope = scope?.trim() || project || 'mine';
     const titleKey = `lh-board-title-${boardScope}`;
     const [boardTitle, setBoardTitle] = useState('');
     const [dragging, setDragging] = useState<string | null>(null);
@@ -610,7 +615,8 @@ export function LegalHubMyTasks({
     }, [columnDrag, dragging]);
 
     const canCreate = mode === 'mine';
-    const title = project != null ? PROJECT_TITLE[project] : t(mode === 'queue' ? 'legalHub.sideReview' : 'legalHub.myTasks');
+    const title = heading?.trim()
+        || (project != null ? PROJECT_TITLE[project] : t(mode === 'queue' ? 'legalHub.sideReview' : 'legalHub.myTasks'));
     const projectOptions = useMemo(
         () => [{ id: '' as const, label: t('legalHub.boardAllProjects') }, ...TASK_PROJECTS.map((id) => ({ id, label: PROJECT_TITLE[id] }))],
         [t],
@@ -687,7 +693,7 @@ export function LegalHubMyTasks({
         });
     const shownColumns = columns.filter((column) => !hideEmpty || column.custom || column.cards.length > 0 || (dragging != null && column.droppable));
     const hiddenCount = columns.length - shownColumns.length;
-    const shownTitle = boardTitle.trim() || title;
+    const shownTitle = heading?.trim() || boardTitle.trim() || title;
     const setChrome = useSetLegalHubChrome();
     useEffect(() => {
         setChrome(undefined);
@@ -708,7 +714,7 @@ export function LegalHubMyTasks({
         <div className="lh-bt">
             <div className="lh-bt__head">
                 <div className="lh-bt__title">
-                    {project != null && onBack ? (
+                    {onBack ? (
                         <nav className="lh-bt__crumbs" aria-label={t('legalHub.projects')}>
                             <button type="button" onClick={onBack}>{t('legalHub.projectsBack')}</button>
                             <span aria-hidden>/</span>
