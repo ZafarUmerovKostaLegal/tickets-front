@@ -4763,7 +4763,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
     min-height: 0;
   }
 
-  .lh-my:has(.lh-my__board) > :not(.lh-my__board) {
+  .lh-my:has(.lh-my__board) > :not(.lh-my__board):not(.lh-my__swap) {
     flex-shrink: 0;
   }
 
@@ -7613,8 +7613,33 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-page--photo .lh-my__card,
-.lh-page--photo .lh-my--docket .lh-my__card {
+.lh-page--photo .lh-my--docket .lh-my__card,
+.lh-page--photo .lh-rows__item {
   background: var(--lh-photo-surface, var(--app-surface));
+}
+
+.lh-page--photo .lh-rows__item:hover {
+  background: var(--lh-photo-surface2, var(--app-surface));
+}
+
+.lh-page--photo .lh-page__content:has(.lh-my--list) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lh-page--photo .lh-my--list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lh-page--photo .lh-my--list .lh-rows {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .lh-page--photo .lh-bt__filter,
@@ -7627,8 +7652,23 @@ body[data-theme='dark'] .lh-page {
   position: relative;
   isolation: isolate;
   box-sizing: border-box;
-  padding: 0.7rem 0.85rem 0.35rem;
+  padding: 0.55rem 0 0.2rem;
   background: transparent;
+}
+
+.lh-my--photo .lh-bt,
+.lh-my--photo.lh-my--list .lh-rows {
+  padding-inline: 0.85rem;
+}
+
+.lh-my--photo .lh-my__board {
+  scrollbar-gutter: auto;
+}
+
+.lh-my--photo .lh-my__board::before,
+.lh-my--photo .lh-my__board::after {
+  content: "";
+  flex: 0 0 0.65rem;
 }
 
 .lh-my__photo,
@@ -8171,6 +8211,32 @@ body[data-theme='dark'] .lh-page {
 .lh-my--docket .lh-my__duepill.is-done {
   background: color-mix(in srgb, var(--app-success) 14%, var(--app-surface));
   color: color-mix(in srgb, var(--app-success) 70%, var(--app-text));
+}
+
+.lh-my__swap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: lh-view-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lh-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-my__swap {
+    animation: none;
+  }
 }
 
 /* List view */

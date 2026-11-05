@@ -1060,6 +1060,7 @@ export function LegalHubMyTasks({
             <div className={`lh-my lh-my--docket lh-my--list${backgroundImage ? ' lh-my--photo' : ''}`} style={themeStyle}>
                 {photo}
                 {toolbar}
+                <div key={view} className="lh-my__swap">
                 <div className={`lh-rows${project == null ? '' : ' lh-rows--one'}`}>
                     {noMatch ?? (listed.length === 0 ? (
                         <div className="lh-rows__empty">
@@ -1109,6 +1110,7 @@ export function LegalHubMyTasks({
                         </ul>
                     ))}
                 </div>
+                </div>
                 {drawer}
                 {dialog}
                 {membersOpen ? <BoardMembersDialog people={members} onClose={() => setMembersOpen(false)} /> : null}
@@ -1120,6 +1122,7 @@ export function LegalHubMyTasks({
         <div className={`lh-my lh-my--docket${backgroundImage ? ' lh-my--photo' : ''}`} style={themeStyle}>
             {photo}
             {toolbar}
+            <div key={view} className="lh-my__swap">
             {noMatch ?? (
                 <div className="lh-my__board" ref={boardRef}>
                     {shownColumns.map((column) => (
@@ -1157,6 +1160,7 @@ export function LegalHubMyTasks({
                     {mode === 'mine' ? <ColumnAdder onCreate={addColumn} /> : null}
                 </div>
             )}
+            </div>
             {drawer}
             {dialog}
             {membersOpen ? <BoardMembersDialog people={members} onClose={() => setMembersOpen(false)} /> : null}
