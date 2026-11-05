@@ -763,6 +763,9 @@ export function LegalHubMyTasks({
         ['--app-accent-border' as string]: themeVars.accent,
         ['--app-accent-light-bg' as string]: themeVars.isDark ? 'rgba(255,255,255,0.1)' : themeVars.surface2,
         ['--app-accent-focus' as string]: themeVars.isDark ? 'rgba(255,255,255,0.16)' : themeVars.border,
+        ['--lh-photo-surface' as string]: themeVars.surface,
+        ['--lh-photo-surface2' as string]: themeVars.surface2,
+        ['--lh-photo-header' as string]: themeVars.headerBg,
         ...(themeVars.isDark ? {
             ['--app-error' as string]: '#fca5a5',
             ['--app-error-bg' as string]: 'rgba(239,68,68,0.22)',
