@@ -141,7 +141,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         void (async () => {
             try {
                 const [teams, users, projectRows] = await Promise.all([
-                    listTimeTrackingTeams(),
+                    listTimeTrackingTeams().catch(() => [] as TimeTrackingTeamRow[]),
                     listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
                     listAllClientProjectsMerged(false).catch(() => [] as TimeManagerClientProjectRow[]),
                 ]);
