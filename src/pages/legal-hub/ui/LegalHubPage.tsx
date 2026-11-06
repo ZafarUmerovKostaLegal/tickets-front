@@ -204,6 +204,8 @@ function LegalHubPageBody() {
     const sideDrag = useRef<{ parent: string; key: string } | null>(null);
     const [sideDrop, setSideDrop] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [sidePeek, setSidePeek] = useState(false);
+    const sideDismissed = useRef(false);
     const [utilOpen, setUtilOpen] = useState(false);
     const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
     const [sideCollapsed, setSideCollapsed] = useState(() => {
@@ -340,7 +342,8 @@ function LegalHubPageBody() {
                 : current.archivedClients.filter((item) => item.trim().toLowerCase() !== key),
         }));
         setClientMenu(null);
-    }, []);
+        dismissSide();
+    }, [dismissSide]);
     useEffect(() => {
         if (clientMenu == null)
             return undefined;
@@ -384,13 +387,18 @@ function LegalHubPageBody() {
         navigate(legalHubSectionUrl('myTasks'));
     }, [navigate, onMemberPage, setViewAsId]);
 
+    const dismissSide = useCallback(() => {
+        sideDismissed.current = true;
+        setSidePeek(false);
+        setMenuOpen(false);
+    }, []);
     const closeMenu = useCallback(() => setMenuOpen(false), []);
     const openMenu = useCallback(() => {
         setUtilOpen(false);
         setMenuOpen((open) => !open);
     }, []);
     const openSection = useCallback((id: LegalHubNavId) => {
-        setMenuOpen(false);
+        dismissSide();
         if (onMemberPage) {
             navigate(legalHubSectionUrl(id));
             return;
@@ -401,11 +409,11 @@ function LegalHubPageBody() {
             addTransitionType(NAV_TRANSITION_TYPE);
             navigate(legalHubSectionUrl(id));
         });
-    }, [navigate, onMemberPage, openProjectId, section]);
+    }, [dismissSide, navigate, onMemberPage, openProjectId, section]);
     const openMatter = useCallback((id: string) => {
         if (!canOpenProject(id))
             return;
-        setMenuOpen(false);
+        dismissSide();
         const projectId = encodeURIComponent(id);
         if (onMemberPage) {
             navigate(`${legalHubSectionUrl('projects')}&project=${projectId}`);
@@ -418,7 +426,7 @@ function LegalHubPageBody() {
             addTransitionType(NAV_TRANSITION_TYPE);
             setSearchParams(next);
         });
-    }, [canOpenProject, navigate, onMemberPage, searchParams, setSearchParams]);
+    }, [canOpenProject, dismissSide, navigate, onMemberPage, searchParams, setSearchParams]);
     const closeProject = useCallback(() => {
         const next = new URLSearchParams(searchParams);
         next.set('view', 'projects');
@@ -461,7 +469,18 @@ function LegalHubPageBody() {
                     onClick={closeMenu}
                 />
             ) : null}
-            <div className="lh-side-dock">
+            {createPortal(
+            <div
+                className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sidePeek ? ' is-open' : ''}`}
+                onMouseEnter={() => {
+                    if (!sideDismissed.current)
+                        setSidePeek(true);
+                }}
+                onMouseLeave={() => {
+                    sideDismissed.current = false;
+                    setSidePeek(false);
+                }}
+            >
             <aside className="lh-side" aria-label={t('legalHub.navAria')}>
                 <div className="lh-side__head">
                     <AppBackButton iconOnly className="lh-side__back" />
@@ -527,7 +546,10 @@ function LegalHubPageBody() {
                                 aria-label={t('legalHub.projectDisplay')}
                                 aria-expanded={displayOpen}
                                 title={t('legalHub.projectDisplay')}
-                                onClick={() => setDisplayOpen(true)}
+                                onClick={() => {
+                                    dismissSide();
+                                    setDisplayOpen(true);
+                                }}
                             >
                                 <IconSliders />
                             </button>
@@ -696,7 +718,9 @@ function LegalHubPageBody() {
                     </button>
                 </div>
             </aside>
-            </div>
+            </div>,
+            document.body,
+            )}
             <div className="lh-page__main">
                 <header className="lh-top">
                     <button
