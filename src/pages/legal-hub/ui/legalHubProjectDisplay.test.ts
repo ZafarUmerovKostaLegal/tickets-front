@@ -49,6 +49,7 @@ describe('project folders', () => {
             { id: 'two', name: 'Сделки', color: 'accent', projectIds: ['b'], collapsed: false, clientOrder: [] },
         ]);
         expect(settings.sidebarOrder).toEqual([]);
+        expect(settings.archivedClients).toEqual([]);
     });
 
     it('меняет местами папку и клиента', () => {

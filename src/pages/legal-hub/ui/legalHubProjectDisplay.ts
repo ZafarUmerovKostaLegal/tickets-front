@@ -18,12 +18,14 @@ export type ProjectDisplaySettings = {
     hideLocked: boolean;
     folders: ProjectFolder[];
     sidebarOrder: SidebarToken[];
+    archivedClients: string[];
 };
 
 export const EMPTY_PROJECT_DISPLAY: ProjectDisplaySettings = {
     hideLocked: false,
     folders: [],
     sidebarOrder: [],
+    archivedClients: [],
 };
 
 function storageKey(userId: number): string {
@@ -130,6 +132,7 @@ export function normalizeProjectDisplay(raw: unknown): ProjectDisplaySettings {
         hideLocked: row.hideLocked === true,
         folders: exclusive,
         sidebarOrder: normalizeSidebarOrder(row.sidebarOrder),
+        archivedClients: cleanNames(row.archivedClients),
     };
 }
 

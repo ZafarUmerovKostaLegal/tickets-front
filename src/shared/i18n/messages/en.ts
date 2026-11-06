@@ -76,6 +76,8 @@ export const enMessages = {
         projectFolderLoose: 'Ungrouped',
         projectNoClient: 'No client',
         reorder: 'Reorder',
+        archive: 'Archive',
+        unarchive: 'Restore',
         sideReview: 'My reviews',
         myTasks: 'My Tasks',
         reviewQueue: 'Review Queue',

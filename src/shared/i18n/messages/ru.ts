@@ -76,6 +76,8 @@ export const ruMessages: Messages = {
         projectFolderLoose: 'Без папки',
         projectNoClient: 'Без клиента',
         reorder: 'Переместить',
+        archive: 'Архив',
+        unarchive: 'Разархивировать',
         sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
@@ -1198,6 +1200,8 @@ export type Messages = {
         projectFolderLoose: string;
         projectNoClient: string;
         reorder: string;
+        archive: string;
+        unarchive: string;
         sideReview: string;
         myTasks: string;
         reviewQueue: string;

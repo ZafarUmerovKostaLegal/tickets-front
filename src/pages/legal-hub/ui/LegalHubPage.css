@@ -11,6 +11,10 @@
   display: none;
 }
 
+.lh-side-dock {
+  display: contents;
+}
+
 .lh-side {
   flex-shrink: 0;
   width: 248px;
@@ -226,6 +230,50 @@
 .lh-side__row.is-over {
   outline: 1px solid var(--app-accent);
   outline-offset: -1px;
+}
+
+.lh-side__row--surface .lh-side__client-head {
+  cursor: grab;
+}
+
+.lh-side__row--surface .lh-side__client-head:active {
+  cursor: grabbing;
+}
+
+.lh-side__archive {
+  margin-top: 0.75rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.lh-side__menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 11rem;
+  padding: 0.3rem;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.lh-side__menu button {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-side__menu button:hover {
+  background: color-mix(in srgb, var(--app-text) 5%, transparent);
 }
 
 .lh-side__grip {
@@ -457,6 +505,52 @@
 }
 
 @media (min-width: 861px) {
+  .lh-side-dock {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 12px;
+    z-index: 45;
+  }
+
+  .lh-side-dock::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: color-mix(in srgb, var(--app-text) 14%, transparent);
+  }
+
+  .lh-side-dock:hover,
+  .lh-side-dock:focus-within {
+    width: 248px;
+  }
+
+  .lh-page--side-collapsed .lh-side-dock:hover,
+  .lh-page--side-collapsed .lh-side-dock:focus-within {
+    width: 76px;
+  }
+
+  .lh-side-dock .lh-side {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    transform: translateX(-105%);
+    transition: transform 0.18s ease;
+    box-shadow: none;
+  }
+
+  .lh-side-dock:hover .lh-side,
+  .lh-side-dock:focus-within .lh-side {
+    transform: translateX(0);
+    box-shadow: 8px 0 24px rgba(15, 23, 42, 0.08);
+  }
+
   .lh-page--side-collapsed .lh-side {
     width: 76px;
   }

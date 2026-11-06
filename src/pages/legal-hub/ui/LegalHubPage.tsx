@@ -1,4 +1,5 @@
-import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useRef, useState, ViewTransition, type ComponentType, type ReactNode } from 'react';
+import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useRef, useState, ViewTransition, type ComponentType, type DragEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppBackButton, NAV_TRANSITION_TYPE, SearchableSelect } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
@@ -198,7 +199,8 @@ function LegalHubPageBody() {
     const savedFolders = useRef('');
     const [query, setQuery] = useState('');
     const [projectQuery, setProjectQuery] = useState('');
-    const [collapsedClients, setCollapsedClients] = useState<Set<string>>(() => new Set());
+    const [openClients, setOpenClients] = useState<Set<string>>(() => new Set());
+    const [clientMenu, setClientMenu] = useState<{ x: number; y: number; name: string; archived: boolean } | null>(null);
     const sideDrag = useRef<{ parent: string; key: string } | null>(null);
     const [sideDrop, setSideDrop] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -256,8 +258,8 @@ function LegalHubPageBody() {
             if (cancelled)
                 return;
             if (remote != null && userId != null) {
-                const serverEmpty = !remote.folders.hideLocked && remote.folders.folders.length === 0 && remote.folders.sidebarOrder.length === 0;
-                const localHas = local.hideLocked || local.folders.length > 0 || local.sidebarOrder.length > 0;
+                const serverEmpty = !remote.folders.hideLocked && remote.folders.folders.length === 0 && remote.folders.sidebarOrder.length === 0 && remote.folders.archivedClients.length === 0;
+                const localHas = local.hideLocked || local.folders.length > 0 || local.sidebarOrder.length > 0 || local.archivedClients.length > 0;
                 const localJson = JSON.stringify(local);
                 if (serverEmpty && localHas) {
                     savedFolders.current = localJson;
@@ -300,15 +302,27 @@ function LegalHubPageBody() {
         () => groupProjects(visibleProjects, projectDisplay.folders),
         [projectDisplay.folders, visibleProjects],
     );
+    const archivedNames = useMemo(
+        () => new Set(projectDisplay.archivedClients.map((name) => name.trim().toLowerCase())),
+        [projectDisplay.archivedClients],
+    );
+    const activeProjects = useMemo(
+        () => visibleProjects.filter((project) => !archivedNames.has(project.client.trim().toLowerCase())),
+        [archivedNames, visibleProjects],
+    );
+    const archivedProjects = useMemo(
+        () => visibleProjects.filter((project) => archivedNames.has(project.client.trim().toLowerCase())),
+        [archivedNames, visibleProjects],
+    );
     const sidebarEntries = useMemo(
-        () => buildSidebarEntries(visibleProjects, projectDisplay),
-        [projectDisplay, visibleProjects],
+        () => buildSidebarEntries(activeProjects, projectDisplay),
+        [activeProjects, projectDisplay],
     );
     const reorderSidebar = useCallback((parent: string, fromKey: string, toKey: string) => {
-        setProjectDisplay((current) => reorderProjectDisplay(current, visibleProjects, parent, fromKey, toKey));
-    }, [visibleProjects]);
+        setProjectDisplay((current) => reorderProjectDisplay(current, activeProjects, parent, fromKey, toKey));
+    }, [activeProjects]);
     const toggleClient = useCallback((key: string) => {
-        setCollapsedClients((current) => {
+        setOpenClients((current) => {
             const next = new Set(current);
             if (next.has(key))
                 next.delete(key);
@@ -317,6 +331,31 @@ function LegalHubPageBody() {
             return next;
         });
     }, []);
+    const setClientArchived = useCallback((name: string, archived: boolean) => {
+        const key = name.trim().toLowerCase();
+        setProjectDisplay((current) => ({
+            ...current,
+            archivedClients: archived
+                ? [...current.archivedClients.filter((item) => item.trim().toLowerCase() !== key), name.trim()]
+                : current.archivedClients.filter((item) => item.trim().toLowerCase() !== key),
+        }));
+        setClientMenu(null);
+    }, []);
+    useEffect(() => {
+        if (clientMenu == null)
+            return undefined;
+        const close = () => setClientMenu(null);
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape')
+                setClientMenu(null);
+        };
+        window.addEventListener('mousedown', close);
+        window.addEventListener('keydown', onKey);
+        return () => {
+            window.removeEventListener('mousedown', close);
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [clientMenu]);
     const toggleFolder = useCallback((folder: ProjectFolder) => {
         setProjectDisplay((current) => ({
             ...current,
@@ -422,6 +461,7 @@ function LegalHubPageBody() {
                     onClick={closeMenu}
                 />
             ) : null}
+            <div className="lh-side-dock">
             <aside className="lh-side" aria-label={t('legalHub.navAria')}>
                 <div className="lh-side__head">
                     <AppBackButton iconOnly className="lh-side__back" />
@@ -537,7 +577,7 @@ function LegalHubPageBody() {
                                                         parent={folder.id}
                                                         order={folder.clientOrder}
                                                         searching={searching}
-                                                        collapsed={collapsedClients}
+                                                        open={openClients}
                                                         dropKey={sideDrop}
                                                         drag={sideDrag}
                                                         onOver={setSideDrop}
@@ -547,6 +587,7 @@ function LegalHubPageBody() {
                                                         }}
                                                         onToggle={toggleClient}
                                                         onReorder={reorderSidebar}
+                                                        onMenu={setClientMenu}
                                                         openProjectId={openProjectId}
                                                         canOpen={canOpenProject}
                                                         lockedLabel={t('legalHub.projectLocked')}
@@ -564,7 +605,7 @@ function LegalHubPageBody() {
                                         parent="root"
                                         order={[entry.client]}
                                         searching={projectQuery.trim().length > 0}
-                                        collapsed={collapsedClients}
+                                        open={openClients}
                                         dropKey={sideDrop}
                                         drag={sideDrag}
                                         onOver={setSideDrop}
@@ -574,6 +615,7 @@ function LegalHubPageBody() {
                                         }}
                                         onToggle={toggleClient}
                                         onReorder={reorderSidebar}
+                                        onMenu={setClientMenu}
                                         openProjectId={openProjectId}
                                         canOpen={canOpenProject}
                                         lockedLabel={t('legalHub.projectLocked')}
@@ -581,6 +623,45 @@ function LegalHubPageBody() {
                                     />
                                 );
                             })}
+                            <li className="lh-side__folder lh-side__archive">
+                                <button
+                                    type="button"
+                                    className="lh-side__folder-head"
+                                    aria-expanded={openClients.has('archive') || projectQuery.trim().length > 0}
+                                    onClick={() => toggleClient('archive')}
+                                >
+                                    <span className="lh-side__sw lh-side__sw--ink" aria-hidden />
+                                    <span className="lh-side__folder-name">{t('legalHub.archive')}</span>
+                                    <em className="lh-side__folder-count">{new Set(archivedProjects.map((project) => project.client.trim().toLowerCase())).size}</em>
+                                </button>
+                                {openClients.has('archive') || projectQuery.trim().length > 0 ? (
+                                    <ul className="lh-side__list">
+                                        <ClientGroups
+                                            projects={archivedProjects}
+                                            parent="archive"
+                                            order={projectDisplay.archivedClients}
+                                            searching={projectQuery.trim().length > 0}
+                                            open={openClients}
+                                            dropKey={sideDrop}
+                                            drag={sideDrag}
+                                            onOver={setSideDrop}
+                                            onEnd={() => {
+                                                sideDrag.current = null;
+                                                setSideDrop(null);
+                                            }}
+                                            onToggle={toggleClient}
+                                            onReorder={reorderSidebar}
+                                            onMenu={setClientMenu}
+                                            archived
+                                            reorderable={false}
+                                            openProjectId={openProjectId}
+                                            canOpen={canOpenProject}
+                                            lockedLabel={t('legalHub.projectLocked')}
+                                            onOpen={openMatter}
+                                        />
+                                    </ul>
+                                ) : null}
+                            </li>
                         </ul>
                     </div>
                     <ul className="lh-side__list lh-side__list--tail">
@@ -615,6 +696,7 @@ function LegalHubPageBody() {
                     </button>
                 </div>
             </aside>
+            </div>
             <div className="lh-page__main">
                 <header className="lh-top">
                     <button
@@ -793,6 +875,23 @@ function LegalHubPageBody() {
                 </ViewTransition>
             </div>
             {showUtil ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
+            {clientMenu != null ? createPortal(
+                <div
+                    className="lh-side__menu"
+                    style={{ top: clientMenu.y, left: clientMenu.x }}
+                    role="menu"
+                    onMouseDown={(event) => event.stopPropagation()}
+                >
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => setClientArchived(clientMenu.name, !clientMenu.archived)}
+                    >
+                        {clientMenu.archived ? t('legalHub.unarchive') : t('legalHub.archive')}
+                    </button>
+                </div>,
+                document.body,
+            ) : null}
             <LegalHubProjectSettings
                 open={displayOpen}
                 settings={projectDisplay}
@@ -826,6 +925,7 @@ function SideDragRow({
     parent,
     itemKey,
     searching,
+    surface,
     dropKey,
     drag,
     onOver,
@@ -836,6 +936,7 @@ function SideDragRow({
     parent: string;
     itemKey: string;
     searching: boolean;
+    surface?: boolean;
     dropKey: string | null;
     drag: { current: { parent: string; key: string } | null };
     onOver: (key: string | null) => void;
@@ -845,9 +946,26 @@ function SideDragRow({
 }) {
     const { t } = useI18n();
     const mark = `${parent}:${itemKey}`;
+    const dragged = useRef(false);
+    const startDrag = (event: DragEvent) => {
+        dragged.current = true;
+        drag.current = { parent, key: itemKey };
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', itemKey);
+    };
     return (
         <div
-            className={`lh-side__row${dropKey === mark ? ' is-over' : ''}`}
+            className={`lh-side__row${surface ? ' lh-side__row--surface' : ''}${dropKey === mark ? ' is-over' : ''}`}
+            onDragStart={() => {
+                dragged.current = true;
+            }}
+            onClickCapture={(event) => {
+                if (!dragged.current)
+                    return;
+                dragged.current = false;
+                event.preventDefault();
+                event.stopPropagation();
+            }}
             onDragOver={(event) => {
                 const current = drag.current;
                 if (searching || current == null || current.parent !== parent || current.key === itemKey)
@@ -863,16 +981,12 @@ function SideDragRow({
                 onEnd();
             }}
         >
-            <span
+            {surface ? null : <span
                 className="lh-side__grip"
                 draggable={!searching}
                 aria-label={t('legalHub.reorder')}
                 title={t('legalHub.reorder')}
-                onDragStart={(event) => {
-                    drag.current = { parent, key: itemKey };
-                    event.dataTransfer.effectAllowed = 'move';
-                    event.dataTransfer.setData('text/plain', itemKey);
-                }}
+                onDragStart={startDrag}
                 onDragEnd={onEnd}
             >
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -883,7 +997,7 @@ function SideDragRow({
                     <circle cx="9" cy="17" r="1.3" />
                     <circle cx="15" cy="17" r="1.3" />
                 </svg>
-            </span>
+            </span>}
             {children}
         </div>
     );
@@ -894,13 +1008,16 @@ function ClientGroups({
     parent,
     order,
     searching,
-    collapsed,
+    open,
     dropKey,
     drag,
     onOver,
     onEnd,
     onToggle,
     onReorder,
+    onMenu,
+    archived = false,
+    reorderable = true,
     openProjectId,
     canOpen,
     lockedLabel,
@@ -910,13 +1027,16 @@ function ClientGroups({
     parent: string;
     order: readonly string[];
     searching: boolean;
-    collapsed: Set<string>;
+    open: Set<string>;
     dropKey: string | null;
     drag: { current: { parent: string; key: string } | null };
     onOver: (key: string | null) => void;
     onEnd: () => void;
     onToggle: (key: string) => void;
     onReorder: (parent: string, fromKey: string, toKey: string) => void;
+    onMenu: (menu: { x: number; y: number; name: string; archived: boolean }) => void;
+    archived?: boolean;
+    reorderable?: boolean;
     openProjectId: string | null;
     canOpen: (id: string) => boolean;
     lockedLabel: string;
@@ -928,14 +1048,15 @@ function ClientGroups({
         <>
             {groups.map((group) => {
                 const key = clientGroupKey(group.client);
-                const folded = collapsed.has(`${parent}:${key}`) && !searching;
+                const folded = !open.has(`${parent}:${key}`) && !searching;
                 const label = group.client || t('legalHub.projectNoClient');
                 return (
                     <li key={key} className="lh-side__client">
                         <SideDragRow
                             parent={parent}
                             itemKey={key}
-                            searching={searching}
+                            searching={searching || !reorderable}
+                            surface={reorderable}
                             dropKey={dropKey}
                             drag={drag}
                             onOver={onOver}
@@ -945,8 +1066,19 @@ function ClientGroups({
                             <button
                                 type="button"
                                 className="lh-side__client-head"
+                                draggable={reorderable && !searching}
                                 aria-expanded={!folded}
+                                onDragStart={(event) => {
+                                    drag.current = { parent, key };
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    event.dataTransfer.setData('text/plain', key);
+                                }}
+                                onDragEnd={onEnd}
                                 onClick={() => onToggle(`${parent}:${key}`)}
+                                onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    onMenu({ x: event.clientX, y: event.clientY, name: group.client, archived });
+                                }}
                             >
                                 <IconChevron open={!folded} />
                                 <span className="lh-side__folder-name">{label}</span>
