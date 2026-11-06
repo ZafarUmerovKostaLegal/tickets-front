@@ -5,13 +5,18 @@ import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import { useLegalHubView } from './legalHubView';
 import {
+    addLegalHubCheck,
+    addLegalHubCheckNote,
     addLegalHubComment,
+    deleteLegalHubCheckNote,
     deleteLegalHubFile,
-    downloadLegalHubFile,
     fetchLegalHubTaskActivity,
+    patchLegalHubCheck,
     patchLegalHubTask,
     uploadLegalHubFiles,
+    type LegalHubTaskActivity,
 } from './legalHubTaskApi';
+import { LegalHubFilePreview } from './LegalHubFilePreview';
 import {
     PERSON_LABEL,
     PROJECT_LABEL,
@@ -127,6 +132,14 @@ function IconSend() {
     );
 }
 
+function IconClip() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7.1-7.1l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.5-8.5" />
+        </svg>
+    );
+}
+
 export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     task: HubTask;
     owner: { code: string; name: string } | null;
@@ -158,6 +171,9 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [history, setHistory] = useState(seed.history);
     const [commentDraft, setCommentDraft] = useState('');
+    const [commentFiles, setCommentFiles] = useState<File[]>([]);
+    const [preview, setPreview] = useState<{ id: string; name: string } | null>(null);
+    const commentFileRef = useRef<HTMLInputElement>(null);
     const [important, setImportant] = useState(seed.important || task.important === true);
     const [reviewerId, setReviewerId] = useState<number | null>(task.reviewerId ?? null);
     const [reviewError, setReviewError] = useState('');
@@ -252,14 +268,19 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     const progress = checks.length === 0 ? 0 : Math.round((done / checks.length) * 100);
     const priorities = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
 
+    const applyActivity = (activity: LegalHubTaskActivity) => {
+        setFiles(activity.files);
+        setChecks(activity.checks);
+        setComments(activity.comments.map((comment) => ({ ...comment, mine: comment.authorUserId === userId })));
+        setHistory(activity.history);
+    };
+
     useEffect(() => {
         let cancelled = false;
         void fetchLegalHubTaskActivity(task.id).then((activity) => {
             if (cancelled || activity == null)
                 return;
-            setFiles(activity.files);
-            setComments(activity.comments.map((comment) => ({ ...comment, mine: comment.authorUserId === userId })));
-            setHistory(activity.history);
+            applyActivity(activity);
         });
         return () => {
             cancelled = true;
@@ -290,26 +311,38 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         const label = checkDraft.trim();
         if (!label)
             return;
-        setChecks((current) => [...current, { id: `${task.id}-extra-${current.length}`, label, done: false, notes: [], files: [] }]);
-        setCheckDraft('');
+        void addLegalHubCheck(task.id, label).then((activity) => {
+            if (activity == null) {
+                setReviewError(t('legalHub.taskSaveError'));
+                return;
+            }
+            applyActivity(activity);
+            setCheckDraft('');
+        });
     };
     const addComment = () => {
-        const text = commentDraft.trim();
+        const pending = commentFiles;
+        const text = commentDraft.trim() || (pending[0]?.name ?? '');
         if (!text)
             return;
         setCommentDraft('');
-        void addLegalHubComment(task.id, text).then((activity) => {
-            if (activity == null)
+        setCommentFiles([]);
+        void addLegalHubComment(task.id, text, pending).then((activity) => {
+            if (activity == null) {
+                setReviewError(t('legalHub.taskSaveError'));
+                setCommentDraft(text);
+                setCommentFiles(pending);
                 return;
-            setComments(activity.comments.map((comment) => ({ ...comment, mine: comment.authorUserId === userId })));
-            setHistory(activity.history);
+            }
+            applyActivity(activity);
             setTab('comments');
         });
     };
 
+    const taskFiles = files.filter((file) => !file.checkId && !file.commentId);
     const tabs: { id: TabId; label: string; count?: number }[] = [
         { id: 'details', label: t('legalHub.taskTabDetails') },
-        { id: 'files', label: t('legalHub.taskTabFiles'), count: files.length },
+        { id: 'files', label: t('legalHub.taskTabFiles'), count: taskFiles.length },
         { id: 'comments', label: t('legalHub.taskTabComments'), count: comments.length },
         { id: 'history', label: t('legalHub.taskTabHistory') },
     ];
@@ -318,18 +351,18 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         <section className="lh-drawer__block">
             <div className="lh-drawer__block-head">
                 <h3>{t('legalHub.taskFilesTitle')}</h3>
-                <span className="lh-drawer__count">{files.length}</span>
+                <span className="lh-drawer__count">{taskFiles.length}</span>
             </div>
-            {files.length === 0 ? null : (
+            {taskFiles.length === 0 ? null : (
                 <ul className="lh-drawer__files">
-                    {files.map((file) => (
+                    {taskFiles.map((file) => (
                         <li key={file.id}>
                             <span className={`lh-drawer__file-mark lh-drawer__file-mark--${file.kind}`}>{file.kind === 'pdf' ? 'PDF' : 'DOC'}</span>
                             <span className="lh-drawer__file-body">
                             <button
                                 type="button"
                                 className="lh-drawer__file-open"
-                                onClick={() => void downloadLegalHubFile(task.id, file.id, file.name)}
+                                onClick={() => setPreview({ id: file.id, name: file.name })}
                             >
                                 <strong>{file.name}</strong>
                             </button>
@@ -365,7 +398,9 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         </section>
     );
 
-    return createPortal(
+    return (
+        <>
+            {createPortal(
         <div className="lh-drawer" role="presentation" onMouseDown={onClose}>
             <div
                 className="lh-drawer__panel"
@@ -530,7 +565,12 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                                     type="button"
                                                     className="lh-drawer__check"
                                                     aria-pressed={item.done}
-                                                    onClick={() => setChecks((current) => current.map((row) => row.id === item.id ? { ...row, done: !row.done } : row))}
+                                                    onClick={() => {
+                                                        void patchLegalHubCheck(task.id, item.id, !item.done).then((activity) => {
+                                                            if (activity)
+                                                                applyActivity(activity);
+                                                        });
+                                                    }}
                                                 >
                                                     <span className={item.done ? 'is-on' : ''} aria-hidden />
                                                     <span className={item.done ? 'is-done' : ''}>{item.label}</span>
@@ -564,7 +604,12 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                                                 <button
                                                                     type="button"
                                                                     aria-label={t('legalHub.taskCheckClearNote')}
-                                                                    onClick={() => setChecks((current) => current.map((row) => row.id === item.id ? { ...row, notes: (row.notes ?? []).filter((entry) => entry.id !== note.id) } : row))}
+                                                                    onClick={() => {
+                                                                        void deleteLegalHubCheckNote(task.id, item.id, note.id).then((activity) => {
+                                                                            if (activity)
+                                                                                applyActivity(activity);
+                                                                        });
+                                                                    }}
                                                                 >
                                                                     ×
                                                                 </button>
@@ -577,11 +622,14 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                                                 const text = noteDraft.trim();
                                                                 if (!text)
                                                                     return;
-                                                                setChecks((current) => current.map((row) => row.id === item.id ? {
-                                                                    ...row,
-                                                                    notes: [...(row.notes ?? []), { id: `${item.id}-n-${Date.now()}`, text }],
-                                                                } : row));
-                                                                setNoteDraft('');
+                                                                void addLegalHubCheckNote(task.id, item.id, text).then((activity) => {
+                                                                    if (activity == null) {
+                                                                        setReviewError(t('legalHub.taskSaveError'));
+                                                                        return;
+                                                                    }
+                                                                    applyActivity(activity);
+                                                                    setNoteDraft('');
+                                                                });
                                                             }}
                                                         >
                                                             <input
@@ -598,11 +646,20 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                                     <div className="lh-drawer__check-panel">
                                                         {itemFiles.map((file) => (
                                                             <div key={file.id} className="lh-drawer__chip">
-                                                                <span>{file.name}</span>
+                                                                <button type="button" className="lh-drawer__file-open" onClick={() => setPreview({ id: file.id, name: file.name })}>
+                                                                    {file.name}
+                                                                </button>
                                                                 <button
                                                                     type="button"
                                                                     aria-label={t('legalHub.taskCheckClearFile')}
-                                                                    onClick={() => setChecks((current) => current.map((row) => row.id === item.id ? { ...row, files: (row.files ?? []).filter((entry) => entry.id !== file.id) } : row))}
+                                                                    onClick={() => {
+                                                                        void deleteLegalHubFile(task.id, file.id).then((ok) => {
+                                                                            if (!ok)
+                                                                                return;
+                                                                            setFiles((current) => current.filter((row) => row.id !== file.id));
+                                                                            setChecks((current) => current.map((row) => row.id === item.id ? { ...row, files: (row.files ?? []).filter((entry) => entry.id !== file.id) } : row));
+                                                                        });
+                                                                    }}
                                                                 >
                                                                     ×
                                                                 </button>
@@ -639,25 +696,13 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                         event.target.value = '';
                                         if (picked.length === 0)
                                             return;
-                                        void uploadLegalHubFiles(task.id, picked).then((activity) => {
-                                            if (activity == null)
+                                        void uploadLegalHubFiles(task.id, picked, mode === 'item' && targetId ? { checkId: targetId } : undefined).then((activity) => {
+                                            if (activity == null) {
+                                                setReviewError(t('legalHub.taskFileError'));
                                                 return;
-                                            setFiles(activity.files);
-                                            setHistory(activity.history);
+                                            }
+                                            applyActivity(activity);
                                         });
-                                        if (mode !== 'task') {
-                                            if (!targetId)
-                                                return;
-                                            setChecks((current) => current.map((row) => {
-                                                if (row.id !== targetId)
-                                                    return row;
-                                                const next = picked.map((file, index) => ({
-                                                    id: `${targetId}-f-${Date.now()}-${index}`,
-                                                    name: file.name,
-                                                }));
-                                                return { ...row, files: [...(row.files ?? []), ...next] };
-                                            }));
-                                        }
                                     }}
                                 />
                                 <form
@@ -705,6 +750,16 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                                 </div>
                                                 <div className="lh-chat__bubble">
                                                     <p>{comment.text}</p>
+                                                    {(comment.files ?? []).map((file) => (
+                                                        <button
+                                                            key={file.id}
+                                                            type="button"
+                                                            className="lh-chat__file"
+                                                            onClick={() => setPreview({ id: file.id, name: file.name })}
+                                                        >
+                                                            {file.name}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </div>
                                         </article>
@@ -718,22 +773,63 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                     addComment();
                                 }}
                             >
-                                <textarea
-                                    rows={1}
-                                    value={commentDraft}
-                                    placeholder={t('legalHub.taskCommentPlaceholder')}
-                                    aria-label={t('legalHub.taskCommentPlaceholder')}
-                                    onChange={(event) => setCommentDraft(event.target.value)}
-                                    onKeyDown={(event) => {
-                                        if (event.key !== 'Enter' || event.shiftKey)
+                                {commentFiles.length > 0 ? (
+                                    <div className="lh-chat__pending">
+                                        {commentFiles.map((file, index) => (
+                                            <span key={`${file.name}-${index}`} className="lh-drawer__chip">
+                                                <span>{file.name}</span>
+                                                <button
+                                                    type="button"
+                                                    aria-label={t('legalHub.taskCheckClearFile')}
+                                                    onClick={() => setCommentFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                                <div className="lh-chat__compose-row">
+                                    <button
+                                        type="button"
+                                        className="lh-chat__clip"
+                                        aria-label={t('legalHub.taskCommentAttach')}
+                                        onClick={() => commentFileRef.current?.click()}
+                                    >
+                                        <IconClip />
+                                    </button>
+                                    <textarea
+                                        rows={1}
+                                        value={commentDraft}
+                                        placeholder={t('legalHub.taskCommentPlaceholder')}
+                                        aria-label={t('legalHub.taskCommentPlaceholder')}
+                                        onChange={(event) => setCommentDraft(event.target.value)}
+                                        onKeyDown={(event) => {
+                                            if (event.key !== 'Enter' || event.shiftKey)
+                                                return;
+                                            event.preventDefault();
+                                            addComment();
+                                        }}
+                                    />
+                                    <button type="submit" aria-label={t('legalHub.taskCommentSend')} disabled={commentDraft.trim().length === 0 && commentFiles.length === 0}>
+                                        <IconSend />
+                                    </button>
+                                </div>
+                                <input
+                                    ref={commentFileRef}
+                                    className="lh-drawer__file-input"
+                                    type="file"
+                                    multiple
+                                    tabIndex={-1}
+                                    aria-hidden
+                                    onChange={(event) => {
+                                        const picked = [...(event.target.files ?? [])];
+                                        event.target.value = '';
+                                        if (picked.length === 0)
                                             return;
-                                        event.preventDefault();
-                                        addComment();
+                                        setCommentFiles((current) => [...current, ...picked]);
                                     }}
                                 />
-                                <button type="submit" aria-label={t('legalHub.taskCommentSend')} disabled={commentDraft.trim().length === 0}>
-                                    <IconSend />
-                                </button>
                             </form>
                         </div>
                     ) : null}
@@ -773,6 +869,16 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
             </div>
         </div>,
         document.body,
+    )}
+            {preview ? (
+                <LegalHubFilePreview
+                    taskId={task.id}
+                    fileId={preview.id}
+                    name={preview.name}
+                    onClose={() => setPreview(null)}
+                />
+            ) : null}
+        </>
     );
 }
 

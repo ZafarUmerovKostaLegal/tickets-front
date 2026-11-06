@@ -1,6 +1,6 @@
 import { apiFetch } from '@shared/api';
 import type { MineTask } from './LegalHubMyTasks';
-import type { TaskComment, TaskFile, TaskHistory, TaskHistoryKind, TaskPriorityId, TaskStatusId } from './legalHubTasks';
+import type { TaskCheck, TaskComment, TaskFile, TaskHistory, TaskHistoryKind, TaskPriorityId, TaskStatusId } from './legalHubTasks';
 
 type ApiTask = {
     id?: unknown;
@@ -19,6 +19,7 @@ type ApiTask = {
     instructions?: unknown;
     approval?: unknown;
     boardColumn?: unknown;
+    archived?: unknown;
 };
 
 type ApiStamp = { createdAt?: unknown };
@@ -75,6 +76,7 @@ export function mineTaskFromApi(row: ApiTask): MineTask | null {
         instructions: text(row.instructions),
         approval: row.approval === true,
         boardColumn: boardColumn || undefined,
+        archived: row.archived === true,
     };
 }
 
@@ -145,22 +147,47 @@ type ApiDetail = {
     comments?: unknown;
     files?: unknown;
     history?: unknown;
+    checks?: unknown;
+    createdId?: unknown;
 };
 
 export type LegalHubTaskActivity = {
     comments: TaskComment[];
     files: TaskFile[];
     history: TaskHistory[];
+    checks: TaskCheck[];
 };
+
+function readFile(item: unknown): TaskFile | null {
+    const row = item as { id?: unknown; name?: unknown; kind?: unknown; size?: unknown; checkId?: unknown; commentId?: unknown } & ApiStamp;
+    const id = text(row.id);
+    const name = text(row.name);
+    if (!id || !name)
+        return null;
+    const when = stamp(row.createdAt);
+    return {
+        id,
+        name,
+        kind: text(row.kind) === 'pdf' ? 'pdf' : 'docx',
+        size: text(row.size),
+        when: when.when,
+        checkId: text(row.checkId) || undefined,
+        commentId: text(row.commentId) || undefined,
+    };
+}
 
 function readActivity(body: ApiDetail): LegalHubTaskActivity {
     const comments = Array.isArray(body.comments) ? body.comments.flatMap((item): TaskComment[] => {
-        const row = item as { id?: unknown; author?: unknown; authorUserId?: unknown; text?: unknown } & ApiStamp;
+        const row = item as { id?: unknown; author?: unknown; authorUserId?: unknown; text?: unknown; files?: unknown } & ApiStamp;
         const id = text(row.id);
         const message = text(row.text);
         if (!id || !message)
             return [];
         const when = stamp(row.createdAt);
+        const files = Array.isArray(row.files) ? row.files.flatMap((file) => {
+            const stored = readFile(file);
+            return stored ? [{ id: stored.id, name: stored.name }] : [];
+        }) : [];
         return [{
             id,
             author: text(row.author),
@@ -168,22 +195,12 @@ function readActivity(body: ApiDetail): LegalHubTaskActivity {
             text: message,
             when: when.when,
             time: when.time,
+            files,
         }];
     }) : [];
-    const files = Array.isArray(body.files) ? body.files.flatMap((item): TaskFile[] => {
-        const row = item as { id?: unknown; name?: unknown; kind?: unknown; size?: unknown } & ApiStamp;
-        const id = text(row.id);
-        const name = text(row.name);
-        if (!id || !name)
-            return [];
-        const when = stamp(row.createdAt);
-        return [{
-            id,
-            name,
-            kind: text(row.kind) === 'pdf' ? 'pdf' : 'docx',
-            size: text(row.size),
-            when: when.when,
-        }];
+    const files = Array.isArray(body.files) ? body.files.flatMap((item) => {
+        const stored = readFile(item);
+        return stored ? [stored] : [];
     }) : [];
     const history = Array.isArray(body.history) ? body.history.flatMap((item): TaskHistory[] => {
         const row = item as { id?: unknown; kind?: unknown; actor?: unknown; text?: unknown } & ApiStamp;
@@ -201,7 +218,27 @@ function readActivity(body: ApiDetail): LegalHubTaskActivity {
             text: text(row.text),
         }];
     }) : [];
-    return { comments, files, history };
+    const checks = Array.isArray(body.checks) ? body.checks.flatMap((item): TaskCheck[] => {
+        const row = item as { id?: unknown; label?: unknown; done?: unknown; notes?: unknown; files?: unknown };
+        const id = text(row.id);
+        const label = text(row.label).trim();
+        if (!id || !label)
+            return [];
+        const notes = Array.isArray(row.notes) ? row.notes.flatMap((note) => {
+            const stored = note as { id?: unknown; text?: unknown };
+            const noteId = text(stored.id);
+            const noteText = text(stored.text).trim();
+            return noteId && noteText ? [{ id: noteId, text: noteText }] : [];
+        }) : [];
+        const checkFiles = Array.isArray(row.files) ? row.files.flatMap((file) => {
+            const stored = file as { id?: unknown; name?: unknown };
+            const fileId = text(stored.id);
+            const fileName = text(stored.name);
+            return fileId && fileName ? [{ id: fileId, name: fileName }] : [];
+        }) : [];
+        return [{ id, label, done: row.done === true, notes, files: checkFiles }];
+    }) : [];
+    return { comments, files, history, checks };
 }
 
 export async function fetchLegalHubTaskActivity(taskId: string): Promise<LegalHubTaskActivity | null> {
@@ -229,6 +266,7 @@ export async function patchLegalHubTask(taskId: string, patch: {
     notifyDates?: boolean;
     notifyReview?: boolean;
     approval?: boolean;
+    archived?: boolean;
 }): Promise<boolean> {
     try {
         const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}`, {
@@ -243,7 +281,7 @@ export async function patchLegalHubTask(taskId: string, patch: {
     }
 }
 
-export async function addLegalHubComment(taskId: string, message: string): Promise<LegalHubTaskActivity | null> {
+export async function addLegalHubComment(taskId: string, message: string, attachments: File[] = []): Promise<LegalHubTaskActivity | null> {
     try {
         const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}/comments`, {
             method: 'POST',
@@ -252,17 +290,27 @@ export async function addLegalHubComment(taskId: string, message: string): Promi
         });
         if (!response.ok)
             return null;
-        return readActivity(await response.json() as ApiDetail);
+        const body = await response.json() as ApiDetail;
+        const createdId = text(body.createdId);
+        if (attachments.length > 0 && createdId) {
+            const uploaded = await uploadLegalHubFiles(taskId, attachments, { commentId: createdId });
+            return uploaded ?? readActivity(body);
+        }
+        return readActivity(body);
     }
     catch {
         return null;
     }
 }
 
-export async function uploadLegalHubFiles(taskId: string, files: File[]): Promise<LegalHubTaskActivity | null> {
+export async function uploadLegalHubFiles(taskId: string, files: File[], link?: { checkId?: string; commentId?: string }): Promise<LegalHubTaskActivity | null> {
     const body = new FormData();
     for (const file of files)
         body.append('files', file);
+    if (link?.checkId)
+        body.append('check_id', link.checkId);
+    if (link?.commentId)
+        body.append('comment_id', link.commentId);
     try {
         const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}/files`, {
             method: 'POST',
@@ -277,6 +325,38 @@ export async function uploadLegalHubFiles(taskId: string, files: File[]): Promis
     }
 }
 
+async function writeTask(taskId: string, path: string, method: string, payload?: unknown): Promise<LegalHubTaskActivity | null> {
+    try {
+        const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}${path}`, {
+            method,
+            headers: payload == null ? undefined : { 'Content-Type': 'application/json' },
+            body: payload == null ? undefined : JSON.stringify(payload),
+        });
+        if (!response.ok)
+            return null;
+        return readActivity(await response.json() as ApiDetail);
+    }
+    catch {
+        return null;
+    }
+}
+
+export function addLegalHubCheck(taskId: string, label: string) {
+    return writeTask(taskId, '/checks', 'POST', { label });
+}
+
+export function patchLegalHubCheck(taskId: string, checkId: string, done: boolean) {
+    return writeTask(taskId, `/checks/${encodeURIComponent(checkId)}`, 'PATCH', { done });
+}
+
+export function addLegalHubCheckNote(taskId: string, checkId: string, message: string) {
+    return writeTask(taskId, `/checks/${encodeURIComponent(checkId)}/notes`, 'POST', { text: message });
+}
+
+export function deleteLegalHubCheckNote(taskId: string, checkId: string, noteId: string) {
+    return writeTask(taskId, `/checks/${encodeURIComponent(checkId)}/notes/${encodeURIComponent(noteId)}`, 'DELETE');
+}
+
 export async function deleteLegalHubFile(taskId: string, fileId: string): Promise<boolean> {
     try {
         const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fileId)}`, {
@@ -286,6 +366,18 @@ export async function deleteLegalHubFile(taskId: string, fileId: string): Promis
     }
     catch {
         return false;
+    }
+}
+
+export async function fetchLegalHubFileBlob(taskId: string, fileId: string): Promise<Blob | null> {
+    try {
+        const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fileId)}`);
+        if (!response.ok)
+            return null;
+        return await response.blob();
+    }
+    catch {
+        return null;
     }
 }
 

@@ -298,9 +298,14 @@ export const ruMessages: Messages = {
         taskFileToday: 'Сегодня',
         taskSaveError: 'Не удалось сохранить задачу',
         taskFileError: 'Не удалось загрузить файл',
+        taskFileDownload: 'Скачать',
+        taskFilePreviewLoading: 'Загрузка…',
+        taskFilePreviewFail: 'Не удалось открыть файл',
+        taskFilePreviewNone: 'Этот файл нельзя показать здесь. Скачайте его.',
         taskReviewNeedsFile: 'Добавьте файл, чтобы отправить на проверку',
         taskReviewNeedsPerson: 'Назначьте партнёра или ассоциата',
         taskReviewNeedsPartner: 'Для передачи выберите партнёра',
+        taskCommentAttach: 'Прикрепить файл',
         taskHistCreated: 'Задача создана',
         taskHistStarted: 'Работа начата',
         taskHistReview: 'Отправлено на проверку',
@@ -439,6 +444,12 @@ export const ruMessages: Messages = {
         cardWaitClientAny: 'Ждём ответа клиента',
         cardWaitWho: 'Ждём: {name}',
         cardDragHint: 'Перетащите в другую колонку или нажмите, чтобы открыть',
+        cardOpen: 'Открыть',
+        cardReviewAgain: 'Повторная проверка',
+        cardBackToWork: 'Вернуть в работу',
+        cardRequestChanges: 'На правки',
+        cardUndoMove: 'Отменить перенос',
+        boardShowArchive: 'Архив',
         teamHint: 'Загрузка, статусы и задачи каждого сотрудника',
         viewAsBanner: 'Вы смотрите данные: {name}',
         viewAsReset: 'Вернуться к моим',
@@ -1427,9 +1438,14 @@ export type Messages = {
         taskFileToday: string;
         taskSaveError: string;
         taskFileError: string;
+        taskFileDownload: string;
+        taskFilePreviewLoading: string;
+        taskFilePreviewFail: string;
+        taskFilePreviewNone: string;
         taskReviewNeedsFile: string;
         taskReviewNeedsPerson: string;
         taskReviewNeedsPartner: string;
+        taskCommentAttach: string;
         taskHistCreated: string;
         taskHistStarted: string;
         taskHistReview: string;
@@ -1568,6 +1584,12 @@ export type Messages = {
         cardWaitClientAny: string;
         cardWaitWho: string;
         cardDragHint: string;
+        cardOpen: string;
+        cardReviewAgain: string;
+        cardBackToWork: string;
+        cardRequestChanges: string;
+        cardUndoMove: string;
+        boardShowArchive: string;
         teamHint: string;
         viewAsBanner: string;
         viewAsReset: string;

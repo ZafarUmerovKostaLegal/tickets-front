@@ -8,7 +8,7 @@ import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
 import { canAssignLegalHubTask } from './legalHubRank';
 import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
-import { createLegalHubTask } from './legalHubTaskApi';
+import { createLegalHubTask, patchLegalHubTask } from './legalHubTaskApi';
 import { useLegalHubView } from './legalHubView';
 import {
     HUB_TASKS,
@@ -35,6 +35,7 @@ export type MineTask = HubTask & {
     instructions: string;
     approval: boolean;
     boardColumn?: string;
+    archived?: boolean;
 };
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes', 'done'];
@@ -490,6 +491,9 @@ export function LegalHubMyTasks({
     }, [createSignal, mode]);
     const [composeColumn, setComposeColumn] = useState<string | null>(null);
     const [openId, setOpenId] = useState<string | null>(null);
+    const [showArchived, setShowArchived] = useState(false);
+    const [cardMenu, setCardMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+    const moveHistory = useRef(new Map<string, string>());
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
@@ -502,10 +506,12 @@ export function LegalHubMyTasks({
             return false;
         if (mode === 'queue' && (task.done || (task.status !== 'associate' && task.status !== 'partner')))
             return false;
-        if (view === 'list' && task.done)
+        if (view === 'list' && task.done && !showArchived)
             return false;
-        return true;
-    }), [boardOwnerId, mode, project, scope, tasks, view]);
+        if (showArchived)
+            return task.archived === true;
+        return task.archived !== true;
+    }), [boardOwnerId, mode, project, scope, showArchived, tasks, view]);
     const visible = useMemo(() => scoped.filter((task) => {
         if (projectFilter && task.project !== projectFilter)
             return false;
@@ -540,22 +546,78 @@ export function LegalHubMyTasks({
         setPriorityFilter('');
     };
 
-    const moveTask = (id: string, column: string) => {
+    const placeTask = (task: MineTask, column: string): MineTask => {
+        if (!isBuiltin(column))
+            return { ...task, boardColumn: column, done: false, approval: false };
+        const waitingFor = column === 'waitClient'
+            ? (isClientWait(task) ? task.waitingFor : 'Client')
+            : column === 'waitGov'
+                ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : undefined)
+                : task.waitingFor;
+        return {
+            ...task,
+            boardColumn: column,
+            done: column === 'done',
+            approval: column === 'done',
+            status: statusOf(column),
+            waitingFor,
+        };
+    };
+    const moveTask = (id: string, column: string, remember = true) => {
         flip.current = 'cards';
+        let changed = false;
         setTasks((current) => current.map((task) => {
             if (task.id !== id)
                 return task;
-            if (!isBuiltin(column))
-                return { ...task, boardColumn: column, done: false };
-            const waitingFor = column === 'waitClient'
-                ? (isClientWait(task) ? task.waitingFor : 'Client')
-                : column === 'waitGov'
-                    ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : undefined)
-                    : task.waitingFor;
-            return { ...task, boardColumn: undefined, done: column === 'done', status: statusOf(column), waitingFor };
+            const from = columnOf(task);
+            if (from === column)
+                return task;
+            changed = true;
+            if (remember)
+                moveHistory.current.set(id, from);
+            else
+                moveHistory.current.delete(id);
+            return placeTask(task, column);
         }));
+        if (!changed)
+            return;
+        const builtin = isBuiltin(column);
+        void patchLegalHubTask(id, {
+            boardColumn: column,
+            status: builtin ? statusOf(column) : undefined,
+            approval: column === 'done',
+        });
         setDragging(null);
+        setCardMenu(null);
     };
+    const undoMove = (id: string) => {
+        const previous = moveHistory.current.get(id);
+        if (!previous)
+            return;
+        moveTask(id, previous, false);
+    };
+    const setArchived = (id: string, archived: boolean) => {
+        setTasks((current) => current.map((task) => task.id === id ? { ...task, archived } : task));
+        void patchLegalHubTask(id, { archived });
+        setCardMenu(null);
+    };
+    useEffect(() => {
+        if (cardMenu == null)
+            return;
+        const close = () => setCardMenu(null);
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape')
+                return;
+            event.stopPropagation();
+            setCardMenu(null);
+        };
+        window.addEventListener('mousedown', close);
+        window.addEventListener('keydown', onKey, true);
+        return () => {
+            window.removeEventListener('mousedown', close);
+            window.removeEventListener('keydown', onKey, true);
+        };
+    }, [cardMenu]);
 
     const reorderColumns = (from: string, to: string) => {
         if (from === to)
@@ -870,6 +932,9 @@ export function LegalHubMyTasks({
                                         {t('legalHub.boardFilterLate')}
                                         <em>{lateCount}</em>
                                     </button>
+                                    <button type="button" className={`lh-bt__chip${showArchived ? ' is-on' : ''}`} aria-pressed={showArchived} onClick={() => setShowArchived((value) => !value)}>
+                                        {t('legalHub.boardShowArchive')}
+                                    </button>
                                     <button type="button" className={`lh-bt__chip${onlyUrgent ? ' is-on' : ''}`} aria-pressed={onlyUrgent} disabled={urgentCount === 0 && !onlyUrgent} onClick={() => setOnlyUrgent((value) => !value)}>
                                         <IconFlag />
                                         {t('legalHub.boardFilterUrgent')}
@@ -940,6 +1005,25 @@ export function LegalHubMyTasks({
             }}
         />
     ) : null;
+    const menuTask = cardMenu == null ? null : tasks.find((task) => task.id === cardMenu.id) ?? null;
+    const cardMenuNode = cardMenu != null && menuTask != null ? createPortal(
+        <div
+            className="lh-card-menu"
+            role="menu"
+            style={{ top: Math.max(8, Math.min(cardMenu.y, window.innerHeight - 280)), left: Math.max(8, Math.min(cardMenu.x, window.innerWidth - 220)) }}
+            onMouseDown={(event) => event.stopPropagation()}
+        >
+            <button type="button" role="menuitem" onClick={() => { setOpenId(menuTask.id); setCardMenu(null); }}>{t('legalHub.cardOpen')}</button>
+            <button type="button" role="menuitem" onClick={() => moveTask(menuTask.id, 'associate')}>{t('legalHub.cardReviewAgain')}</button>
+            <button type="button" role="menuitem" onClick={() => moveTask(menuTask.id, 'progress')}>{t('legalHub.cardBackToWork')}</button>
+            <button type="button" role="menuitem" onClick={() => moveTask(menuTask.id, 'changes')}>{t('legalHub.cardRequestChanges')}</button>
+            <button type="button" role="menuitem" disabled={!moveHistory.current.has(menuTask.id)} onClick={() => undoMove(menuTask.id)}>{t('legalHub.cardUndoMove')}</button>
+            <button type="button" role="menuitem" onClick={() => setArchived(menuTask.id, menuTask.archived !== true)}>
+                {menuTask.archived ? t('legalHub.unarchive') : t('legalHub.archive')}
+            </button>
+        </div>,
+        document.body,
+    ) : null;
     const noMatch = visible.length === 0 && (filtersOn || needle) ? (
         <div className="lh-rows__empty">
             <strong>{t('legalHub.boardNoMatch')}</strong>
@@ -971,7 +1055,13 @@ export function LegalHubMyTasks({
                                     const late = dayDelta(task.clientOn) < 0;
                                     const soon = !late && dayDelta(task.clientOn) <= 1;
                                     return (
-                                        <li key={task.id}>
+                                        <li
+                                            key={task.id}
+                                            onContextMenu={(event) => {
+                                                event.preventDefault();
+                                                setCardMenu({ x: event.clientX, y: event.clientY, id: task.id });
+                                            }}
+                                        >
                                             <button type="button" className={`lh-rows__item${late ? ' is-late' : ''}`} onClick={() => setOpenId(task.id)}>
                                                 <span className="lh-rows__text">
                                                     <strong>
@@ -1007,6 +1097,7 @@ export function LegalHubMyTasks({
                 </div>
                 {drawer}
                 {dialog}
+                {cardMenuNode}
             </div>
         );
     }
@@ -1046,6 +1137,7 @@ export function LegalHubMyTasks({
                                 onDragStart={setDragging}
                                 onDragEnd={() => setDragging(null)}
                                 onOpen={setOpenId}
+                                onCardMenu={setCardMenu}
                                 onRemove={column.custom ? () => removeColumn(column.id) : undefined}
                             />
                         ))}
@@ -1055,11 +1147,12 @@ export function LegalHubMyTasks({
             </div>
             {drawer}
             {dialog}
+            {cardMenuNode}
         </div>
     );
 }
 
-function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, reorderable, columnDrag, columnOver, onColumnDragStart, onColumnDragEnd, onColumnOver, onColumnDrop, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen, onRemove }: {
+function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, reorderable, columnDrag, columnOver, onColumnDragStart, onColumnDragEnd, onColumnOver, onColumnDrop, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen, onCardMenu, onRemove }: {
     id: string;
     title: string;
     hint: string | null;
@@ -1083,6 +1176,7 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
     onDragStart: (id: string) => void;
     onDragEnd: () => void;
     onOpen: (id: string) => void;
+    onCardMenu: (menu: { x: number; y: number; id: string }) => void;
     onRemove?: () => void;
 }) {
     const { t } = useI18n();
@@ -1188,6 +1282,7 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
                             onDragStart={() => onDragStart(task.id)}
                             onDragEnd={onDragEnd}
                             onOpen={() => onOpen(task.id)}
+                            onMenu={(x, y) => onCardMenu({ x, y, id: task.id })}
                         />
                     ))}
                 </ul>
@@ -1291,7 +1386,7 @@ function IconFlag() {
     );
 }
 
-function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEnd, onOpen }: {
+function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEnd, onOpen, onMenu }: {
     task: MineTask;
     showProject: boolean;
     draggable: boolean;
@@ -1299,6 +1394,7 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
     onDragStart: () => void;
     onDragEnd: () => void;
     onOpen: () => void;
+    onMenu: (x: number, y: number) => void;
 }) {
     const { t, locale } = useI18n();
     const dragged = useRef(false);
@@ -1331,6 +1427,11 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
                 if (dragged.current)
                     return;
                 onOpen();
+            }}
+            onContextMenu={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onMenu(event.clientX, event.clientY);
             }}
             onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
