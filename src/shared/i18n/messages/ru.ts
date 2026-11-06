@@ -595,7 +595,18 @@ export const ruMessages: Messages = {
         itSecurity: 'IT-безопасность',
         kostaLegalAi: 'Kosta Legal AI',
         legalHub: 'Legal Hub',
+        fileManager: 'Файловый менеджер',
         sectionsAria: 'Разделы приложения',
+    },
+    fileManager: {
+        newFolder: 'Новая папка',
+        upload: 'Загрузить',
+        empty: 'Папка пустая. Создайте папку или загрузите файл.',
+        folderPh: 'Название папки',
+        create: 'Создать',
+        remove: 'Удалить',
+        root: 'Все файлы',
+        error: 'Не удалось обновить файлы',
     },
     pageTitle: {
         login: 'Вход',
@@ -1702,9 +1713,20 @@ export type Messages = {
         | 'itSecurity'
         | 'kostaLegalAi'
         | 'legalHub'
+        | 'fileManager'
         | 'sectionsAria',
         string
     >;
+    fileManager: {
+        newFolder: string;
+        upload: string;
+        empty: string;
+        folderPh: string;
+        create: string;
+        remove: string;
+        root: string;
+        error: string;
+    };
     pageTitle: Record<
         | 'login'
         | 'authCallback'

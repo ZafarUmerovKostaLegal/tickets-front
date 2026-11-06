@@ -97,6 +97,7 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         [routes.hr]: 'nav.hr',
         [routes.kostaLegalAi]: 'nav.kostaLegalAi',
         [routes.legalHub]: 'nav.legalHub',
+        [routes.fileManager]: 'nav.fileManager',
         [routes.kostaDaily]: 'nav.kostaDaily',
         [routes.contacts]: 'nav.contacts',
         [routes.internalCommunication]: 'nav.internalCommunication',

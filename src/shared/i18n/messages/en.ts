@@ -595,7 +595,18 @@ export const enMessages = {
         itSecurity: 'IT security',
         kostaLegalAi: 'Kosta Legal AI',
         legalHub: 'Legal Hub',
+        fileManager: 'File manager',
         sectionsAria: 'Application sections',
+    },
+    fileManager: {
+        newFolder: 'New folder',
+        upload: 'Upload',
+        empty: 'This folder is empty. Create a folder or upload a file.',
+        folderPh: 'Folder name',
+        create: 'Create',
+        remove: 'Delete',
+        root: 'All files',
+        error: 'Could not update the files',
     },
     pageTitle: {
         login: 'Sign in',

@@ -61,6 +61,7 @@ const ContactsPage = lazy(() => import('@pages/contacts').then(m => ({ default: 
 const InternalCommunicationPage = lazy(() => import('@pages/internal-communication').then(m => ({ default: m.InternalCommunicationPage })));
 const ItSecurityPage = lazy(() => import('@pages/it-security').then(m => ({ default: m.ItSecurityPage })));
 const LegalHubPage = lazy(() => import('@pages/legal-hub').then(m => ({ default: m.LegalHubPage })));
+const FileManagerPage = lazy(() => import('@pages/file-manager').then(m => ({ default: m.FileManagerPage })));
 const ExpensesPage = lazy(() => import('@pages/expenses/ui/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
 const ExpensesRequestsPage = lazy(() => import('@pages/expenses/ui/ExpensesRequestsPage').then(m => ({ default: m.ExpensesRequestsPage })));
 const ExpensesReportPage = lazy(() => import('@pages/expenses/ui/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })));
@@ -114,6 +115,7 @@ const router = createBrowserRouter([
             { path: routes.legalHubMemberStats, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
             { path: routes.legalHubMemberReports, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
             { path: routes.legalHubMember, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
+            { path: routes.fileManager, element: withProtected(<FileManagerPage />) },
             { path: routes.tickets, element: withProtected(<TicketsPage />) },
             { path: routes.ticketDetail, element: withProtected(<TicketDetailPage />) },
             { path: routes.attendance, element: withProtected(<AttendanceAccessRoute>

@@ -139,11 +139,12 @@ function SheetPreview({ bytes, loadingLabel, onFail }: { bytes: ArrayBuffer; loa
     );
 }
 
-export function LegalHubFilePreview({ taskId, fileId, name, onClose }: {
-    taskId: string;
-    fileId: string;
+export function LegalHubFilePreview({ taskId = '', fileId = '', name, onClose, loadBlob }: {
+    taskId?: string;
+    fileId?: string;
     name: string;
     onClose: () => void;
+    loadBlob?: () => Promise<Blob | null>;
 }) {
     const { t } = useI18n();
     const [blob, setBlob] = useState<Blob | null>(null);
@@ -163,7 +164,7 @@ export function LegalHubFilePreview({ taskId, fileId, name, onClose }: {
         setText('');
         setDocx(null);
         setSheet(null);
-        void fetchLegalHubFileBlob(taskId, fileId).then(async (loaded) => {
+        void (loadBlob ?? (() => fetchLegalHubFileBlob(taskId, fileId)))().then(async (loaded) => {
             if (cancelled)
                 return;
             if (loaded == null) {
@@ -196,7 +197,7 @@ export function LegalHubFilePreview({ taskId, fileId, name, onClose }: {
             if (objectUrl)
                 URL.revokeObjectURL(objectUrl);
         };
-    }, [taskId, fileId, name]);
+    }, [taskId, fileId, name, loadBlob]);
 
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {

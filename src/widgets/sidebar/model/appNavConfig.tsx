@@ -10,7 +10,7 @@ import { isScheduleOnlyAccount } from '@shared/lib/scheduleOnlyAccount';
 import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { canAccessLegalHub } from '@shared/lib/legalHubAccess';
-import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconHr, IconLegalHub, IconShield, } from '../ui/SidebarIcons';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconFiles, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconHr, IconLegalHub, IconShield, } from '../ui/SidebarIcons';
 
 export type AppNavId =
     | 'home'
@@ -34,7 +34,8 @@ export type AppNavId =
     | 'contacts'
     | 'internalCommunication'
     | 'itSecurity'
-    | 'legalHub';
+    | 'legalHub'
+    | 'fileManager';
 
 export type AppNavItemDef = {
     id: AppNavId;
@@ -52,6 +53,7 @@ export type AppNavItemDef = {
 const EMPLOYEE_NAV_IDS = new Set<AppNavId>([
     'home',
     'legalHub',
+    'fileManager',
     'timeTracking',
     'expenses',
     'expensesPartners',
@@ -71,6 +73,7 @@ const MEETING_ROOM_NAV_IDS = new Set<AppNavId>(['home', 'callSchedule']);
 export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'home', to: routes.home, icon: IconHome },
     { id: 'legalHub', to: routes.legalHub, icon: IconLegalHub },
+    { id: 'fileManager', to: routes.fileManager, icon: IconFiles },
     { id: 'timeTracking', to: routes.timeTracking, icon: IconStopwatch },
     { id: 'expenses', to: routes.expenses, icon: IconWallet },
     { id: 'expensesPartners', to: routes.expensesPartners, icon: IconContacts },

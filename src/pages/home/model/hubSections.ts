@@ -22,6 +22,7 @@ export const HUB_SECTIONS: HubSectionDef[] = [
             'tickets',
             'attendance',
             'callSchedule',
+            'fileManager',
         ],
         accent: '#B85C5C',
         accentSoft: '#F8F3F3',
