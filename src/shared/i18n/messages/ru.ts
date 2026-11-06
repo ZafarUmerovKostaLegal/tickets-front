@@ -599,14 +599,29 @@ export const ruMessages: Messages = {
         sectionsAria: 'Разделы приложения',
     },
     fileManager: {
-        newFolder: 'Новая папка',
-        upload: 'Загрузить',
-        empty: 'Папка пустая. Создайте папку или загрузите файл.',
-        folderPh: 'Название папки',
-        create: 'Создать',
-        remove: 'Удалить',
-        root: 'Все файлы',
-        error: 'Не удалось обновить файлы',
+        createUpload: 'Создать или загрузить',
+        files: 'Файлы',
+        all: 'Все файлы',
+        explorer: 'Проводник',
+        mine: 'Мои файлы',
+        shared: 'Общие папки',
+        available: 'Доступные мне',
+        recent: 'Недавно открытые',
+        starred: 'Избранное',
+        trash: 'Корзина',
+        admin: 'Администрирование',
+        users: 'Пользователи и группы',
+        access: 'Управление доступами',
+        matrix: 'Матрица доступа',
+        journal: 'Журнал действий',
+        monitoring: 'Мониторинг активности',
+        storages: 'Хранилища',
+        directory: 'Active Directory',
+        settings: 'Настройки',
+        storageCount: 'Хранилища · 4',
+        of: 'из',
+        tb: 'ТБ',
+        storageWarn: '1 хранилище с предупреждением',
     },
     pageTitle: {
         login: 'Вход',
@@ -1718,14 +1733,29 @@ export type Messages = {
         string
     >;
     fileManager: {
-        newFolder: string;
-        upload: string;
-        empty: string;
-        folderPh: string;
-        create: string;
-        remove: string;
-        root: string;
-        error: string;
+        createUpload: string;
+        files: string;
+        all: string;
+        explorer: string;
+        mine: string;
+        shared: string;
+        available: string;
+        recent: string;
+        starred: string;
+        trash: string;
+        admin: string;
+        users: string;
+        access: string;
+        matrix: string;
+        journal: string;
+        monitoring: string;
+        storages: string;
+        directory: string;
+        settings: string;
+        storageCount: string;
+        of: string;
+        tb: string;
+        storageWarn: string;
     };
     pageTitle: Record<
         | 'login'

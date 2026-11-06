@@ -1,207 +1,166 @@
 .fm {
+  display: flex;
   min-height: 100%;
-  background: var(--app-bg);
+  background: #f7f8fb;
 }
 
-.fm__head,
-.fm__bar {
+.fm-side {
+  display: flex;
+  flex-direction: column;
+  width: 272px;
+  flex-shrink: 0;
+  min-height: 100vh;
+  padding: 0.85rem 0.75rem 0.7rem;
+  border-right: 1px solid #e6e8ee;
+  background: #fff;
+}
+
+.fm-side__create {
+  height: 2.55rem;
+  margin-bottom: 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: #1d2a6b;
+  color: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fm-side__create:hover {
+  background: #24348a;
+}
+
+.fm-side > p {
+  margin: 0.85rem 0.55rem 0.35rem;
+  color: #9aa3b2;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.fm-side nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.fm-side nav button {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 2.15rem;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #3d4654;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fm-side nav button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  color: #8b95a5;
+}
+
+.fm-side nav button span {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm-side nav button em {
+  min-width: 1.15rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: #eef0f4;
+  color: #8b95a5;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.fm-side nav button em.is-alert {
+  background: #fde8ea;
+  color: #e11d48;
+}
+
+.fm-side nav button:hover {
+  background: #f4f6f8;
+}
+
+.fm-side nav button.is-on {
+  background: #f3f4f6;
+  color: #1f2937;
+  font-weight: 650;
+}
+
+.fm-side nav button.is-on svg {
+  color: #4b5563;
+}
+
+.fm-side__storage {
+  margin-top: auto;
+  padding: 0.75rem 0.55rem 0.15rem;
+}
+
+.fm-side__storage div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.fm-side__storage strong {
+  color: #374151;
+  font-weight: 650;
+}
+
+.fm-side__storage i {
+  display: block;
+  height: 4px;
+  margin: 0.45rem 0 0.4rem;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.fm-side__storage b {
+  display: block;
+  width: 36%;
+  height: 100%;
+  border-radius: inherit;
+  background: #1f2937;
+}
+
+.fm-side__storage small {
+  color: #e11d48;
+  font-size: 0.75rem;
+}
+
+.fm__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-}
-
-.fm__head {
   padding: 0.85rem 1.25rem;
-  border-bottom: 1px solid var(--app-border);
-  background: var(--app-surface);
 }
 
 .fm__head-start {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  min-width: 0;
-}
-
-.fm__head h1 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.fm__bar {
-  padding: 0.85rem 1.25rem 0;
-}
-
-.fm__crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.fm__crumbs button {
-  border: 0;
-  background: transparent;
-  color: var(--app-text);
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.fm__crumbs span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--app-muted);
-}
-
-.fm__actions,
-.fm__new {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.fm__actions > button,
-.fm__new button {
-  height: 2.2rem;
-  padding: 0 0.8rem;
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  background: var(--app-surface);
-  color: var(--app-text);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.fm__upload {
-  background: var(--app-accent) !important;
-  border-color: var(--app-accent) !important;
-  color: #fff !important;
-}
-
-.fm__new input {
-  height: 2.2rem;
-  width: 12rem;
-  padding: 0 0.7rem;
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  background: var(--app-surface);
-  color: var(--app-text);
-  font: inherit;
-}
-
-.fm__file {
-  display: none;
-}
-
-.fm__error,
-.fm__empty {
-  margin: 1.5rem 1.25rem;
-  color: var(--app-muted);
-}
-
-.fm__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.7rem;
-  margin: 0.9rem 0 0;
-  padding: 0 1.25rem 1.5rem;
-  list-style: none;
-}
-
-.fm__item {
-  position: relative;
-  border: 1px solid var(--app-border);
-  border-radius: 12px;
-  background: var(--app-surface);
-}
-
-.fm__open {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.35rem;
-  width: 100%;
-  min-height: 6.2rem;
-  padding: 0.85rem 2rem 0.85rem 0.85rem;
-  border: 0;
-  background: transparent;
-  color: var(--app-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.fm__open strong {
-  overflow-wrap: anywhere;
-}
-
-.fm__open small,
-.fm__crumbs button:hover,
-.fm__open:hover strong {
-  color: var(--app-muted);
-}
-
-.fm__open:hover strong {
-  color: var(--app-text);
-  text-decoration: underline;
-}
-
-.fm__folder,
-.fm__mark {
-  display: grid;
-  place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 8px;
-}
-
-.fm__folder {
-  background: color-mix(in srgb, #9a8548 16%, var(--app-surface));
-}
-
-.fm__folder::before {
-  content: '';
-  width: 1.15rem;
-  height: 0.85rem;
-  border-radius: 2px 2px 3px 3px;
-  background: #9a8548;
-  box-shadow: 0 -0.22rem 0 -0.08rem #9a8548;
-}
-
-.fm__mark {
-  color: #fff;
-  font-size: 0.62rem;
-  font-weight: 750;
-  background: #64748b;
-}
-
-.fm__mark--pdf { background: #dc2626; }
-.fm__mark--image { background: #2563eb; }
-.fm__mark--doc { background: #1d4ed8; }
-.fm__mark--sheet { background: #15803d; }
-
-.fm__remove {
-  position: absolute;
-  top: 0.45rem;
-  right: 0.45rem;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--app-muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.fm__remove:hover {
-  background: var(--app-bg);
-  color: var(--app-text);
 }
