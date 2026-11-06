@@ -504,7 +504,53 @@
   white-space: nowrap;
 }
 
+.lh-side-pin {
+  display: none;
+}
+
 @media (min-width: 861px) {
+  .lh-side-pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 50%;
+    left: 0;
+    z-index: 46;
+    width: 22px;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--app-border);
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+    background: var(--app-surface);
+    color: var(--app-text);
+    box-shadow: 4px 0 12px rgba(15, 23, 42, 0.08);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: left 0.18s ease;
+  }
+
+  .lh-side-pin svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .lh-side-pin.is-open {
+    left: 248px;
+  }
+
+  .lh-side-pin.is-open.is-collapsed {
+    left: 76px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lh-side-pin {
+      transition: none;
+    }
+  }
+
   .lh-side-dock {
     display: block;
     position: fixed;

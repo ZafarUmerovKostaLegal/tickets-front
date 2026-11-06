@@ -205,6 +205,7 @@ function LegalHubPageBody() {
     const [sideDrop, setSideDrop] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [sidePeek, setSidePeek] = useState(false);
+    const [sidePinned, setSidePinned] = useState(false);
     const sideDismissed = useRef(false);
     const [utilOpen, setUtilOpen] = useState(false);
     const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
@@ -388,12 +389,25 @@ function LegalHubPageBody() {
 
     const dismissSide = useCallback(() => {
         sideDismissed.current = true;
+        setSidePinned(false);
         setSidePeek(false);
         setMenuOpen(false);
         const active = document.activeElement;
         if (active instanceof HTMLElement && active.closest('.lh-side-dock'))
             active.blur();
     }, []);
+    const sideOpen = sidePeek || sidePinned;
+    const toggleSidePin = useCallback(() => {
+        if (sideOpen) {
+            sideDismissed.current = true;
+            setSidePinned(false);
+            setSidePeek(false);
+            return;
+        }
+        sideDismissed.current = false;
+        setSidePinned(true);
+        setSidePeek(true);
+    }, [sideOpen]);
     useEffect(() => {
         const onMove = (event: PointerEvent) => {
             if (!sideDismissed.current || event.clientX <= 24)
@@ -481,20 +495,32 @@ function LegalHubPageBody() {
                 />
             ) : null}
             {createPortal(
+            <>
+            <button
+                type="button"
+                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}`}
+                aria-expanded={sideOpen}
+                aria-label={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                title={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                onClick={toggleSidePin}
+            >
+                <IconCollapse collapsed={!sideOpen} />
+            </button>
             <div
-                className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sidePeek ? ' is-open' : ''}`}
+                className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sideOpen ? ' is-open' : ''}`}
                 onMouseEnter={() => {
                     if (!sideDismissed.current)
                         setSidePeek(true);
                 }}
                 onMouseLeave={() => {
-                    setSidePeek(false);
+                    if (!sidePinned)
+                        setSidePeek(false);
                 }}
                 onClickCapture={(event) => {
                     const target = event.target;
                     if (!(target instanceof Element))
                         return;
-                    if (target.closest('input, textarea'))
+                    if (target.closest('input, textarea, [data-side-keep]'))
                         return;
                     if (target.closest('button, a'))
                         dismissSide();
@@ -603,6 +629,7 @@ function LegalHubPageBody() {
                                                 <button
                                                     type="button"
                                                     className="lh-side__folder-head"
+                                                    data-side-keep=""
                                                     aria-expanded={!folded}
                                                     onClick={() => toggleFolder(folder)}
                                                 >
@@ -668,6 +695,7 @@ function LegalHubPageBody() {
                                 <button
                                     type="button"
                                     className="lh-side__folder-head"
+                                    data-side-keep=""
                                     aria-expanded={openClients.has('archive') || projectQuery.trim().length > 0}
                                     onClick={() => toggleClient('archive')}
                                 >
@@ -725,6 +753,7 @@ function LegalHubPageBody() {
                     <button
                         type="button"
                         className="lh-side__collapse"
+                        data-side-keep=""
                         aria-expanded={!sideCollapsed}
                         aria-label={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
                         title={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
@@ -737,7 +766,8 @@ function LegalHubPageBody() {
                     </button>
                 </div>
             </aside>
-            </div>,
+            </div>
+            </>,
             document.body,
             )}
             <div className="lh-page__main">
@@ -1112,6 +1142,7 @@ function ClientGroups({
                             <button
                                 type="button"
                                 className="lh-side__client-head"
+                                data-side-keep=""
                                 draggable={reorderable && !searching}
                                 aria-expanded={!folded}
                                 onDragStart={(event) => {
