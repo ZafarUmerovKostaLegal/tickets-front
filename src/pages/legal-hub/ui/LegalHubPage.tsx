@@ -150,6 +150,24 @@ function IconCollapse({ collapsed }: { collapsed: boolean }) {
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
+const SIDE_PIN_KEY = 'lh-sidebar-pin-top';
+
+function clampPinTop(top: number, height = window.innerHeight): number {
+    return Math.min(Math.max(top, 36), Math.max(36, height - 36));
+}
+
+function readPinTop(): number {
+    const fallback = window.innerHeight / 2;
+    try {
+        const raw = Number(localStorage.getItem(SIDE_PIN_KEY));
+        if (Number.isFinite(raw))
+            return clampPinTop(raw);
+    }
+    catch {
+        /* storage can be unavailable */
+    }
+    return fallback;
+}
 
 const SECTION_HINT: Record<LegalHubNavId, TranslationKey> = {
     myTasks: 'legalHub.myTasksHint',
@@ -204,9 +222,12 @@ function LegalHubPageBody() {
     const sideDrag = useRef<{ parent: string; key: string } | null>(null);
     const [sideDrop, setSideDrop] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [sidePeek, setSidePeek] = useState(false);
     const [sidePinned, setSidePinned] = useState(false);
-    const sideDismissed = useRef(false);
+    const [pinTop, setPinTop] = useState(readPinTop);
+    const [pinDragging, setPinDragging] = useState(false);
+    const pinTopLive = useRef(pinTop);
+    const pinDrag = useRef<{ y: number; top: number } | null>(null);
+    const pinMoved = useRef(false);
     const [utilOpen, setUtilOpen] = useState(false);
     const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
     const [sideCollapsed, setSideCollapsed] = useState(() => {
@@ -388,34 +409,20 @@ function LegalHubPageBody() {
     }, [navigate, onMemberPage, setViewAsId]);
 
     const dismissSide = useCallback(() => {
-        sideDismissed.current = true;
         setSidePinned(false);
-        setSidePeek(false);
         setMenuOpen(false);
         const active = document.activeElement;
         if (active instanceof HTMLElement && active.closest('.lh-side-dock'))
             active.blur();
     }, []);
-    const sideOpen = sidePeek || sidePinned;
+    const sideOpen = sidePinned;
     const toggleSidePin = useCallback(() => {
-        if (sideOpen) {
-            sideDismissed.current = true;
-            setSidePinned(false);
-            setSidePeek(false);
-            return;
-        }
-        sideDismissed.current = false;
-        setSidePinned(true);
-        setSidePeek(true);
-    }, [sideOpen]);
+        setSidePinned((pinned) => !pinned);
+    }, []);
     useEffect(() => {
-        const onMove = (event: PointerEvent) => {
-            if (!sideDismissed.current || event.clientX <= 24)
-                return;
-            sideDismissed.current = false;
-        };
-        window.addEventListener('pointermove', onMove);
-        return () => window.removeEventListener('pointermove', onMove);
+        const onResize = () => setPinTop((top) => clampPinTop(top));
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
     }, []);
     const closeMenu = useCallback(() => setMenuOpen(false), []);
     const openMenu = useCallback(() => {
@@ -498,24 +505,62 @@ function LegalHubPageBody() {
             <>
             <button
                 type="button"
-                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}`}
+                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}${pinDragging ? ' is-dragging' : ''}`}
+                style={{ top: pinTop }}
                 aria-expanded={sideOpen}
                 aria-label={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
                 title={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                onClick={toggleSidePin}
+                onPointerDown={(event) => {
+                    if (event.button !== 0)
+                        return;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    pinDrag.current = { y: event.clientY, top: pinTop };
+                    pinMoved.current = false;
+                    setPinDragging(true);
+                }}
+                onPointerMove={(event) => {
+                    const drag = pinDrag.current;
+                    if (drag == null)
+                        return;
+                    const next = clampPinTop(drag.top + (event.clientY - drag.y));
+                    if (Math.abs(event.clientY - drag.y) > 4)
+                        pinMoved.current = true;
+                    pinTopLive.current = next;
+                    setPinTop(next);
+                }}
+                onPointerUp={() => {
+                    if (pinDrag.current == null)
+                        return;
+                    pinDrag.current = null;
+                    setPinDragging(false);
+                    if (!pinMoved.current)
+                        return;
+                    try {
+                        localStorage.setItem(SIDE_PIN_KEY, String(pinTopLive.current));
+                    }
+                    catch {
+                        /* storage can be unavailable */
+                    }
+                    window.setTimeout(() => {
+                        pinMoved.current = false;
+                    }, 0);
+                }}
+                onPointerCancel={() => {
+                    pinDrag.current = null;
+                    setPinDragging(false);
+                }}
+                onClick={() => {
+                    if (pinMoved.current) {
+                        pinMoved.current = false;
+                        return;
+                    }
+                    toggleSidePin();
+                }}
             >
                 <IconCollapse collapsed={!sideOpen} />
             </button>
             <div
                 className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sideOpen ? ' is-open' : ''}`}
-                onMouseEnter={() => {
-                    if (!sideDismissed.current)
-                        setSidePeek(true);
-                }}
-                onMouseLeave={() => {
-                    if (!sidePinned)
-                        setSidePeek(false);
-                }}
                 onClickCapture={(event) => {
                     const target = event.target;
                     if (!(target instanceof Element))

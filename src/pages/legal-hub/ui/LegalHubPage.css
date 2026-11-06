@@ -527,9 +527,15 @@
     background: var(--app-surface);
     color: var(--app-text);
     box-shadow: 4px 0 12px rgba(15, 23, 42, 0.08);
-    cursor: pointer;
+    cursor: grab;
+    touch-action: none;
     transform: translateY(-50%);
     transition: left 0.18s ease;
+  }
+
+  .lh-side-pin.is-dragging {
+    cursor: grabbing;
+    transition: none;
   }
 
   .lh-side-pin svg {
@@ -560,6 +566,7 @@
     width: 12px;
     z-index: 45;
     overflow: hidden;
+    pointer-events: none;
   }
 
   .lh-side-dock::before {
@@ -575,6 +582,7 @@
   .lh-side-dock.is-open {
     width: 248px;
     overflow: visible;
+    pointer-events: auto;
   }
 
   .lh-side-dock.is-collapsed.is-open {
