@@ -150,24 +150,6 @@ function IconCollapse({ collapsed }: { collapsed: boolean }) {
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
-const SIDE_PIN_KEY = 'lh-sidebar-pin-top';
-
-function clampPinTop(top: number, height = window.innerHeight): number {
-    return Math.min(Math.max(top, 36), Math.max(36, height - 36));
-}
-
-function readPinTop(): number {
-    const fallback = window.innerHeight / 2;
-    try {
-        const raw = Number(localStorage.getItem(SIDE_PIN_KEY));
-        if (Number.isFinite(raw))
-            return clampPinTop(raw);
-    }
-    catch {
-        /* storage can be unavailable */
-    }
-    return fallback;
-}
 
 const SECTION_HINT: Record<LegalHubNavId, TranslationKey> = {
     myTasks: 'legalHub.myTasksHint',
@@ -223,11 +205,6 @@ function LegalHubPageBody() {
     const [sideDrop, setSideDrop] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [sidePinned, setSidePinned] = useState(false);
-    const [pinTop, setPinTop] = useState(readPinTop);
-    const [pinDragging, setPinDragging] = useState(false);
-    const pinTopLive = useRef(pinTop);
-    const pinDrag = useRef<{ y: number; top: number } | null>(null);
-    const pinMoved = useRef(false);
     const [utilOpen, setUtilOpen] = useState(false);
     const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
     const [sideCollapsed, setSideCollapsed] = useState(() => {
@@ -419,11 +396,6 @@ function LegalHubPageBody() {
     const toggleSidePin = useCallback(() => {
         setSidePinned((pinned) => !pinned);
     }, []);
-    useEffect(() => {
-        const onResize = () => setPinTop((top) => clampPinTop(top));
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
     const closeMenu = useCallback(() => setMenuOpen(false), []);
     const openMenu = useCallback(() => {
         setUtilOpen(false);
@@ -492,7 +464,7 @@ function LegalHubPageBody() {
     }, []);
 
     return (
-        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}`}>
+        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}${sideOpen ? ' lh-page--side-open' : ''}`}>
             {menuOpen ? (
                 <button
                     type="button"
@@ -502,63 +474,6 @@ function LegalHubPageBody() {
                 />
             ) : null}
             {createPortal(
-            <>
-            <button
-                type="button"
-                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}${pinDragging ? ' is-dragging' : ''}`}
-                style={{ top: pinTop }}
-                aria-expanded={sideOpen}
-                aria-label={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                title={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                onPointerDown={(event) => {
-                    if (event.button !== 0)
-                        return;
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    pinDrag.current = { y: event.clientY, top: pinTop };
-                    pinMoved.current = false;
-                    setPinDragging(true);
-                }}
-                onPointerMove={(event) => {
-                    const drag = pinDrag.current;
-                    if (drag == null)
-                        return;
-                    const next = clampPinTop(drag.top + (event.clientY - drag.y));
-                    if (Math.abs(event.clientY - drag.y) > 4)
-                        pinMoved.current = true;
-                    pinTopLive.current = next;
-                    setPinTop(next);
-                }}
-                onPointerUp={() => {
-                    if (pinDrag.current == null)
-                        return;
-                    pinDrag.current = null;
-                    setPinDragging(false);
-                    if (!pinMoved.current)
-                        return;
-                    try {
-                        localStorage.setItem(SIDE_PIN_KEY, String(pinTopLive.current));
-                    }
-                    catch {
-                        /* storage can be unavailable */
-                    }
-                    window.setTimeout(() => {
-                        pinMoved.current = false;
-                    }, 0);
-                }}
-                onPointerCancel={() => {
-                    pinDrag.current = null;
-                    setPinDragging(false);
-                }}
-                onClick={() => {
-                    if (pinMoved.current) {
-                        pinMoved.current = false;
-                        return;
-                    }
-                    toggleSidePin();
-                }}
-            >
-                <IconCollapse collapsed={!sideOpen} />
-            </button>
             <div
                 className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sideOpen ? ' is-open' : ''}`}
                 onClickCapture={(event) => {
@@ -573,7 +488,9 @@ function LegalHubPageBody() {
             >
             <aside className="lh-side" aria-label={t('legalHub.navAria')}>
                 <div className="lh-side__head">
-                    <AppBackButton iconOnly className="lh-side__back" />
+                    <span data-side-keep="">
+                        <AppBackButton className="lh-side__back" />
+                    </span>
                     <span className="lh-side__mark" aria-hidden>
                         <IconMark />
                     </span>
@@ -811,8 +728,7 @@ function LegalHubPageBody() {
                     </button>
                 </div>
             </aside>
-            </div>
-            </>,
+            </div>,
             document.body,
             )}
             <div className="lh-page__main">
@@ -820,9 +736,14 @@ function LegalHubPageBody() {
                     <button
                         type="button"
                         className="lh-top__menu"
-                        aria-label={menuOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                        aria-expanded={menuOpen}
-                        onClick={openMenu}
+                        aria-label={menuOpen || sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                        aria-expanded={menuOpen || sideOpen}
+                        onClick={() => {
+                            if (window.innerWidth <= 860)
+                                openMenu();
+                            else
+                                toggleSidePin();
+                        }}
                     >
                         <IconMenu />
                     </button>
