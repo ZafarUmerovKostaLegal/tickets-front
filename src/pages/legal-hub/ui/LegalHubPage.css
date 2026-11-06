@@ -7773,6 +7773,60 @@ body[data-theme='dark'] .lh-page {
   text-transform: uppercase;
 }
 
+.lh-project-clients {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.lh-project-client__head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.15rem 0.15rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-project-client__head svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  color: var(--app-muted);
+  transition: transform 0.15s ease;
+}
+
+.lh-project-client__head svg.is-open {
+  transform: rotate(90deg);
+}
+
+.lh-project-client__head span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lh-project-client__head em {
+  margin-left: auto;
+  color: var(--app-muted);
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.lh-project-client .lh-project-list {
+  margin-left: 1.15rem;
+}
+
 .lh-project-list {
   display: flex;
   flex-direction: column;

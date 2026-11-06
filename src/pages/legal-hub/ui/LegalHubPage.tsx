@@ -968,12 +968,13 @@ function LegalHubPageBody() {
                                                         <span className={folderSwatchClass(folder.color)} aria-hidden />
                                                         {folder.name.trim() || t('legalHub.projectFolderNew')}
                                                     </h2>
-                                                    <ProjectList
-                                                        projects={folderProjects}
-                                                        canOpen={canOpenProject}
-                                                        lockedLabel={t('legalHub.projectLocked')}
-                                                        onOpen={openMatter}
-                                                    />
+                                        <ProjectList
+                                            projects={folderProjects}
+                                            order={folder.clientOrder}
+                                            canOpen={canOpenProject}
+                                            lockedLabel={t('legalHub.projectLocked')}
+                                            onOpen={openMatter}
+                                        />
                                                 </section>
                                             )
                                         ))}
@@ -982,6 +983,7 @@ function LegalHubPageBody() {
                                         ) : null}
                                         <ProjectList
                                             projects={projectGroups.loose}
+                                            order={projectDisplay.sidebarOrder.flatMap((token) => token.type === 'client' ? [token.name] : [])}
                                             canOpen={canOpenProject}
                                             lockedLabel={t('legalHub.projectLocked')}
                                             onOpen={openMatter}
@@ -1235,15 +1237,6 @@ function projectTitle(project: { name: string; client: string }, locked: boolean
     return locked ? `${label}. ${lockedLabel}` : label;
 }
 
-function ProjectLabel({ project, list = false }: { project: { name: string; client: string }; list?: boolean }) {
-    return (
-        <span className={list ? 'lh-project-list__name' : 'lh-side__item-label lh-side__item-label--stack'}>
-            <span className={list ? 'lh-project-list__title' : 'lh-side__item-title'}>{project.name}</span>
-            {project.client ? <span className={list ? 'lh-project-list__client' : 'lh-side__item-client'}>{project.client}</span> : null}
-        </span>
-    );
-}
-
 function SideProject({
     project,
     selected,
@@ -1282,42 +1275,77 @@ function SideProject({
 
 function ProjectList({
     projects,
+    order = [],
     canOpen,
     lockedLabel,
     onOpen,
 }: {
     projects: { id: string; name: string; client: string }[];
+    order?: readonly string[];
     canOpen: (id: string) => boolean;
     lockedLabel: string;
     onOpen: (id: string) => void;
 }) {
-    if (projects.length === 0)
+    const { t } = useI18n();
+    const [folded, setFolded] = useState<Set<string>>(() => new Set());
+    const groups = orderClientNames(collectClients(projects), order);
+    if (groups.length === 0)
         return null;
     return (
-        <ul className="lh-project-list">
-            {projects.map((project) => {
-                const locked = !canOpen(project.id);
+        <div className="lh-project-clients">
+            {groups.map((group) => {
+                const key = clientGroupKey(group.client);
+                const open = !folded.has(key);
+                const label = group.client || t('legalHub.projectNoClient');
                 return (
-                    <li key={project.id}>
+                    <section key={key} className="lh-project-client">
                         <button
                             type="button"
-                            className={`lh-project-list__item${locked ? ' lh-project-list__item--locked' : ''}`}
-                            aria-disabled={locked || undefined}
-                            disabled={locked}
-                            title={projectTitle(project, locked, lockedLabel)}
-                            onClick={() => onOpen(project.id)}
+                            className="lh-project-client__head"
+                            aria-expanded={open}
+                            onClick={() => setFolded((current) => {
+                                const next = new Set(current);
+                                if (next.has(key))
+                                    next.delete(key);
+                                else
+                                    next.add(key);
+                                return next;
+                            })}
                         >
-                            <ProjectLabel project={project} list />
-                            {locked ? (
-                                <span className="lh-lock" aria-hidden>
-                                    <IconLock />
-                                </span>
-                            ) : null}
+                            <IconChevron open={open} />
+                            <span>{label}</span>
+                            <em>{group.projects.length}</em>
                         </button>
-                    </li>
+                        {open ? (
+                            <ul className="lh-project-list">
+                                {group.projects.map((project) => {
+                                    const locked = !canOpen(project.id);
+                                    return (
+                                        <li key={project.id}>
+                                            <button
+                                                type="button"
+                                                className={`lh-project-list__item${locked ? ' lh-project-list__item--locked' : ''}`}
+                                                aria-disabled={locked || undefined}
+                                                disabled={locked}
+                                                title={projectTitle(project, locked, lockedLabel)}
+                                                onClick={() => onOpen(project.id)}
+                                            >
+                                                <span className="lh-project-list__title">{project.name}</span>
+                                                {locked ? (
+                                                    <span className="lh-lock" aria-hidden>
+                                                        <IconLock />
+                                                    </span>
+                                                ) : null}
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : null}
+                    </section>
                 );
             })}
-        </ul>
+        </div>
     );
 }
 
