@@ -947,55 +947,55 @@ export function LegalHubMyTasks({
             <div className="lh-my lh-my--docket lh-my--list">
                 {toolbar}
                 <div key={view} className="lh-my__swap">
-                <div className={`lh-rows${project == null ? '' : ' lh-rows--one'}`}>
-                    {noMatch ?? (listed.length === 0 ? (
-                        <div className="lh-rows__empty">
-                            <strong>{emptyTitle}</strong>
-                            <p>{emptyText}</p>
-                        </div>
-                    ) : (
-                        <ul>
-                            {listed.map((task) => {
-                                const column = columnOf(task);
-                                const owner = taskOwnerLabel(task);
-                                const reviewer = task.reviewer && (TASK_PEOPLE as readonly string[]).includes(task.reviewer) ? PERSON_LABEL[task.reviewer] : null;
-                                const stream = task.workstream && task.workstream !== '—' ? task.workstream : '';
-                                const late = dayDelta(task.clientOn) < 0;
-                                const soon = !late && dayDelta(task.clientOn) <= 1;
-                                return (
-                                    <li key={task.id}>
-                                        <button type="button" className={`lh-rows__item${late ? ' is-late' : ''}`} onClick={() => setOpenId(task.id)}>
-                                            <span className="lh-rows__text">
-                                                <strong>
-                                                    {task.priority === 'high' ? <span className="lh-rows__flag" title={t('legalHub.myTasksUrgent')}><IconFlag /></span> : null}
-                                                    {task.title}
-                                                </strong>
-                                                <small className="lh-rows__meta">
-                                                    {project == null ? `${taskProjectName(task)} · ` : ''}
-                                                    {stream ? `${stream} · ` : ''}
-                                                    {owner.name}
-                                                    {reviewer ? ` → ${reviewer.name}` : ''}
-                                                </small>
-                                            </span>
-                                            <span className="lh-rows__project">
-                                                {project == null ? <b>{taskProjectName(task)}</b> : <b>{stream || '—'}</b>}
-                                                {project == null ? <small>{stream || '\u00a0'}</small> : null}
-                                            </span>
-                                            <span className="lh-rows__people">
-                                                <b>{owner.name}</b>
-                                                <small>{reviewer ? `→ ${reviewer.name}` : '\u00a0'}</small>
-                                            </span>
-                                            <span className={`lh-rows__stage lh-rows__stage--${column}`}>{customColumns.find((item) => item.id === column)?.title ?? (isBuiltin(column) ? t(COLUMN_LABEL[column]) : column)}</span>
-                                            <span className={`lh-my__duepill${late ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>
-                                                {shortDate(task.clientOn, locale)} · {dueText(dayDelta(task.clientOn), t)}
-                                            </span>
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    ))}
-                </div>
+                    <div className={`lh-rows${project == null ? '' : ' lh-rows--one'}`}>
+                        {noMatch ?? (listed.length === 0 ? (
+                            <div className="lh-rows__empty">
+                                <strong>{emptyTitle}</strong>
+                                <p>{emptyText}</p>
+                            </div>
+                        ) : (
+                            <ul>
+                                {listed.map((task) => {
+                                    const column = columnOf(task);
+                                    const owner = taskOwnerLabel(task);
+                                    const reviewer = task.reviewer && (TASK_PEOPLE as readonly string[]).includes(task.reviewer) ? PERSON_LABEL[task.reviewer] : null;
+                                    const stream = task.workstream && task.workstream !== '—' ? task.workstream : '';
+                                    const late = dayDelta(task.clientOn) < 0;
+                                    const soon = !late && dayDelta(task.clientOn) <= 1;
+                                    return (
+                                        <li key={task.id}>
+                                            <button type="button" className={`lh-rows__item${late ? ' is-late' : ''}`} onClick={() => setOpenId(task.id)}>
+                                                <span className="lh-rows__text">
+                                                    <strong>
+                                                        {task.priority === 'high' ? <span className="lh-rows__flag" title={t('legalHub.myTasksUrgent')}><IconFlag /></span> : null}
+                                                        {task.title}
+                                                    </strong>
+                                                    <small className="lh-rows__meta">
+                                                        {project == null ? `${taskProjectName(task)} · ` : ''}
+                                                        {stream ? `${stream} · ` : ''}
+                                                        {owner.name}
+                                                        {reviewer ? ` → ${reviewer.name}` : ''}
+                                                    </small>
+                                                </span>
+                                                <span className="lh-rows__project">
+                                                    {project == null ? <b>{taskProjectName(task)}</b> : <b>{stream || '—'}</b>}
+                                                    {project == null ? <small>{stream || '\u00a0'}</small> : null}
+                                                </span>
+                                                <span className="lh-rows__people">
+                                                    <b>{owner.name}</b>
+                                                    <small>{reviewer ? `→ ${reviewer.name}` : '\u00a0'}</small>
+                                                </span>
+                                                <span className={`lh-rows__stage lh-rows__stage--${column}`}>{customColumns.find((item) => item.id === column)?.title ?? (isBuiltin(column) ? t(COLUMN_LABEL[column]) : column)}</span>
+                                                <span className={`lh-my__duepill${late ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>
+                                                    {shortDate(task.clientOn, locale)} · {dueText(dayDelta(task.clientOn), t)}
+                                                </span>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ))}
+                    </div>
                 </div>
                 {drawer}
                 {dialog}
@@ -1007,43 +1007,43 @@ export function LegalHubMyTasks({
         <div className="lh-my lh-my--docket">
             {toolbar}
             <div key={view} className="lh-my__swap">
-            {noMatch ?? (
-                <div className="lh-my__board" ref={boardRef}>
-                    {shownColumns.map((column) => (
-                        <BoardColumnView
-                            key={column.id}
-                            id={column.id}
-                            title={column.label}
-                            hint={column.hint}
-                            review={column.review}
-                            cards={column.cards}
-                            showProject={project == null}
-                            collapsed={collapsed.includes(column.id) && dragging == null && columnDrag == null}
-                            onToggleCollapsed={() => toggleCollapsed(column.id)}
-                            droppable={column.droppable}
-                            dragging={dragging}
-                            reorderable={mode === 'mine'}
-                            columnDrag={columnDrag}
-                            columnOver={columnOver === column.id}
-                            onColumnDragStart={setColumnDrag}
-                            onColumnDragEnd={() => {
-                                setColumnDrag(null);
-                                setColumnOver(null);
-                            }}
-                            onColumnOver={setColumnOver}
-                            onColumnDrop={reorderColumns}
-                            onAdd={() => openComposer(column.id as BoardColumn)}
-                            canAdd={column.canAdd}
-                            onMove={(id) => moveTask(id, column.id)}
-                            onDragStart={setDragging}
-                            onDragEnd={() => setDragging(null)}
-                            onOpen={setOpenId}
-                            onRemove={column.custom ? () => removeColumn(column.id) : undefined}
-                        />
-                    ))}
-                    {mode === 'mine' ? <ColumnAdder onCreate={addColumn} /> : null}
-                </div>
-            )}
+                {noMatch ?? (
+                    <div className="lh-my__board" ref={boardRef}>
+                        {shownColumns.map((column) => (
+                            <BoardColumnView
+                                key={column.id}
+                                id={column.id}
+                                title={column.label}
+                                hint={column.hint}
+                                review={column.review}
+                                cards={column.cards}
+                                showProject={project == null}
+                                collapsed={collapsed.includes(column.id) && dragging == null && columnDrag == null}
+                                onToggleCollapsed={() => toggleCollapsed(column.id)}
+                                droppable={column.droppable}
+                                dragging={dragging}
+                                reorderable={mode === 'mine'}
+                                columnDrag={columnDrag}
+                                columnOver={columnOver === column.id}
+                                onColumnDragStart={setColumnDrag}
+                                onColumnDragEnd={() => {
+                                    setColumnDrag(null);
+                                    setColumnOver(null);
+                                }}
+                                onColumnOver={setColumnOver}
+                                onColumnDrop={reorderColumns}
+                                onAdd={() => openComposer(column.id as BoardColumn)}
+                                canAdd={column.canAdd}
+                                onMove={(id) => moveTask(id, column.id)}
+                                onDragStart={setDragging}
+                                onDragEnd={() => setDragging(null)}
+                                onOpen={setOpenId}
+                                onRemove={column.custom ? () => removeColumn(column.id) : undefined}
+                            />
+                        ))}
+                        {mode === 'mine' ? <ColumnAdder onCreate={addColumn} /> : null}
+                    </div>
+                )}
             </div>
             {drawer}
             {dialog}
