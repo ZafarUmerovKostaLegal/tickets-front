@@ -918,7 +918,15 @@ export function LegalHubMyTasks({
     );
 
     const drawer = openTask ? (
-        <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
+        <LegalHubTaskDrawer
+            key={openTask.id}
+            task={openTask}
+            owner={null}
+            onClose={() => setOpenId(null)}
+            onReviewed={(patch) => {
+                setTasks((current) => current.map((item) => item.id === openTask.id ? { ...item, ...patch } : item));
+            }}
+        />
     ) : null;
     const dialog = composer ? (
         <NewTaskDialog

@@ -9,19 +9,18 @@ import {
     deleteLegalHubFile,
     downloadLegalHubFile,
     fetchLegalHubTaskActivity,
+    patchLegalHubTask,
     uploadLegalHubFiles,
 } from './legalHubTaskApi';
 import {
     PERSON_LABEL,
     PROJECT_LABEL,
-    TASK_PEOPLE,
     TASK_PRIORITIES,
     taskDrawerDetail,
     type HubTask,
     type TaskCheck,
     type TaskComment,
     type TaskFile,
-    type TaskPersonId,
     type TaskPriorityId,
     type TaskStatusId,
 } from './legalHubTasks';
@@ -128,13 +127,14 @@ function IconSend() {
     );
 }
 
-export function LegalHubTaskDrawer({ task, owner, onClose }: {
+export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     task: HubTask;
     owner: { code: string; name: string } | null;
     onClose: () => void;
+    onReviewed?: (patch: { status?: TaskStatusId; boardColumn: string; reviewerId?: number; done?: boolean; approval?: boolean }) => void;
 }) {
     const { t, locale } = useI18n();
-    const { userId } = useLegalHubView();
+    const { userId, staff } = useLegalHubView();
     const formId = useId();
     const seed = taskDrawerDetail(task);
     const stored = task as HubTask & { instructions?: string; internalOn?: string };
@@ -159,14 +159,18 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const [history, setHistory] = useState(seed.history);
     const [commentDraft, setCommentDraft] = useState('');
     const [important, setImportant] = useState(seed.important || task.important === true);
-    const [reviewer, setReviewer] = useState<TaskPersonId | ''>(task.reviewer ?? '');
-    const [approved, setApproved] = useState(false);
+    const [reviewerId, setReviewerId] = useState<number | null>(task.reviewerId ?? null);
+    const [reviewError, setReviewError] = useState('');
+    const [approved, setApproved] = useState((task as { approval?: boolean }).approval === true);
     const ownerPerson = owner ?? (task.assigneeName?.trim()
         ? { name: task.assigneeName.trim(), code: task.assigneeCode?.trim() || task.assigneeName.trim().slice(0, 2).toUpperCase() }
         : PERSON_LABEL[task.owner]);
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
-    const people = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].code }));
+    const reviewers = staff
+        .filter((person) => person.rank === 0 || (person.rank >= 2 && person.rank <= 7))
+        .slice()
+        .sort((left, right) => left.rank - right.rank || left.name.localeCompare(right.name, locale));
     const clientLate = clientOn !== '' && dayDelta(clientOn) < 0;
     const dateLabel = (iso: string, late = false) => {
         if (!iso)
@@ -185,22 +189,60 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                 : status === 'changes'
                     ? 'legalHub.taskSendFixes'
                     : 'legalHub.taskSendReview';
+    const sendingReview = !approved && status !== 'partner';
+    const missingFile = sendingReview && files.length === 0;
+    const selectedReviewer = reviewers.find((item) => item.id === reviewerId);
+    const needsPartner = status === 'associate' && selectedReviewer?.rank !== 0;
+    const missingReviewer = sendingReview && (reviewerId == null || needsPartner);
     const notifyReviewer = () => {
         if (approved)
             return;
         if (status === 'partner') {
-            setApproved(true);
+            void patchLegalHubTask(task.id, { boardColumn: 'done', approval: true }).then((ok) => {
+                if (!ok) {
+                    setReviewError(t('legalHub.taskSaveError'));
+                    return;
+                }
+                setReviewError('');
+                setApproved(true);
+                onReviewed?.({ boardColumn: 'done', done: true, approval: true });
+            });
             return;
         }
-        if (status === 'associate') {
-            setStatus('partner');
+        if (missingFile || reviewerId == null)
+            return;
+        const person = selectedReviewer;
+        if (status === 'associate' && person?.rank !== 0) {
+            setReviewError(t('legalHub.taskReviewNeedsPartner'));
             return;
         }
-        if (status === 'changes') {
-            setStatus(reviewer === 'partner' ? 'partner' : 'associate');
-            return;
-        }
-        setStatus(reviewer === 'partner' ? 'partner' : 'associate');
+        const next: TaskStatusId = person?.rank === 0 ? 'partner' : 'associate';
+        void patchLegalHubTask(task.id, {
+            status: next,
+            boardColumn: next,
+            reviewerUserId: reviewerId,
+            notifyReview: true,
+        }).then((ok) => {
+            if (!ok) {
+                setReviewError(t('legalHub.taskSaveError'));
+                return;
+            }
+            setReviewError('');
+            setStatus(next);
+            onReviewed?.({ status: next, boardColumn: next, reviewerId });
+            void fetchLegalHubTaskActivity(task.id).then((activity) => {
+                if (activity)
+                    setHistory(activity.history);
+            });
+        });
+    };
+    const saveDate = (field: 'internalOn' | 'reviewOn' | 'dueOn', value: string) => {
+        if (field === 'internalOn')
+            void patchLegalHubTask(task.id, value ? { internalOn: value, notifyDates: true } : { clearInternalOn: true, notifyDates: true });
+        else if (field === 'reviewOn')
+            void patchLegalHubTask(task.id, value ? { reviewOn: value, notifyDates: true } : { clearReviewOn: true, notifyDates: true });
+        else
+            void patchLegalHubTask(task.id, value ? { dueOn: value, notifyDates: true } : { clearDueOn: true, notifyDates: true });
     };
     const withdraw = () => {
         setApproved(false);
@@ -390,23 +432,27 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                         placeholder={`+ ${t('legalHub.taskAssign')}`}
                                         emptyListText={t('legalHub.taskFilterAll')}
                                         noMatchText={t('legalHub.teamNoMatch')}
-                                        value={reviewer}
-                                        items={people}
-                                        getOptionValue={(item) => item.id}
-                                        getOptionLabel={(item) => item.label}
-                                        getSearchText={(item) => `${item.label} ${PERSON_LABEL[item.id].name}`}
-                                        onSelect={(item) => setReviewer(item.id)}
+                                        value={reviewerId == null ? '' : String(reviewerId)}
+                                        items={reviewers}
+                                        getOptionValue={(item) => String(item.id)}
+                                        getOptionLabel={(item) => `${item.name} · ${item.position}`}
+                                        getSearchText={(item) => `${item.name} ${item.position} ${item.code}`}
+                                        onSelect={(item) => {
+                                            setReviewerId(item.id);
+                                            setReviewError('');
+                                            void patchLegalHubTask(task.id, { reviewerUserId: item.id });
+                                        }}
                                         renderButtonContent={(item) => (
                                             <span className="lh-drawer__person">
-                                                <span className={`lh-tasks__avatar lh-tasks__avatar--${item.id}`} aria-hidden>{item.label}</span>
-                                                {item.label}
+                                                <span className="lh-tasks__avatar" aria-hidden>{item.code}</span>
+                                                {item.name}
                                             </span>
                                         )}
                                     />
                                 </div>
-                                <DateField id={`${formId}-internal`} label={t('legalHub.taskFieldInternal')} value={internalOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(internalOn)} onChange={setInternalOn} />
-                                <DateField id={`${formId}-review`} label={t('legalHub.taskFieldReview')} value={reviewOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(reviewOn)} onChange={setReviewOn} />
-                                <DateField id={`${formId}-client`} label={t('legalHub.taskFieldClient')} value={clientOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(clientOn, clientLate)} late={clientLate} onChange={setClientOn} />
+                                <DateField id={`${formId}-internal`} label={t('legalHub.taskFieldInternal')} value={internalOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(internalOn)} onChange={(value) => { setInternalOn(value); saveDate('internalOn', value); }} />
+                                <DateField id={`${formId}-review`} label={t('legalHub.taskFieldReview')} value={reviewOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(reviewOn)} onChange={(value) => { setReviewOn(value); saveDate('reviewOn', value); }} />
+                                <DateField id={`${formId}-client`} label={t('legalHub.taskFieldClient')} value={clientOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(clientOn, clientLate)} late={clientLate} onChange={(value) => { setClientOn(value); saveDate('dueOn', value); }} />
                                 <div className="lh-drawer__row">
                                     <span>{t('legalHub.taskColPriority')}</span>
                                     <SearchableSelect
@@ -709,12 +755,15 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                     <button
                         type="button"
                         className={`lh-drawer__send${approved ? ' is-done' : ''}`}
-                        disabled={approved}
+                        disabled={approved || missingFile || missingReviewer}
                         onClick={notifyReviewer}
                     >
                         {approved ? <IconCheck /> : <IconBell />}
                         <span>{t(primaryLabel)}</span>
                     </button>
+                    {missingFile ? <p className="lh-drawer__note">{t('legalHub.taskReviewNeedsFile')}</p> : null}
+                    {!missingFile && missingReviewer ? <p className="lh-drawer__note">{t(needsPartner ? 'legalHub.taskReviewNeedsPartner' : 'legalHub.taskReviewNeedsPerson')}</p> : null}
+                    {reviewError ? <p className="lh-drawer__note">{reviewError}</p> : null}
                     <div className="lh-drawer__foot-row">
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
                         {inReview ? <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button> : null}

@@ -298,6 +298,9 @@ export const ruMessages: Messages = {
         taskFileToday: 'Сегодня',
         taskSaveError: 'Не удалось сохранить задачу',
         taskFileError: 'Не удалось загрузить файл',
+        taskReviewNeedsFile: 'Добавьте файл, чтобы отправить на проверку',
+        taskReviewNeedsPerson: 'Назначьте партнёра или ассоциата',
+        taskReviewNeedsPartner: 'Для передачи выберите партнёра',
         taskHistCreated: 'Задача создана',
         taskHistStarted: 'Работа начата',
         taskHistReview: 'Отправлено на проверку',
@@ -1424,6 +1427,9 @@ export type Messages = {
         taskFileToday: string;
         taskSaveError: string;
         taskFileError: string;
+        taskReviewNeedsFile: string;
+        taskReviewNeedsPerson: string;
+        taskReviewNeedsPartner: string;
         taskHistCreated: string;
         taskHistStarted: string;
         taskHistReview: string;

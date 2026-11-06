@@ -7,6 +7,7 @@ type ApiTask = {
     title?: unknown;
     status?: unknown;
     assigneeUserId?: unknown;
+    reviewerUserId?: unknown;
     assigneeName?: unknown;
     assigneeCode?: unknown;
     projectId?: unknown;
@@ -14,6 +15,7 @@ type ApiTask = {
     priority?: unknown;
     dueOn?: unknown;
     internalOn?: unknown;
+    reviewOn?: unknown;
     instructions?: unknown;
     approval?: unknown;
     boardColumn?: unknown;
@@ -61,9 +63,10 @@ export function mineTaskFromApi(row: ApiTask): MineTask | null {
         assigneeName: text(row.assigneeName),
         assigneeCode: text(row.assigneeCode),
         reviewer: row.approval === true ? 'partner' : null,
+        reviewerId: typeof row.reviewerUserId === 'number' ? row.reviewerUserId : undefined,
         status: (STATUSES.has(status) ? status : 'todo') as TaskStatusId,
         priority: (PRIORITIES.has(priority) ? priority : 'normal') as TaskPriorityId,
-        reviewOn: null,
+        reviewOn: text(row.reviewOn) || null,
         clientOn: text(row.dueOn),
         minutes: 0,
         done: boardColumn === 'done',
@@ -210,6 +213,33 @@ export async function fetchLegalHubTaskActivity(taskId: string): Promise<LegalHu
     }
     catch {
         return null;
+    }
+}
+
+export async function patchLegalHubTask(taskId: string, patch: {
+    status?: string;
+    boardColumn?: string;
+    reviewerUserId?: number | null;
+    dueOn?: string | null;
+    internalOn?: string | null;
+    reviewOn?: string | null;
+    clearDueOn?: boolean;
+    clearInternalOn?: boolean;
+    clearReviewOn?: boolean;
+    notifyDates?: boolean;
+    notifyReview?: boolean;
+    approval?: boolean;
+}): Promise<boolean> {
+    try {
+        const response = await apiFetch(`/api/v1/legal-hub/tasks/${encodeURIComponent(taskId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+        });
+        return response.ok;
+    }
+    catch {
+        return false;
     }
 }
 

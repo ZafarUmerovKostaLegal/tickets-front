@@ -17,6 +17,8 @@ export type HubTask = {
     workstream: string;
     owner: TaskPersonId;
     reviewer: TaskPersonId | null;
+    /** Real reviewer from the staff list. */
+    reviewerId?: number;
     status: TaskStatusId;
     priority: TaskPriorityId;
     reviewOn: string | null;
