@@ -14,6 +14,7 @@ import { LegalHubChromeProvider } from './legalHubChrome';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import { folderSwatchClass, LegalHubProjectSettings } from './LegalHubProjectSettings';
 import { fetchLegalHubBoard, saveLegalHubFolders } from './legalHubBoardApi';
+import { listLegalHubTasks } from './legalHubTaskApi';
 import {
     buildSidebarEntries,
     clientGroupKey,
@@ -211,6 +212,16 @@ function LegalHubPageBody() {
     const openProjectId = openProject?.id ?? null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [hubTasks, setHubTasks] = useState<MineTask[]>([]);
+    useEffect(() => {
+        let cancelled = false;
+        void listLegalHubTasks().then((items) => {
+            if (!cancelled && items)
+                setHubTasks(items);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
     const [projectDisplay, setProjectDisplay] = useState<ProjectDisplaySettings>(EMPTY_PROJECT_DISPLAY);
     const [displayOpen, setDisplayOpen] = useState(false);
     const displayPhase = useRef<'boot' | 'ready'>('boot');

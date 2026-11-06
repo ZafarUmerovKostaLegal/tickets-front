@@ -8,6 +8,7 @@ import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
 import { canAssignLegalHubTask } from './legalHubRank';
 import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
+import { createLegalHubTask } from './legalHubTaskApi';
 import { useLegalHubView } from './legalHubView';
 import {
     HUB_TASKS,
@@ -1428,6 +1429,7 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
     const [approval, setApproval] = useState(false);
     const [instructions, setInstructions] = useState('');
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
     const priorities = (['normal', 'high', 'low'] as const).map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
     useEffect(() => {
         if (projectId && openProjects.some((project) => project.id === projectId))
@@ -1460,7 +1462,7 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [onClose]);
 
-    const submit = () => {
+    const submit = async () => {
         const project = openProjects.find((item) => item.id === projectId) ?? null;
         const owner = assignees.find((person) => person.id === ownerId) ?? (showOwner ? null : me);
         if (!title.trim()) {
@@ -1479,30 +1481,29 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
             setError(t('legalHub.myTasksDateRequired'));
             return;
         }
-        onCreate({
-            id: `new-${Date.now()}`,
-            project: 'solar',
-            projectId: project.id,
-            projectName: project.name,
+        const columnId = column && isBuiltin(column) ? column : 'todo';
+        setSaving(true);
+        const created = await createLegalHubTask({
             title: title.trim(),
-            workstream: '—',
-            owner: 'ja1',
-            assigneeId: owner.id,
+            projectId: project.id,
+            projectLabel: project.client ? `${project.name} · ${project.client}` : project.name,
+            assigneeUserId: owner.id,
             assigneeName: owner.name,
             assigneeCode: owner.code,
-            reviewer: approval ? 'partner' : null,
             status: column && isBuiltin(column) ? statusOf(column) : 'todo',
             priority,
-            reviewOn: null,
-            clientOn,
-            minutes: 0,
-            done: false,
-            hours: 0,
+            dueOn: clientOn,
             internalOn,
             instructions: instructions.trim(),
             approval,
-            boardColumn: column && !isBuiltin(column) ? column : undefined,
+            boardColumn: column && !isBuiltin(column) ? column : columnId,
         });
+        setSaving(false);
+        if (created == null) {
+            setError(t('legalHub.taskSaveError'));
+            return;
+        }
+        onCreate(created);
     };
 
     return createPortal(
@@ -1607,7 +1608,7 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
                 {error ? <p className="lh-my__error">{error}</p> : null}
                 <footer>
                     <button type="button" onClick={onClose}>{t('legalHub.myTasksCancel')}</button>
-                    <button type="submit">{t('legalHub.myTasksCreate')}</button>
+                    <button type="submit" disabled={saving}>{t('legalHub.myTasksCreate')}</button>
                 </footer>
             </form>
         </div>,

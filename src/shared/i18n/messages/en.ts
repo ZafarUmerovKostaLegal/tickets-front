@@ -296,6 +296,8 @@ export const enMessages = {
         taskCommentsEmpty: 'Write to the team. People on this task will see the message.',
         taskYou: 'You',
         taskFileToday: 'Today',
+        taskSaveError: 'Could not save the task',
+        taskFileError: 'Could not upload the file',
         taskHistCreated: 'Task created',
         taskHistStarted: 'Started work',
         taskHistReview: 'Sent to review',

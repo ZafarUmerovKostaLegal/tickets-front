@@ -296,6 +296,8 @@ export const ruMessages: Messages = {
         taskCommentsEmpty: 'Напишите команде — сообщение увидят участники задачи.',
         taskYou: 'Вы',
         taskFileToday: 'Сегодня',
+        taskSaveError: 'Не удалось сохранить задачу',
+        taskFileError: 'Не удалось загрузить файл',
         taskHistCreated: 'Задача создана',
         taskHistStarted: 'Работа начата',
         taskHistReview: 'Отправлено на проверку',
@@ -1420,6 +1422,8 @@ export type Messages = {
         taskCommentsEmpty: string;
         taskYou: string;
         taskFileToday: string;
+        taskSaveError: string;
+        taskFileError: string;
         taskHistCreated: string;
         taskHistStarted: string;
         taskHistReview: string;

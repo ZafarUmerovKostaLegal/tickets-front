@@ -3,6 +3,14 @@ import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
+import { useLegalHubView } from './legalHubView';
+import {
+    addLegalHubComment,
+    deleteLegalHubFile,
+    downloadLegalHubFile,
+    fetchLegalHubTaskActivity,
+    uploadLegalHubFiles,
+} from './legalHubTaskApi';
 import {
     PERSON_LABEL,
     PROJECT_LABEL,
@@ -126,16 +134,18 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     onClose: () => void;
 }) {
     const { t, locale } = useI18n();
+    const { userId } = useLegalHubView();
     const formId = useId();
     const seed = taskDrawerDetail(task);
+    const stored = task as HubTask & { instructions?: string; internalOn?: string };
     const [tab, setTab] = useState<TabId>('details');
     const [status, setStatus] = useState<TaskStatusId>(task.status);
     const [priority, setPriority] = useState<TaskPriorityId>(task.priority);
     const [minutes, setMinutes] = useState(String(task.minutes));
-    const [internalOn, setInternalOn] = useState(seed.internalOn ?? '');
+    const [internalOn, setInternalOn] = useState(stored.internalOn || seed.internalOn || '');
     const [reviewOn, setReviewOn] = useState(task.reviewOn ?? '');
     const [clientOn, setClientOn] = useState(task.clientOn);
-    const [instructions, setInstructions] = useState(seed.instructions);
+    const [instructions, setInstructions] = useState(stored.instructions || seed.instructions);
     const [checks, setChecks] = useState<TaskCheck[]>(seed.checks);
     const [checkDraft, setCheckDraft] = useState('');
     const [panel, setPanel] = useState<{ id: string; kind: 'notes' | 'files' } | null>(null);
@@ -146,6 +156,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [files, setFiles] = useState<TaskFile[]>(seed.files);
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
+    const [history, setHistory] = useState(seed.history);
     const [commentDraft, setCommentDraft] = useState('');
     const [important, setImportant] = useState(seed.important || task.important === true);
     const [reviewer, setReviewer] = useState<TaskPersonId | ''>(task.reviewer ?? '');
@@ -200,6 +211,20 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const priorities = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
 
     useEffect(() => {
+        let cancelled = false;
+        void fetchLegalHubTaskActivity(task.id).then((activity) => {
+            if (cancelled || activity == null)
+                return;
+            setFiles(activity.files);
+            setComments(activity.comments.map((comment) => ({ ...comment, mine: comment.authorUserId === userId })));
+            setHistory(activity.history);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [task.id, userId]);
+
+    useEffect(() => {
         if (tab !== 'comments')
             return;
         const node = threadRef.current;
@@ -226,31 +251,18 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
         setChecks((current) => [...current, { id: `${task.id}-extra-${current.length}`, label, done: false, notes: [], files: [] }]);
         setCheckDraft('');
     };
-    const rememberFiles = (picked: File[]) => picked.map((file, index) => ({
-        id: `${task.id}-file-${Date.now()}-${index}`,
-        name: file.name,
-        kind: file.name.toLowerCase().endsWith('.pdf') ? 'pdf' as const : 'docx' as const,
-        size: file.size < 1024 * 1024
-            ? `${Math.max(1, Math.round(file.size / 1024))} KB`
-            : `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        when: t('legalHub.taskFileToday'),
-    }));
     const addComment = () => {
         const text = commentDraft.trim();
         if (!text)
             return;
-        const now = new Date();
-        const pad = (value: number) => String(value).padStart(2, '0');
-        setComments((current) => [...current, {
-            id: `${task.id}-comment-${Date.now()}`,
-            author: t('legalHub.taskYou'),
-            text,
-            when: t('legalHub.taskFileToday'),
-            time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
-            mine: true,
-        }]);
         setCommentDraft('');
-        setTab('comments');
+        void addLegalHubComment(task.id, text).then((activity) => {
+            if (activity == null)
+                return;
+            setComments(activity.comments.map((comment) => ({ ...comment, mine: comment.authorUserId === userId })));
+            setHistory(activity.history);
+            setTab('comments');
+        });
     };
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
@@ -272,13 +284,25 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                         <li key={file.id}>
                             <span className={`lh-drawer__file-mark lh-drawer__file-mark--${file.kind}`}>{file.kind === 'pdf' ? 'PDF' : 'DOC'}</span>
                             <span className="lh-drawer__file-body">
+                            <button
+                                type="button"
+                                className="lh-drawer__file-open"
+                                onClick={() => void downloadLegalHubFile(task.id, file.id, file.name)}
+                            >
                                 <strong>{file.name}</strong>
+                            </button>
                                 <small>{file.size} · {file.when}</small>
                             </span>
                             <button
                                 type="button"
                                 aria-label={t('legalHub.taskCheckClearFile')}
-                                onClick={() => setFiles((current) => current.filter((row) => row.id !== file.id))}
+                                onClick={() => {
+                                    void deleteLegalHubFile(task.id, file.id).then((ok) => {
+                                        if (!ok)
+                                            return;
+                                        setFiles((current) => current.filter((row) => row.id !== file.id));
+                                    });
+                                }}
                             >
                                 ×
                             </button>
@@ -569,21 +593,25 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                         event.target.value = '';
                                         if (picked.length === 0)
                                             return;
-                                        if (mode === 'task') {
-                                            setFiles((current) => [...current, ...rememberFiles(picked)]);
-                                            return;
-                                        }
-                                        if (!targetId)
-                                            return;
-                                        setChecks((current) => current.map((row) => {
-                                            if (row.id !== targetId)
-                                                return row;
-                                            const next = picked.map((file, index) => ({
-                                                id: `${targetId}-f-${Date.now()}-${index}`,
-                                                name: file.name,
+                                        void uploadLegalHubFiles(task.id, picked).then((activity) => {
+                                            if (activity == null)
+                                                return;
+                                            setFiles(activity.files);
+                                            setHistory(activity.history);
+                                        });
+                                        if (mode !== 'task') {
+                                            if (!targetId)
+                                                return;
+                                            setChecks((current) => current.map((row) => {
+                                                if (row.id !== targetId)
+                                                    return row;
+                                                const next = picked.map((file, index) => ({
+                                                    id: `${targetId}-f-${Date.now()}-${index}`,
+                                                    name: file.name,
+                                                }));
+                                                return { ...row, files: [...(row.files ?? []), ...next] };
                                             }));
-                                            return { ...row, files: [...(row.files ?? []), ...next] };
-                                        }));
+                                        }
                                     }}
                                 />
                                 <form
@@ -665,12 +693,12 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                     ) : null}
                     {tab === 'history' ? (
                         <ul className="lh-drawer__history">
-                            {seed.history.map((event, index) => (
+                            {history.map((event, index) => (
                                 <li key={event.id} style={{ ['--lh-delay' as string]: `${index * 70}ms` }}>
                                     <span className={`lh-drawer__history-dot lh-drawer__history-dot--${event.kind}`} aria-hidden />
                                     <div>
                                         <strong>{t(HISTORY_LABEL[event.kind])}</strong>
-                                        <span>{ownerName} · {event.when} · {event.time}</span>
+                                        <span>{[event.actor || ownerName, event.text, event.when, event.time].filter(Boolean).join(' · ')}</span>
                                     </div>
                                 </li>
                             ))}

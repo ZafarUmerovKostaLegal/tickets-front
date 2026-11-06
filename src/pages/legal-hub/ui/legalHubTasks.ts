@@ -87,9 +87,9 @@ export type TaskCheckNote = { id: string; text: string };
 export type TaskCheckFile = { id: string; name: string };
 export type TaskCheck = { id: string; label: string; done: boolean; notes?: TaskCheckNote[]; files?: TaskCheckFile[] };
 export type TaskFile = { id: string; name: string; kind: 'pdf' | 'docx'; size: string; when: string };
-export type TaskComment = { id: string; author: string; text: string; when: string; time: string; mine?: boolean };
+export type TaskComment = { id: string; author: string; authorUserId?: number; text: string; when: string; time: string; mine?: boolean };
 export type TaskHistoryKind = 'created' | 'started' | 'review' | 'file' | 'comment';
-export type TaskHistory = { id: string; kind: TaskHistoryKind; when: string; time: string };
+export type TaskHistory = { id: string; kind: TaskHistoryKind; when: string; time: string; actor?: string; text?: string };
 
 export type TaskDetail = {
     internalOn: string | null;
