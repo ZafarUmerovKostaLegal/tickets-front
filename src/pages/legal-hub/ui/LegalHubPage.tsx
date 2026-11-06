@@ -342,8 +342,7 @@ function LegalHubPageBody() {
                 : current.archivedClients.filter((item) => item.trim().toLowerCase() !== key),
         }));
         setClientMenu(null);
-        dismissSide();
-    }, [dismissSide]);
+    }, []);
     useEffect(() => {
         if (clientMenu == null)
             return undefined;
@@ -929,7 +928,10 @@ function LegalHubPageBody() {
                     <button
                         type="button"
                         role="menuitem"
-                        onClick={() => setClientArchived(clientMenu.name, !clientMenu.archived)}
+                        onClick={() => {
+                            setClientArchived(clientMenu.name, !clientMenu.archived);
+                            dismissSide();
+                        }}
                     >
                         {clientMenu.archived ? t('legalHub.unarchive') : t('legalHub.archive')}
                     </button>
