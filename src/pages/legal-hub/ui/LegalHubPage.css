@@ -6700,12 +6700,17 @@ body[data-theme='dark'] .lh-page {
   align-self: flex-start;
 }
 
+.lh-my--docket .lh-my__board {
+  container-type: inline-size;
+}
+
 .lh-my--docket .lh-my__col {
+  --lh-col-w: calc((100cqi - 5 * 0.7rem - 8px) / 6);
   gap: 0;
-  width: 360px;
-  min-width: 360px;
-  max-width: 360px;
-  flex-basis: 360px;
+  width: var(--lh-col-w);
+  min-width: var(--lh-col-w);
+  max-width: var(--lh-col-w);
+  flex-basis: var(--lh-col-w);
   padding: 0;
   border: 1px solid var(--app-border);
   border-radius: 6px;
@@ -8779,12 +8784,13 @@ body[data-theme='dark'] .lh-page {
   text-decoration: underline;
 }
 
-/* Columns: narrower, add-card right under the last card, foldable */
+/* Columns: six expanded columns fit the board, the rest scroll */
 .lh-my--docket .lh-my__col {
-  width: 360px;
-  min-width: 360px;
-  max-width: 360px;
-  flex-basis: 360px;
+  --lh-col-w: calc((100cqi - 5 * 0.7rem - 8px) / 6);
+  width: var(--lh-col-w);
+  min-width: var(--lh-col-w);
+  max-width: var(--lh-col-w);
+  flex-basis: var(--lh-col-w);
 }
 
 .lh-my--docket .lh-my__col > ul {
