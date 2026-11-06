@@ -574,7 +574,7 @@ function LegalHubPageBody() {
             <aside className="lh-side" aria-label={t('legalHub.navAria')}>
                 <div className="lh-side__head">
                     <span data-side-keep="">
-                        <AppBackButton className="lh-side__back" />
+                        <AppBackButton iconOnly className="lh-side__back" />
                     </span>
                     <span className="lh-side__mark" aria-hidden>
                         <IconMark />

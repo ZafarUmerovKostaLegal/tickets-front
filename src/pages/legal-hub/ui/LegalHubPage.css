@@ -2,6 +2,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
+  container-type: inline-size;
   background: var(--app-bg);
   color: var(--app-text);
   font-family: var(--app-font-family);
@@ -41,19 +42,11 @@
 }
 
 .lh-side__back.app-back-btn {
-  height: 2rem;
-  padding: 0 0.6rem 0 0.4rem;
-  border-radius: 8px;
-}
-
-.lh-side-dock.is-collapsed .lh-side__back .app-back-btn__label {
-  display: none;
-}
-
-.lh-side-dock.is-collapsed .lh-side__back.app-back-btn {
   width: 2rem;
   min-width: 2rem;
+  height: 2rem;
   padding: 0;
+  border-radius: 8px;
 }
 
 .lh-side__mark {
@@ -6731,12 +6724,8 @@ body[data-theme='dark'] .lh-page {
   align-self: flex-start;
 }
 
-.lh-my--docket .lh-my__board {
-  container-type: inline-size;
-}
-
 .lh-my--docket .lh-my__col {
-  --lh-col-w: calc((100cqi - 5 * 0.7rem - 8px) / 6);
+  --lh-col-w: calc((100cqi - 2rem - 5 * 0.7rem - 20px) / 6);
   gap: 0;
   width: var(--lh-col-w);
   min-width: var(--lh-col-w);
@@ -8817,7 +8806,7 @@ body[data-theme='dark'] .lh-page {
 
 /* Columns: six expanded columns fit the board, the rest scroll */
 .lh-my--docket .lh-my__col {
-  --lh-col-w: calc((100cqi - 5 * 0.7rem - 8px) / 6);
+  --lh-col-w: calc((100cqi - 2rem - 5 * 0.7rem - 20px) / 6);
   width: var(--lh-col-w);
   min-width: var(--lh-col-w);
   max-width: var(--lh-col-w);
