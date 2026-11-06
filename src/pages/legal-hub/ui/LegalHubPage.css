@@ -550,6 +550,10 @@
     box-shadow: 8px 0 24px rgba(15, 23, 42, 0.08);
   }
 
+  .lh-side-dock:not(.is-open) .lh-side {
+    transform: translateX(-105%);
+  }
+
   .lh-side-dock.is-collapsed .lh-side {
     width: 76px;
   }

@@ -33,7 +33,6 @@ export type MineTask = HubTask & {
     internalOn: string;
     instructions: string;
     approval: boolean;
-    /** Custom board column. Built-in columns leave this empty. */
     boardColumn?: string;
 };
 

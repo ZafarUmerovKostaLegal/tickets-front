@@ -391,6 +391,18 @@ function LegalHubPageBody() {
         sideDismissed.current = true;
         setSidePeek(false);
         setMenuOpen(false);
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && active.closest('.lh-side-dock'))
+            active.blur();
+    }, []);
+    useEffect(() => {
+        const onMove = (event: PointerEvent) => {
+            if (!sideDismissed.current || event.clientX <= 24)
+                return;
+            sideDismissed.current = false;
+        };
+        window.addEventListener('pointermove', onMove);
+        return () => window.removeEventListener('pointermove', onMove);
     }, []);
     const closeMenu = useCallback(() => setMenuOpen(false), []);
     const openMenu = useCallback(() => {
@@ -477,8 +489,16 @@ function LegalHubPageBody() {
                         setSidePeek(true);
                 }}
                 onMouseLeave={() => {
-                    sideDismissed.current = false;
                     setSidePeek(false);
+                }}
+                onClickCapture={(event) => {
+                    const target = event.target;
+                    if (!(target instanceof Element))
+                        return;
+                    if (target.closest('input, textarea'))
+                        return;
+                    if (target.closest('button, a'))
+                        dismissSide();
                 }}
             >
             <aside className="lh-side" aria-label={t('legalHub.navAria')}>
