@@ -1,7 +1,25 @@
 .fm {
   display: flex;
-  min-height: 100%;
-  background: #f7f8fb;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: var(--app-bg, #f7f8fb);
+}
+
+.fm__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.fm__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fm-side {
@@ -9,10 +27,11 @@
   flex-direction: column;
   width: 272px;
   flex-shrink: 0;
-  min-height: 100vh;
+  min-height: 0;
+  overflow: auto;
   padding: 0.85rem 0.75rem 0.7rem;
-  border-right: 1px solid #e6e8ee;
-  background: #fff;
+  border-right: 1px solid var(--app-border, #e6e8ee);
+  background: var(--app-surface, #fff);
 }
 
 .fm-side__create {
@@ -34,7 +53,7 @@
 
 .fm-side > p {
   margin: 0.85rem 0.55rem 0.35rem;
-  color: #9aa3b2;
+  color: var(--app-meta, #9aa3b2);
   font-size: 0.68rem;
   font-weight: 750;
   letter-spacing: 0.06em;
@@ -56,7 +75,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #3d4654;
+  color: var(--app-text, #3d4654);
   font: inherit;
   font-size: 0.9rem;
   text-align: left;
@@ -67,7 +86,7 @@
   width: 1.05rem;
   height: 1.05rem;
   flex-shrink: 0;
-  color: #8b95a5;
+  color: var(--app-muted, #8b95a5);
 }
 
 .fm-side nav button span {
@@ -93,12 +112,12 @@
 }
 
 .fm-side nav button:hover {
-  background: #f4f6f8;
+  background: var(--app-bg-soft, #f4f6f8);
 }
 
 .fm-side nav button.is-on {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--app-bg-soft, #f3f4f6);
+  color: var(--app-text, #1f2937);
   font-weight: 650;
 }
 
@@ -115,12 +134,12 @@
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  color: #6b7280;
+  color: var(--app-muted, #6b7280);
   font-size: 0.75rem;
 }
 
 .fm-side__storage strong {
-  color: #374151;
+  color: var(--app-text, #374151);
   font-weight: 650;
 }
 
@@ -149,18 +168,21 @@
 .fm__main {
   flex: 1;
   min-width: 0;
+  background: var(--app-bg, #f7f8fb);
 }
 
-.fm__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1.25rem;
-}
+@media (max-width: 768px) {
+  .fm__header {
+    height: auto;
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+  }
 
-.fm__head-start {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  .fm__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .fm-side {
+    width: 240px;
+  }
 }

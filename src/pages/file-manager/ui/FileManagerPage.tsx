@@ -104,6 +104,17 @@ export function FileManagerPage() {
 
     return (
         <div className="fm">
+            <header className="fm__header">
+                <div className="fm__header-inner">
+                    <div className="fm__header-start">
+                        <AppBackButton className="app-back-btn" />
+                        <AppHomeLogo withSeparator />
+                        <h1 className="fm__title">{t('nav.fileManager')}</h1>
+                    </div>
+                    <AppPageSettings />
+                </div>
+            </header>
+            <div className="fm__body">
             <aside className="fm-side">
                 <button type="button" className="fm-side__create">+ {t('fileManager.createUpload')}</button>
                 <p>{t('fileManager.files')}</p>
@@ -123,14 +134,7 @@ export function FileManagerPage() {
                     <small>{t('fileManager.storageWarn')}</small>
                 </div>
             </aside>
-            <div className="fm__main">
-                <header className="fm__head">
-                    <div className="fm__head-start">
-                        <AppBackButton />
-                        <AppHomeLogo withSeparator />
-                    </div>
-                    <AppPageSettings />
-                </header>
+            <div className="fm__main" />
             </div>
         </div>
     );
