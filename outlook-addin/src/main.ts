@@ -16,6 +16,8 @@ import {
 
 type Tab = 'file' | 'rules' | 'settings';
 
+const ASSET_BASE = import.meta.env.BASE_URL || '/';
+
 const app = document.getElementById('app');
 if (!app)
   throw new Error('#app missing');
@@ -197,7 +199,7 @@ function renderFile(): string {
 function render(): void {
   app!.innerHTML = `
     <header class="brand">
-      <div class="brand-mark" aria-hidden="true">KF</div>
+      <img class="brand-logo" src="${ASSET_BASE}assets/logo.svg" width="28" height="40" alt="Kosta Legal" />
       <div class="brand-copy">
         <h1>Kosta File</h1>
         <p class="sub">Сессия Hub · New Outlook</p>

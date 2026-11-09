@@ -55,19 +55,12 @@ body {
   margin-bottom: 14px;
 }
 
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  color: #fff;
-  background: linear-gradient(145deg, #4aa3ff, #0f6cbd 55%, #2b5cff);
-  box-shadow: 0 6px 16px rgba(15, 108, 189, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+.brand-logo {
+  width: 28px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 10px rgba(230, 40, 44, 0.28));
 }
 
 .brand-copy h1 {
