@@ -338,6 +338,7 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                                 <span className={matter.closed ? 'fm-matter-card__status is-closed' : 'fm-matter-card__status'}>
                                     {matter.closed ? tr('common.closed') : tr('directory.open')}
                                 </span>
+                                <span aria-hidden>·</span>
                                 <LevelBadge level={matter.level} />
                                 <span className="fm-matter-card__docs">
                                     {matter.documents
