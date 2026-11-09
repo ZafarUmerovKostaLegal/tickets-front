@@ -97,6 +97,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         viewList: 'List',
         viewTiles: 'Tiles',
         matterType: 'Matter',
+        docsCount: '{count} docs',
+        noDocs: 'No documents',
     },
     tree: {
         filter: 'Filter clients and matters…',

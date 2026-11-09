@@ -296,22 +296,56 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                     <small>{tr('tree.emptyHint')}</small>
                 </div>
             ) : layout === 'tiles' ? (
-                <div className="fm-ex__tiles fm-ex__tiles--page">
+                <div className="fm-matter-grid">
                     {rows.map((matter) => (
-                        <button key={matter.id} type="button"
-                            className={matter.closed ? 'fm-ex__tile is-closed' : 'fm-ex__tile'}
+                        <article
+                            key={matter.id}
+                            className={matter.closed ? 'fm-matter-card is-closed' : 'fm-matter-card'}
+                            tabIndex={0}
+                            role="button"
                             onClick={() => onOpenMatter(matter.id)}
-                            onDoubleClick={() => onOpenMatter(matter.id)}>
-                            <span className="fm-ex__tile-ico" aria-hidden>
-                                <Icon name={matter.closed || matter.level === 'read' ? 'lock' : 'briefcase'} />
-                            </span>
-                            <span className="fm-ex__tile-meta">
-                                <strong title={matter.name}>{matter.name}</strong>
-                                <small title={!clientId ? matter.clientName : (matter.code || undefined)}>
-                                    {!clientId ? matter.clientName : (matter.code || tr('directory.matterType'))}
-                                </small>
-                            </span>
-                        </button>
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    onOpenMatter(matter.id);
+                                }
+                            }}
+                        >
+                            <div className="fm-matter-card__head">
+                                <span className="fm-matter-card__ico" aria-hidden>
+                                    <Icon name={matter.closed || matter.level === 'read' ? 'lock' : 'briefcase'} />
+                                </span>
+                                <button
+                                    type="button"
+                                    className={matter.favorite ? 'fm-star is-on' : 'fm-star'}
+                                    aria-pressed={matter.favorite}
+                                    aria-label={tr(matter.favorite ? 'pane.favoriteRemove' : 'pane.favoriteAdd')}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        void toggleFavorite(matter);
+                                    }}
+                                >
+                                    <Icon name="star" />
+                                </button>
+                            </div>
+                            <h3 className="fm-matter-card__title" title={matter.name}>{matter.name}</h3>
+                            {matter.code ? <p className="fm-matter-card__code">{matter.code}</p> : null}
+                            <p className="fm-matter-card__client" title={matter.clientName}>
+                                <Icon name="building" />
+                                <span>{matter.clientName}</span>
+                            </p>
+                            <div className="fm-matter-card__foot">
+                                <span className={matter.closed ? 'fm-matter-card__status is-closed' : 'fm-matter-card__status'}>
+                                    {matter.closed ? tr('common.closed') : tr('directory.open')}
+                                </span>
+                                <LevelBadge level={matter.level} />
+                                <span className="fm-matter-card__docs">
+                                    {matter.documents
+                                        ? tr('directory.docsCount', { count: matter.documents })
+                                        : tr('directory.noDocs')}
+                                </span>
+                            </div>
+                        </article>
                     ))}
                 </div>
             ) : (
