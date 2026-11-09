@@ -113,14 +113,44 @@ export async function ensureEmailsFolder(matterId: string): Promise<string | nul
   return emails.id;
 }
 
-export async function uploadToMatter(matterId: string, folderId: string | null, file: File, comment = ''): Promise<void> {
+export type UploadedDocument = {
+  id: string;
+  name?: string;
+};
+
+export async function uploadToMatter(
+  matterId: string,
+  folderId: string | null,
+  file: File,
+  comment = '',
+): Promise<UploadedDocument[]> {
   const body = new FormData();
   body.append('files', file);
   if (folderId)
     body.append('folderId', folderId);
   if (comment)
     body.append('comment', comment);
-  await request<{ documents: unknown[] }>(`/matters/${encodeURIComponent(matterId)}/documents`, {
+  const data = await request<{ documents: UploadedDocument[] }>(
+    `/matters/${encodeURIComponent(matterId)}/documents`,
+    { method: 'POST', body },
+  );
+  return Array.isArray(data.documents) ? data.documents : [];
+}
+
+/** Upload a new version into an existing FM document (thread update). */
+export async function checkinDocument(documentId: string, file: File, comment = ''): Promise<void> {
+  const body = new FormData();
+  body.append('file', file);
+  if (comment)
+    body.append('comment', comment);
+  try {
+    await request<{ document: unknown }>(`/documents/${encodeURIComponent(documentId)}/checkout`, {
+      method: 'POST',
+    });
+  } catch {
+    /* may already be checked out by us / optional */
+  }
+  await request<{ document: unknown }>(`/documents/${encodeURIComponent(documentId)}/checkin`, {
     method: 'POST',
     body,
   });

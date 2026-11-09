@@ -1,21 +1,20 @@
 import './styles.css';
-import { ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
+import { checkinDocument, ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
 import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
 import { clearLegacyOutlookTokens, getProfile, isAuthenticated, readAzureAccessToken } from './auth/session';
-import {
-  conversationFileName,
-  downloadMessageMime,
-  listConversationMessages,
-} from './conversation';
+import { listConversationMessages } from './conversation';
+import { buildConversationEml } from './conversationBuild';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
 import { itemHasSavedCategory, markItemSavedToKosta, SAVED_CATEGORY } from './outlookCategory';
 import { describeMatch, matchRule } from './rules';
 import {
+  getConversationDoc,
   getSettings,
   loadRoamingSettings,
   markFiled,
   newRuleId,
   saveSettings,
+  setConversationDoc,
   wasFiled,
   type FilingRule,
 } from './settings';
@@ -154,7 +153,7 @@ function resolveThreadTarget(): { matterId: string; matterName: string; clientNa
   return { matterId: matter.id, matterName: matter.name, clientName: matter.clientName };
 }
 
-/** Save or update the full Outlook conversation (all participants) into FM Emails. */
+/** Save or update the full Outlook conversation as one FM document (like one Outlook thread). */
 async function fileConversation(mode: 'all' | 'new'): Promise<void> {
   const target = resolveThreadTarget();
   if (!target) {
@@ -166,38 +165,72 @@ async function fileConversation(mode: 'all' | 'new'): Promise<void> {
     return;
   }
   busy = true;
-  setStatus(mode === 'all' ? 'Читаем всю переписку…' : 'Ищем новые письма в переписке…');
+  setStatus(mode === 'all' ? 'Читаем всю переписку…' : 'Проверяем переписку…');
   try {
-    const { messages } = await listConversationMessages();
-    const toUpload = mode === 'all'
-      ? messages
-      : messages.filter((row) => !wasFiled(row.internetMessageId));
-    if (!toUpload.length) {
-      setStatus(`Переписка уже в FM (${messages.length} писем) → «${target.matterName}»`, 'ok');
+    const { conversationId, messages } = await listConversationMessages();
+    if (!messages.length) {
+      setStatus('В переписке нет писем', 'error');
+      return;
+    }
+
+    const { file, storageKey } = await buildConversationEml(
+      conversationId,
+      messages,
+      (index, total) => setStatus(`Собираем тред ${index}/${total}…`),
+    );
+    const existing = getConversationDoc(storageKey);
+    const sameMatter = existing?.matterId === target.matterId;
+    const noNewMail = mode === 'new'
+      && sameMatter
+      && existing
+      && existing.messageCount >= messages.length;
+
+    if (noNewMail) {
+      setStatus(
+        `Переписка уже в FM (${messages.length} писем) → «${target.matterName}»\n${existing.fileName}`,
+        'ok',
+      );
       await ensureOutlookSavedMark();
       return;
     }
-    const folderId = await ensureEmailsFolder(target.matterId);
-    let uploaded = 0;
-    for (let i = 0; i < toUpload.length; i += 1) {
-      const meta = toUpload[i];
-      setStatus(`Загрузка ${i + 1}/${toUpload.length}: ${meta.fromEmail}…`);
-      const file = await downloadMessageMime(
-        meta,
-        conversationFileName(meta, messages.indexOf(meta)),
-      );
-      await uploadToMatter(
-        target.matterId,
-        folderId,
-        file,
-        `Outlook thread · ${meta.fromEmail} · ${target.clientName}`,
-      );
-      markFiled(meta.internetMessageId);
-      uploaded += 1;
+
+    const comment = `Outlook thread · ${messages.length} msg · ${target.clientName}`;
+    let documentId = sameMatter ? existing?.documentId : undefined;
+    let action = 'сохранена';
+
+    if (documentId) {
+      setStatus(`Обновляем файл переписки (${messages.length} писем)…`);
+      try {
+        await checkinDocument(documentId, file, comment);
+        action = 'обновлена';
+      } catch {
+        documentId = undefined;
+      }
     }
+
+    if (!documentId) {
+      setStatus(`Загружаем один файл переписки (${messages.length} писем)…`);
+      const folderId = await ensureEmailsFolder(target.matterId);
+      const uploaded = await uploadToMatter(target.matterId, folderId, file, comment);
+      documentId = uploaded[0]?.id;
+      if (!documentId)
+        throw new Error('API не вернул id документа после загрузки');
+      action = 'сохранена';
+    }
+
+    setConversationDoc(storageKey, {
+      documentId,
+      matterId: target.matterId,
+      fileName: file.name,
+      messageCount: messages.length,
+      updatedAt: new Date().toISOString(),
+    });
+    for (const row of messages)
+      markFiled(row.internetMessageId);
     await ensureOutlookSavedMark();
     setStatus(
-      `Переписка → «${target.matterName}»: загружено ${uploaded} из ${messages.length}`
+      `Переписка ${action} → «${target.matterName}» / Correspondence/Emails\n`
+      + `${file.name} · ${messages.length} писем в одном файле`
       + (outlookSavedCategory ? `\nOutlook: «${SAVED_CATEGORY}»` : ''),
       'ok',
     );
@@ -339,7 +372,7 @@ function renderFile(): string {
     </section>
     <section class="card">
       <h2>Вся переписка</h2>
-      <p class="hint">Сохраняет все письма треда (все участники) в Correspondence/Emails. «Обновить» догружает только новые.</p>
+      <p class="hint">Один файл Conversation_*.eml со всей перепиской (как тред в Outlook). «Обновить» перезаписывает тот же документ новыми письмами.</p>
       ${!rule ? `
         <label class="field">Matter для переписки
           <select id="threadMatter"><option value="">Выберите matter…</option>${matterOptions}</select>

@@ -8,11 +8,21 @@ export type FilingRule = {
   enabled: boolean;
 };
 
+export type ConversationDocRef = {
+  documentId: string;
+  matterId: string;
+  fileName: string;
+  messageCount: number;
+  updatedAt: string;
+};
+
 export type AddinSettings = {
   /** File Manager API, e.g. https://ticketsback.kostalegal.com/api/v1/files */
   apiBase: string;
   rules: FilingRule[];
   filedMessageIds: string[];
+  /** conversationStorageKey → FM document (single thread file) */
+  conversationDocs: Record<string, ConversationDocRef>;
 };
 
 const KEY = 'kosta.file.addin.settings';
@@ -22,6 +32,7 @@ const defaults: AddinSettings = {
   apiBase: 'https://ticketsback.kostalegal.com/api/v1/files',
   rules: [],
   filedMessageIds: [],
+  conversationDocs: {},
 };
 
 function normalizeApiBase(value: string): string {
@@ -43,6 +54,9 @@ function fromStorage(): AddinSettings {
       apiBase: normalizeApiBase(String(parsed.apiBase || defaults.apiBase)),
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
       filedMessageIds: Array.isArray(parsed.filedMessageIds) ? parsed.filedMessageIds.map(String) : [],
+      conversationDocs: parsed.conversationDocs && typeof parsed.conversationDocs === 'object'
+        ? parsed.conversationDocs as Record<string, ConversationDocRef>
+        : {},
     };
   } catch {
     return { ...defaults, rules: [], filedMessageIds: [] };
@@ -62,6 +76,7 @@ export function saveSettings(patch: Partial<AddinSettings>): AddinSettings {
     apiBase: normalizeApiBase(patch.apiBase ?? cache.apiBase),
     rules: patch.rules ?? cache.rules,
     filedMessageIds: patch.filedMessageIds ?? cache.filedMessageIds,
+    conversationDocs: patch.conversationDocs ?? cache.conversationDocs,
   };
   localStorage.setItem(KEY, JSON.stringify(cache));
   try {
@@ -93,6 +108,9 @@ export function loadRoamingSettings(): Promise<AddinSettings> {
           filedMessageIds: Array.isArray(parsed.filedMessageIds)
             ? parsed.filedMessageIds.map(String)
             : cache.filedMessageIds,
+          conversationDocs: parsed.conversationDocs && typeof parsed.conversationDocs === 'object'
+            ? parsed.conversationDocs as Record<string, ConversationDocRef>
+            : cache.conversationDocs,
         };
         localStorage.setItem(KEY, JSON.stringify(cache));
       }
@@ -116,6 +134,19 @@ export function markFiled(messageId: string): void {
 export function wasFiled(messageId: string): boolean {
   const id = normalizeFiledId(messageId);
   return cache.filedMessageIds.some((x) => normalizeFiledId(x) === id);
+}
+
+export function getConversationDoc(storageKey: string): ConversationDocRef | null {
+  return cache.conversationDocs[storageKey] || null;
+}
+
+export function setConversationDoc(storageKey: string, ref: ConversationDocRef): void {
+  saveSettings({
+    conversationDocs: {
+      ...cache.conversationDocs,
+      [storageKey]: ref,
+    },
+  });
 }
 
 export function newRuleId(): string {
