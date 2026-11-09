@@ -1,11 +1,14 @@
 ﻿.fm {
-  --fm-accent: #1d2a6b;
-  --fm-accent-soft: #eef1fb;
+  --fm-accent: var(--app-accent, #1d2a6b);
+  --fm-accent-soft: var(--app-accent-light-bg, #eef1fb);
+  --fm-accent-border: var(--app-accent-border, #7eb6f5);
+  --fm-select: var(--app-accent-focus, #cce4ff);
   --fm-border: var(--app-border, #e6e8ee);
   --fm-surface: var(--app-surface, #fff);
   --fm-text: var(--app-text, #1f2937);
   --fm-muted: var(--app-muted, #6b7280);
   --fm-soft: var(--app-bg-soft, #f4f6f8);
+  --fm-hover: var(--app-surface-soft, #f5f8fc);
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -14,6 +17,7 @@
   max-height: 100dvh;
   overflow: hidden;
   background: var(--app-bg, #f7f8fb);
+  color: var(--fm-text);
 }
 
 .fm__body {
@@ -82,7 +86,7 @@
 }
 
 .fm-side__create:hover {
-  background: #24348a;
+  background: var(--app-accent-hover, #24348a);
 }
 
 .fm-side__secondary {
@@ -143,8 +147,8 @@
   min-width: 1.15rem;
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
-  background: #eef0f4;
-  color: #6b7280;
+  background: var(--fm-soft);
+  color: var(--fm-muted);
   font-style: normal;
   font-size: 0.72rem;
   font-weight: 700;
@@ -152,8 +156,8 @@
 }
 
 .fm-side nav button em.is-alert {
-  background: #fde8ea;
-  color: #e11d48;
+  background: rgba(225, 29, 72, 0.16);
+  color: #fb7185;
 }
 
 .fm-side nav button:hover {
@@ -314,7 +318,7 @@
 }
 
 .fm-btn--primary:hover:not(:disabled) {
-  background: #24348a;
+  background: var(--app-accent-hover, #24348a);
 }
 
 .fm-btn--danger {
@@ -569,11 +573,16 @@
   white-space: nowrap;
 }
 
-.fm-level--none { background: #f1f5f9; color: #64748b; }
-.fm-level--read { background: #e0f2fe; color: #0369a1; }
-.fm-level--edit { background: #dcfce7; color: #15803d; }
-.fm-level--manage { background: #ede9fe; color: #6d28d9; }
-.fm-level--deny { background: #ffe4e6; color: #be123c; }
+.fm-level--none { background: var(--fm-soft); color: var(--fm-muted); }
+.fm-level--read { background: rgba(14, 165, 233, 0.16); color: #0284c7; }
+.fm-level--edit { background: rgba(34, 197, 94, 0.16); color: #16a34a; }
+.fm-level--manage { background: rgba(99, 102, 241, 0.18); color: #6366f1; }
+.fm-level--deny { background: rgba(225, 29, 72, 0.16); color: #e11d48; }
+
+body[data-theme='dark'] .fm-level--read { color: #7dd3fc; }
+body[data-theme='dark'] .fm-level--edit { color: #86efac; }
+body[data-theme='dark'] .fm-level--manage { color: #a5b4fc; }
+body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 
 .fm-status {
   padding: 0.15rem 0.55rem;
@@ -664,11 +673,12 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #fff;
+  background: var(--fm-surface);
+  color: var(--fm-text);
 }
 
 .fm-tiles.is-dropping {
-  background: #f0f6ff;
+  background: var(--fm-accent-soft);
 }
 
 .fm-tiles__content {
@@ -687,7 +697,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: #94a3b8;
+  color: var(--fm-muted);
   font-size: 0.9rem;
   text-align: center;
 }
@@ -714,20 +724,20 @@
   border: 1px solid transparent;
   border-radius: 3px;
   background: transparent;
-  color: #1f2937;
+  color: var(--fm-text);
   font: inherit;
   text-align: left;
   cursor: default;
 }
 
 .fm-ex__tile:hover {
-  border-color: #c9d1d9;
-  background: #f5f8fc;
+  border-color: var(--fm-border);
+  background: var(--fm-hover);
 }
 
 .fm-ex__tile.is-on {
-  border-color: #7eb6f5;
-  background: #cce4ff;
+  border-color: var(--fm-accent-border);
+  background: var(--fm-select);
 }
 
 .fm-ex__tile-ico {
@@ -760,6 +770,7 @@
 
 .fm-ex__tile-meta strong {
   overflow: hidden;
+  color: var(--fm-text);
   font-size: 0.86rem;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -768,14 +779,14 @@
 
 .fm-ex__tile-meta small {
   overflow: hidden;
-  color: #64748b;
+  color: var(--fm-muted);
   font-size: 0.74rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .fm-ex__tile--up .fm-ex__tile-ico {
-  color: #64748b;
+  color: var(--fm-muted);
 }
 
 .fm-ex__menu {
@@ -783,10 +794,10 @@
   z-index: 8;
   min-width: 10.5rem;
   padding: 0.25rem;
-  border: 1px solid #c9d1d9;
+  border: 1px solid var(--fm-border);
   border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 0.18);
+  background: var(--fm-surface);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.28);
 }
 
 .fm-ex__menu button {
@@ -796,7 +807,7 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #1f2937;
+  color: var(--fm-text);
   font: inherit;
   font-size: 0.82rem;
   text-align: left;
@@ -804,11 +815,11 @@
 }
 
 .fm-ex__menu button:hover {
-  background: #e8f0fe;
+  background: var(--fm-accent-soft);
 }
 
 .fm-ex__menu button.is-danger {
-  color: #be123c;
+  color: #e11d48;
 }
 
 .fm-docs {
@@ -898,7 +909,7 @@
   gap: 0.6rem;
   border: 2px dashed var(--fm-accent);
   border-radius: 14px;
-  background: rgb(238 241 251 / 0.9);
+  background: var(--fm-accent-soft);
   color: var(--fm-accent);
   font-weight: 700;
   pointer-events: none;
