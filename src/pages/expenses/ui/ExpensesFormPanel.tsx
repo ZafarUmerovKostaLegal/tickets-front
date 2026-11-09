@@ -20,6 +20,7 @@ import { listPartners, type UserPublic } from '@entities/user';
 import { listProjectsForExpenses, listProjectExpenseCategories, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeTrackingProjectForExpense, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
 import { useI18n, ttProjectTypeLabel } from '@shared/i18n';
 import { showToast } from '@shared/ui/app-toast';
+import { DatePicker } from '@shared/ui';
 import './ExpensesPage.css';
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
@@ -533,7 +534,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         setErrors({});
     }, [isOpen, mode, editingRequest]);
     const expenseDateKey = allowExpenseBackdate
-        ? values.expenseDate.trim().slice(0, 10)
+        ? (/^\d{4}-\d{2}-\d{2}$/.test(values.expenseDate.trim().slice(0, 10))
+            ? values.expenseDate.trim().slice(0, 10)
+            : '')
         : '';
     useEffect(() => {
         if (!isOpen || mode !== 'create') {
@@ -560,9 +563,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                         if (fp != null && fp > 0)
                             fr = formatForeignFp(fp);
                     }
-                    const nextDate = allowExpenseBackdate && prev.expenseDate.trim()
-                        ? prev.expenseDate.trim().slice(0, 10)
-                        : iso;
                     const rate = parseExpenseMoney(er);
                     let nextAmount = prev.amountUzs;
                     const locked = prev.lockedAmountUzs;
@@ -577,15 +577,13 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                         }
                     }
                     if (
-                        prev.expenseDate === nextDate
-                        && prev.exchangeRate === er
+                        prev.exchangeRate === er
                         && prev.foreignPerUsd === fr
                         && prev.amountUzs === nextAmount
                     )
                         return prev;
                     return {
                         ...prev,
-                        expenseDate: nextDate,
                         exchangeRate: er,
                         foreignPerUsd: fr,
                         amountUzs: nextAmount,
@@ -1871,13 +1869,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                     </p>)}
 
                     {mode === 'create' && allowExpenseBackdate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
-                        <label className="exp-form-label">Дата расхода <span className="exp-form-req">*</span></label>
-                        <input
-                            type="date"
-                            className="exp-form-input exp-form-input--date"
+                        <label className="exp-form-label" id="exp-form-expense-date-lbl">Дата расхода <span className="exp-form-req">*</span></label>
+                        <DatePicker
+                            portal
+                            portalZIndex={12100}
+                            className="exp-form-datepicker"
+                            buttonClassName="exp-form-input exp-form-datepicker__btn"
+                            aria-labelledby="exp-form-expense-date-lbl"
+                            title="Дата расхода"
+                            emptyLabel="Выберите дату"
                             value={values.expenseDate}
                             max={todayIsoLocal()}
-                            onChange={e => set('expenseDate', e.target.value)}
+                            onChange={(iso) => set('expenseDate', iso)}
                             disabled={isView}
                         />
                         <p className="exp-form-hint">Можно указать прошедшую дату; курс подставится с cbu.uz на выбранный день.</p>
