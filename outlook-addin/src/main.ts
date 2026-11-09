@@ -183,7 +183,7 @@ async function fileConversation(mode: 'all' | 'new'): Promise<void> {
       const meta = toUpload[i];
       setStatus(`Загрузка ${i + 1}/${toUpload.length}: ${meta.fromEmail}…`);
       const file = await downloadMessageMime(
-        meta.graphId,
+        meta,
         conversationFileName(meta, messages.indexOf(meta)),
       );
       await uploadToMatter(
