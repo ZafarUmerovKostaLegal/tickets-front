@@ -1,203 +1,186 @@
-import { createPkcePair, randomState } from './pkce';
 import {
   clearSession,
-  getAccessToken,
-  getDeviceId,
-  readRefreshToken,
+  isAuthenticated,
+  markAuthenticated,
+  readHubAccessToken,
   setProfile,
-  setSession,
   type AuthProfile,
 } from './session';
 import { getSettings } from '../settings';
 
-type TokenPair = {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  token_type: string;
-  scope: string;
-};
-
-function authBase(): string {
-  const configured = getSettings().authBase.replace(/\/+$/, '');
-  if (configured)
-    return configured;
+function gatewayOrigin(): string {
   const api = getSettings().apiBase.replace(/\/+$/, '');
-  if (api.endsWith('/files'))
-    return api.slice(0, -'/files'.length) + '/auth/outlook';
-  if (api.includes('/api/v1/'))
-    return api.replace(/\/api\/v1\/.*$/, '/api/v1/auth/outlook');
-  return '';
-}
-
-function redirectUri(): string {
-  // Vite base is /outlook-addin/ in prod (same Hub domain)
-  const base = import.meta.env.BASE_URL || '/';
-  return new URL('auth/callback.html', `${window.location.origin}${base}`).href;
-}
-
-async function postJson<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
-  const root = authBase();
-  if (!root)
-    throw new Error('Укажите Auth URL (например https://hub.example.com/api/v1/auth/outlook)');
-  const response = await fetch(`${root}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const data = await response.json() as { detail?: string };
-      if (data.detail)
-        detail = data.detail;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail);
+  if (!api)
+    return '';
+  try {
+    const url = new URL(api);
+    return url.origin;
+  } catch {
+    return '';
   }
-  if (response.status === 204)
-    return undefined as T;
-  return await response.json() as T;
 }
 
-export async function refreshAccessToken(): Promise<string> {
-  const refresh = await readRefreshToken();
-  if (!refresh)
-    throw new Error('Нет refresh token — войдите снова');
-  const deviceId = getDeviceId();
-  const pair = await postJson<TokenPair>('/refresh', {
-    refreshToken: refresh,
-    deviceId,
-  }, { 'X-Outlook-Device-Id': deviceId });
-  await setSession(pair);
-  return pair.access_token;
+function usersMeUrl(): string {
+  const origin = gatewayOrigin();
+  return origin ? `${origin}/api/v1/users/me` : '';
 }
 
-export async function ensureAccessToken(): Promise<string> {
-  const current = getAccessToken();
-  if (current)
-    return current;
-  return refreshAccessToken();
+function sessionLogoutUrl(): string {
+  const origin = gatewayOrigin();
+  return origin ? `${origin}/api/v1/auth/azure/session/logout` : '';
 }
 
-export async function fetchOutlookMe(accessToken?: string): Promise<AuthProfile> {
-  const root = authBase();
-  const token = accessToken || await ensureAccessToken();
-  const response = await fetch(`${root}/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Outlook-Device-Id': getDeviceId(),
-    },
+function azureLoginUrl(): string {
+  const origin = gatewayOrigin();
+  return origin ? `${origin}/api/v1/auth/azure/login` : '';
+}
+
+function hubLoginPageUrl(): string {
+  const base = import.meta.env.BASE_URL || '/';
+  return new URL('auth/hub-login.html', `${window.location.origin}${base}`).href;
+}
+
+function authHeaders(): HeadersInit {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const token = readHubAccessToken();
+  if (token)
+    headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+export async function fetchHubMe(): Promise<AuthProfile> {
+  const url = usersMeUrl();
+  if (!url)
+    throw new Error('Укажите File Manager API в настройках');
+  const response = await fetch(url, {
+    credentials: 'include',
+    headers: authHeaders(),
   });
   if (!response.ok)
-    throw new Error('Не удалось загрузить профиль');
-  const data = await response.json() as { id: number; email: string; display_name?: string };
-  const profile = {
+    throw new Error(response.status === 401 ? 'Нет сессии Hub' : `HTTP ${response.status}`);
+  const data = await response.json() as {
+    id: number;
+    email: string;
+    display_name?: string;
+    displayName?: string;
+  };
+  const profile: AuthProfile = {
     id: data.id,
     email: data.email,
-    displayName: data.display_name || data.email,
+    displayName: data.display_name || data.displayName || data.email,
   };
+  markAuthenticated(profile);
   setProfile(profile);
   return profile;
 }
 
-export async function logoutOutlook(): Promise<void> {
+/** Restore Hub session (cookie / same-origin token) if already logged in. */
+export async function ensureHubSession(): Promise<boolean> {
   try {
-    const token = getAccessToken();
-    if (token) {
-      await postJson('/logout', {}, {
-        Authorization: `Bearer ${token}`,
-        'X-Outlook-Device-Id': getDeviceId(),
-      });
-    }
+    await fetchHubMe();
+    return true;
   } catch {
-    /* still clear local */
+    clearSession();
+    return false;
+  }
+}
+
+export async function logoutHub(): Promise<void> {
+  const url = sessionLogoutUrl();
+  if (url) {
+    try {
+      await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(),
+      });
+    } catch {
+      /* still clear local */
+    }
   }
   clearSession();
 }
 
 /**
- * Open Azure login in Office dialog (or window), exchange code for outlook tokens.
+ * Same Hub Microsoft login as the website (session cookie on ticketsback).
+ * No separate Outlook token family.
  */
-export async function loginWithMicrosoft(): Promise<AuthProfile> {
-  const root = authBase();
-  if (!root)
-    throw new Error('Сначала укажите Auth / API URL в настройках');
-
-  const { verifier, challenge } = await createPkcePair();
-  const state = randomState();
-  sessionStorage.setItem('kosta.outlook.pkce', JSON.stringify({ verifier, state }));
-
-  const loginMeta = await fetch(
-    `${root}/login-url?${new URLSearchParams({ redirect_uri: redirectUri(), state })}`,
-  );
-  if (!loginMeta.ok)
-    throw new Error('Не удалось получить URL входа Azure');
-  const { authorizeUrl } = await loginMeta.json() as { authorizeUrl: string };
-  const url = new URL(authorizeUrl);
-  url.searchParams.set('code_challenge', challenge);
-  url.searchParams.set('code_challenge_method', 'S256');
-
-  const code = await openLoginDialog(url.toString(), state);
-  const pair = await postJson<TokenPair>('/exchange', {
-    code,
-    redirectUri: redirectUri(),
-    codeVerifier: verifier,
-    deviceId: getDeviceId(),
+export async function loginWithHub(): Promise<AuthProfile> {
+  if (!gatewayOrigin())
+    throw new Error('Укажите File Manager API в настройках');
+  const loginPage = hubLoginPageUrl();
+  const params = new URLSearchParams({
+    azure: azureLoginUrl(),
+    done: new URL('auth/hub-done.html', `${window.location.origin}${import.meta.env.BASE_URL || '/'}`).href,
   });
-  await setSession(pair);
-  return fetchOutlookMe(pair.access_token);
+  try {
+    await openHubLoginDialog(`${loginPage}?${params.toString()}`);
+  } catch (error) {
+    // Cookie may already be set even if dialog closed without messageParent
+    if (await ensureHubSession())
+      return fetchHubMe();
+    throw error;
+  }
+  return fetchHubMe();
 }
 
-function openLoginDialog(authorizeUrl: string, expectedState: string): Promise<string> {
+function openHubLoginDialog(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const finish = (code: string, state: string) => {
-      if (state && state !== expectedState) {
-        reject(new Error('OAuth state mismatch'));
+    let settled = false;
+    const ok = () => {
+      if (settled)
         return;
-      }
-      resolve(code);
+      settled = true;
+      resolve();
+    };
+    const fail = (error: Error) => {
+      if (settled)
+        return;
+      settled = true;
+      reject(error);
     };
 
     if (typeof Office !== 'undefined' && Office.context?.ui?.displayDialogAsync) {
       Office.context.ui.displayDialogAsync(
-        authorizeUrl,
-        { height: 60, width: 40 },
+        url,
+        { height: 65, width: 42, displayInIframe: false },
         (result) => {
           if (result.status !== Office.AsyncResultStatus.Succeeded) {
-            reject(result.error ?? new Error('Dialog failed'));
+            fail(result.error ?? new Error('Не удалось открыть окно входа'));
             return;
           }
           const dialog = result.value;
           dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
             try {
               const payload = JSON.parse((arg as { message: string }).message) as {
-                code?: string;
-                state?: string;
+                ok?: boolean;
                 error?: string;
               };
               dialog.close();
               if (payload.error)
-                reject(new Error(payload.error));
-              else if (payload.code)
-                finish(payload.code, payload.state || '');
+                fail(new Error(payload.error));
+              else if (payload.ok)
+                ok();
               else
-                reject(new Error('Пустой ответ OAuth'));
+                fail(new Error('Пустой ответ входа'));
             } catch (error) {
               dialog.close();
-              reject(error instanceof Error ? error : new Error(String(error)));
+              fail(error instanceof Error ? error : new Error(String(error)));
             }
           });
           dialog.addEventHandler(Office.EventType.DialogEventReceived, () => {
-            reject(new Error('Окно входа закрыто'));
+            // User closed dialog — parent will probe session next
+            if (isAuthenticated())
+              ok();
+            else
+              fail(new Error('Окно входа закрыто'));
           });
         },
       );
       return;
     }
 
-    const popup = window.open(authorizeUrl, 'kosta-outlook-login', 'width=480,height=640');
+    const popup = window.open(url, 'kosta-hub-login', 'width=480,height=680');
     if (!popup) {
       reject(new Error('Браузер заблокировал окно входа'));
       return;
@@ -205,17 +188,17 @@ function openLoginDialog(authorizeUrl: string, expectedState: string): Promise<s
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin)
         return;
-      const data = event.data as { type?: string; code?: string; state?: string; error?: string };
-      if (data?.type !== 'kosta-outlook-oauth')
+      const data = event.data as { type?: string; ok?: boolean; error?: string };
+      if (data?.type !== 'kosta-hub-oauth')
         return;
       window.removeEventListener('message', onMessage);
       popup.close();
       if (data.error)
         reject(new Error(data.error));
-      else if (data.code)
-        finish(data.code, data.state || '');
+      else if (data.ok)
+        resolve();
       else
-        reject(new Error('Пустой ответ OAuth'));
+        reject(new Error('Пустой ответ входа'));
     };
     window.addEventListener('message', onMessage);
   });

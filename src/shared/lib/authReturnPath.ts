@@ -19,8 +19,12 @@ export function rememberAuthReturnPath(pathname: string | null | undefined, sear
 
 export function consumeAuthReturnPath(): string | null {
     try {
-        const value = sessionStorage.getItem(AUTH_RETURN_PATH_KEY);
+        let value = sessionStorage.getItem(AUTH_RETURN_PATH_KEY);
         sessionStorage.removeItem(AUTH_RETURN_PATH_KEY);
+        if (!value) {
+            value = localStorage.getItem(AUTH_RETURN_PATH_KEY);
+            localStorage.removeItem(AUTH_RETURN_PATH_KEY);
+        }
         if (!value || !isSafeReturnPath(value))
             return null;
         return value;

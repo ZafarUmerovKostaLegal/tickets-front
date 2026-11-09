@@ -9,10 +9,8 @@ export type FilingRule = {
 };
 
 export type AddinSettings = {
-  /** File Manager API, e.g. https://hub/api/v1/files */
+  /** File Manager API, e.g. https://ticketsback.kostalegal.com/api/v1/files */
   apiBase: string;
-  /** Outlook auth API, e.g. https://hub/api/v1/auth/outlook (optional if derived from apiBase) */
-  authBase: string;
   rules: FilingRule[];
   filedMessageIds: string[];
 };
@@ -21,8 +19,7 @@ const KEY = 'kosta.file.addin.settings';
 const MAX_FILED = 400;
 
 const defaults: AddinSettings = {
-  apiBase: '',
-  authBase: '',
+  apiBase: 'https://ticketsback.kostalegal.com/api/v1/files',
   rules: [],
   filedMessageIds: [],
 };
@@ -32,10 +29,9 @@ function fromStorage(): AddinSettings {
     const raw = localStorage.getItem(KEY);
     if (!raw)
       return { ...defaults, rules: [], filedMessageIds: [] };
-    const parsed = JSON.parse(raw) as Partial<AddinSettings> & { authToken?: string };
+    const parsed = JSON.parse(raw) as Partial<AddinSettings>;
     return {
-      apiBase: String(parsed.apiBase ?? ''),
-      authBase: String(parsed.authBase ?? ''),
+      apiBase: String(parsed.apiBase || defaults.apiBase),
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
       filedMessageIds: Array.isArray(parsed.filedMessageIds) ? parsed.filedMessageIds.map(String) : [],
     };
@@ -82,8 +78,7 @@ export function loadRoamingSettings(): Promise<AddinSettings> {
       if (typeof raw === 'string' && raw.trim()) {
         const parsed = JSON.parse(raw) as Partial<AddinSettings>;
         cache = {
-          apiBase: String(parsed.apiBase ?? cache.apiBase),
-          authBase: String(parsed.authBase ?? cache.authBase),
+          apiBase: String(parsed.apiBase || cache.apiBase || defaults.apiBase),
           rules: Array.isArray(parsed.rules) ? parsed.rules : cache.rules,
           filedMessageIds: Array.isArray(parsed.filedMessageIds)
             ? parsed.filedMessageIds.map(String)

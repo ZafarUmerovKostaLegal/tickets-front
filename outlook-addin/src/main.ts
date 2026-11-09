@@ -1,7 +1,7 @@
 import './styles.css';
 import { ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
-import { fetchOutlookMe, loginWithMicrosoft, logoutOutlook } from './auth/authApi';
-import { getProfile, isAuthenticated } from './auth/session';
+import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
+import { clearLegacyOutlookTokens, getProfile, isAuthenticated } from './auth/session';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
 import { describeMatch, matchRule } from './rules';
 import {
@@ -89,11 +89,11 @@ function renderAuthGate(): string {
   if (isAuthenticated() && profile) {
     return `
       <section class="card">
-        <h2>Сессия Outlook</h2>
+        <h2>Сессия Hub</h2>
         <div class="mail">
           <strong>${escape(profile.displayName)}</strong>
           <div class="muted">${escape(profile.email)}</div>
-          <div class="muted">Отдельный токен add-in · access только в памяти</div>
+          <div class="muted">Та же авторизация, что и в Kosta Hub</div>
         </div>
         <div class="row" style="margin-top:8px">
           <button type="button" id="logoutBtn">Выйти</button>
@@ -104,8 +104,8 @@ function renderAuthGate(): string {
   return `
     <section class="card">
       <h2>Вход</h2>
-      <p class="hint">Отдельная авторизация Microsoft для надстройки. Hub-токен вставлять нельзя — выдаётся короткий access + защищённый refresh.</p>
-      <button type="button" class="primary" id="loginBtn" ${busy ? 'disabled' : ''}>Войти через Microsoft</button>
+      <p class="hint">Один вход Microsoft — тот же, что на сайте Hub. Отдельная авторизация add-in не нужна.</p>
+      <button type="button" class="primary" id="loginBtn" ${busy ? 'disabled' : ''}>Войти в Kosta Hub</button>
     </section>
   `;
 }
@@ -117,12 +117,9 @@ function renderSettings(): string {
     <section class="card">
       <h2>Подключение</h2>
       <label class="field">File Manager API
-        <input id="apiBase" value="${escape(s.apiBase)}" placeholder="https://hub.example.com/api/v1/files" />
+        <input id="apiBase" value="${escape(s.apiBase)}" placeholder="https://ticketsback.kostalegal.com/api/v1/files" />
       </label>
-      <label class="field">Auth Outlook API (опционально)
-        <input id="authBase" value="${escape(s.authBase)}" placeholder="https://hub.example.com/api/v1/auth/outlook" />
-      </label>
-      <p class="hint">Если Auth URL пуст, он выводится из File Manager URL. Токены не хранятся в открытом виде.</p>
+      <p class="hint">Сессия берётся из cookie Hub (тот же Microsoft-логин).</p>
       <div class="row">
         <button type="button" id="saveSettings">Сохранить URL</button>
         <button type="button" id="testApi" ${!isAuthenticated() ? 'disabled' : ''}>Проверить API</button>
@@ -133,7 +130,7 @@ function renderSettings(): string {
 
 function renderRules(): string {
   if (!isAuthenticated())
-    return `<section class="card"><p class="hint">Сначала войдите на вкладке «Настройки».</p></section>`;
+    return `<section class="card gate"><p class="hint">Сначала войдите на вкладке «Настройки».</p></section>`;
   const s = getSettings();
   const options = matters.map((matter) => {
     const label = `${matter.clientName} · ${matter.code ? `${matter.code} · ` : ''}${matter.name}`;
@@ -173,7 +170,7 @@ function renderRules(): string {
 
 function renderFile(): string {
   if (!isAuthenticated())
-    return `<section class="card"><p class="hint">Войдите через Microsoft на вкладке «Настройки».</p></section>`;
+    return `<section class="card gate"><p class="hint">Войдите через Microsoft на вкладке «Настройки».</p></section>`;
   const s = getSettings();
   const rule = mail ? matchRule(mail.fromEmail, s.rules) : null;
   return `
@@ -185,11 +182,11 @@ function renderFile(): string {
           <div>От: ${escape(mail.fromName)} &lt;${escape(mail.fromEmail)}&gt;</div>
           <div class="muted">${escape(mail.received)}</div>
           ${rule
-            ? `<div>Правило: <strong>${escape(rule.match)}</strong> → ${escape(rule.matterName)}</div>`
+            ? `<span class="chip">${escape(rule.match)} → ${escape(rule.matterName)}</span>`
             : `<div class="muted">Нет правила для отправителя</div>`}
         </div>
       ` : `<p class="hint">Откройте письмо в Outlook.</p>`}
-      <div class="row" style="margin-top:8px">
+      <div class="row" style="margin-top:10px">
         <button type="button" id="refreshMail">Обновить</button>
         <button type="button" class="primary" id="fileNow" ${!rule || busy ? 'disabled' : ''}>Загрузить в matter</button>
       </div>
@@ -199,13 +196,18 @@ function renderFile(): string {
 
 function render(): void {
   app!.innerHTML = `
-    <h1>Kosta File</h1>
-    <p class="sub">Outlook add-in · защищённые токены</p>
-    <div class="tabs">
+    <header class="brand">
+      <div class="brand-mark" aria-hidden="true">KF</div>
+      <div class="brand-copy">
+        <h1>Kosta File</h1>
+        <p class="sub">Сессия Hub · New Outlook</p>
+      </div>
+    </header>
+    <nav class="tabs" aria-label="Разделы">
       <button type="button" data-tab="file" class="${tab === 'file' ? 'is-on' : ''}">Письмо</button>
       <button type="button" data-tab="rules" class="${tab === 'rules' ? 'is-on' : ''}">Правила</button>
       <button type="button" data-tab="settings" class="${tab === 'settings' ? 'is-on' : ''}">Настройки</button>
-    </div>
+    </nav>
     ${tab === 'file' ? renderFile() : ''}
     ${tab === 'rules' ? renderRules() : ''}
     ${tab === 'settings' ? renderSettings() : ''}
@@ -226,18 +228,17 @@ function bind(): void {
   if (loginBtn) {
     loginBtn.onclick = async () => {
       const apiBase = app!.querySelector<HTMLInputElement>('#apiBase')?.value.trim();
-      const authBase = app!.querySelector<HTMLInputElement>('#authBase')?.value.trim();
       if (apiBase !== undefined)
-        saveSettings({ apiBase: apiBase ?? getSettings().apiBase, authBase: authBase ?? getSettings().authBase });
+        saveSettings({ apiBase: apiBase || getSettings().apiBase });
       busy = true;
-      setStatus('Откройте окно Microsoft…');
+      setStatus('Откройте окно входа Hub…');
       try {
-        const profile = await loginWithMicrosoft();
+        const profile = await loginWithHub();
         setStatus(`Вход выполнен: ${profile.email}`, 'ok');
         try {
           await refreshMatters();
         } catch {
-          /* optional until API URL set */
+          /* optional until API ready */
         }
       } catch (error) {
         setStatus(error instanceof Error ? error.message : String(error), 'error');
@@ -251,9 +252,9 @@ function bind(): void {
   const logoutBtn = app!.querySelector<HTMLButtonElement>('#logoutBtn');
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
-      await logoutOutlook();
+      await logoutHub();
       matters = [];
-      setStatus('Сессия отозвана', 'ok');
+      setStatus('Сессия Hub завершена', 'ok');
     };
   }
 
@@ -262,9 +263,8 @@ function bind(): void {
     saveSettingsBtn.onclick = () => {
       saveSettings({
         apiBase: app!.querySelector<HTMLInputElement>('#apiBase')?.value.trim() ?? '',
-        authBase: app!.querySelector<HTMLInputElement>('#authBase')?.value.trim() ?? '',
       });
-      setStatus('URL сохранены', 'ok');
+      setStatus('URL сохранён', 'ok');
     };
   }
 
@@ -273,7 +273,6 @@ function bind(): void {
     testApi.onclick = async () => {
       saveSettings({
         apiBase: app!.querySelector<HTMLInputElement>('#apiBase')?.value.trim() ?? '',
-        authBase: app!.querySelector<HTMLInputElement>('#authBase')?.value.trim() ?? '',
       });
       try {
         setStatus(await pingApi(), 'ok');
@@ -383,9 +382,10 @@ function wireOutlook(): void {
       return;
     }
     await loadRoamingSettings();
-    if (isAuthenticated()) {
+    clearLegacyOutlookTokens();
+    if (await ensureHubSession()) {
       try {
-        await fetchOutlookMe();
+        await fetchHubMe();
         await refreshMatters();
       } catch {
         /* need re-login */

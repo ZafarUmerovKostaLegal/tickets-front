@@ -40,6 +40,10 @@ export function AuthCallbackPage() {
             void refreshCurrentUser().then((user) => {
                 if (user) {
                     const stored = consumeAuthReturnPath();
+                    if (stored?.startsWith('/outlook-addin/')) {
+                        window.location.replace(stored);
+                        return;
+                    }
                     navigate(isScheduleOnlyAccount(user) ? scheduleOnlyLandingPath() : (stored ?? routes.home), { replace: true });
                     return;
                 }
@@ -53,6 +57,10 @@ export function AuthCallbackPage() {
             if (u) {
                 setSessionCookieHint(true);
                 const stored = consumeAuthReturnPath();
+                if (stored?.startsWith('/outlook-addin/')) {
+                    window.location.replace(stored);
+                    return;
+                }
                 navigate(isScheduleOnlyAccount(u) ? scheduleOnlyLandingPath() : (stored ?? routes.home), { replace: true });
             }
             else {

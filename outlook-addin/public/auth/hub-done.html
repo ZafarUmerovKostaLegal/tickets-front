@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Вход выполнен</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        color: #3dd68c;
+        background: linear-gradient(165deg, #141c2c, #0b1220);
+      }
+    </style>
+  </head>
+  <body>
+    <p>Вход выполнен. Можно закрыть окно.</p>
+    <script>
+      function notify() {
+        var payload = JSON.stringify({ ok: true });
+        try {
+          if (typeof Office !== 'undefined' && Office.context && Office.context.ui && Office.context.ui.messageParent) {
+            Office.context.ui.messageParent(payload);
+            return;
+          }
+        } catch (e) {}
+        if (window.opener) {
+          window.opener.postMessage({ type: 'kosta-hub-oauth', ok: true }, window.location.origin);
+        }
+      }
+      if (typeof Office !== 'undefined') {
+        Office.onReady(function () { notify(); });
+      } else {
+        notify();
+      }
+    </script>
+  </body>
+</html>

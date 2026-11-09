@@ -1,5 +1,4 @@
-import { ensureAccessToken, refreshAccessToken } from './auth/authApi';
-import { getDeviceId } from './auth/session';
+import { readHubAccessToken } from './auth/session';
 import { getSettings } from './settings';
 
 export type MatterOption = {
@@ -33,39 +32,38 @@ function baseUrl(): string {
   return getSettings().apiBase.replace(/\/+$/, '');
 }
 
-async function authHeaders(): Promise<HeadersInit> {
-  const token = await ensureAccessToken();
-  return {
-    Authorization: `Bearer ${token}`,
-    'X-Outlook-Device-Id': getDeviceId(),
-  };
+function authHeaders(): HeadersInit {
+  const headers: Record<string, string> = {};
+  const token = readHubAccessToken();
+  if (token)
+    headers.Authorization = `Bearer ${token}`;
+  return headers;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const root = baseUrl();
   if (!root)
-    throw new Error('Укажите URL API файлового менеджера (например https://hub.example.com/api/v1/files)');
+    throw new Error('Укажите URL API файлового менеджера');
   const headers = {
-    ...(await authHeaders()),
+    ...authHeaders(),
     ...(init?.headers ?? {}),
   };
-  let response = await fetch(`${root}${path}`, { ...init, headers });
-  if (response.status === 401) {
-    await refreshAccessToken();
-    response = await fetch(`${root}${path}`, {
-      ...init,
-      headers: { ...(await authHeaders()), ...(init?.headers ?? {}) },
-    });
-  }
+  const response = await fetch(`${root}${path}`, {
+    ...init,
+    headers,
+    credentials: 'include',
+  });
   if (!response.ok) {
     let detail = `HTTP ${response.status}`;
     try {
       const body = await response.json() as { detail?: string };
       if (body.detail)
-        detail = body.detail;
+        detail = typeof body.detail === 'string' ? body.detail : detail;
     } catch {
       /* ignore */
     }
+    if (response.status === 401)
+      throw new Error('Сессия Hub истекла — войдите снова');
     throw new Error(detail);
   }
   return await response.json() as T;

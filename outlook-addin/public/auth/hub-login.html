@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Вход Kosta Hub</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        color: #f3f6fb;
+        background: linear-gradient(165deg, #141c2c, #0b1220);
+      }
+      p { opacity: 0.8; }
+    </style>
+  </head>
+  <body>
+    <p>Переход к входу Microsoft…</p>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var azure = params.get('azure');
+        var done = params.get('done') || (window.location.origin + '/outlook-addin/auth/hub-done.html');
+        if (!azure) {
+          document.body.textContent = 'Не задан URL входа Azure';
+          return;
+        }
+        try {
+          // Same key as Hub SPA — AuthCallback will return here after login
+          localStorage.setItem('auth-return-path', '/outlook-addin/auth/hub-done.html');
+          sessionStorage.setItem('auth-return-path', '/outlook-addin/auth/hub-done.html');
+          localStorage.setItem('kosta.outlook.hub-done', done);
+        } catch (e) {}
+        window.location.replace(azure);
+      })();
+    </script>
+  </body>
+</html>
