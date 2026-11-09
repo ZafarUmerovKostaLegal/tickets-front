@@ -99,23 +99,7 @@ export const FileManagerAllFiles = forwardRef<FileManagerAllFilesHandle, Props>(
                     <h2 className="fm-all__title">{t('fileManager.all')}</h2>
                     <p className="fm-all__meta">{meta}</p>
                 </div>
-                <div className="fm-all__actions">
-                    {canManage ? (
-                        <button type="button" className="fm-all__btn" onClick={() => fileRef.current?.click()}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                <path d="M4 8.5h7l1.5-2H20v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
-                            </svg>
-                            {t('fileManager.newFolder')}
-                        </button>
-                    ) : null}
-                    <button type="button" className="fm-all__btn fm-all__btn--primary" onClick={() => fileRef.current?.click()}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                            <path d="M12 16V5" /><path d="m8 8 4-4 4 4" /><path d="M5 19h14" />
-                        </svg>
-                        {t('fileManager.uploadFiles')}
-                    </button>
-                    <input ref={fileRef} className="fm-all__file" type="file" multiple />
-                </div>
+                <input ref={fileRef} className="fm-all__file" type="file" multiple />
             </div>
 
             {canManage ? (

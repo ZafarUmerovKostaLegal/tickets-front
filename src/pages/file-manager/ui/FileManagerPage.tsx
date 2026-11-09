@@ -44,6 +44,15 @@ const FILES: NavItem[] = [
     { id: 'trash', label: 'fileManager.trash', icon: 'trash' },
 ];
 
+const EMPLOYEE_FILE_IDS: PageId[] = ['mine', 'available', 'trash', 'starred', 'recent'];
+
+const EMPLOYEE_FILES: NavItem[] = EMPLOYEE_FILE_IDS.map((id) => {
+    const item = FILES.find((row) => row.id === id);
+    if (item == null)
+        throw new Error(`Missing file-manager nav item: ${id}`);
+    return item;
+});
+
 const ADMIN: NavItem[] = [
     { id: 'users', label: 'fileManager.users', icon: 'users' },
     { id: 'access', label: 'fileManager.access', icon: 'shield', badge: '3', badgeTone: 'alert' },
@@ -55,7 +64,7 @@ const ADMIN: NavItem[] = [
     { id: 'settings', label: 'fileManager.settings', icon: 'gear' },
 ];
 
-const ADMIN_PAGE_IDS = new Set<PageId>(ADMIN.map((item) => item.id));
+const EMPLOYEE_PAGE_IDS = new Set<PageId>(EMPLOYEE_FILE_IDS);
 
 function NavIcon({ name }: { name: NavItem['icon'] }) {
     const common = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
@@ -112,15 +121,16 @@ export function FileManagerPage() {
     const seededRef = useRef(false);
     const allFilesRef = useRef<FileManagerAllFilesHandle | null>(null);
 
-    const navItems = useMemo(() => (canManage ? [...FILES, ...ADMIN] : FILES), [canManage]);
-    const active = navItems.find((item) => item.id === page) ?? FILES.find((item) => item.id === 'available') ?? FILES[0];
+    const fileNav = canManage ? FILES : EMPLOYEE_FILES;
+    const navItems = useMemo(() => (canManage ? [...FILES, ...ADMIN] : EMPLOYEE_FILES), [canManage]);
+    const active = navItems.find((item) => item.id === page) ?? EMPLOYEE_FILES[0] ?? FILES[0];
 
     useEffect(() => {
         if (loading)
             return;
         if (!seededRef.current) {
             seededRef.current = true;
-            const next: PageId = canManage ? 'all' : 'available';
+            const next: PageId = canManage ? 'all' : 'mine';
             if (next !== page) {
                 startTransition(() => {
                     setPage(next);
@@ -128,17 +138,19 @@ export function FileManagerPage() {
             }
             return;
         }
-        if (canManage || !ADMIN_PAGE_IDS.has(page))
+        if (canManage)
+            return;
+        if (EMPLOYEE_PAGE_IDS.has(page))
             return;
         startTransition(() => {
-            setPage('available');
+            setPage('mine');
         });
     }, [canManage, loading, page]);
 
     const selectPage = useCallback((id: PageId) => {
         if (id === page)
             return;
-        if (!canManage && ADMIN_PAGE_IDS.has(id))
+        if (!canManage && !EMPLOYEE_PAGE_IDS.has(id))
             return;
         startTransition(() => {
             setPage(id);
@@ -156,18 +168,18 @@ export function FileManagerPage() {
     }, [page, pendingAction]);
 
     const onCreateClick = useCallback(() => {
-        const action = canManage ? 'create' : 'upload';
+        if (!canManage) {
+            allFilesRef.current?.openUpload();
+            return;
+        }
         if (page !== 'all') {
-            setPendingAction(action);
+            setPendingAction('create');
             startTransition(() => {
                 setPage('all');
             });
             return;
         }
-        if (action === 'create')
-            allFilesRef.current?.openCreateFolder();
-        else
-            allFilesRef.current?.openUpload();
+        allFilesRef.current?.openCreateFolder();
     }, [canManage, page]);
 
     return (
@@ -189,7 +201,7 @@ export function FileManagerPage() {
                     </button>
                     <p>{t('fileManager.files')}</p>
                     <nav aria-label={t('fileManager.files')}>
-                        {FILES.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
+                        {fileNav.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
                     </nav>
                     {canManage ? (
                         <>
