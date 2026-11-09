@@ -265,7 +265,7 @@ function render(): void {
       <img class="brand-logo" src="${ASSET_BASE}assets/logo.svg" width="28" height="40" alt="Kosta Legal" />
       <div class="brand-copy">
         <h1>Kosta File</h1>
-        <p class="sub">Сессия Hub · New Outlook</p>
+        <p class="sub">Сессия Hub · закрепите панель (📌), чтобы не закрывалась</p>
       </div>
     </header>
     <nav class="tabs" aria-label="Разделы">
@@ -478,6 +478,13 @@ function wireOutlook(): void {
     }
     Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, async () => {
       try {
+        // When pinned, item can briefly be null (no selection).
+        if (!Office.context.mailbox.item) {
+          mail = null;
+          outlookSavedCategory = false;
+          render();
+          return;
+        }
         await refreshMail({ autoFile: true });
         render();
       } catch (error) {
