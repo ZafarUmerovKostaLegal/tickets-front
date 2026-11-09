@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kosta File — вход</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; padding: 24px; color: #1f2937; }
+    </style>
+  </head>
+  <body>
+    <p>Завершение входа…</p>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const payload = {
+          type: 'kosta-outlook-oauth',
+          code: params.get('code') || '',
+          state: params.get('state') || '',
+          error: params.get('error_description') || params.get('error') || '',
+        };
+        function send() {
+          const message = JSON.stringify(payload);
+          if (window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent) {
+            Office.onReady(function () {
+              Office.context.ui.messageParent(message);
+            });
+            return;
+          }
+          if (window.opener) {
+            window.opener.postMessage(payload, window.location.origin);
+            window.close();
+          }
+        }
+        if (window.Office) {
+          Office.onReady(send);
+        } else {
+          send();
+        }
+      })();
+    </script>
+  </body>
+</html>
