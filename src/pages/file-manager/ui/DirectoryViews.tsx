@@ -36,6 +36,7 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
     const [filter, setFilter] = useState('');
     const [status, setStatus] = useState<ClientStatus>('active');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
+    const [withProjects, setWithProjects] = useState(false);
 
     const archivedCount = clients.stats?.archivedClients
         ?? clients.clients.filter((client) => client.archived).length;
@@ -48,17 +49,20 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                 return false;
             if (favoritesOnly && !client.favorite)
                 return false;
+            if (withProjects && client.matters.length === 0)
+                return false;
             return matchesFilter(filter, client.name);
         })
         .sort((a, b) => Number(b.favorite) - Number(a.favorite)
             || Number(a.archived) - Number(b.archived)
-            || a.name.localeCompare(b.name)), [clients.clients, filter, status, favoritesOnly]);
+            || a.name.localeCompare(b.name)), [clients.clients, filter, status, favoritesOnly, withProjects]);
 
-    const dirty = Boolean(filter) || status !== 'active' || favoritesOnly;
+    const dirty = Boolean(filter) || status !== 'active' || favoritesOnly || withProjects;
     const reset = () => {
         setFilter('');
         setStatus('active');
         setFavoritesOnly(false);
+        setWithProjects(false);
     };
 
     const toggleFavorite = async (clientId: string, favorite: boolean) => {
@@ -82,6 +86,10 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                 <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
                     onClick={() => setFavoritesOnly((value) => !value)}>
                     <Icon name="star" />{tr('directory.favoritesOnly')}
+                </button>
+                <button type="button" className={withProjects ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={withProjects}
+                    onClick={() => setWithProjects((value) => !value)}>
+                    <Icon name="briefcase" />{tr('directory.withProjects')}
                 </button>
                 {dirty ? (
                     <button type="button" className="fm-filters__reset" onClick={reset}>{tr('directory.resetFilters')}</button>

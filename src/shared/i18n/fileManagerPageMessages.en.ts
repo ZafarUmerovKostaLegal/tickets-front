@@ -88,6 +88,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         statusArchived: 'Archived',
         accessAll: 'Any access',
         favoritesOnly: 'Favorites',
+        withProjects: 'With projects',
         docsAny: 'All documents',
         withDocs: 'With documents',
         withoutDocs: 'No documents',
