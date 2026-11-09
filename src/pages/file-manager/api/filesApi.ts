@@ -34,10 +34,20 @@ export type RequestableMatter = {
     clientName: string;
 };
 
+export type DirectoryStats = {
+    clients: number;
+    matters: number;
+    archivedClients: number;
+    closedMatters: number;
+    visibleClients: number;
+    visibleMatters: number;
+};
+
 export type ClientsResponse = {
     viewer: { userId: number; name: string; canManage: boolean };
     clients: ClientRow[];
     requestable: RequestableMatter[];
+    stats?: DirectoryStats;
 };
 
 export type DocumentRow = {

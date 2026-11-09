@@ -68,6 +68,8 @@ export const fileManagerPageMessages = {
         showArchived: 'Показывать архивных клиентов',
         archived: 'Архив',
         total: 'Всего: {count}',
+        directoryStats: 'В учёте времени: {clients} клиентов, {matters} проектов',
+        filtered: 'Показано: {count}',
         matters: 'Matters',
         openMatters: 'Открытых',
         mine: 'Мои',

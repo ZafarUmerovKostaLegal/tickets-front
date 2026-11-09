@@ -70,6 +70,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         showArchived: 'Show archived clients',
         archived: 'Archived',
         total: 'Total: {count}',
+        directoryStats: 'Time tracking: {clients} clients, {matters} projects',
+        filtered: 'Showing: {count}',
         matters: 'Matters',
         openMatters: 'Open',
         mine: 'Mine',

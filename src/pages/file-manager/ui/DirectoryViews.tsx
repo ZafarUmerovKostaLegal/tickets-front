@@ -16,7 +16,8 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
     const [showArchived, setShowArchived] = useState(false);
 
     const rows = useMemo(() => {
-        const archivedCount = clients.clients.filter((client) => client.archived).length;
+        const archivedCount = clients.stats?.archivedClients
+            ?? clients.clients.filter((client) => client.archived).length;
         const list = clients.clients
             .filter((client) => (showArchived || !client.archived) && matchesFilter(filter, client.name, ...client.matters.map((m) => m.code)))
             .map((client) => ({
@@ -37,6 +38,8 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
             onChanged();
     };
 
+    const stats = clients.stats;
+
     return (
         <section className="fm-docs fm-docs--padded">
             <div className="fm-toolbar">
@@ -48,7 +51,12 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                     <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
                     <span>{tr('directory.showArchived')}{rows.archivedCount ? ` (${rows.archivedCount})` : ''}</span>
                 </label>
-                <span className="fm-muted">{tr('directory.total', { count: rows.list.length })}</span>
+                <span className="fm-muted">
+                    {stats
+                        ? tr('directory.directoryStats', { clients: stats.clients, matters: stats.matters })
+                        : tr('directory.total', { count: rows.list.length })}
+                    {stats ? ` · ${tr('directory.filtered', { count: rows.list.length })}` : ''}
+                </span>
             </div>
             {rows.list.length === 0 ? (
                 <div className="fm-state">
@@ -164,9 +172,14 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                 </select>
                 <label className="fm-check">
                     <input type="checkbox" checked={showClosed} onChange={(event) => setShowClosed(event.target.checked)} />
-                    <span>{tr('tree.showClosed')}</span>
+                    <span>{tr('tree.showClosed')}{clients.stats?.closedMatters ? ` (${clients.stats.closedMatters})` : ''}</span>
                 </label>
-                <span className="fm-muted">{tr('directory.total', { count: rows.length })}</span>
+                <span className="fm-muted">
+                    {clients.stats && !clientId && !mineOnly
+                        ? tr('directory.directoryStats', { clients: clients.stats.clients, matters: clients.stats.matters })
+                        : tr('directory.total', { count: rows.length })}
+                    {clients.stats && !clientId && !mineOnly ? ` · ${tr('directory.filtered', { count: rows.length })}` : ''}
+                </span>
             </div>
             {rows.length === 0 ? (
                 <div className="fm-state">
