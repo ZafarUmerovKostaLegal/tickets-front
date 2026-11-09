@@ -66,6 +66,7 @@ export const fileManagerPageMessages = {
         clientsSearch: 'Найти клиента или код matter…',
         mattersSearch: 'Найти matter по названию, коду или клиенту…',
         showArchived: 'Показывать архивных клиентов',
+        archived: 'Архив',
         total: 'Всего: {count}',
         matters: 'Matters',
         openMatters: 'Открытых',

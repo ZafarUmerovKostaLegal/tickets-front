@@ -15,15 +15,21 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
     const [filter, setFilter] = useState('');
     const [showArchived, setShowArchived] = useState(false);
 
-    const rows = useMemo(() => clients.clients
-        .filter((client) => (showArchived || !client.archived) && matchesFilter(filter, client.name, ...client.matters.map((m) => m.code)))
-        .map((client) => ({
-            client,
-            open: client.matters.filter((matter) => !matter.closed).length,
-            mine: client.matters.filter((matter) => matter.mine).length,
-            documents: client.matters.reduce((sum, matter) => sum + matter.documents, 0),
-        }))
-        .sort((a, b) => Number(b.client.favorite) - Number(a.client.favorite) || a.client.name.localeCompare(b.client.name)), [clients, filter, showArchived]);
+    const rows = useMemo(() => {
+        const archivedCount = clients.clients.filter((client) => client.archived).length;
+        const list = clients.clients
+            .filter((client) => (showArchived || !client.archived) && matchesFilter(filter, client.name, ...client.matters.map((m) => m.code)))
+            .map((client) => ({
+                client,
+                open: client.matters.filter((matter) => !matter.closed).length,
+                mine: client.matters.filter((matter) => matter.mine).length,
+                documents: client.matters.reduce((sum, matter) => sum + matter.documents, 0),
+            }))
+            .sort((a, b) => Number(b.client.favorite) - Number(a.client.favorite)
+                || Number(a.client.archived) - Number(b.client.archived)
+                || a.client.name.localeCompare(b.client.name));
+        return { list, archivedCount };
+    }, [clients, filter, showArchived]);
 
     const toggleFavorite = async (clientId: string, favorite: boolean) => {
         const ok = await act(() => (favorite ? filesApi.removeFavorite('client', clientId) : filesApi.addFavorite('client', clientId)));
@@ -40,11 +46,11 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                 </label>
                 <label className="fm-check">
                     <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
-                    <span>{tr('directory.showArchived')}</span>
+                    <span>{tr('directory.showArchived')}{rows.archivedCount ? ` (${rows.archivedCount})` : ''}</span>
                 </label>
-                <span className="fm-muted">{tr('directory.total', { count: rows.length })}</span>
+                <span className="fm-muted">{tr('directory.total', { count: rows.list.length })}</span>
             </div>
-            {rows.length === 0 ? (
+            {rows.list.length === 0 ? (
                 <div className="fm-state">
                     <Icon name="building" />
                     <p>{tr('tree.empty')}</p>
@@ -64,8 +70,9 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map(({ client, open, mine, documents }) => (
-                                <tr key={client.id} tabIndex={0} onClick={() => onOpenClient(client.id)}
+                            {rows.list.map(({ client, open, mine, documents }) => (
+                                <tr key={client.id} tabIndex={0} className={client.archived ? 'is-archived' : undefined}
+                                    onClick={() => onOpenClient(client.id)}
                                     onKeyDown={(event) => {
                                         if (event.key === 'Enter')
                                             onOpenClient(client.id);
@@ -84,7 +91,7 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                                         <span className="fm-table__name">
                                             <Icon name="building" className="fm-ico--client" />
                                             <strong>{client.name}</strong>
-                                            {client.archived ? <span className="fm-level fm-level--none">{tr('common.closed')}</span> : null}
+                                            {client.archived ? <span className="fm-level fm-level--none">{tr('directory.archived')}</span> : null}
                                         </span>
                                     </td>
                                     <td className="fm-table__num">{client.matters.length}</td>

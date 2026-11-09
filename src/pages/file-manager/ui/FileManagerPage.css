@@ -423,6 +423,22 @@
   color: var(--fm-muted);
   font-size: 0.82rem;
   cursor: pointer;
+  user-select: none;
+}
+
+.fm-check input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--fm-accent);
+  cursor: pointer;
+}
+
+.fm-table tbody tr.is-archived td {
+  color: var(--fm-muted);
+}
+
+.fm-table tbody tr.is-archived strong {
+  color: var(--fm-muted);
 }
 
 .fm-toolbar {
