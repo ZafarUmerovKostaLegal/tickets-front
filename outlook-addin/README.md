@@ -10,6 +10,10 @@
 2. Письмо → **Kosta File** → **В matter**
 3. **Настройки** → **Войти в Kosta Hub** (если сессии ещё нет в WebView Outlook)
 
+## Статус в Outlook
+
+После успешной загрузки в File Manager на письмо ставится категория **Saved to Kosta** (видна в списке писем). SharePoint пока не подключён.
+
 ## API
 
 По умолчанию: `https://ticketsback.kostalegal.com/api/v1/files`

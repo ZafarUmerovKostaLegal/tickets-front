@@ -3,6 +3,7 @@ import { ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOp
 import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
 import { clearLegacyOutlookTokens, getProfile, isAuthenticated } from './auth/session';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
+import { itemHasSavedCategory, markItemSavedToKosta, SAVED_CATEGORY } from './outlookCategory';
 import { describeMatch, matchRule } from './rules';
 import {
   getSettings,
@@ -28,6 +29,7 @@ let matters: MatterOption[] = [];
 let statusText = '';
 let statusKind: '' | 'ok' | 'error' = '';
 let busy = false;
+let outlookSavedCategory = false;
 let draft: { match: string; matterId: string; autoFile: boolean } = { match: '', matterId: '', autoFile: true };
 
 function setStatus(text: string, kind: '' | 'ok' | 'error' = '') {
@@ -49,6 +51,7 @@ let autoFileInFlight: string | null = null;
 async function refreshMail(options: { autoFile?: boolean } = {}): Promise<void> {
   const wantAuto = options.autoFile !== false;
   mail = await readCurrentMail();
+  await refreshOutlookCategoryFlag();
   if (!wantAuto)
     return;
   await tryAutoFileCurrent();
@@ -68,6 +71,7 @@ async function tryAutoFileCurrent(): Promise<boolean> {
     return false;
   }
   if (wasFiled(mail.messageId)) {
+    void ensureOutlookSavedMark();
     setStatus(`Уже в matter «${rule.matterName}» (это письмо уже загружали)`, 'ok');
     return false;
   }
@@ -86,10 +90,22 @@ async function refreshMatters(): Promise<void> {
   matters = await listMatters();
 }
 
+async function ensureOutlookSavedMark(): Promise<void> {
+  const result = await markItemSavedToKosta();
+  outlookSavedCategory = result.ok || await itemHasSavedCategory();
+  if (!result.ok && result.detail)
+    setStatus(`Файл в FM ок, но категорию Outlook не удалось поставить: ${result.detail}`, 'error');
+}
+
+async function refreshOutlookCategoryFlag(): Promise<void> {
+  outlookSavedCategory = await itemHasSavedCategory();
+}
+
 async function fileMail(rule: FilingRule, automatic: boolean): Promise<void> {
   if (!mail)
     mail = await readCurrentMail();
   if (wasFiled(mail.messageId) && automatic) {
+    await ensureOutlookSavedMark();
     setStatus(`Уже загружено ранее → ${rule.matterName}`, 'ok');
     return;
   }
@@ -105,7 +121,12 @@ async function fileMail(rule: FilingRule, automatic: boolean): Promise<void> {
       `Outlook · ${mail.fromEmail} · ${describeMatch(rule)}`,
     );
     markFiled(mail.messageId);
-    setStatus(`Сохранено в «${rule.matterName}» / Correspondence/Emails\n${file.name}`, 'ok');
+    await ensureOutlookSavedMark();
+    setStatus(
+      `Сохранено в «${rule.matterName}» / Correspondence/Emails\n${file.name}`
+      + (outlookSavedCategory ? `\nOutlook: категория «${SAVED_CATEGORY}»` : ''),
+      'ok',
+    );
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error), 'error');
   } finally {
@@ -224,6 +245,9 @@ function renderFile(): string {
           ${rule
             ? `<span class="chip">${escape(rule.match)} → ${escape(rule.matterName)}${rule.autoFile ? ' · авто' : ''}${filed ? ' · уже в FM' : ''}</span>`
             : `<div class="muted">Нет правила для отправителя</div>`}
+          ${outlookSavedCategory
+            ? `<span class="chip chip-saved">${escape(SAVED_CATEGORY)}</span>`
+            : ''}
         </div>
       ` : `<p class="hint">Откройте письмо в Outlook.</p>`}
       <p class="hint">${escape(autoHint)}</p>
