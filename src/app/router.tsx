@@ -17,7 +17,7 @@ import { ExpensesNestedLayout } from '@app/ExpensesNestedLayout';
 import { ExpensesErrorFallback } from '@pages/expenses/ui/ExpensesErrorFallback';
 import { AppRouteError } from '@app/ui/AppRouteError';
 import { DesktopOnlyRoute } from '@app/DesktopOnlyRoute';
-import { EnsureContactsI18n, EnsureTimeTrackingI18n, EnsureTodoI18n } from '@shared/i18n';
+import { EnsureContactsI18n, EnsureFileManagerI18n, EnsureTimeTrackingI18n, EnsureTodoI18n } from '@shared/i18n';
 
 
 function routerBasename(): string | undefined {
@@ -115,7 +115,7 @@ const router = createBrowserRouter([
             { path: routes.legalHubMemberStats, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
             { path: routes.legalHubMemberReports, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
             { path: routes.legalHubMember, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
-            { path: routes.fileManager, element: withProtected(<FileManagerPage />) },
+            { path: routes.fileManager, element: withProtected(<EnsureFileManagerI18n fallback={<LazyFallback />}><FileManagerPage /></EnsureFileManagerI18n>) },
             { path: routes.tickets, element: withProtected(<TicketsPage />) },
             { path: routes.ticketDetail, element: withProtected(<TicketDetailPage />) },
             { path: routes.attendance, element: withProtected(<AttendanceAccessRoute>

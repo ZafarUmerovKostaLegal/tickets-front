@@ -2,10 +2,12 @@ import type { Messages } from './ru';
 import type { TodoPageMessages } from '../todoPageMessages';
 import type { TimeTrackingPageMessages } from '../timeTrackingPageMessages';
 import type { ContactsPageMessages } from '../contactsPageMessages';
+import type { FileManagerPageMessages } from '../fileManagerPageMessages';
 
 const timeTrackingPageStubEn = {} as TimeTrackingPageMessages;
 const todoPageStubEn = {} as TodoPageMessages;
 const contactsPageStubEn = {} as ContactsPageMessages;
+const fileManagerPageStubEn = {} as FileManagerPageMessages;
 
 export const enMessages = {
     brand: {
@@ -600,40 +602,7 @@ export const enMessages = {
         fileManager: 'File manager',
         sectionsAria: 'Application sections',
     },
-    fileManager: {
-        createUpload: 'Create or upload',
-        upload: 'Upload',
-        files: 'Files',
-        explorer: 'Explorer',
-        mine: 'My files',
-        shared: 'Shared folders',
-        available: 'Shared with me',
-        recent: 'Recent',
-        starred: 'Starred',
-        trash: 'Trash',
-        admin: 'Administration',
-        users: 'Users and groups',
-        access: 'Access control',
-        matrix: 'Access matrix',
-        journal: 'Activity log',
-        monitoring: 'Activity monitoring',
-        storages: 'Storages',
-        directory: 'Active Directory',
-        settings: 'Settings',
-        storageCount: 'Storages · 4',
-        of: 'of',
-        tb: 'TB',
-        storageWarn: '1 storage has a warning',
-        availableProjects: 'Available projects',
-        root: 'Root',
-        empty: 'No files or folders yet',
-        error: 'Could not load files',
-        newFolder: 'New folder',
-        folderPh: 'Folder name',
-        create: 'Create',
-        remove: 'Remove',
-        uploadFiles: 'Upload files',
-    },
+    fileManagerPage: fileManagerPageStubEn,
     pageTitle: {
         login: 'Sign in',
         authCallback: 'Signing in',

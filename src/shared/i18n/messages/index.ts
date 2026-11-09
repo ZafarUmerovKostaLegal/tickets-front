@@ -1,5 +1,6 @@
 import type { AppLocale } from '../types';
 import type { ContactsPageMessages } from '../contactsPageMessages';
+import type { FileManagerPageMessages } from '../fileManagerPageMessages';
 import type { TimeTrackingPageMessages } from '../timeTrackingPageMessages';
 import type { TodoPageMessages } from '../todoPageMessages';
 import { enMessages } from './en';
@@ -117,6 +118,38 @@ export async function ensureContactsPageMessages(locale: AppLocale): Promise<voi
             throw err;
         });
         contactsInflight.set(locale, inflight);
+    }
+    await inflight;
+}
+
+const fileManagerLoaded = new Set<AppLocale>();
+const fileManagerInflight = new Map<AppLocale, Promise<void>>();
+
+export function isFileManagerPageMessagesReady(locale: AppLocale): boolean {
+    return fileManagerLoaded.has(locale);
+}
+
+export async function ensureFileManagerPageMessages(locale: AppLocale): Promise<void> {
+    if (fileManagerLoaded.has(locale))
+        return;
+    let inflight = fileManagerInflight.get(locale);
+    if (!inflight) {
+        inflight = (async () => {
+            const msgs: FileManagerPageMessages = locale === 'en'
+                ? (await import('../fileManagerPageMessages.en')).fileManagerPageMessagesEn
+                : (await import('../fileManagerPageMessages')).fileManagerPageMessages;
+            catalogs[locale] = {
+                ...catalogs[locale],
+                fileManagerPage: msgs,
+            };
+            fileManagerLoaded.add(locale);
+            fileManagerInflight.delete(locale);
+            notifyMessageCatalog();
+        })().catch((err) => {
+            fileManagerInflight.delete(locale);
+            throw err;
+        });
+        fileManagerInflight.set(locale, inflight);
     }
     await inflight;
 }

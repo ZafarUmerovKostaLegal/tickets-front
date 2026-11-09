@@ -2,9 +2,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useI18n } from './I18nProvider';
 import {
     ensureContactsPageMessages,
+    ensureFileManagerPageMessages,
     ensureTimeTrackingPageMessages,
     ensureTodoPageMessages,
     isContactsPageMessagesReady,
+    isFileManagerPageMessagesReady,
     isTimeTrackingPageMessagesReady,
     isTodoPageMessagesReady,
 } from './messages';
@@ -60,4 +62,8 @@ export function EnsureTodoI18n(props: Props) {
 
 export function EnsureContactsI18n(props: Props) {
     return <EnsureMessages {...props} ensure={ensureContactsPageMessages} isReady={isContactsPageMessagesReady} />;
+}
+
+export function EnsureFileManagerI18n(props: Props) {
+    return <EnsureMessages {...props} ensure={ensureFileManagerPageMessages} isReady={isFileManagerPageMessagesReady} />;
 }

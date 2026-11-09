@@ -1,7 +1,8 @@
 export { I18nProvider, useI18n } from './I18nProvider';
-export { EnsureContactsI18n, EnsureTimeTrackingI18n, EnsureTodoI18n } from './EnsureTimeTrackingI18n';
+export { EnsureContactsI18n, EnsureFileManagerI18n, EnsureTimeTrackingI18n, EnsureTodoI18n } from './EnsureTimeTrackingI18n';
 export {
     ensureContactsPageMessages,
+    ensureFileManagerPageMessages,
     ensureTimeTrackingPageMessages,
     ensureTodoPageMessages,
 } from './messages';

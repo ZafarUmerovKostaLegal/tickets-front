@@ -1,11 +1,13 @@
 import type { TodoPageMessages } from '../todoPageMessages';
 import type { TimeTrackingPageMessages } from '../timeTrackingPageMessages';
 import type { ContactsPageMessages } from '../contactsPageMessages';
+import type { FileManagerPageMessages } from '../fileManagerPageMessages';
 
 
 const timeTrackingPageStub = {} as TimeTrackingPageMessages;
 const todoPageStub = {} as TodoPageMessages;
 const contactsPageStub = {} as ContactsPageMessages;
+const fileManagerPageStub = {} as FileManagerPageMessages;
 
 export const ruMessages: Messages = {
     brand: {
@@ -600,40 +602,7 @@ export const ruMessages: Messages = {
         fileManager: 'Файловый менеджер',
         sectionsAria: 'Разделы приложения',
     },
-    fileManager: {
-        createUpload: 'Создать или загрузить',
-        upload: 'Загрузить',
-        files: 'Файлы',
-        explorer: 'Проводник',
-        mine: 'Мои файлы',
-        shared: 'Общие папки',
-        available: 'Доступные мне',
-        recent: 'Недавно открытые',
-        starred: 'Избранное',
-        trash: 'Корзина',
-        admin: 'Администрирование',
-        users: 'Пользователи и группы',
-        access: 'Управление доступами',
-        matrix: 'Матрица доступа',
-        journal: 'Журнал действий',
-        monitoring: 'Мониторинг активности',
-        storages: 'Хранилища',
-        directory: 'Active Directory',
-        settings: 'Настройки',
-        storageCount: 'Хранилища · 4',
-        of: 'из',
-        tb: 'ТБ',
-        storageWarn: '1 хранилище с предупреждением',
-        availableProjects: 'Доступные проекты',
-        root: 'Корень',
-        empty: 'Пока нет файлов и папок',
-        error: 'Не удалось загрузить файлы',
-        newFolder: 'Новая папка',
-        folderPh: 'Название папки',
-        create: 'Создать',
-        remove: 'Удалить',
-        uploadFiles: 'Загрузить файлы',
-    },
+    fileManagerPage: fileManagerPageStub,
     pageTitle: {
         login: 'Вход',
         authCallback: 'Выполняется вход',
@@ -1745,40 +1714,7 @@ export type Messages = {
         | 'sectionsAria',
         string
     >;
-    fileManager: {
-        createUpload: string;
-        upload: string;
-        files: string;
-        explorer: string;
-        mine: string;
-        shared: string;
-        available: string;
-        recent: string;
-        starred: string;
-        trash: string;
-        admin: string;
-        users: string;
-        access: string;
-        matrix: string;
-        journal: string;
-        monitoring: string;
-        storages: string;
-        directory: string;
-        settings: string;
-        storageCount: string;
-        of: string;
-        tb: string;
-        storageWarn: string;
-        availableProjects: string;
-        root: string;
-        empty: string;
-        error: string;
-        newFolder: string;
-        folderPh: string;
-        create: string;
-        remove: string;
-        uploadFiles: string;
-    };
+    fileManagerPage: FileManagerPageMessages;
     pageTitle: Record<
         | 'login'
         | 'authCallback'
