@@ -103,13 +103,19 @@ export function loadRoamingSettings(): Promise<AddinSettings> {
   });
 }
 
+function normalizeFiledId(messageId: string): string {
+  return messageId.trim().replace(/^<|>$/g, '').toLowerCase();
+}
+
 export function markFiled(messageId: string): void {
-  const next = [messageId, ...cache.filedMessageIds.filter((id) => id !== messageId)].slice(0, MAX_FILED);
+  const id = normalizeFiledId(messageId);
+  const next = [id, ...cache.filedMessageIds.map(normalizeFiledId).filter((x) => x && x !== id)].slice(0, MAX_FILED);
   saveSettings({ filedMessageIds: next });
 }
 
 export function wasFiled(messageId: string): boolean {
-  return cache.filedMessageIds.includes(messageId);
+  const id = normalizeFiledId(messageId);
+  return cache.filedMessageIds.some((x) => normalizeFiledId(x) === id);
 }
 
 export function newRuleId(): string {

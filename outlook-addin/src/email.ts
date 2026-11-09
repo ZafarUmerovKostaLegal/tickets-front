@@ -10,6 +10,11 @@ export type MailSnapshot = {
   bodyText: string;
 };
 
+/** Stable id for dedupe (Outlook may include or omit &lt;&gt;). */
+export function normalizeMessageId(value: string): string {
+  return value.trim().replace(/^<|>$/g, '').toLowerCase();
+}
+
 function getItem(): Office.MessageRead {
   const item = Office.context.mailbox.item;
   if (!item)
@@ -40,12 +45,17 @@ export async function readCurrentMail(): Promise<MailSnapshot> {
   const cc = (item.cc ?? []).map((r) => r.emailAddress).filter(Boolean).join(', ');
   const internetId = typeof item.internetMessageId === 'string' ? item.internetMessageId : '';
   const itemId = typeof item.itemId === 'string' ? item.itemId : '';
+  const rawFrom = (from?.emailAddress || '').trim();
+  // Some hosts put "Name <mail@x>" into emailAddress — keep bare address for rules.
+  const fromEmail = (rawFrom.match(/<([^>]+)>/)?.[1] || rawFrom).trim();
 
   return {
-    messageId: internetId || itemId || `${from?.emailAddress ?? ''}|${item.subject ?? ''}|${item.dateTimeCreated?.toISOString?.() ?? ''}`,
+    messageId: normalizeMessageId(
+      internetId || itemId || `${fromEmail}|${item.subject ?? ''}|${item.dateTimeCreated?.toISOString?.() ?? ''}`,
+    ),
     subject: item.subject || '(без темы)',
-    fromEmail: from?.emailAddress ?? '',
-    fromName: from?.displayName ?? from?.emailAddress ?? '',
+    fromEmail,
+    fromName: from?.displayName ?? fromEmail,
     to,
     cc,
     received: item.dateTimeCreated?.toISOString?.() ?? new Date().toISOString(),

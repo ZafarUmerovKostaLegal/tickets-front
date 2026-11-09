@@ -44,14 +44,42 @@ function escape(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-async function refreshMail(): Promise<void> {
+let autoFileInFlight: string | null = null;
+
+async function refreshMail(options: { autoFile?: boolean } = {}): Promise<void> {
+  const wantAuto = options.autoFile !== false;
   mail = await readCurrentMail();
-  if (!isAuthenticated())
+  if (!wantAuto)
     return;
+  await tryAutoFileCurrent();
+}
+
+/** Auto-file current message when rule has autoFile. Requires open taskpane + Hub session. */
+async function tryAutoFileCurrent(): Promise<boolean> {
+  if (!mail || !isAuthenticated() || busy)
+    return false;
   const settings = getSettings();
   const rule = matchRule(mail.fromEmail, settings.rules);
-  if (rule && rule.autoFile && !wasFiled(mail.messageId))
+  if (!rule) {
+    return false;
+  }
+  if (!rule.autoFile) {
+    setStatus(`Правило «${rule.match}» без автозагрузки — нажмите «Загрузить в matter»`, '');
+    return false;
+  }
+  if (wasFiled(mail.messageId)) {
+    setStatus(`Уже в matter «${rule.matterName}» (это письмо уже загружали)`, 'ok');
+    return false;
+  }
+  if (autoFileInFlight === mail.messageId)
+    return false;
+  autoFileInFlight = mail.messageId;
+  try {
     await fileMail(rule, true);
+    return true;
+  } finally {
+    autoFileInFlight = null;
+  }
 }
 
 async function refreshMatters(): Promise<void> {
@@ -175,6 +203,16 @@ function renderFile(): string {
     return `<section class="card gate"><p class="hint">Войдите через Microsoft на вкладке «Настройки».</p></section>`;
   const s = getSettings();
   const rule = mail ? matchRule(mail.fromEmail, s.rules) : null;
+  const filed = mail ? wasFiled(mail.messageId) : false;
+  let autoHint = 'Автозагрузка срабатывает при открытии письма, пока открыта эта панель (Outlook не даёт фон без панели).';
+  if (mail && rule?.autoFile && !filed)
+    autoHint = `Авто: при открытии/смене письма загрузим в «${rule.matterName}».`;
+  else if (mail && rule?.autoFile && filed)
+    autoHint = 'Это письмо уже загружали по автоправилу.';
+  else if (mail && rule && !rule.autoFile)
+    autoHint = 'Правило без автозагрузки — только кнопка «Загрузить в matter».';
+  else if (mail && !rule)
+    autoHint = 'Нет правила для этого отправителя — добавьте на вкладке «Правила».';
   return `
     <section class="card">
       <h2>Текущее письмо</h2>
@@ -184,12 +222,13 @@ function renderFile(): string {
           <div>От: ${escape(mail.fromName)} &lt;${escape(mail.fromEmail)}&gt;</div>
           <div class="muted">${escape(mail.received)}</div>
           ${rule
-            ? `<span class="chip">${escape(rule.match)} → ${escape(rule.matterName)}</span>`
+            ? `<span class="chip">${escape(rule.match)} → ${escape(rule.matterName)}${rule.autoFile ? ' · авто' : ''}${filed ? ' · уже в FM' : ''}</span>`
             : `<div class="muted">Нет правила для отправителя</div>`}
         </div>
       ` : `<p class="hint">Откройте письмо в Outlook.</p>`}
+      <p class="hint">${escape(autoHint)}</p>
       <div class="row" style="margin-top:10px">
-        <button type="button" id="refreshMail">Обновить</button>
+        <button type="button" id="refreshMail">Обновить / авто</button>
         <button type="button" class="primary" id="fileNow" ${!rule || busy ? 'disabled' : ''}>Загрузить в matter</button>
       </div>
     </section>
@@ -223,6 +262,11 @@ function bind(): void {
     button.onclick = () => {
       tab = button.dataset.tab as Tab;
       render();
+      if (tab === 'file' && isAuthenticated()) {
+        void refreshMail().then(() => render()).catch((error) => {
+          setStatus(error instanceof Error ? error.message : String(error), 'error');
+        });
+      }
     };
   });
 
@@ -241,6 +285,11 @@ function bind(): void {
           await refreshMatters();
         } catch {
           /* optional until API ready */
+        }
+        try {
+          await refreshMail({ autoFile: true });
+        } catch {
+          /* mail optional */
         }
       } catch (error) {
         setStatus(error instanceof Error ? error.message : String(error), 'error');
@@ -398,14 +447,14 @@ function wireOutlook(): void {
     }
     render();
     try {
-      await refreshMail();
+      await refreshMail({ autoFile: true });
       render();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error), 'error');
     }
     Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, async () => {
       try {
-        await refreshMail();
+        await refreshMail({ autoFile: true });
         render();
       } catch (error) {
         setStatus(error instanceof Error ? error.message : String(error), 'error');
