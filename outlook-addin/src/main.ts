@@ -1,7 +1,12 @@
 import './styles.css';
 import { ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
 import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
-import { clearLegacyOutlookTokens, getProfile, isAuthenticated } from './auth/session';
+import { clearLegacyOutlookTokens, getProfile, isAuthenticated, readAzureAccessToken } from './auth/session';
+import {
+  conversationFileName,
+  downloadMessageMime,
+  listConversationMessages,
+} from './conversation';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
 import { itemHasSavedCategory, markItemSavedToKosta, SAVED_CATEGORY } from './outlookCategory';
 import { describeMatch, matchRule } from './rules';
@@ -30,6 +35,8 @@ let statusText = '';
 let statusKind: '' | 'ok' | 'error' = '';
 let busy = false;
 let outlookSavedCategory = false;
+/** Matter override for full-thread save when no sender rule matches. */
+let threadMatterId = '';
 let draft: { match: string; matterId: string; autoFile: boolean } = { match: '', matterId: '', autoFile: true };
 
 function setStatus(text: string, kind: '' | 'ok' | 'error' = '') {
@@ -135,6 +142,73 @@ async function fileMail(rule: FilingRule, automatic: boolean): Promise<void> {
   }
 }
 
+function resolveThreadTarget(): { matterId: string; matterName: string; clientName: string } | null {
+  if (!mail)
+    return null;
+  const rule = matchRule(mail.fromEmail, getSettings().rules);
+  if (rule)
+    return { matterId: rule.matterId, matterName: rule.matterName, clientName: rule.clientName };
+  const matter = matters.find((row) => row.id === threadMatterId);
+  if (!matter)
+    return null;
+  return { matterId: matter.id, matterName: matter.name, clientName: matter.clientName };
+}
+
+/** Save or update the full Outlook conversation (all participants) into FM Emails. */
+async function fileConversation(mode: 'all' | 'new'): Promise<void> {
+  const target = resolveThreadTarget();
+  if (!target) {
+    setStatus('Укажите matter для переписки (правило или выбор ниже)', 'error');
+    return;
+  }
+  if (!readAzureAccessToken()) {
+    setStatus('Для переписки нужен Mail.Read — выйдите и войдите снова', 'error');
+    return;
+  }
+  busy = true;
+  setStatus(mode === 'all' ? 'Читаем всю переписку…' : 'Ищем новые письма в переписке…');
+  try {
+    const { messages } = await listConversationMessages();
+    const toUpload = mode === 'all'
+      ? messages
+      : messages.filter((row) => !wasFiled(row.internetMessageId));
+    if (!toUpload.length) {
+      setStatus(`Переписка уже в FM (${messages.length} писем) → «${target.matterName}»`, 'ok');
+      await ensureOutlookSavedMark();
+      return;
+    }
+    const folderId = await ensureEmailsFolder(target.matterId);
+    let uploaded = 0;
+    for (let i = 0; i < toUpload.length; i += 1) {
+      const meta = toUpload[i];
+      setStatus(`Загрузка ${i + 1}/${toUpload.length}: ${meta.fromEmail}…`);
+      const file = await downloadMessageMime(
+        meta.graphId,
+        conversationFileName(meta, messages.indexOf(meta)),
+      );
+      await uploadToMatter(
+        target.matterId,
+        folderId,
+        file,
+        `Outlook thread · ${meta.fromEmail} · ${target.clientName}`,
+      );
+      markFiled(meta.internetMessageId);
+      uploaded += 1;
+    }
+    await ensureOutlookSavedMark();
+    setStatus(
+      `Переписка → «${target.matterName}»: загружено ${uploaded} из ${messages.length}`
+      + (outlookSavedCategory ? `\nOutlook: «${SAVED_CATEGORY}»` : ''),
+      'ok',
+    );
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), 'error');
+  } finally {
+    busy = false;
+    render();
+  }
+}
+
 function renderAuthGate(): string {
   const profile = getProfile();
   if (isAuthenticated() && profile) {
@@ -225,15 +299,22 @@ function renderFile(): string {
   const s = getSettings();
   const rule = mail ? matchRule(mail.fromEmail, s.rules) : null;
   const filed = mail ? wasFiled(mail.messageId) : false;
-  let autoHint = 'Автозагрузка срабатывает при открытии письма, пока открыта эта панель (Outlook не даёт фон без панели).';
+  const threadTarget = resolveThreadTarget();
+  const matterOptions = matters.map((matter) => {
+    const label = `${matter.clientName} · ${matter.code ? `${matter.code} · ` : ''}${matter.name}`;
+    const selected = (rule?.matterId || threadMatterId) === matter.id ? 'selected' : '';
+    return `<option value="${escape(matter.id)}" ${selected}>${escape(label)}</option>`;
+  }).join('');
+  let autoHint = 'Автозагрузка срабатывает при открытии письма, пока открыта эта панель.';
   if (mail && rule?.autoFile && !filed)
     autoHint = `Авто: при открытии/смене письма загрузим в «${rule.matterName}».`;
   else if (mail && rule?.autoFile && filed)
     autoHint = 'Это письмо уже загружали по автоправилу.';
   else if (mail && rule && !rule.autoFile)
-    autoHint = 'Правило без автозагрузки — только кнопка «Загрузить в matter».';
+    autoHint = 'Правило без автозагрузки — кнопка «Это письмо» или вся переписка.';
   else if (mail && !rule)
-    autoHint = 'Нет правила для этого отправителя — добавьте на вкладке «Правила».';
+    autoHint = 'Нет правила для отправителя — выберите matter ниже для переписки.';
+  const graphOk = Boolean(readAzureAccessToken());
   return `
     <section class="card">
       <h2>Текущее письмо</h2>
@@ -253,7 +334,21 @@ function renderFile(): string {
       <p class="hint">${escape(autoHint)}</p>
       <div class="row" style="margin-top:10px">
         <button type="button" id="refreshMail">Обновить / авто</button>
-        <button type="button" class="primary" id="fileNow" ${!rule || busy ? 'disabled' : ''}>Загрузить в matter</button>
+        <button type="button" class="primary" id="fileNow" ${!rule || busy ? 'disabled' : ''}>Это письмо</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Вся переписка</h2>
+      <p class="hint">Сохраняет все письма треда (все участники) в Correspondence/Emails. «Обновить» догружает только новые.</p>
+      ${!rule ? `
+        <label class="field">Matter для переписки
+          <select id="threadMatter"><option value="">Выберите matter…</option>${matterOptions}</select>
+        </label>
+      ` : `<p class="hint">Matter из правила: <strong>${escape(rule.matterName)}</strong></p>`}
+      ${!graphOk ? `<p class="hint">Нужен повторный вход (согласие Mail.Read) для чтения треда.</p>` : ''}
+      <div class="row">
+        <button type="button" class="primary" id="fileThreadAll" ${!threadTarget || busy || !graphOk ? 'disabled' : ''}>Сохранить переписку</button>
+        <button type="button" id="fileThreadNew" ${!threadTarget || busy || !graphOk ? 'disabled' : ''}>Обновить переписку</button>
       </div>
     </section>
   `;
@@ -436,6 +531,26 @@ function bind(): void {
       const rule = matchRule(mail.fromEmail, getSettings().rules);
       if (rule)
         await fileMail(rule, false);
+    };
+  }
+
+  const threadMatter = app!.querySelector<HTMLSelectElement>('#threadMatter');
+  if (threadMatter) {
+    threadMatter.onchange = () => {
+      threadMatterId = threadMatter.value;
+      render();
+    };
+  }
+  const fileThreadAll = app!.querySelector<HTMLButtonElement>('#fileThreadAll');
+  if (fileThreadAll) {
+    fileThreadAll.onclick = () => {
+      void fileConversation('all');
+    };
+  }
+  const fileThreadNew = app!.querySelector<HTMLButtonElement>('#fileThreadNew');
+  if (fileThreadNew) {
+    fileThreadNew.onclick = () => {
+      void fileConversation('new');
     };
   }
 

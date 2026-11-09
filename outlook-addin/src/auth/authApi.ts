@@ -5,6 +5,7 @@ import {
   markAuthenticated,
   readHubAccessToken,
   setProfile,
+  storeAzureAccessToken,
   storeHubAccessToken,
   type AuthProfile,
 } from './session';
@@ -195,8 +196,11 @@ export async function loginWithHub(): Promise<AuthProfile> {
   if (!pair.access_token)
     throw new Error('Пустой ответ bootstrap');
   storeHubAccessToken(pair.access_token);
+  storeAzureAccessToken(azureTokens.access_token, azureTokens.expires_in || 3600);
   return fetchHubMe();
 }
+
+const AZURE_SCOPES = 'openid profile email offline_access User.Read Mail.Read';
 
 async function redeemSpaCodeInBrowser(input: {
   tenantId: string;
@@ -204,7 +208,7 @@ async function redeemSpaCodeInBrowser(input: {
   code: string;
   redirectUri: string;
   codeVerifier: string;
-}): Promise<{ access_token: string; id_token?: string }> {
+}): Promise<{ access_token: string; id_token?: string; expires_in?: number }> {
   const tokenUrl = `https://login.microsoftonline.com/${input.tenantId}/oauth2/v2.0/token`;
   const response = await fetch(tokenUrl, {
     method: 'POST',
@@ -215,12 +219,13 @@ async function redeemSpaCodeInBrowser(input: {
       code: input.code,
       redirect_uri: input.redirectUri,
       code_verifier: input.codeVerifier,
-      scope: 'openid profile email offline_access User.Read',
+      scope: AZURE_SCOPES,
     }),
   });
   const payload = await response.json() as {
     access_token?: string;
     id_token?: string;
+    expires_in?: number;
     error?: string;
     error_description?: string;
   };
@@ -229,7 +234,11 @@ async function redeemSpaCodeInBrowser(input: {
       humanizeOAuthError(payload.error_description || payload.error || `HTTP ${response.status}`),
     );
   }
-  return { access_token: payload.access_token, id_token: payload.id_token };
+  return {
+    access_token: payload.access_token,
+    id_token: payload.id_token,
+    expires_in: payload.expires_in,
+  };
 }
 
 function humanizeOAuthError(raw: string): string {

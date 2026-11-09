@@ -11,6 +11,9 @@ const HUB_TOKEN_KEY = 'access_token';
 
 let sessionLive = false;
 let profile: AuthProfile | null = null;
+/** Azure Graph token (Mail.Read) — memory only, for conversation export. */
+let azureAccessToken: string | null = null;
+let azureAccessExpiresAt = 0;
 
 function readStoredProfile(): AuthProfile | null {
   try {
@@ -60,6 +63,8 @@ export function markAuthenticated(next: AuthProfile): void {
 export function clearSession(): void {
   sessionLive = false;
   profile = null;
+  azureAccessToken = null;
+  azureAccessExpiresAt = 0;
   try {
     localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(HUB_TOKEN_KEY);
@@ -67,6 +72,17 @@ export function clearSession(): void {
     /* ignore */
   }
   clearLegacyOutlookTokens();
+}
+
+export function storeAzureAccessToken(token: string, expiresInSec = 3600): void {
+  azureAccessToken = token;
+  azureAccessExpiresAt = Date.now() + Math.max(60, expiresInSec - 60) * 1000;
+}
+
+export function readAzureAccessToken(): string | null {
+  if (!azureAccessToken || Date.now() >= azureAccessExpiresAt)
+    return null;
+  return azureAccessToken;
 }
 
 export function setProfile(next: AuthProfile): void {
