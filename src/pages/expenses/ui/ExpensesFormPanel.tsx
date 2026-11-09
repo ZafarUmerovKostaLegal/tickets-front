@@ -1873,11 +1873,12 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                         <DatePicker
                             portal
                             portalZIndex={12100}
+                            editable
                             className="exp-form-datepicker"
                             buttonClassName="exp-form-input exp-form-datepicker__btn"
                             aria-labelledby="exp-form-expense-date-lbl"
                             title="Дата расхода"
-                            emptyLabel="Выберите дату"
+                            emptyLabel="дд.мм.гггг"
                             value={values.expenseDate}
                             max={todayIsoLocal()}
                             onChange={(iso) => set('expenseDate', iso)}

@@ -21,6 +21,78 @@
   margin-left: 0.15rem;
 }
 
+.ttp--editable {
+  width: 100%;
+}
+
+.ttp__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 0.35rem 0 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border, #e5e7eb);
+  background: var(--app-surface, #fff);
+  color: var(--app-text, #111827);
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.ttp__edit:focus-within {
+  border-color: var(--app-accent, #7c3aed);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent, #7c3aed) 28%, transparent);
+}
+
+.ttp__input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.ttp__input::placeholder {
+  color: var(--app-muted, #64748b);
+}
+
+.ttp__input:disabled {
+  cursor: not-allowed;
+}
+
+.ttp__edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted, #6b7280);
+  cursor: pointer;
+}
+
+.ttp__edit-btn:hover:not(:disabled) {
+  background: var(--app-surface-soft, #f1f5f9);
+  color: var(--app-text, #111827);
+}
+
+.ttp__edit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .ttp__btn {
   display: inline-flex;
   align-items: center;

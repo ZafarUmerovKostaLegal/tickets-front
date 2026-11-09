@@ -58,6 +58,31 @@ function displayRuFromIso(iso: string): string {
         return '—';
     return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+function formatRuFromDate(d: Date): string {
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function parseTypedDate(raw: string): Date | null {
+    const text = raw.trim();
+    if (!text)
+        return null;
+    const iso = parseIsoDate(text);
+    if (iso)
+        return iso;
+    const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/.exec(text);
+    if (!m)
+        return null;
+    const day = Number(m[1]);
+    const month = Number(m[2]);
+    let year = Number(m[3]);
+    if (year < 100)
+        year += year >= 70 ? 1900 : 2000;
+    if (!day || !month || !year)
+        return null;
+    const d = new Date(year, month - 1, day);
+    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day)
+        return null;
+    return d;
+}
 function compareIso(a: string, b: string): number {
     return a.localeCompare(b);
 }
@@ -82,16 +107,20 @@ export type DatePickerProps = {
     isDateDisabled?: (iso: string) => boolean;
     emptyLabel?: string;
     labelText?: string;
+    /** Allow typing dd.mm.yyyy (or ISO) in addition to the calendar. */
+    editable?: boolean;
 };
-export function DatePicker({ value, onChange, min, max, disabled = false, isDateDisabled, className = '', buttonClassName = '', id, 'aria-labelledby': ariaLabelledBy, portal = false, portalZIndex = 1300, title = 'Выбрать дату', iconAfterLabel = false, showChevron = true, emptyLabel, labelText, }: DatePickerProps) {
+export function DatePicker({ value, onChange, min, max, disabled = false, isDateDisabled, className = '', buttonClassName = '', id, 'aria-labelledby': ariaLabelledBy, portal = false, portalZIndex = 1300, title = 'Выбрать дату', iconAfterLabel = false, showChevron = true, emptyLabel, labelText, editable = false, }: DatePickerProps) {
     const genId = useId();
     const btnId = id ?? `${genId}-btn`;
     const gridId = `${genId}-grid`;
     const [open, setOpen] = useState(false);
     const parsedValue = useMemo(() => parseIsoDate(value), [value]);
     const [viewMonth, setViewMonth] = useState<Date>(() => parsedValue ?? new Date());
+    const [draft, setDraft] = useState(() => (parsedValue ? formatRuFromDate(parsedValue) : ''));
     const wrapRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const popRef = useRef<HTMLDivElement>(null);
     const popW = 280;
     const GAP = 6;
@@ -105,7 +134,9 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
         const p = parseIsoDate(value);
         if (p)
             setViewMonth(startOfMonth(p));
-    }, [value]);
+        if (editable)
+            setDraft(p ? formatRuFromDate(p) : '');
+    }, [value, editable]);
     const isDisabledDay = useCallback((d: Date): boolean => {
         const iso = toIsoDate(d);
         if (min && compareIso(iso, min) < 0)
@@ -116,6 +147,22 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
             return true;
         return false;
     }, [min, max, isDateDisabled]);
+    const commitTyped = useCallback(() => {
+        const typed = draft.trim();
+        if (!typed) {
+            setDraft(parsedValue ? formatRuFromDate(parsedValue) : '');
+            return;
+        }
+        const d = parseTypedDate(typed);
+        if (d == null || isDisabledDay(d)) {
+            setDraft(parsedValue ? formatRuFromDate(parsedValue) : '');
+            return;
+        }
+        const iso = toIsoDate(d);
+        setDraft(formatRuFromDate(d));
+        if (iso !== value)
+            onChange(iso);
+    }, [draft, isDisabledDay, onChange, parsedValue, value]);
     const cells = useMemo(() => {
         const start = calendarGridStart(viewMonth);
         const out: {
@@ -150,7 +197,7 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
             return Math.max(V_MARGIN, Math.min(top, maxTop));
         };
         const update = (measuredH: number | null) => {
-            const el = btnRef.current;
+            const el = btnRef.current ?? wrapRef.current;
             if (!el)
                 return;
             const r = el.getBoundingClientRect();
@@ -207,12 +254,12 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
             if (e.key === 'Escape') {
                 e.preventDefault();
                 setOpen(false);
-                btnRef.current?.focus();
+                (editable ? inputRef.current : btnRef.current)?.focus();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [open]);
+    }, [editable, open]);
     const today = useMemo(() => {
         const t = new Date();
         return new Date(t.getFullYear(), t.getMonth(), t.getDate());
@@ -220,9 +267,12 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
     const pick = (d: Date) => {
         if (disabled || isDisabledDay(d))
             return;
-        onChange(toIsoDate(d));
+        const iso = toIsoDate(d);
+        if (editable)
+            setDraft(formatRuFromDate(d));
+        onChange(iso);
         setOpen(false);
-        btnRef.current?.focus();
+        (editable ? inputRef.current : btnRef.current)?.focus();
     };
     const goToday = () => {
         if (!isDisabledDay(today))
@@ -290,7 +340,54 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
         ? (labelText ?? parsedValue.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }))
         : (emptyLabel ?? displayRuFromIso(value));
     const labelClass = ['ttp__label', !parsedValue ? 'ttp__label--empty' : ''].filter(Boolean).join(' ');
-    return (<div ref={wrapRef} className={`ttp${iconAfterLabel ? ' ttp--icon-end' : ''} ${className}`.trim()}>
+    return (<div ref={wrapRef} className={`ttp${iconAfterLabel ? ' ttp--icon-end' : ''}${editable ? ' ttp--editable' : ''} ${className}`.trim()}>
+      {editable ? (
+        <div className={`ttp__edit ${buttonClassName}`.trim()}>
+          {ico}
+          <input
+            ref={inputRef}
+            id={btnId}
+            type="text"
+            className="ttp__input"
+            inputMode="numeric"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={emptyLabel ?? 'дд.мм.гггг'}
+            value={draft}
+            disabled={disabled}
+            aria-labelledby={ariaLabelledBy}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-controls={open ? gridId : undefined}
+            title={title}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commitTyped}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    commitTyped();
+                    setOpen(false);
+                }
+                if (event.key === 'ArrowDown' && !disabled) {
+                    event.preventDefault();
+                    setOpen(true);
+                }
+            }}
+          />
+          <button
+            ref={btnRef}
+            type="button"
+            className="ttp__edit-btn"
+            disabled={disabled}
+            aria-label={title}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            onClick={() => !disabled && setOpen((o) => !o)}
+          >
+            {chev ?? ico}
+          </button>
+        </div>
+      ) : (
       <button ref={btnRef} id={btnId} type="button" className={`ttp__btn ${buttonClassName}`.trim()} disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? gridId : undefined} aria-labelledby={ariaLabelledBy} onClick={() => !disabled && setOpen((o) => !o)} title={title}>
         {iconAfterLabel
             ? (<>
@@ -304,6 +401,7 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
           {chev}
         </>)}
       </button>
+      )}
       {open && !portal ? <div className="ttp__dropdown">{popover}</div> : null}
       {open && portal && portalBox && typeof document !== 'undefined'
             ? createPortal(popover, document.body)

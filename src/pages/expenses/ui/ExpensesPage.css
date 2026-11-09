@@ -2703,21 +2703,16 @@ body[data-theme='dark'] .exp-table__status-reason--revision .exp-table__status-r
   width: 100%;
 }
 
-.exp-form-datepicker__btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+.exp-form-datepicker__btn.ttp__edit,
+.exp-form-datepicker .exp-form-datepicker__btn {
   width: 100%;
   min-height: 2.75rem;
-  text-align: left;
-  cursor: pointer;
+  border-radius: 10px;
 }
 
-.exp-form-datepicker__btn:focus-visible {
+.exp-form-datepicker .ttp__edit:focus-within {
   border-color: var(--app-accent, #4f46e5);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-  outline: none;
 }
 .exp-form-textarea:disabled,
 .exp-form-select:disabled {
