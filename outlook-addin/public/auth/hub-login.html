@@ -14,26 +14,18 @@
         color: #f3f6fb;
         background: linear-gradient(165deg, #141c2c, #0b1220);
       }
-      p { opacity: 0.8; }
+      p { opacity: 0.85; max-width: 16rem; text-align: center; }
     </style>
   </head>
   <body>
-    <p>Переход к входу Microsoft…</p>
+    <p>Подхватываем Microsoft-аккаунт Outlook…</p>
     <script>
       (function () {
-        var params = new URLSearchParams(window.location.search);
-        var azure = params.get('azure');
-        var done = params.get('done') || (window.location.origin + '/outlook-addin/auth/hub-done.html');
+        var azure = new URLSearchParams(window.location.search).get('azure');
         if (!azure) {
           document.body.textContent = 'Не задан URL входа Azure';
           return;
         }
-        try {
-          // Same key as Hub SPA — AuthCallback will return here after login
-          localStorage.setItem('auth-return-path', '/outlook-addin/auth/hub-done.html');
-          sessionStorage.setItem('auth-return-path', '/outlook-addin/auth/hub-done.html');
-          localStorage.setItem('kosta.outlook.hub-done', done);
-        } catch (e) {}
         window.location.replace(azure);
       })();
     </script>

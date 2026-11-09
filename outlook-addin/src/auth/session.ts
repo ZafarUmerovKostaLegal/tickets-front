@@ -6,6 +6,8 @@ export type AuthProfile = {
 
 const PROFILE_KEY = 'kosta.outlook.profile';
 const LEGACY_REFRESH = 'kosta.outlook.refresh.enc';
+/** Same key as Hub SPA — shared on tickets.kostalegal.com */
+const HUB_TOKEN_KEY = 'access_token';
 
 let sessionLive = false;
 let profile: AuthProfile | null = null;
@@ -60,6 +62,7 @@ export function clearSession(): void {
   profile = null;
   try {
     localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(HUB_TOKEN_KEY);
   } catch {
     /* ignore */
   }
@@ -75,12 +78,19 @@ export function setProfile(next: AuthProfile): void {
   }
 }
 
-/** Hub SPA token on same origin (when cookie-only is off). */
 export function readHubAccessToken(): string | null {
   try {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem(HUB_TOKEN_KEY);
     return token?.trim() || null;
   } catch {
     return null;
+  }
+}
+
+export function storeHubAccessToken(token: string): void {
+  try {
+    localStorage.setItem(HUB_TOKEN_KEY, token);
+  } catch {
+    /* ignore */
   }
 }

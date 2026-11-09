@@ -1,6 +1,6 @@
 import './styles.css';
 import { ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
-import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
+import { ensureHubSessionOrSilent, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
 import { clearLegacyOutlookTokens, getProfile, isAuthenticated } from './auth/session';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
 import { describeMatch, matchRule } from './rules';
@@ -104,7 +104,7 @@ function renderAuthGate(): string {
   return `
     <section class="card">
       <h2>Вход</h2>
-      <p class="hint">Один вход Microsoft — тот же, что на сайте Hub. Отдельная авторизация add-in не нужна.</p>
+      <p class="hint">Подхватываем аккаунт Outlook (тот же Microsoft, что и Hub). Если тихий вход не сработал — нажмите кнопку.</p>
       <button type="button" class="primary" id="loginBtn" ${busy ? 'disabled' : ''}>Войти в Kosta Hub</button>
     </section>
   `;
@@ -119,7 +119,7 @@ function renderSettings(): string {
       <label class="field">File Manager API
         <input id="apiBase" value="${escape(s.apiBase)}" placeholder="https://ticketsback.kostalegal.com/api/v1/files" />
       </label>
-      <p class="hint">Сессия берётся из cookie Hub (тот же Microsoft-логин).</p>
+      <p class="hint">Сессия Hub в этом WebView Outlook (токен после входа через Microsoft).</p>
       <div class="row">
         <button type="button" id="saveSettings">Сохранить URL</button>
         <button type="button" id="testApi" ${!isAuthenticated() ? 'disabled' : ''}>Проверить API</button>
@@ -383,13 +383,17 @@ function wireOutlook(): void {
     }
     await loadRoamingSettings();
     clearLegacyOutlookTokens();
-    if (await ensureHubSession()) {
+    setStatus('Проверяем сессию Hub…');
+    if (await ensureHubSessionOrSilent()) {
       try {
         await fetchHubMe();
         await refreshMatters();
+        setStatus(`Сессия: ${getProfile()?.email || 'OK'}`, 'ok');
       } catch {
-        /* need re-login */
+        setStatus('');
       }
+    } else {
+      setStatus('Сессия браузера сюда не подтягивается — нажмите «Войти в Kosta Hub» (один раз)', '');
     }
     render();
     try {

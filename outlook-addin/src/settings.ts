@@ -24,6 +24,16 @@ const defaults: AddinSettings = {
   filedMessageIds: [],
 };
 
+function normalizeApiBase(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, '');
+  if (!trimmed)
+    return defaults.apiBase;
+  // Common typo from truncated UI: .../api/v1/file
+  if (/\/api\/v1\/file$/i.test(trimmed))
+    return `${trimmed}s`;
+  return trimmed;
+}
+
 function fromStorage(): AddinSettings {
   try {
     const raw = localStorage.getItem(KEY);
@@ -31,7 +41,7 @@ function fromStorage(): AddinSettings {
       return { ...defaults, rules: [], filedMessageIds: [] };
     const parsed = JSON.parse(raw) as Partial<AddinSettings>;
     return {
-      apiBase: String(parsed.apiBase || defaults.apiBase),
+      apiBase: normalizeApiBase(String(parsed.apiBase || defaults.apiBase)),
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
       filedMessageIds: Array.isArray(parsed.filedMessageIds) ? parsed.filedMessageIds.map(String) : [],
     };
@@ -50,6 +60,7 @@ export function saveSettings(patch: Partial<AddinSettings>): AddinSettings {
   cache = {
     ...cache,
     ...patch,
+    apiBase: normalizeApiBase(patch.apiBase ?? cache.apiBase),
     rules: patch.rules ?? cache.rules,
     filedMessageIds: patch.filedMessageIds ?? cache.filedMessageIds,
   };
