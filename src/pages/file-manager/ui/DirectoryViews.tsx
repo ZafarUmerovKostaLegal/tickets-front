@@ -3,6 +3,25 @@ import { filesApi, type AccessLevel, type ClientsResponse, type MatterRow } from
 import { matchesFilter } from '../lib/filesFormat';
 import { Icon, LevelBadge, useAction, useFm } from './fmShared';
 
+type DirectoryLayout = 'list' | 'tiles';
+const MATTERS_LAYOUT_KEY = 'fm.mattersLayout';
+
+function readMattersLayout(): DirectoryLayout {
+    try {
+        return localStorage.getItem(MATTERS_LAYOUT_KEY) === 'tiles' ? 'tiles' : 'list';
+    } catch {
+        return 'list';
+    }
+}
+
+function writeMattersLayout(layout: DirectoryLayout) {
+    try {
+        localStorage.setItem(MATTERS_LAYOUT_KEY, layout);
+    } catch {
+        /* ignore */
+    }
+}
+
 type ClientsProps = {
     clients: ClientsResponse;
     onOpenClient: (clientId: string) => void;
@@ -146,7 +165,13 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
     const [docs, setDocs] = useState<DocsFilter>('any');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [mineFilter, setMineFilter] = useState(false);
+    const [layout, setLayout] = useState<DirectoryLayout>(readMattersLayout);
     const client = clientId ? clients.clients.find((row) => row.id === clientId) ?? null : null;
+
+    const setMattersLayout = (next: DirectoryLayout) => {
+        setLayout(next);
+        writeMattersLayout(next);
+    };
 
     const clientOptions = useMemo(() => clients.clients
         .slice()
@@ -249,6 +274,16 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                 {dirty ? (
                     <button type="button" className="fm-filters__reset" onClick={reset}>{tr('directory.resetFilters')}</button>
                 ) : null}
+                <div className="fm-view-toggle" role="group" aria-label={tr('directory.viewList')}>
+                    <button type="button" className={layout === 'list' ? 'is-on' : ''} aria-pressed={layout === 'list'}
+                        title={tr('directory.viewList')} onClick={() => setMattersLayout('list')}>
+                        <Icon name="list" />
+                    </button>
+                    <button type="button" className={layout === 'tiles' ? 'is-on' : ''} aria-pressed={layout === 'tiles'}
+                        title={tr('directory.viewTiles')} onClick={() => setMattersLayout('tiles')}>
+                        <Icon name="grid" />
+                    </button>
+                </div>
                 <span className="fm-toolbar__stats">
                     {clients.stats ? tr('directory.directoryStats', { clients: clients.stats.clients, matters: clients.stats.matters }) : null}
                     <small>{tr('directory.filtered', { count: rows.length })}</small>
@@ -259,6 +294,25 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                     <Icon name="briefcase" />
                     <p>{mineOnly ? tr('lists.myMattersEmpty') : tr('tree.empty')}</p>
                     <small>{tr('tree.emptyHint')}</small>
+                </div>
+            ) : layout === 'tiles' ? (
+                <div className="fm-ex__tiles fm-ex__tiles--page">
+                    {rows.map((matter) => (
+                        <button key={matter.id} type="button"
+                            className={matter.closed ? 'fm-ex__tile is-closed' : 'fm-ex__tile'}
+                            onClick={() => onOpenMatter(matter.id)}
+                            onDoubleClick={() => onOpenMatter(matter.id)}>
+                            <span className="fm-ex__tile-ico" aria-hidden>
+                                <Icon name={matter.closed || matter.level === 'read' ? 'lock' : 'briefcase'} />
+                            </span>
+                            <span className="fm-ex__tile-meta">
+                                <strong title={matter.name}>{matter.name}</strong>
+                                <small title={!clientId ? matter.clientName : (matter.code || undefined)}>
+                                    {!clientId ? matter.clientName : (matter.code || tr('directory.matterType'))}
+                                </small>
+                            </span>
+                        </button>
+                    ))}
                 </div>
             ) : (
                 <div className="fm-table-wrap">

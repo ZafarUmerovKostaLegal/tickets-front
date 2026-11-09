@@ -94,6 +94,9 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         mineOnly: 'Mine only',
         clientsEmpty: 'No clients',
         clientsEmptyHint: 'Change the filter or check access in time tracking.',
+        viewList: 'List',
+        viewTiles: 'Tiles',
+        matterType: 'Matter',
     },
     tree: {
         filter: 'Filter clients and matters…',
