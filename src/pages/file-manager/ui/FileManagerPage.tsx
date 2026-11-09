@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -98,9 +98,20 @@ function SideLink({ item, active, onSelect }: { item: NavItem; active: boolean; 
     );
 }
 
+const ALL_ITEMS = [...FILES, ...ADMIN];
+
 export function FileManagerPage() {
     const { t } = useI18n();
     const [page, setPage] = useState<PageId>('all');
+    const active = ALL_ITEMS.find((item) => item.id === page) ?? FILES[0];
+
+    const selectPage = useCallback((id: PageId) => {
+        if (id === page)
+            return;
+        startTransition(() => {
+            setPage(id);
+        });
+    }, [page]);
 
     return (
         <div className="fm">
@@ -115,26 +126,32 @@ export function FileManagerPage() {
                 </div>
             </header>
             <div className="fm__body">
-            <aside className="fm-side">
-                <button type="button" className="fm-side__create">+ {t('fileManager.createUpload')}</button>
-                <p>{t('fileManager.files')}</p>
-                <nav aria-label={t('fileManager.files')}>
-                    {FILES.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={setPage} />)}
-                </nav>
-                <p>{t('fileManager.admin')}</p>
-                <nav aria-label={t('fileManager.admin')}>
-                    {ADMIN.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={setPage} />)}
-                </nav>
-                <div className="fm-side__storage">
-                    <div>
-                        <strong>{t('fileManager.storageCount')}</strong>
-                        <span>1,8 {t('fileManager.of')} 5 {t('fileManager.tb')}</span>
+                <aside className="fm-side">
+                    <button type="button" className="fm-side__create">+ {t('fileManager.createUpload')}</button>
+                    <p>{t('fileManager.files')}</p>
+                    <nav aria-label={t('fileManager.files')}>
+                        {FILES.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
+                    </nav>
+                    <p>{t('fileManager.admin')}</p>
+                    <nav aria-label={t('fileManager.admin')}>
+                        {ADMIN.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
+                    </nav>
+                    <div className="fm-side__storage">
+                        <div>
+                            <strong>{t('fileManager.storageCount')}</strong>
+                            <span>1,8 {t('fileManager.of')} 5 {t('fileManager.tb')}</span>
+                        </div>
+                        <i aria-hidden><b /></i>
+                        <small>{t('fileManager.storageWarn')}</small>
                     </div>
-                    <i aria-hidden><b /></i>
-                    <small>{t('fileManager.storageWarn')}</small>
-                </div>
-            </aside>
-            <div className="fm__main" />
+                </aside>
+                <ViewTransition default="none" enter="none" exit="none" update="fm-section">
+                    <main key={page} className="fm__main">
+                        <div className="fm__panel">
+                            <h2 className="fm__panel-title">{t(active.label)}</h2>
+                        </div>
+                    </main>
+                </ViewTransition>
             </div>
         </div>
     );

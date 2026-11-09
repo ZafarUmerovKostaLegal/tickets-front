@@ -80,6 +80,7 @@
   font-size: 0.9rem;
   text-align: left;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .fm-side nav button svg {
@@ -168,7 +169,55 @@
 .fm__main {
   flex: 1;
   min-width: 0;
+  overflow: auto;
   background: var(--app-bg, #f7f8fb);
+}
+
+.fm__panel {
+  padding: 1.25rem 1.5rem;
+}
+
+.fm__panel-title {
+  margin: 0;
+  color: var(--app-text, #1f2937);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+@supports not (view-transition-name: none) {
+  .fm__main {
+    animation: fm-pane-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@supports (view-transition-name: none) {
+  ::view-transition-old(.fm-section) {
+    animation: vt-fade-out 0.18s ease both;
+  }
+
+  ::view-transition-new(.fm-section) {
+    animation: vt-fade-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes fm-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm__main,
+  .fm-side nav button {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -184,5 +233,9 @@
 
   .fm-side {
     width: 240px;
+  }
+
+  .fm__panel {
+    padding: 1rem;
   }
 }
