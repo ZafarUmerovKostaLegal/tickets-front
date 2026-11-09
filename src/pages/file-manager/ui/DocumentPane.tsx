@@ -260,7 +260,7 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
         if (!doc)
             return;
         const url = new URL(window.location.href);
-        url.search = new URLSearchParams({ view: 'matters', matter: doc.matterId, ...(doc.folderId ? { folder: doc.folderId } : {}), doc: doc.id }).toString();
+        url.search = new URLSearchParams({ view: 'matter', matter: doc.matterId, ...(doc.folderId ? { folder: doc.folderId } : {}), doc: doc.id }).toString();
         await act(() => navigator.clipboard.writeText(url.toString()), tr('pane.linkCopied'));
     };
 

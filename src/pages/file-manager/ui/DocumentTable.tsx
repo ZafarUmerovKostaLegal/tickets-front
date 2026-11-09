@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { DocumentRow, FolderRow } from '../api/filesApi';
 import { formatBytes, formatDateTime } from '../lib/filesFormat';
 import { FileBadge, Icon, useFm } from './fmShared';
@@ -16,6 +16,7 @@ type Props = {
     onSelect: (doc: DocumentRow) => void;
     onOpen?: (doc: DocumentRow) => void;
     onOpenFolder?: (folder: FolderRow) => void;
+    onDropOnFolder?: (folder: FolderRow, documentId: string) => void;
     onToggleFavorite?: (doc: DocumentRow) => void;
 };
 
@@ -30,9 +31,11 @@ export function DocumentTable({
     onSelect,
     onOpen,
     onOpenFolder,
+    onDropOnFolder,
     onToggleFavorite,
 }: Props) {
     const { tr, locale } = useFm();
+    const [dropTarget, setDropTarget] = useState<string | null>(null);
     if (documents.length === 0 && folders.length === 0)
         return <div className="fm-state">{empty ?? tr('table.noResults')}</div>;
     return (
@@ -52,8 +55,24 @@ export function DocumentTable({
                 </thead>
                 <tbody>
                     {folders.map((folder) => (
-                        <tr key={`f:${folder.id}`} className="fm-table__folder" onDoubleClick={() => onOpenFolder?.(folder)}
-                            onClick={() => onOpenFolder?.(folder)}>
+                        <tr key={`f:${folder.id}`} className={dropTarget === folder.id ? 'fm-table__folder is-drop' : 'fm-table__folder'}
+                            onClick={() => onOpenFolder?.(folder)}
+                            onDragOver={onDropOnFolder ? (event) => {
+                                if (event.dataTransfer.types.includes(DOC_DRAG_TYPE)) {
+                                    event.preventDefault();
+                                    setDropTarget(folder.id);
+                                }
+                            } : undefined}
+                            onDragLeave={() => setDropTarget(null)}
+                            onDrop={onDropOnFolder ? (event) => {
+                                setDropTarget(null);
+                                const id = event.dataTransfer.getData(DOC_DRAG_TYPE);
+                                if (id) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    onDropOnFolder(folder, id);
+                                }
+                            } : undefined}>
                             <td />
                             <td colSpan={showMatter ? 2 : 1}>
                                 <span className="fm-table__name">

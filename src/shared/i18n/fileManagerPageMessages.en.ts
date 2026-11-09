@@ -4,6 +4,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
     nav: {
         workspace: 'Workspace',
         matters: 'Clients & Matters',
+        clients: 'Clients',
+        allMatters: 'Matters',
         myMatters: 'My Matters',
         favorites: 'Favorites',
         recent: 'Recent documents',
@@ -61,6 +63,19 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         archive: 'Archive',
         text: 'Text',
         file: 'File',
+    },
+    directory: {
+        clientsSearch: 'Find a client or matter code…',
+        mattersSearch: 'Find a matter by name, code or client…',
+        showArchived: 'Show archived clients',
+        total: 'Total: {count}',
+        matters: 'Matters',
+        openMatters: 'Open',
+        mine: 'Mine',
+        documents: 'Documents',
+        access: 'Access',
+        status: 'Status',
+        open: 'Open',
     },
     tree: {
         filter: 'Filter clients and matters…',

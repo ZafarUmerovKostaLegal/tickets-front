@@ -2,6 +2,8 @@ export const fileManagerPageMessages = {
     nav: {
         workspace: 'Рабочая область',
         matters: 'Clients & Matters',
+        clients: 'Клиенты',
+        allMatters: 'Matters',
         myMatters: 'Мои Matters',
         favorites: 'Избранное',
         recent: 'Недавние документы',
@@ -59,6 +61,19 @@ export const fileManagerPageMessages = {
         archive: 'Архив',
         text: 'Текст',
         file: 'Файл',
+    },
+    directory: {
+        clientsSearch: 'Найти клиента или код matter…',
+        mattersSearch: 'Найти matter по названию, коду или клиенту…',
+        showArchived: 'Показывать архивных клиентов',
+        total: 'Всего: {count}',
+        matters: 'Matters',
+        openMatters: 'Открытых',
+        mine: 'Мои',
+        documents: 'Документов',
+        access: 'Доступ',
+        status: 'Статус',
+        open: 'Открыт',
     },
     tree: {
         filter: 'Фильтр клиентов и matters…',

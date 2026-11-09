@@ -6,20 +6,22 @@ import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge, CheckedOutBadge } from './fmBadges';
 import { AuditView, MonitoringView, TemplateView } from './AdminViews';
 import { MatrixView, RequestAccessModal, RequestsView, SecurityView } from './AccessViews';
+import { ClientsView, MattersListView } from './DirectoryViews';
 import { CheckedOutView, FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
-import { MattersBrowser, type Location } from './MattersBrowser';
+import { MatterWorkspace, type Location } from './MatterWorkspace';
 import { Icon, StateBlock, ToastHost, useFm, useLoad, useNotify, type IconName } from './fmShared';
 import './FileManagerPage.css';
 
 type View =
-    | 'matters' | 'myMatters' | 'favorites' | 'recent' | 'checkedOut' | 'search' | 'trash' | 'requests'
+    | 'clients' | 'matters' | 'myMatters' | 'matter' | 'favorites' | 'recent' | 'checkedOut' | 'search' | 'trash' | 'requests'
     | 'security' | 'matrix' | 'audit' | 'monitoring' | 'templates';
 
 type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' | 'checkedOut' };
 
 const WORKSPACE: NavItem[] = [
-    { id: 'matters', label: 'nav.matters', icon: 'building' },
-    { id: 'myMatters', label: 'nav.myMatters', icon: 'briefcase' },
+    { id: 'clients', label: 'nav.clients', icon: 'building' },
+    { id: 'matters', label: 'nav.allMatters', icon: 'briefcase' },
+    { id: 'myMatters', label: 'nav.myMatters', icon: 'user' },
     { id: 'favorites', label: 'nav.favorites', icon: 'star' },
     { id: 'recent', label: 'nav.recent', icon: 'clock' },
     { id: 'checkedOut', label: 'nav.checkedOut', icon: 'lock', badge: 'checkedOut' },
@@ -39,11 +41,15 @@ const ADMIN: NavItem[] = [
 ];
 
 const ADMIN_VIEWS = new Set<View>(['matrix', 'audit', 'monitoring']);
-const ALL_VIEWS = new Set<View>([...WORKSPACE, ...ADMIN].map((item) => item.id));
+const ALL_VIEWS = new Set<View>([...WORKSPACE, ...ADMIN, { id: 'matter' as View }].map((item) => item.id));
 
-function readView(value: string | null): View {
-    return value && ALL_VIEWS.has(value as View) ? value as View : 'matters';
+function readView(value: string | null, matterId: string | null): View {
+    if (value && ALL_VIEWS.has(value as View))
+        return value === 'matter' && !matterId ? 'matters' : value as View;
+    return matterId ? 'matter' : 'clients';
 }
+
+type GoParams = Partial<Location> & { clientId?: string | null };
 
 function FileManagerWorkspace() {
     const { tr } = useFm();
@@ -55,18 +61,19 @@ function FileManagerWorkspace() {
     const clients = useLoad(() => filesApi.clients(), []);
 
     const canManage = clients.data?.viewer.canManage ?? false;
-    const requested = readView(params.get('view'));
-    const view: View = !canManage && ADMIN_VIEWS.has(requested) ? 'matters' : requested;
-    const location: Location = {
-        matterId: params.get('matter'),
-        folderId: params.get('folder'),
-        docId: params.get('doc'),
-    };
+    const matterId = params.get('matter');
+    const folderId = params.get('folder');
+    const docId = params.get('doc');
+    const clientId = params.get('client');
+    const requested = readView(params.get('view'), matterId);
+    const view: View = !canManage && ADMIN_VIEWS.has(requested) ? 'clients' : requested;
 
-    const go = useCallback((next: View, loc: Partial<Location> = {}, replace = false) => {
+    const go = useCallback((next: View, loc: GoParams = {}, replace = false) => {
         const search = new URLSearchParams();
-        if (next !== 'matters')
+        if (next !== 'clients')
             search.set('view', next);
+        if (loc.clientId)
+            search.set('client', loc.clientId);
         if (loc.matterId)
             search.set('matter', loc.matterId);
         if (loc.folderId)
@@ -78,11 +85,10 @@ function FileManagerWorkspace() {
         });
     }, [setParams]);
 
-    const browserView = view === 'myMatters' ? 'myMatters' : 'matters';
-    const navigateBrowser = useCallback((loc: Location) => {
-        const sameFolder = loc.matterId === location.matterId && loc.folderId === location.folderId;
-        go(view === 'myMatters' ? 'myMatters' : 'matters', loc, sameFolder);
-    }, [go, view, location.matterId, location.folderId]);
+    const openMatter = useCallback((loc: Location) => {
+        const sameFolder = view === 'matter' && loc.matterId === matterId && loc.folderId === folderId;
+        go('matter', loc, sameFolder);
+    }, [go, view, matterId, folderId]);
 
     const reloadClients = clients.reload;
     const refreshAll = useCallback(() => {
@@ -91,11 +97,12 @@ function FileManagerWorkspace() {
     }, [reloadClients]);
 
     const workspace = useMemo(() => (canManage ? WORKSPACE : [...WORKSPACE, ...EMPLOYEE_EXTRA]), [canManage]);
-    const active = [...workspace, ...ADMIN].find((item) => item.id === view) ?? WORKSPACE[0];
+    const navView: View = view === 'matter' ? 'matters' : view;
+    const active = [...workspace, ...ADMIN].find((item) => item.id === navView) ?? WORKSPACE[0];
     const serviceDown = clients.error !== null && clients.data === null;
 
     const onUpload = () => {
-        if ((view === 'matters' || view === 'myMatters') && location.matterId) {
+        if (view === 'matter' && matterId) {
             setUploadSignal((n) => n + 1);
             return;
         }
@@ -105,10 +112,10 @@ function FileManagerWorkspace() {
     };
 
     const renderItem = (item: NavItem) => (
-        <button key={item.id} type="button" className={view === item.id ? 'is-on' : ''} aria-current={view === item.id ? 'page' : undefined}
+        <button key={item.id} type="button" className={navView === item.id ? 'is-on' : ''} aria-current={navView === item.id ? 'page' : undefined}
             onClick={() => {
                 if (item.id !== view)
-                    go(item.id, item.id === 'matters' || item.id === 'myMatters' ? { matterId: location.matterId, folderId: location.folderId } : {});
+                    go(item.id);
             }}>
             <Icon name={item.icon} />
             <span>{tr(item.label)}</span>
@@ -122,39 +129,57 @@ function FileManagerWorkspace() {
         if (!data)
             return null;
         const viewerId = data.viewer.userId;
-        const locate = (loc: Location) => go('matters', loc);
+        const openClient = (id: string | null) => go('matters', { clientId: id });
         switch (view) {
+            case 'clients':
+                return <ClientsView clients={data} onOpenClient={openClient} onChanged={refreshAll} />;
             case 'matters':
             case 'myMatters':
                 return (
-                    <MattersBrowser
+                    <MattersListView
                         clients={data}
-                        location={location}
-                        mineOnly={browserView === 'myMatters'}
-                        uploadSignal={uploadSignal}
-                        onNavigate={navigateBrowser}
-                        onClientsStale={refreshAll}
-                        onOpenSecurity={(matterId) => go('security', { matterId })}
+                        clientId={clientId}
+                        mineOnly={view === 'myMatters'}
+                        onPickClient={(id) => go(view, { clientId: id }, true)}
+                        onOpenMatter={(id) => go('matter', { matterId: id })}
+                        onOpenClients={() => go('clients')}
+                        onChanged={refreshAll}
                     />
                 );
+            case 'matter':
+                return matterId ? (
+                    <MatterWorkspace
+                        key={matterId}
+                        matterId={matterId}
+                        folderId={folderId}
+                        docId={docId}
+                        viewerId={viewerId}
+                        uploadSignal={uploadSignal}
+                        onNavigate={openMatter}
+                        onOpenClients={() => go('clients')}
+                        onOpenClient={openClient}
+                        onClientsStale={refreshAll}
+                        onOpenSecurity={(id) => go('security', { matterId: id })}
+                    />
+                ) : null;
             case 'favorites':
-                return <FavoritesView viewerId={viewerId} onLocate={locate} />;
+                return <FavoritesView viewerId={viewerId} onLocate={openMatter} />;
             case 'recent':
-                return <RecentView viewerId={viewerId} onLocate={locate} />;
+                return <RecentView viewerId={viewerId} onLocate={openMatter} />;
             case 'checkedOut':
-                return <CheckedOutView viewerId={viewerId} onLocate={locate} canManage={canManage} />;
+                return <CheckedOutView viewerId={viewerId} onLocate={openMatter} canManage={canManage} />;
             case 'search':
-                return <SearchView clients={data} viewerId={viewerId} onLocate={locate} />;
+                return <SearchView clients={data} viewerId={viewerId} onLocate={openMatter} />;
             case 'trash':
                 return <TrashView onChanged={refreshAll} />;
             case 'requests':
                 return <RequestsView canManage={canManage} onChanged={refreshAll} />;
             case 'security':
-                return <SecurityView clients={data} matterId={location.matterId} onPickMatter={(matterId) => go('security', { matterId })} />;
+                return <SecurityView clients={data} matterId={matterId} onPickMatter={(id) => go('security', { matterId: id })} />;
             case 'matrix':
                 return <MatrixView clients={data} />;
             case 'audit':
-                return <AuditView clients={data} initialMatterId={location.matterId} />;
+                return <AuditView clients={data} initialMatterId={matterId} />;
             case 'monitoring':
                 return <MonitoringView onOpenAudit={() => go('audit')} />;
             case 'templates':
@@ -162,7 +187,7 @@ function FileManagerWorkspace() {
         }
     };
 
-    const browser = view === 'matters' || view === 'myMatters';
+    const workspaceView = view === 'matter';
 
     return (
         <div className="fm__body">
@@ -183,8 +208,8 @@ function FileManagerWorkspace() {
                 ) : null}
             </aside>
             <ViewTransition default="none" enter="none" exit="none" update="fm-section">
-                <main key={browser ? 'browser' : view} className={browser ? 'fm__main fm__main--browser' : 'fm__main'}>
-                    {!browser ? (
+                <main key={workspaceView ? `matter:${matterId}` : `${view}:${clientId ?? ''}`} className={workspaceView ? 'fm__main fm__main--browser' : 'fm__main'}>
+                    {!workspaceView ? (
                         <header className="fm__view-head">
                             <Icon name={active.icon} />
                             <h2>{tr(active.label)}</h2>

@@ -4,7 +4,7 @@ import { formatBytes, formatDateTime } from '../lib/filesFormat';
 import { DocumentTable } from './DocumentTable';
 import { DocumentPane } from './DocumentPane';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, StateBlock, useAction, useFm, useLoad, type Loadable } from './fmShared';
-import type { Location } from './MattersBrowser';
+import type { Location } from './MatterWorkspace';
 
 type ListProps = {
     viewerId: number;
