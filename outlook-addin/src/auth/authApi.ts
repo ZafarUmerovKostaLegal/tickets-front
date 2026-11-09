@@ -193,14 +193,14 @@ function humanizeOAuthError(raw: string): string {
 const OAUTH_AUTHORIZE_KEY = 'kosta.outlook.oauth.authorize';
 
 function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<string> {
-  // Keep authorize URL out of the dialog query string — Office truncates long URLs
-  // which breaks PKCE / redirect_uri and surfaces as "Invalid or expired code".
-  let bridge = hubLoginPageUrl();
+  // Short bridge URL only — New Outlook dialog often has a separate storage partition,
+  // so we deliver authorizeUrl via dialog.messageChild after {type:'ready'}.
   try {
     localStorage.setItem(OAUTH_AUTHORIZE_KEY, authorizeUrl);
   } catch {
-    bridge = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
+    /* optional cache */
   }
+  const bridge = hubLoginPageUrl();
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -217,7 +217,14 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       reject(error);
     };
 
-    const handlePayload = (payload: { code?: string; state?: string; error?: string }) => {
+    const handlePayload = (payload: {
+      type?: string;
+      code?: string;
+      state?: string;
+      error?: string;
+    }) => {
+      if (payload.type === 'kosta-outlook-ready')
+        return false;
       if (payload.error)
         fail(new Error(humanizeOAuthError(payload.error)));
       else if (payload.code) {
@@ -228,6 +235,23 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       } else {
         fail(new Error('Пустой ответ OAuth'));
       }
+      return true;
+    };
+
+    const sendAuthorizeToDialog = (dialog: Office.Dialog) => {
+      const payload = JSON.stringify({ authorizeUrl });
+      const anyDialog = dialog as Office.Dialog & {
+        messageChild?: (message: string, options?: object) => void;
+      };
+      try {
+        if (typeof anyDialog.messageChild === 'function') {
+          anyDialog.messageChild(payload);
+          return true;
+        }
+      } catch {
+        /* fall through */
+      }
+      return false;
     };
 
     if (typeof Office !== 'undefined' && Office.context?.ui?.displayDialogAsync) {
@@ -236,37 +260,57 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
         { height: 65, width: 42, displayInIframe: false },
         (result) => {
           if (result.status !== Office.AsyncResultStatus.Succeeded) {
-            fail(result.error ?? new Error('Не удалось открыть окно входа'));
+            fail(result.error ?? new Error('Не удалось открыть окно входа. Если был запрос Allow — нажмите Allow.'));
             return;
           }
           const dialog = result.value;
+          // Retry delivery — dialog asks via ready, and we also push a few times.
+          let pushes = 0;
+          const push = () => {
+            if (settled || pushes > 8)
+              return;
+            pushes += 1;
+            sendAuthorizeToDialog(dialog);
+          };
+          push();
+          const pushTimer = window.setInterval(push, 500);
+
           dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
             try {
               const payload = JSON.parse((arg as { message: string }).message) as {
+                type?: string;
                 code?: string;
                 state?: string;
                 error?: string;
-                ok?: boolean;
               };
+              if (payload.type === 'kosta-outlook-ready') {
+                push();
+                return;
+              }
+              window.clearInterval(pushTimer);
               dialog.close();
               handlePayload(payload);
             } catch (error) {
+              window.clearInterval(pushTimer);
               dialog.close();
               fail(error instanceof Error ? error : new Error(String(error)));
             }
           });
           dialog.addEventHandler(Office.EventType.DialogEventReceived, () => {
+            window.clearInterval(pushTimer);
             if (isAuthenticated())
               fail(new Error('Окно закрыто после входа — обновите панель'));
             else
-              fail(new Error('Окно входа закрыто — войдите ещё раз и дождитесь завершения'));
+              fail(new Error('Окно входа закрыто. Если был белый диалог — нажмите Allow, затем «Войти» снова.'));
           });
         },
       );
       return;
     }
 
-    const popup = window.open(bridge, 'kosta-hub-login', 'width=480,height=680');
+    // Browser fallback: query string is OK outside Office dialog limits
+    const popupUrl = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
+    const popup = window.open(popupUrl, 'kosta-hub-login', 'width=480,height=680');
     if (!popup) {
       fail(new Error('Браузер заблокировал окно входа'));
       return;
@@ -280,6 +324,8 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
         state?: string;
         error?: string;
       };
+      if (data?.type === 'kosta-outlook-ready')
+        return;
       if (data?.type !== 'kosta-outlook-oauth' && data?.type !== 'kosta-hub-oauth')
         return;
       window.removeEventListener('message', onMessage);

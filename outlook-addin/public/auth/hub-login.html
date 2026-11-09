@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Вход Kosta Hub</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <style>
       body {
         margin: 0;
@@ -14,27 +15,99 @@
         color: #f3f6fb;
         background: linear-gradient(165deg, #141c2c, #0b1220);
       }
-      p { opacity: 0.85; max-width: 18rem; text-align: center; }
+      p { opacity: 0.9; max-width: 20rem; text-align: center; line-height: 1.45; }
+      .muted { opacity: 0.7; font-size: 12px; margin-top: 8px; }
     </style>
   </head>
   <body>
-    <p>Открываем вход Microsoft…<br/>Не закрывайте окно до завершения.</p>
+    <div>
+      <p id="msg">Открываем вход Microsoft…<br/>Не закрывайте окно.</p>
+      <p class="muted" id="hint"></p>
+    </div>
     <script>
       (function () {
         var KEY = 'kosta.outlook.oauth.authorize';
-        var azure = '';
-        try {
-          azure = localStorage.getItem(KEY) || '';
-          localStorage.removeItem(KEY);
-        } catch (e) {}
-        if (!azure) {
-          azure = new URLSearchParams(window.location.search).get('azure') || '';
+        var redirected = false;
+
+        function go(url) {
+          if (redirected || !url) return;
+          redirected = true;
+          window.location.replace(url);
         }
-        if (!azure) {
-          document.body.textContent = 'Не найден URL входа Azure. Закройте окно и нажмите «Войти» ещё раз.';
+
+        function fail(text) {
+          document.getElementById('msg').textContent = text;
+        }
+
+        function tryLocal() {
+          try {
+            var v = localStorage.getItem(KEY) || '';
+            if (v) {
+              localStorage.removeItem(KEY);
+              return v;
+            }
+          } catch (e) {}
+          return '';
+        }
+
+        function tryQuery() {
+          return new URLSearchParams(window.location.search).get('azure') || '';
+        }
+
+        var azure = tryLocal() || tryQuery();
+        if (azure) {
+          go(azure);
           return;
         }
-        window.location.replace(azure);
+
+        document.getElementById('hint').textContent = 'Ждём ссылку входа от панели Kosta File…';
+
+        function askParent() {
+          try {
+            if (Office && Office.context && Office.context.ui && Office.context.ui.messageParent) {
+              Office.context.ui.messageParent(JSON.stringify({ type: 'kosta-outlook-ready' }));
+            }
+          } catch (e) {}
+        }
+
+        function onParentMessage(arg) {
+          try {
+            var raw = (arg && arg.message) ? arg.message : '';
+            var data = JSON.parse(raw);
+            if (data && data.authorizeUrl) go(data.authorizeUrl);
+            if (data && data.error) fail(String(data.error));
+          } catch (e) {
+            fail('Не удалось прочитать ссылку входа');
+          }
+        }
+
+        if (typeof Office !== 'undefined') {
+          Office.onReady(function () {
+            try {
+              if (Office.EventType && Office.EventType.DialogParentMessageReceived) {
+                Office.context.ui.addHandlerAsync(
+                  Office.EventType.DialogParentMessageReceived,
+                  onParentMessage,
+                  function () { askParent(); }
+                );
+              } else {
+                askParent();
+              }
+            } catch (e) {
+              askParent();
+            }
+            setTimeout(function () {
+              if (!redirected) askParent();
+            }, 400);
+            setTimeout(function () {
+              if (!redirected) {
+                fail('Не найден URL входа Azure. Закройте окно, нажмите Allow если спросят, затем «Войти» ещё раз.');
+              }
+            }, 8000);
+          });
+        } else {
+          fail('Не найден URL входа Azure. Закройте окно и нажмите «Войти» ещё раз.');
+        }
       })();
     </script>
   </body>

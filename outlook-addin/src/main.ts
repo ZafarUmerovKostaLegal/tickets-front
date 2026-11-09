@@ -104,7 +104,7 @@ function renderAuthGate(): string {
   return `
     <section class="card">
       <h2>Вход</h2>
-      <p class="hint">Один раз войдите через Microsoft в открывшемся окне и дождитесь его закрытия. Дальше сессия сохранится в Outlook.</p>
+      <p class="hint">1) Если появится белый диалог — нажмите <strong>Allow</strong>. 2) Войдите в Microsoft и дождитесь закрытия окна.</p>
       <button type="button" class="primary" id="loginBtn" ${busy ? 'disabled' : ''}>Войти в Kosta Hub</button>
     </section>
   `;
@@ -231,7 +231,7 @@ function bind(): void {
       if (apiBase !== undefined)
         saveSettings({ apiBase: apiBase || getSettings().apiBase });
       busy = true;
-      setStatus('Откройте окно входа Hub…');
+      setStatus('Если белый диалог — нажмите Allow, затем войдите в Microsoft…');
       try {
         const profile = await loginWithHub();
         setStatus(`Вход выполнен: ${profile.email}`, 'ok');

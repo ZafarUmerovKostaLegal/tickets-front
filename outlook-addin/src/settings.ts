@@ -28,9 +28,8 @@ function normalizeApiBase(value: string): string {
   let trimmed = value.trim().replace(/[!\s]+$/g, '').replace(/\/+$/, '');
   if (!trimmed)
     return defaults.apiBase;
-  // Common typo from truncated UI: .../api/v1/file or .../file!
-  if (/\/api\/v1\/files?$/i.test(trimmed))
-    return trimmed.replace(/\/api\/v1\/file$/i, '/api/v1/files');
+  // Truncation / typo: .../api/v1/file  →  .../api/v1/files
+  trimmed = trimmed.replace(/\/api\/v1\/file$/i, '/api/v1/files');
   return trimmed;
 }
 
