@@ -148,7 +148,7 @@ export function combinedReportDocxChildren(snapshot: CombinedReportSnapshot): (P
         ['Shared amounts', '', 'Reimbursable expenses', 'TO BE INVOICED:'],
         [
             ...snapshot.shares.map((share) => [share.name, `${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)]),
-            ['Total', '100%', money(invoiced), money(invoiced)],
+            ['Total', '100%', '', money(invoiced)],
         ],
         [36, 14, 25, 25],
         1,

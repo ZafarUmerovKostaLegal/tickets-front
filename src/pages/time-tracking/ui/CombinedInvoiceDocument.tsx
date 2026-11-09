@@ -362,7 +362,7 @@ export function CombinedInvoiceDocument({
                             <tr>
                                 <td>Total</td>
                                 <td className="num">100%</td>
-                                <td className="num">{money(totalFees + totalExp)}</td>
+                                <td className="num" />
                                 <td className="num">{money(totalFees + totalExp)}</td>
                             </tr>
                         </tfoot>

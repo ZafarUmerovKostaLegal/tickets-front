@@ -691,7 +691,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                 <tr>
                                     <td>Total</td>
                                     <td className="num">100%</td>
-                                    <td className="num">{money(invoiced)}</td>
+                                    <td className="num" />
                                     <td className="num">{money(invoiced)}</td>
                                 </tr>
                             </tfoot>

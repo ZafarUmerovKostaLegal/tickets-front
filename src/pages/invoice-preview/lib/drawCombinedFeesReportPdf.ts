@@ -2,8 +2,14 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { combinedReportDetailLines, projectExpenseIndexes, projectSummaryRows, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
+import { COVER_LETTERHEAD_LOGO_ASPECT } from './invoiceCoverLogoRaster';
 import { formatTimeReportHours } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
+
+/** Keep letterhead aspect; old 118×30 squeezed the mark. */
+const REPORT_LOGO_H = 42;
+const REPORT_LOGO_W = REPORT_LOGO_H * COVER_LETTERHEAD_LOGO_ASPECT;
+const REPORT_HEADER_CHROME = REPORT_LOGO_H + 18;
 
 const W = 595.28;
 const H = 841.89;
@@ -131,7 +137,7 @@ function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; heade
             ...snapshot.shares.map((share) => ({
                 cells: [share.name, `${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)],
             })),
-            { bold: true, cells: ['Total', '100%', money(invoiced), money(invoiced)] },
+            { bold: true, cells: ['Total', '100%', '', money(invoiced)] },
         ],
     });
     return out;
@@ -429,7 +435,7 @@ function leadLines(snapshot: CombinedReportSnapshot, fontBold: PDFFont): string[
 function contentTop(first: boolean, leadCount: number): number {
     if (!first)
         return H - MT - 16;
-    return H - MT - 54 - leadCount * 10 - 6;
+    return H - MT - REPORT_HEADER_CHROME - leadCount * 10 - 6;
 }
 
 function planPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PDFFont): PageOp[][] {
@@ -572,7 +578,7 @@ export function drawCombinedReportPages(
         let y = H - MT;
         if (index === 0) {
             if (logo)
-                page.drawImage(logo, { x: ML, y: y - 30, width: 118, height: 30 });
+                page.drawImage(logo, { x: ML, y: y - REPORT_LOGO_H, width: REPORT_LOGO_W, height: REPORT_LOGO_H });
             let cy = y - 2;
             for (const line of KOSTA_LEGAL_LETTERHEAD_LINES) {
                 const tw = font.widthOfTextAtSize(line, 6);

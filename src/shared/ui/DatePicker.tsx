@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, } from 'react';
 import { createPortal } from 'react-dom';
 import './DatePicker.css';
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
@@ -58,30 +58,35 @@ function displayRuFromIso(iso: string): string {
         return '—';
     return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-function formatRuFromDate(d: Date): string {
-    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+type DateSegments = {
+    day: string;
+    month: string;
+    year: string;
+};
+function segmentsFromDate(d: Date | null): DateSegments {
+    if (!d)
+        return { day: '', month: '', year: '' };
+    return {
+        day: pad2(d.getDate()),
+        month: pad2(d.getMonth() + 1),
+        year: String(d.getFullYear()),
+    };
 }
-function parseTypedDate(raw: string): Date | null {
-    const text = raw.trim();
-    if (!text)
+function buildDateFromSegments(day: string, month: string, year: string): Date | null {
+    if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month) || !/^\d{4}$/.test(year))
         return null;
-    const iso = parseIsoDate(text);
-    if (iso)
-        return iso;
-    const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/.exec(text);
-    if (!m)
+    const da = Number(day);
+    const mo = Number(month);
+    const y = Number(year);
+    if (!da || !mo || !y || mo < 1 || mo > 12 || da < 1 || da > 31)
         return null;
-    const day = Number(m[1]);
-    const month = Number(m[2]);
-    let year = Number(m[3]);
-    if (year < 100)
-        year += year >= 70 ? 1900 : 2000;
-    if (!day || !month || !year)
-        return null;
-    const d = new Date(year, month - 1, day);
-    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day)
+    const d = new Date(y, mo - 1, da);
+    if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da)
         return null;
     return d;
+}
+function onlyDigits(raw: string, maxLen: number): string {
+    return raw.replace(/\D/g, '').slice(0, maxLen);
 }
 function compareIso(a: string, b: string): number {
     return a.localeCompare(b);
@@ -117,10 +122,15 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
     const [open, setOpen] = useState(false);
     const parsedValue = useMemo(() => parseIsoDate(value), [value]);
     const [viewMonth, setViewMonth] = useState<Date>(() => parsedValue ?? new Date());
-    const [draft, setDraft] = useState(() => (parsedValue ? formatRuFromDate(parsedValue) : ''));
+    const [segs, setSegs] = useState<DateSegments>(() => segmentsFromDate(parsedValue));
+    const segsRef = useRef(segs);
+    segsRef.current = segs;
+    const editingRef = useRef(false);
     const wrapRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const dayRef = useRef<HTMLInputElement>(null);
+    const monthRef = useRef<HTMLInputElement>(null);
+    const yearRef = useRef<HTMLInputElement>(null);
     const popRef = useRef<HTMLDivElement>(null);
     const popW = 280;
     const GAP = 6;
@@ -134,8 +144,8 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
         const p = parseIsoDate(value);
         if (p)
             setViewMonth(startOfMonth(p));
-        if (editable)
-            setDraft(p ? formatRuFromDate(p) : '');
+        if (editable && !editingRef.current)
+            setSegs(segmentsFromDate(p));
     }, [value, editable]);
     const isDisabledDay = useCallback((d: Date): boolean => {
         const iso = toIsoDate(d);
@@ -147,22 +157,53 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
             return true;
         return false;
     }, [min, max, isDateDisabled]);
-    const commitTyped = useCallback(() => {
-        const typed = draft.trim();
-        if (!typed) {
-            setDraft(parsedValue ? formatRuFromDate(parsedValue) : '');
+    const builtFromSegs = useMemo(() => buildDateFromSegments(segs.day, segs.month, segs.year), [segs]);
+    const segsComplete = segs.day.length >= 2 && segs.month.length >= 2 && segs.year.length === 4;
+    const segsInvalid = segsComplete && (builtFromSegs == null || isDisabledDay(builtFromSegs));
+    /** Keep typed day/month; block year until the date is valid again. */
+    const yearLocked = segsInvalid;
+    const commitSegments = useCallback((next: DateSegments) => {
+        const d = buildDateFromSegments(next.day, next.month, next.year);
+        if (d == null || isDisabledDay(d))
             return;
-        }
-        const d = parseTypedDate(typed);
-        if (d == null || isDisabledDay(d)) {
-            setDraft(parsedValue ? formatRuFromDate(parsedValue) : '');
-            return;
-        }
         const iso = toIsoDate(d);
-        setDraft(formatRuFromDate(d));
         if (iso !== value)
             onChange(iso);
-    }, [draft, isDisabledDay, onChange, parsedValue, value]);
+    }, [isDisabledDay, onChange, value]);
+    const updateSeg = useCallback((part: keyof DateSegments, raw: string) => {
+        editingRef.current = true;
+        const maxLen = part === 'year' ? 4 : 2;
+        const digits = onlyDigits(raw, maxLen);
+        const next = { ...segsRef.current, [part]: digits };
+        segsRef.current = next;
+        setSegs(next);
+        commitSegments(next);
+        const d = buildDateFromSegments(next.day, next.month, next.year);
+        const invalid = next.day.length >= 2 && next.month.length >= 2 && next.year.length === 4
+            && (d == null || isDisabledDay(d));
+        if (part === 'day' && digits.length === 2) {
+            requestAnimationFrame(() => monthRef.current?.focus());
+        }
+        else if (part === 'month' && digits.length === 2 && !invalid) {
+            requestAnimationFrame(() => yearRef.current?.focus());
+        }
+    }, [commitSegments, isDisabledDay]);
+    const onSegBlur = useCallback((event: FocusEvent<HTMLInputElement>) => {
+        const next = event.relatedTarget as Node | null;
+        const stillInside = !!next && !!wrapRef.current?.contains(next);
+        if (stillInside)
+            return;
+        editingRef.current = false;
+        // Keep typed segments when invalid — do not snap back to today/previous value.
+        const cur = segsRef.current;
+        const d = buildDateFromSegments(cur.day, cur.month, cur.year);
+        const invalid = cur.day.length >= 2 && cur.month.length >= 2 && cur.year.length === 4
+            && (d == null || isDisabledDay(d));
+        if (!invalid && d)
+            setSegs(segmentsFromDate(d));
+        else if (!cur.day && !cur.month && !cur.year && parsedValue)
+            setSegs(segmentsFromDate(parsedValue));
+    }, [isDisabledDay, parsedValue]);
     const cells = useMemo(() => {
         const start = calendarGridStart(viewMonth);
         const out: {
@@ -254,7 +295,7 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
             if (e.key === 'Escape') {
                 e.preventDefault();
                 setOpen(false);
-                (editable ? inputRef.current : btnRef.current)?.focus();
+                (editable ? dayRef.current : btnRef.current)?.focus();
             }
         };
         window.addEventListener('keydown', onKey);
@@ -268,11 +309,15 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
         if (disabled || isDisabledDay(d))
             return;
         const iso = toIsoDate(d);
-        if (editable)
-            setDraft(formatRuFromDate(d));
+        if (editable) {
+            editingRef.current = false;
+            const next = segmentsFromDate(d);
+            segsRef.current = next;
+            setSegs(next);
+        }
         onChange(iso);
         setOpen(false);
-        (editable ? inputRef.current : btnRef.current)?.focus();
+        (editable ? dayRef.current : btnRef.current)?.focus();
     };
     const goToday = () => {
         if (!isDisabledDay(today))
@@ -342,38 +387,111 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
     const labelClass = ['ttp__label', !parsedValue ? 'ttp__label--empty' : ''].filter(Boolean).join(' ');
     return (<div ref={wrapRef} className={`ttp${iconAfterLabel ? ' ttp--icon-end' : ''}${editable ? ' ttp--editable' : ''} ${className}`.trim()}>
       {editable ? (
-        <div className={`ttp__edit ${buttonClassName}`.trim()}>
+        <div
+          className={`ttp__edit${segsInvalid ? ' ttp__edit--invalid' : ''} ${buttonClassName}`.trim()}
+          aria-labelledby={ariaLabelledBy}
+        >
           {ico}
-          <input
-            ref={inputRef}
-            id={btnId}
-            type="text"
-            className="ttp__input"
-            inputMode="numeric"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder={emptyLabel ?? 'дд.мм.гггг'}
-            value={draft}
-            disabled={disabled}
-            aria-labelledby={ariaLabelledBy}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            aria-controls={open ? gridId : undefined}
-            title={title}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={commitTyped}
-            onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    commitTyped();
-                    setOpen(false);
-                }
-                if (event.key === 'ArrowDown' && !disabled) {
-                    event.preventDefault();
-                    setOpen(true);
-                }
-            }}
-          />
+          <div className="ttp__segs" role="group" aria-label={title}>
+            <input
+              ref={dayRef}
+              id={btnId}
+              type="text"
+              className={`ttp__seg ttp__seg--day${segsInvalid ? ' ttp__seg--error' : ''}`}
+              inputMode="numeric"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="дд"
+              maxLength={2}
+              value={segs.day}
+              disabled={disabled}
+              aria-label="День"
+              aria-invalid={segsInvalid || undefined}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              aria-controls={open ? gridId : undefined}
+              title={title}
+              onChange={(event) => updateSeg('day', event.target.value)}
+              onFocus={(event) => event.target.select()}
+              onBlur={onSegBlur}
+              onKeyDown={(event) => {
+                  if (event.key === 'ArrowRight' && (event.currentTarget.selectionStart ?? 0) >= event.currentTarget.value.length) {
+                      event.preventDefault();
+                      monthRef.current?.focus();
+                  }
+                  if (event.key === 'ArrowDown' && !disabled) {
+                      event.preventDefault();
+                      setOpen(true);
+                  }
+                  if (event.key === 'Enter') {
+                      event.preventDefault();
+                      if (!segsInvalid)
+                          setOpen(false);
+                  }
+              }}
+            />
+            <span className="ttp__seg-dot" aria-hidden>.</span>
+            <input
+              ref={monthRef}
+              type="text"
+              className={`ttp__seg ttp__seg--month${segsInvalid ? ' ttp__seg--error' : ''}`}
+              inputMode="numeric"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="мм"
+              maxLength={2}
+              value={segs.month}
+              disabled={disabled}
+              aria-label="Месяц"
+              aria-invalid={segsInvalid || undefined}
+              onChange={(event) => updateSeg('month', event.target.value)}
+              onFocus={(event) => event.target.select()}
+              onBlur={onSegBlur}
+              onKeyDown={(event) => {
+                  if (event.key === 'ArrowLeft' && (event.currentTarget.selectionStart ?? 0) <= 0) {
+                      event.preventDefault();
+                      dayRef.current?.focus();
+                  }
+                  if (event.key === 'ArrowRight' && (event.currentTarget.selectionStart ?? 0) >= event.currentTarget.value.length) {
+                      event.preventDefault();
+                      if (!yearLocked)
+                          yearRef.current?.focus();
+                  }
+                  if (event.key === 'ArrowDown' && !disabled) {
+                      event.preventDefault();
+                      setOpen(true);
+                  }
+              }}
+            />
+            <span className="ttp__seg-dot" aria-hidden>.</span>
+            <input
+              ref={yearRef}
+              type="text"
+              className="ttp__seg ttp__seg--year"
+              inputMode="numeric"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="гггг"
+              maxLength={4}
+              value={segs.year}
+              disabled={disabled || yearLocked}
+              aria-label="Год"
+              title={yearLocked ? 'Сначала исправьте день или месяц' : undefined}
+              onChange={(event) => updateSeg('year', event.target.value)}
+              onFocus={(event) => event.target.select()}
+              onBlur={onSegBlur}
+              onKeyDown={(event) => {
+                  if (event.key === 'ArrowLeft' && (event.currentTarget.selectionStart ?? 0) <= 0) {
+                      event.preventDefault();
+                      monthRef.current?.focus();
+                  }
+                  if (event.key === 'ArrowDown' && !disabled) {
+                      event.preventDefault();
+                      setOpen(true);
+                  }
+              }}
+            />
+          </div>
           <button
             ref={btnRef}
             type="button"

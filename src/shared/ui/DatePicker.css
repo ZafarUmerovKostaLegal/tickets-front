@@ -45,6 +45,63 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent, #7c3aed) 28%, transparent);
 }
 
+.ttp__edit--invalid:focus-within {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #dc2626 22%, transparent);
+}
+
+.ttp__segs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  gap: 0;
+}
+
+.ttp__seg {
+  margin: 0;
+  padding: 0.35rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  outline: none;
+}
+
+.ttp__seg--day,
+.ttp__seg--month {
+  width: 1.6rem;
+}
+
+.ttp__seg--year {
+  width: 3rem;
+}
+
+.ttp__seg::placeholder {
+  color: var(--app-muted, #64748b);
+}
+
+.ttp__seg:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ttp__seg--error {
+  color: #b91c1c;
+  background: color-mix(in srgb, #fecaca 55%, transparent);
+  border-radius: 4px;
+}
+
+.ttp__seg-dot {
+  flex-shrink: 0;
+  color: var(--app-muted, #64748b);
+  user-select: none;
+  padding: 0 0.05rem;
+}
+
 .ttp__input {
   flex: 1;
   min-width: 0;
