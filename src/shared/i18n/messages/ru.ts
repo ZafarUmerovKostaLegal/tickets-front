@@ -631,6 +631,33 @@ export const ruMessages: Messages = {
         folderPh: 'Название папки',
         create: 'Создать',
         remove: 'Удалить',
+        uploadFiles: 'Загрузить файлы',
+        allMetaAdmin: 'Kosta Legal · {practices} практик · {projects} активных проектов · Внутренние подразделения',
+        allMetaEmployee: 'Kosta Legal · практика {practice} · {projects} проектов',
+        statsAria: 'Сводка по хранилищу',
+        statFiles: 'Файлов в хранилище',
+        statWeek: 'за неделю',
+        statLinks: 'Активных публичных ссылок',
+        statExternal: 'внешних',
+        statNoPassword: 'без пароля',
+        statRequests: 'Запросов на доступ',
+        statWaiting: 'ждут более 24 ч',
+        statRejected: 'Отклонено сервером (24 ч)',
+        statLog: 'Подробнее в журнале',
+        practices: 'Практики',
+        openTree: 'Открыть дерево',
+        projects: 'проектов',
+        recentSection: 'Недавно открытые',
+        openAll: 'Открыть все',
+        colName: 'Название',
+        colChanged: 'Изменено',
+        colChangedBy: 'Кем изменено',
+        colAccess: 'Ваш доступ',
+        attention: 'Требует внимания',
+        accessRequests: 'Запросы на доступ',
+        approve: 'Одобрить',
+        forPeriod: 'На срок…',
+        decline: 'Отклонить',
     },
     pageTitle: {
         login: 'Вход',
@@ -1774,6 +1801,33 @@ export type Messages = {
         folderPh: string;
         create: string;
         remove: string;
+        uploadFiles: string;
+        allMetaAdmin: string;
+        allMetaEmployee: string;
+        statsAria: string;
+        statFiles: string;
+        statWeek: string;
+        statLinks: string;
+        statExternal: string;
+        statNoPassword: string;
+        statRequests: string;
+        statWaiting: string;
+        statRejected: string;
+        statLog: string;
+        practices: string;
+        openTree: string;
+        projects: string;
+        recentSection: string;
+        openAll: string;
+        colName: string;
+        colChanged: string;
+        colChangedBy: string;
+        colAccess: string;
+        attention: string;
+        accessRequests: string;
+        approve: string;
+        forPeriod: string;
+        decline: string;
     };
     pageTitle: Record<
         | 'login'
