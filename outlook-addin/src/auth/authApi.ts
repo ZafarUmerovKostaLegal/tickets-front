@@ -121,27 +121,11 @@ export async function logoutHub(): Promise<void> {
 }
 
 /**
- * Pick up Outlook / Microsoft identity without a separate Hub password:
- * 1) existing Hub token in this WebView
- * 2) silent Azure (prompt=none + login_hint from Outlook)
- * 3) interactive only when caller asks
+ * Interactive Microsoft login in Outlook WebView.
+ * Silent prompt=none does not work here (AADSTS50058 — no Azure cookies in this WebView).
+ * login_hint only pre-fills the Outlook mailbox address.
  */
-export async function ensureHubSessionOrSilent(): Promise<boolean> {
-  if (await ensureHubSession())
-    return true;
-  try {
-    await loginWithAzure({ silent: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function loginWithHub(): Promise<AuthProfile> {
-  return loginWithAzure({ silent: false });
-}
-
-async function loginWithAzure(options: { silent: boolean }): Promise<AuthProfile> {
   if (!gatewayOrigin())
     throw new Error('Укажите File Manager API в настройках');
 
@@ -154,8 +138,6 @@ async function loginWithAzure(options: { silent: boolean }): Promise<AuthProfile
     redirect_uri: redirectUri,
     state,
   });
-  if (options.silent)
-    qs.set('prompt', 'none');
   if (hint)
     qs.set('login_hint', hint);
 
@@ -166,8 +148,9 @@ async function loginWithAzure(options: { silent: boolean }): Promise<AuthProfile
   const authorize = new URL(meta.authorizeUrl);
   authorize.searchParams.set('code_challenge', challenge);
   authorize.searchParams.set('code_challenge_method', 'S256');
+  // Never use prompt=none in Outlook WebView — it causes AADSTS50058
 
-  const code = await openOAuthDialog(authorize.toString(), state, options.silent);
+  const code = await openOAuthDialog(authorize.toString(), state);
   const exchangeRes = await fetch(azureExchangeUrl(), {
     method: 'POST',
     credentials: 'include',
@@ -196,7 +179,18 @@ async function loginWithAzure(options: { silent: boolean }): Promise<AuthProfile
   return fetchHubMe();
 }
 
-function openOAuthDialog(authorizeUrl: string, expectedState: string, silent: boolean): Promise<string> {
+function humanizeOAuthError(raw: string): string {
+  const text = (raw || '').trim();
+  if (/AADSTS50058/i.test(text) || /silent sign-in/i.test(text))
+    return 'Нужен обычный вход (тихий вход в Outlook недоступен). Нажмите «Войти в Kosta Hub».';
+  if (/AADSTS65001/i.test(text) || /consent/i.test(text))
+    return 'Нужно согласие Azure для приложения Kosta. Нажмите «Войти в Kosta Hub» и подтвердите доступ.';
+  if (/login_required|interaction_required|consent_required/i.test(text))
+    return 'Microsoft требует подтверждение входа. Нажмите «Войти в Kosta Hub».';
+  return text || 'Ошибка входа Microsoft';
+}
+
+function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<string> {
   const bridge = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
 
   return new Promise((resolve, reject) => {
@@ -216,7 +210,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string, silent: bo
 
     const handlePayload = (payload: { code?: string; state?: string; error?: string }) => {
       if (payload.error)
-        fail(new Error(payload.error));
+        fail(new Error(humanizeOAuthError(payload.error)));
       else if (payload.code) {
         if (payload.state && payload.state !== expectedState)
           fail(new Error('OAuth state mismatch'));
@@ -230,7 +224,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string, silent: bo
     if (typeof Office !== 'undefined' && Office.context?.ui?.displayDialogAsync) {
       Office.context.ui.displayDialogAsync(
         bridge,
-        { height: silent ? 40 : 65, width: silent ? 30 : 42, displayInIframe: false },
+        { height: 65, width: 42, displayInIframe: false },
         (result) => {
           if (result.status !== Office.AsyncResultStatus.Succeeded) {
             fail(result.error ?? new Error('Не удалось открыть окно входа'));
@@ -256,9 +250,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string, silent: bo
             if (isAuthenticated())
               fail(new Error('Окно закрыто после входа — обновите панель'));
             else
-              fail(new Error(silent
-                ? 'Тихий вход недоступен — нажмите «Войти в Kosta Hub»'
-                : 'Окно входа закрыто'));
+              fail(new Error('Окно входа закрыто — войдите ещё раз и дождитесь завершения'));
           });
         },
       );

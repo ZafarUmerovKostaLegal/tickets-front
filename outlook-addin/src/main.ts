@@ -1,6 +1,6 @@
 import './styles.css';
 import { ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
-import { ensureHubSessionOrSilent, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
+import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
 import { clearLegacyOutlookTokens, getProfile, isAuthenticated } from './auth/session';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
 import { describeMatch, matchRule } from './rules';
@@ -104,7 +104,7 @@ function renderAuthGate(): string {
   return `
     <section class="card">
       <h2>Вход</h2>
-      <p class="hint">Подхватываем аккаунт Outlook (тот же Microsoft, что и Hub). Если тихий вход не сработал — нажмите кнопку.</p>
+      <p class="hint">В WebView Outlook нет cookie браузера — один раз войдите через Microsoft в этом окне. Дальше сессия сохранится здесь.</p>
       <button type="button" class="primary" id="loginBtn" ${busy ? 'disabled' : ''}>Войти в Kosta Hub</button>
     </section>
   `;
@@ -383,8 +383,7 @@ function wireOutlook(): void {
     }
     await loadRoamingSettings();
     clearLegacyOutlookTokens();
-    setStatus('Проверяем сессию Hub…');
-    if (await ensureHubSessionOrSilent()) {
+    if (await ensureHubSession()) {
       try {
         await fetchHubMe();
         await refreshMatters();
@@ -393,7 +392,7 @@ function wireOutlook(): void {
         setStatus('');
       }
     } else {
-      setStatus('Сессия браузера сюда не подтягивается — нажмите «Войти в Kosta Hub» (один раз)', '');
+      setStatus('Нажмите «Войти в Kosta Hub» и завершите вход в открывшемся окне', '');
     }
     render();
     try {
