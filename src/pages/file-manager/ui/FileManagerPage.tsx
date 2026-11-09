@@ -4,6 +4,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { canManageFileManager } from '@shared/lib/fileManagerAccess';
+import { FileManagerAllFiles, type FileManagerAllFilesHandle } from './FileManagerAllFiles';
 import './FileManagerPage.css';
 
 type PageId =
@@ -107,7 +108,9 @@ export function FileManagerPage() {
     const { user, loading } = useCurrentUser();
     const canManage = !loading && canManageFileManager(user);
     const [page, setPage] = useState<PageId>('available');
+    const [pendingAction, setPendingAction] = useState<'upload' | 'create' | null>(null);
     const seededRef = useRef(false);
+    const allFilesRef = useRef<FileManagerAllFilesHandle | null>(null);
 
     const navItems = useMemo(() => (canManage ? [...FILES, ...ADMIN] : FILES), [canManage]);
     const active = navItems.find((item) => item.id === page) ?? FILES.find((item) => item.id === 'available') ?? FILES[0];
@@ -142,6 +145,31 @@ export function FileManagerPage() {
         });
     }, [canManage, page]);
 
+    useEffect(() => {
+        if (page !== 'all' || pendingAction == null)
+            return;
+        if (pendingAction === 'create')
+            allFilesRef.current?.openCreateFolder();
+        else
+            allFilesRef.current?.openUpload();
+        setPendingAction(null);
+    }, [page, pendingAction]);
+
+    const onCreateClick = useCallback(() => {
+        const action = canManage ? 'create' : 'upload';
+        if (page !== 'all') {
+            setPendingAction(action);
+            startTransition(() => {
+                setPage('all');
+            });
+            return;
+        }
+        if (action === 'create')
+            allFilesRef.current?.openCreateFolder();
+        else
+            allFilesRef.current?.openUpload();
+    }, [canManage, page]);
+
     return (
         <div className="fm">
             <header className="fm__header">
@@ -156,7 +184,7 @@ export function FileManagerPage() {
             </header>
             <div className="fm__body">
                 <aside className="fm-side">
-                    <button type="button" className="fm-side__create">
+                    <button type="button" className="fm-side__create" onClick={onCreateClick}>
                         + {canManage ? t('fileManager.createUpload') : t('fileManager.upload')}
                     </button>
                     <p>{t('fileManager.files')}</p>
@@ -182,12 +210,16 @@ export function FileManagerPage() {
                 </aside>
                 <ViewTransition default="none" enter="none" exit="none" update="fm-section">
                     <main key={page} className="fm__main">
-                        <div className="fm__panel">
-                            <h2 className="fm__panel-title">{t(active.label)}</h2>
-                            {!canManage ? (
-                                <p className="fm__panel-hint">{t('fileManager.availableProjects')}</p>
-                            ) : null}
-                        </div>
+                        {page === 'all' ? (
+                            <FileManagerAllFiles ref={allFilesRef} canManage={canManage} />
+                        ) : (
+                            <div className="fm__panel">
+                                <h2 className="fm__panel-title">{t(active.label)}</h2>
+                                {!canManage ? (
+                                    <p className="fm__panel-hint">{t('fileManager.availableProjects')}</p>
+                                ) : null}
+                            </div>
+                        )}
                     </main>
                 </ViewTransition>
             </div>

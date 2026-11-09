@@ -624,6 +624,13 @@ export const enMessages = {
         tb: 'TB',
         storageWarn: '1 storage has a warning',
         availableProjects: 'Available projects',
+        root: 'Root',
+        empty: 'No files or folders yet',
+        error: 'Could not load files',
+        newFolder: 'New folder',
+        folderPh: 'Folder name',
+        create: 'Create',
+        remove: 'Remove',
     },
     pageTitle: {
         login: 'Sign in',

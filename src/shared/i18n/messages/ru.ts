@@ -624,6 +624,13 @@ export const ruMessages: Messages = {
         tb: 'ТБ',
         storageWarn: '1 хранилище с предупреждением',
         availableProjects: 'Доступные проекты',
+        root: 'Корень',
+        empty: 'Пока нет файлов и папок',
+        error: 'Не удалось загрузить файлы',
+        newFolder: 'Новая папка',
+        folderPh: 'Название папки',
+        create: 'Создать',
+        remove: 'Удалить',
     },
     pageTitle: {
         login: 'Вход',
@@ -1760,6 +1767,13 @@ export type Messages = {
         tb: string;
         storageWarn: string;
         availableProjects: string;
+        root: string;
+        empty: string;
+        error: string;
+        newFolder: string;
+        folderPh: string;
+        create: string;
+        remove: string;
     };
     pageTitle: Record<
         | 'login'
