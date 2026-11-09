@@ -21,9 +21,17 @@
     <p>Открываем вход Microsoft…<br/>Не закрывайте окно до завершения.</p>
     <script>
       (function () {
-        var azure = new URLSearchParams(window.location.search).get('azure');
+        var KEY = 'kosta.outlook.oauth.authorize';
+        var azure = '';
+        try {
+          azure = localStorage.getItem(KEY) || '';
+          localStorage.removeItem(KEY);
+        } catch (e) {}
         if (!azure) {
-          document.body.textContent = 'Не задан URL входа Azure';
+          azure = new URLSearchParams(window.location.search).get('azure') || '';
+        }
+        if (!azure) {
+          document.body.textContent = 'Не найден URL входа Azure. Закройте окно и нажмите «Войти» ещё раз.';
           return;
         }
         window.location.replace(azure);

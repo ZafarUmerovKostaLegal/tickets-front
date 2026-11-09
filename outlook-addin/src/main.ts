@@ -104,7 +104,7 @@ function renderAuthGate(): string {
   return `
     <section class="card">
       <h2>Вход</h2>
-      <p class="hint">В WebView Outlook нет cookie браузера — один раз войдите через Microsoft в этом окне. Дальше сессия сохранится здесь.</p>
+      <p class="hint">Один раз войдите через Microsoft в открывшемся окне и дождитесь его закрытия. Дальше сессия сохранится в Outlook.</p>
       <button type="button" class="primary" id="loginBtn" ${busy ? 'disabled' : ''}>Войти в Kosta Hub</button>
     </section>
   `;

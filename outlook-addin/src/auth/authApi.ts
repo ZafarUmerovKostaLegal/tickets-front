@@ -190,8 +190,17 @@ function humanizeOAuthError(raw: string): string {
   return text || 'Ошибка входа Microsoft';
 }
 
+const OAUTH_AUTHORIZE_KEY = 'kosta.outlook.oauth.authorize';
+
 function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<string> {
-  const bridge = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
+  // Keep authorize URL out of the dialog query string — Office truncates long URLs
+  // which breaks PKCE / redirect_uri and surfaces as "Invalid or expired code".
+  let bridge = hubLoginPageUrl();
+  try {
+    localStorage.setItem(OAUTH_AUTHORIZE_KEY, authorizeUrl);
+  } catch {
+    bridge = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
+  }
 
   return new Promise((resolve, reject) => {
     let settled = false;

@@ -25,12 +25,12 @@ const defaults: AddinSettings = {
 };
 
 function normalizeApiBase(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/, '');
+  let trimmed = value.trim().replace(/[!\s]+$/g, '').replace(/\/+$/, '');
   if (!trimmed)
     return defaults.apiBase;
-  // Common typo from truncated UI: .../api/v1/file
-  if (/\/api\/v1\/file$/i.test(trimmed))
-    return `${trimmed}s`;
+  // Common typo from truncated UI: .../api/v1/file or .../file!
+  if (/\/api\/v1\/files?$/i.test(trimmed))
+    return trimmed.replace(/\/api\/v1\/file$/i, '/api/v1/files');
   return trimmed;
 }
 
