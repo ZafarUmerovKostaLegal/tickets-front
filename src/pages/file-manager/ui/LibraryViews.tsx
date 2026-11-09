@@ -60,29 +60,11 @@ export function RecentView(props: ListProps) {
     return <DocumentsWithPane {...props} load={load} empty={tr('lists.recentEmpty')} />;
 }
 
-export function CheckedOutView({ canManage, ...props }: ListProps & { canManage: boolean }) {
-    const { tr } = useFm();
-    const [scope, setScope] = useState<'mine' | 'all'>('mine');
-    const load = useLoad(() => filesApi.checkedOut(scope), [scope]);
-    const toolbar = canManage ? (
-        <div className="fm-toolbar">
-            <div className="fm-seg" role="radiogroup">
-                {(['mine', 'all'] as const).map((id) => (
-                    <button key={id} type="button" role="radio" aria-checked={scope === id} className={scope === id ? 'is-on' : ''} onClick={() => setScope(id)}>
-                        {tr(id === 'mine' ? 'lists.checkedOutMine' : 'lists.checkedOutAll')}
-                    </button>
-                ))}
-            </div>
-        </div>
-    ) : null;
-    return <DocumentsWithPane {...props} load={load} toolbar={toolbar} empty={tr('lists.checkedOutEmpty')} />;
-}
-
 const KINDS: FileKind[] = ['pdf', 'doc', 'sheet', 'slides', 'email', 'image', 'archive', 'text', 'file'];
 
 export function SearchView({ clients, ...props }: ListProps & { clients: ClientsResponse }) {
     const { tr } = useFm();
-    const [form, setForm] = useState({ q: '', clientId: '', matterId: '', kind: '', checkedOut: false });
+    const [form, setForm] = useState({ q: '', clientId: '', matterId: '', kind: '' });
     const [query, setQuery] = useState(form);
     const [submitted, setSubmitted] = useState(false);
     const load = useLoad(submitted ? () => filesApi.search(query) : null, [submitted, query]);
@@ -114,10 +96,6 @@ export function SearchView({ clients, ...props }: ListProps & { clients: Clients
                 <option value="">{tr('kinds.all')}</option>
                 {KINDS.map((kind) => <option key={kind} value={kind}>{tr(`kinds.${kind}`)}</option>)}
             </select>
-            <label className="fm-check">
-                <input type="checkbox" checked={form.checkedOut} onChange={(event) => setForm({ ...form, checkedOut: event.target.checked })} />
-                <span>{tr('search.onlyCheckedOut')}</span>
-            </label>
             <button type="submit" className="fm-btn fm-btn--primary">{tr('search.submit')}</button>
             {load.data ? <span className="fm-muted">{tr('search.found', { count: load.data.total })}</span> : null}
         </form>

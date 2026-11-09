@@ -291,8 +291,7 @@ export const filesApi = {
         return await response.blob();
     },
     recent: () => request<{ documents: DocumentRow[] }>('/recent'),
-    checkedOut: (scope: 'mine' | 'all') => request<{ documents: DocumentRow[] }>(`/checked-out${query({ scope })}`),
-    search: (params: { q?: string; clientId?: string; matterId?: string; kind?: string; checkedOut?: boolean }) =>
+    search: (params: { q?: string; clientId?: string; matterId?: string; kind?: string }) =>
         request<{ documents: DocumentRow[]; total: number }>(`/search${query(params)}`),
     favorites: () => request<FavoritesResponse>('/favorites'),
     addFavorite: (kind: 'client' | 'matter' | 'folder' | 'document', targetId: string, matterId = '') =>

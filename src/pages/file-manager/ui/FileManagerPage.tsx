@@ -3,20 +3,20 @@ import { useSearchParams } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import { filesApi } from '../api/filesApi';
-import { AccessRequestsBadge, CheckedOutBadge } from './fmBadges';
+import { AccessRequestsBadge } from './fmBadges';
 import { AuditView, MonitoringView, TemplateView } from './AdminViews';
 import { MatrixView, RequestAccessModal, RequestsView, SecurityView } from './AccessViews';
 import { ClientsView, MattersListView } from './DirectoryViews';
-import { CheckedOutView, FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
+import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
 import { MatterWorkspace, type Location } from './MatterWorkspace';
 import { Icon, StateBlock, ToastHost, useFm, useLoad, useNotify, type IconName } from './fmShared';
 import './FileManagerPage.css';
 
 type View =
-    | 'clients' | 'matters' | 'myMatters' | 'matter' | 'favorites' | 'recent' | 'checkedOut' | 'search' | 'trash' | 'requests'
+    | 'clients' | 'matters' | 'myMatters' | 'matter' | 'favorites' | 'recent' | 'search' | 'trash' | 'requests'
     | 'security' | 'matrix' | 'audit' | 'monitoring' | 'templates';
 
-type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' | 'checkedOut' };
+type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' };
 
 const WORKSPACE: NavItem[] = [
     { id: 'clients', label: 'nav.clients', icon: 'building' },
@@ -24,7 +24,6 @@ const WORKSPACE: NavItem[] = [
     { id: 'myMatters', label: 'nav.myMatters', icon: 'user' },
     { id: 'favorites', label: 'nav.favorites', icon: 'star' },
     { id: 'recent', label: 'nav.recent', icon: 'clock' },
-    { id: 'checkedOut', label: 'nav.checkedOut', icon: 'lock', badge: 'checkedOut' },
     { id: 'search', label: 'nav.search', icon: 'search' },
     { id: 'trash', label: 'nav.trash', icon: 'trash' },
 ];
@@ -120,7 +119,6 @@ function FileManagerWorkspace() {
             <Icon name={item.icon} />
             <span>{tr(item.label)}</span>
             {item.badge === 'requests' ? <AccessRequestsBadge tick={badgeTick} /> : null}
-            {item.badge === 'checkedOut' ? <CheckedOutBadge tick={badgeTick} /> : null}
         </button>
     );
 
@@ -166,8 +164,6 @@ function FileManagerWorkspace() {
                 return <FavoritesView viewerId={viewerId} onLocate={openMatter} />;
             case 'recent':
                 return <RecentView viewerId={viewerId} onLocate={openMatter} />;
-            case 'checkedOut':
-                return <CheckedOutView viewerId={viewerId} onLocate={openMatter} canManage={canManage} />;
             case 'search':
                 return <SearchView clients={data} viewerId={viewerId} onLocate={openMatter} />;
             case 'trash':

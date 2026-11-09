@@ -49,7 +49,7 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                 return false;
             if (favoritesOnly && !client.favorite)
                 return false;
-            if (withProjects && client.matters.length === 0)
+            if (withProjects && !client.matters.some((matter) => !matter.closed))
                 return false;
             return matchesFilter(filter, client.name);
         })
