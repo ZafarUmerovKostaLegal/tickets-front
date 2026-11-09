@@ -632,8 +632,8 @@ export const ruMessages: Messages = {
         create: 'Создать',
         remove: 'Удалить',
         uploadFiles: 'Загрузить файлы',
-        allMetaAdmin: 'Kosta Legal · {practices} практик · {projects} активных проектов · Внутренние подразделения',
-        allMetaEmployee: 'Kosta Legal · практика {practice} · {projects} проектов',
+        allMetaAdmin: 'Kosta Legal · {teams} команд · {members} участников',
+        allMetaEmployee: 'Kosta Legal · команда {team} · {members} участников',
         statsAria: 'Сводка по хранилищу',
         statFiles: 'Файлов в хранилище',
         statWeek: 'за неделю',
@@ -644,20 +644,20 @@ export const ruMessages: Messages = {
         statWaiting: 'ждут более 24 ч',
         statRejected: 'Отклонено сервером (24 ч)',
         statLog: 'Подробнее в журнале',
-        practices: 'Практики',
+        teams: 'Команды',
+        teamsLoading: 'Загрузка команд…',
+        teamsError: 'Не удалось загрузить команды',
+        teamsEmpty: 'Нет доступных команд',
+        teamActive: 'Активна',
+        teamLeadUnknown: 'Руководитель не указан',
+        members: 'участников',
         openTree: 'Открыть дерево',
-        projects: 'проектов',
         recentSection: 'Недавно открытые',
         openAll: 'Открыть все',
         colName: 'Название',
         colChanged: 'Изменено',
         colChangedBy: 'Кем изменено',
         colAccess: 'Ваш доступ',
-        attention: 'Требует внимания',
-        accessRequests: 'Запросы на доступ',
-        approve: 'Одобрить',
-        forPeriod: 'На срок…',
-        decline: 'Отклонить',
     },
     pageTitle: {
         login: 'Вход',
@@ -1814,20 +1814,20 @@ export type Messages = {
         statWaiting: string;
         statRejected: string;
         statLog: string;
-        practices: string;
+        teams: string;
+        teamsLoading: string;
+        teamsError: string;
+        teamsEmpty: string;
+        teamActive: string;
+        teamLeadUnknown: string;
+        members: string;
         openTree: string;
-        projects: string;
         recentSection: string;
         openAll: string;
         colName: string;
         colChanged: string;
         colChangedBy: string;
         colAccess: string;
-        attention: string;
-        accessRequests: string;
-        approve: string;
-        forPeriod: string;
-        decline: string;
     };
     pageTitle: Record<
         | 'login'
