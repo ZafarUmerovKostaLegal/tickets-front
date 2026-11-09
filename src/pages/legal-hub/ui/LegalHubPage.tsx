@@ -150,8 +150,28 @@ function IconCollapse({ collapsed }: { collapsed: boolean }) {
     );
 }
 
+function IconPin({ docked }: { docked: boolean }) {
+    return (
+        <svg viewBox="0 0 24 24" fill={docked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 17v5" />
+            <path d="M9 3h6l1 7-3 2-3-2z" />
+            <path d="M8 10h8" />
+        </svg>
+    );
+}
+
 const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
+const SIDEBAR_DOCKED_KEY = 'lh-sidebar-docked';
 const SIDE_PIN_KEY = 'lh-sidebar-pin-top';
+
+function readDocked(): boolean {
+    try {
+        return localStorage.getItem(SIDEBAR_DOCKED_KEY) === '1';
+    }
+    catch {
+        return false;
+    }
+}
 
 function clampPinTop(top: number, height = window.innerHeight): number {
     return Math.min(Math.max(top, 36), Math.max(36, height - 36));
@@ -229,11 +249,16 @@ function LegalHubPageBody() {
     const [query, setQuery] = useState('');
     const [projectQuery, setProjectQuery] = useState('');
     const [openClients, setOpenClients] = useState<Set<string>>(() => new Set());
-    const [clientMenu, setClientMenu] = useState<{ x: number; y: number; name: string; archived: boolean } | null>(null);
+    const [sideMenu, setSideMenu] = useState<
+        | { kind: 'client'; x: number; y: number; name: string; archived: boolean }
+        | { kind: 'project'; x: number; y: number; id: string; name: string; archived: boolean }
+        | null
+    >(null);
     const sideDrag = useRef<{ parent: string; key: string } | null>(null);
     const [sideDrop, setSideDrop] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [sidePinned, setSidePinned] = useState(false);
+    const [sideDocked, setSideDocked] = useState(readDocked);
+    const [sidePinned, setSidePinned] = useState(readDocked);
     const [pinTop, setPinTop] = useState(readPinTop);
     const [pinDragging, setPinDragging] = useState(false);
     const pinTopLive = useRef(pinTop);
@@ -293,8 +318,8 @@ function LegalHubPageBody() {
             if (cancelled)
                 return;
             if (remote != null && userId != null) {
-                const serverEmpty = !remote.folders.hideLocked && remote.folders.folders.length === 0 && remote.folders.sidebarOrder.length === 0 && remote.folders.archivedClients.length === 0;
-                const localHas = local.hideLocked || local.folders.length > 0 || local.sidebarOrder.length > 0 || local.archivedClients.length > 0;
+                const serverEmpty = !remote.folders.hideLocked && remote.folders.folders.length === 0 && remote.folders.sidebarOrder.length === 0 && remote.folders.archivedClients.length === 0 && remote.folders.archivedProjects.length === 0;
+                const localHas = local.hideLocked || local.folders.length > 0 || local.sidebarOrder.length > 0 || local.archivedClients.length > 0 || local.archivedProjects.length > 0;
                 const localJson = JSON.stringify(local);
                 if (serverEmpty && localHas) {
                     savedFolders.current = localJson;
@@ -341,13 +366,20 @@ function LegalHubPageBody() {
         () => new Set(projectDisplay.archivedClients.map((name) => name.trim().toLowerCase())),
         [projectDisplay.archivedClients],
     );
+    const archivedProjectIds = useMemo(
+        () => new Set(projectDisplay.archivedProjects),
+        [projectDisplay.archivedProjects],
+    );
+    const isProjectArchived = useCallback((project: { id: string; client: string }) => {
+        return archivedProjectIds.has(project.id) || archivedNames.has(project.client.trim().toLowerCase());
+    }, [archivedNames, archivedProjectIds]);
     const activeProjects = useMemo(
-        () => visibleProjects.filter((project) => !archivedNames.has(project.client.trim().toLowerCase())),
-        [archivedNames, visibleProjects],
+        () => visibleProjects.filter((project) => !isProjectArchived(project)),
+        [isProjectArchived, visibleProjects],
     );
     const archivedProjects = useMemo(
-        () => visibleProjects.filter((project) => archivedNames.has(project.client.trim().toLowerCase())),
-        [archivedNames, visibleProjects],
+        () => visibleProjects.filter((project) => isProjectArchived(project)),
+        [isProjectArchived, visibleProjects],
     );
     const sidebarEntries = useMemo(
         () => buildSidebarEntries(activeProjects, projectDisplay),
@@ -374,15 +406,53 @@ function LegalHubPageBody() {
                 ? [...current.archivedClients.filter((item) => item.trim().toLowerCase() !== key), name.trim()]
                 : current.archivedClients.filter((item) => item.trim().toLowerCase() !== key),
         }));
-        setClientMenu(null);
+        setSideMenu(null);
+    }, []);
+    const setProjectArchived = useCallback((id: string, archived: boolean) => {
+        setProjectDisplay((current) => {
+            const project = projects.find((row) => row.id === id);
+            if (!archived && project != null) {
+                const clientKey = project.client.trim().toLowerCase();
+                const clientArchived = current.archivedClients.some((name) => name.trim().toLowerCase() === clientKey);
+                if (clientArchived) {
+                    const siblings = projects
+                        .filter((row) => row.client.trim().toLowerCase() === clientKey && row.id !== id)
+                        .map((row) => row.id);
+                    return {
+                        ...current,
+                        archivedClients: current.archivedClients.filter((name) => name.trim().toLowerCase() !== clientKey),
+                        archivedProjects: [...new Set([
+                            ...current.archivedProjects.filter((item) => item !== id),
+                            ...siblings,
+                        ])],
+                    };
+                }
+            }
+            return {
+                ...current,
+                archivedProjects: archived
+                    ? [...current.archivedProjects.filter((item) => item !== id), id]
+                    : current.archivedProjects.filter((item) => item !== id),
+            };
+        });
+        setSideMenu(null);
+    }, [projects]);
+    const persistDocked = useCallback((next: boolean) => {
+        setSideDocked(next);
+        try {
+            localStorage.setItem(SIDEBAR_DOCKED_KEY, next ? '1' : '0');
+        }
+        catch {
+            /* storage can be unavailable */
+        }
     }, []);
     useEffect(() => {
-        if (clientMenu == null)
+        if (sideMenu == null)
             return undefined;
-        const close = () => setClientMenu(null);
+        const close = () => setSideMenu(null);
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape')
-                setClientMenu(null);
+                setSideMenu(null);
         };
         window.addEventListener('mousedown', close);
         window.addEventListener('keydown', onKey);
@@ -390,7 +460,7 @@ function LegalHubPageBody() {
             window.removeEventListener('mousedown', close);
             window.removeEventListener('keydown', onKey);
         };
-    }, [clientMenu]);
+    }, [sideMenu]);
     const toggleFolder = useCallback((folder: ProjectFolder) => {
         setProjectDisplay((current) => ({
             ...current,
@@ -420,16 +490,28 @@ function LegalHubPageBody() {
     }, [navigate, onMemberPage, setViewAsId]);
 
     const dismissSide = useCallback(() => {
-        setSidePinned(false);
         setMenuOpen(false);
+        if (!sideDocked)
+            setSidePinned(false);
         const active = document.activeElement;
         if (active instanceof HTMLElement && active.closest('.lh-side-dock'))
             active.blur();
-    }, []);
-    const sideOpen = sidePinned;
+    }, [sideDocked]);
+    const sideOpen = sideDocked || sidePinned;
     const toggleSidePin = useCallback(() => {
+        if (sideDocked) {
+            persistDocked(false);
+            setSidePinned(false);
+            return;
+        }
         setSidePinned((pinned) => !pinned);
-    }, []);
+    }, [persistDocked, sideDocked]);
+    const toggleSideDock = useCallback(() => {
+        const next = !sideDocked;
+        persistDocked(next);
+        if (next)
+            setSidePinned(true);
+    }, [persistDocked, sideDocked]);
     useEffect(() => {
         const onResize = () => setPinTop((top) => clampPinTop(top));
         window.addEventListener('resize', onResize);
@@ -516,11 +598,11 @@ function LegalHubPageBody() {
             <>
             <button
                 type="button"
-                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}${pinDragging ? ' is-dragging' : ''}`}
+                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}${sideDocked ? ' is-docked' : ''}${pinDragging ? ' is-dragging' : ''}`}
                 style={{ top: pinTop }}
                 aria-expanded={sideOpen}
-                aria-label={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                title={sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                aria-label={sideDocked ? t('legalHub.unpinSidebar') : sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                title={sideDocked ? t('legalHub.unpinSidebar') : sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
                 onPointerDown={(event) => {
                     if (event.button !== 0)
                         return;
@@ -713,7 +795,8 @@ function LegalHubPageBody() {
                                                         }}
                                                         onToggle={toggleClient}
                                                         onReorder={reorderSidebar}
-                                                        onMenu={setClientMenu}
+                                                        onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
+                                                        onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
                                                         openProjectId={openProjectId}
                                                         canOpen={canOpenProject}
                                                         lockedLabel={t('legalHub.projectLocked')}
@@ -741,7 +824,8 @@ function LegalHubPageBody() {
                                         }}
                                         onToggle={toggleClient}
                                         onReorder={reorderSidebar}
-                                        onMenu={setClientMenu}
+                                        onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
+                                        onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
                                         openProjectId={openProjectId}
                                         canOpen={canOpenProject}
                                         lockedLabel={t('legalHub.projectLocked')}
@@ -759,7 +843,7 @@ function LegalHubPageBody() {
                                 >
                                     <span className="lh-side__sw lh-side__sw--ink" aria-hidden />
                                     <span className="lh-side__folder-name">{t('legalHub.archive')}</span>
-                                    <em className="lh-side__folder-count">{new Set(archivedProjects.map((project) => project.client.trim().toLowerCase())).size}</em>
+                                    <em className="lh-side__folder-count">{archivedProjects.length}</em>
                                 </button>
                                 {openClients.has('archive') || projectQuery.trim().length > 0 ? (
                                     <ul className="lh-side__list">
@@ -778,7 +862,8 @@ function LegalHubPageBody() {
                                             }}
                                             onToggle={toggleClient}
                                             onReorder={reorderSidebar}
-                                            onMenu={setClientMenu}
+                                            onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
+                                            onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
                                             archived
                                             reorderable={false}
                                             openProjectId={openProjectId}
@@ -808,6 +893,20 @@ function LegalHubPageBody() {
                     </ul>
                 </nav>
                 <div className="lh-side__foot">
+                    <button
+                        type="button"
+                        className={`lh-side__collapse${sideDocked ? ' is-docked' : ''}`}
+                        data-side-keep=""
+                        aria-pressed={sideDocked}
+                        aria-label={sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
+                        title={sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
+                        onClick={toggleSideDock}
+                    >
+                        <IconPin docked={sideDocked} />
+                        <span className="lh-side__collapse-label">
+                            {sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
+                        </span>
+                    </button>
                     <button
                         type="button"
                         className="lh-side__collapse"
@@ -1008,10 +1107,10 @@ function LegalHubPageBody() {
                 </ViewTransition>
             </div>
             {showUtil ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
-            {clientMenu != null ? createPortal(
+            {sideMenu != null ? createPortal(
                 <div
                     className="lh-side__menu"
-                    style={{ top: clientMenu.y, left: clientMenu.x }}
+                    style={{ top: sideMenu.y, left: sideMenu.x }}
                     role="menu"
                     onMouseDown={(event) => event.stopPropagation()}
                 >
@@ -1019,11 +1118,14 @@ function LegalHubPageBody() {
                         type="button"
                         role="menuitem"
                         onClick={() => {
-                            setClientArchived(clientMenu.name, !clientMenu.archived);
+                            if (sideMenu.kind === 'client')
+                                setClientArchived(sideMenu.name, !sideMenu.archived);
+                            else
+                                setProjectArchived(sideMenu.id, !sideMenu.archived);
                             dismissSide();
                         }}
                     >
-                        {clientMenu.archived ? t('legalHub.unarchive') : t('legalHub.archive')}
+                        {sideMenu.archived ? t('legalHub.unarchive') : t('legalHub.archive')}
                     </button>
                 </div>,
                 document.body,
@@ -1152,6 +1254,7 @@ function ClientGroups({
     onToggle,
     onReorder,
     onMenu,
+    onProjectMenu,
     archived = false,
     reorderable = true,
     openProjectId,
@@ -1171,6 +1274,7 @@ function ClientGroups({
     onToggle: (key: string) => void;
     onReorder: (parent: string, fromKey: string, toKey: string) => void;
     onMenu: (menu: { x: number; y: number; name: string; archived: boolean }) => void;
+    onProjectMenu: (menu: { x: number; y: number; id: string; name: string; archived: boolean }) => void;
     archived?: boolean;
     reorderable?: boolean;
     openProjectId: string | null;
@@ -1231,7 +1335,9 @@ function ClientGroups({
                                         selected={openProjectId === project.id}
                                         locked={!canOpen(project.id)}
                                         lockedLabel={lockedLabel}
+                                        archived={archived}
                                         onOpen={onOpen}
+                                        onMenu={onProjectMenu}
                                     />
                                 ))}
                             </ul>
@@ -1253,13 +1359,17 @@ function SideProject({
     selected,
     locked,
     lockedLabel,
+    archived,
     onOpen,
+    onMenu,
 }: {
     project: { id: string; name: string; client: string };
     selected: boolean;
     locked: boolean;
     lockedLabel: string;
+    archived: boolean;
     onOpen: (id: string) => void;
+    onMenu: (menu: { x: number; y: number; id: string; name: string; archived: boolean }) => void;
 }) {
     return (
         <li>
@@ -1271,6 +1381,11 @@ function SideProject({
                 disabled={locked}
                 title={projectTitle(project, locked, lockedLabel)}
                 onClick={() => onOpen(project.id)}
+                onContextMenu={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onMenu({ x: event.clientX, y: event.clientY, id: project.id, name: project.name, archived });
+                }}
             >
                 <span className="lh-side__sw lh-side__sw--project" aria-hidden />
                 <span className="lh-side__item-label">{project.name}</span>

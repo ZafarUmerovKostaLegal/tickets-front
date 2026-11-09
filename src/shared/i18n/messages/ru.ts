@@ -127,6 +127,8 @@ export const ruMessages: Messages = {
         closeMenu: 'Закрыть меню',
         collapseSidebar: 'Свернуть меню',
         expandSidebar: 'Развернуть меню',
+        pinSidebar: 'Закрепить меню',
+        unpinSidebar: 'Открепить меню',
         teamLoading: 'Загрузка команды…',
         teamError: 'Не удалось загрузить команды.',
         memberMissing: 'Сотрудник не найден.',
@@ -652,12 +654,6 @@ export const ruMessages: Messages = {
         teamLeadUnknown: 'Руководитель не указан',
         members: 'участников',
         openTree: 'Открыть дерево',
-        recentSection: 'Недавно открытые',
-        openAll: 'Открыть все',
-        colName: 'Название',
-        colChanged: 'Изменено',
-        colChangedBy: 'Кем изменено',
-        colAccess: 'Ваш доступ',
     },
     pageTitle: {
         login: 'Вход',
@@ -1329,6 +1325,8 @@ export type Messages = {
         closeMenu: string;
         collapseSidebar: string;
         expandSidebar: string;
+        pinSidebar: string;
+        unpinSidebar: string;
         teamLoading: string;
         teamError: string;
         memberMissing: string;
@@ -1822,12 +1820,6 @@ export type Messages = {
         teamLeadUnknown: string;
         members: string;
         openTree: string;
-        recentSection: string;
-        openAll: string;
-        colName: string;
-        colChanged: string;
-        colChangedBy: string;
-        colAccess: string;
     };
     pageTitle: Record<
         | 'login'

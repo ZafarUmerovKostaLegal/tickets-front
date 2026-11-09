@@ -437,10 +437,11 @@
 
 .fm-all__practice strong {
   color: var(--app-text, #111827);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
-.fm-all__practice span,
 .fm-all__practice small {
   color: var(--app-muted, #6b7280);
   font-size: 0.75rem;

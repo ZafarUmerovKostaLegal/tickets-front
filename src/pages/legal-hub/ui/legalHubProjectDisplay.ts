@@ -19,6 +19,7 @@ export type ProjectDisplaySettings = {
     folders: ProjectFolder[];
     sidebarOrder: SidebarToken[];
     archivedClients: string[];
+    archivedProjects: string[];
 };
 
 export const EMPTY_PROJECT_DISPLAY: ProjectDisplaySettings = {
@@ -26,6 +27,7 @@ export const EMPTY_PROJECT_DISPLAY: ProjectDisplaySettings = {
     folders: [],
     sidebarOrder: [],
     archivedClients: [],
+    archivedProjects: [],
 };
 
 function storageKey(userId: number): string {
@@ -66,12 +68,27 @@ function cleanNames(raw: unknown): string[] {
     for (const item of raw) {
         const name = typeof item === 'string' ? item.trim().slice(0, 120) : '';
         const key = name.toLowerCase();
-        if (seen.has(key))
+        if (!name || seen.has(key))
             continue;
         seen.add(key);
         names.push(name);
     }
     return names;
+}
+
+function cleanIds(raw: unknown): string[] {
+    if (!Array.isArray(raw))
+        return [];
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const item of raw) {
+        const id = typeof item === 'string' ? item.trim().slice(0, 64) : '';
+        if (!id || seen.has(id))
+            continue;
+        seen.add(id);
+        ids.push(id);
+    }
+    return ids;
 }
 
 function normalizeSidebarOrder(raw: unknown): SidebarToken[] {
@@ -133,6 +150,7 @@ export function normalizeProjectDisplay(raw: unknown): ProjectDisplaySettings {
         folders: exclusive,
         sidebarOrder: normalizeSidebarOrder(row.sidebarOrder),
         archivedClients: cleanNames(row.archivedClients),
+        archivedProjects: cleanIds(row.archivedProjects),
     };
 }
 

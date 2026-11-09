@@ -2,7 +2,6 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { useI18n } from '@shared/i18n';
 import { useCurrentUser } from '@shared/hooks';
 import { listTimeTrackingTeams, type TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
-import { ALL_RECENT, type AccessTone, type RecentFile } from './fileManagerAllMock';
 
 export type FileManagerAllFilesHandle = {
     openUpload: () => void;
@@ -13,11 +12,6 @@ type Props = {
     canManage: boolean;
 };
 
-function KindIcon({ kind }: { kind: RecentFile['kind'] }) {
-    const label = kind === 'doc' ? 'W' : kind === 'pdf' ? 'PDF' : kind === 'sheet' ? 'X' : 'Z';
-    return <span className={`fm-all__kind fm-all__kind--${kind}`} aria-hidden>{label}</span>;
-}
-
 function TeamIcon() {
     return (
         <span className="fm-all__practice-icon" aria-hidden>
@@ -26,15 +20,6 @@ function TeamIcon() {
             </svg>
         </span>
     );
-}
-
-function teamCode(name: string): string {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0)
-        return 'TM';
-    if (parts.length === 1)
-        return parts[0]!.slice(0, 4).toUpperCase();
-    return parts.slice(0, 3).map((part) => part[0]!.toUpperCase()).join('');
 }
 
 function memberCount(team: TimeTrackingTeamRow): number {
@@ -97,16 +82,6 @@ export const FileManagerAllFiles = forwardRef<FileManagerAllFilesHandle, Props>(
             return [];
         return teams.filter((team) => isUserOnTeam(team, userId));
     }, [canManage, teams, user?.id]);
-
-    const recent = useMemo(() => {
-        if (canManage || visibleTeams.length === 0)
-            return ALL_RECENT;
-        const names = visibleTeams.map((team) => team.name.trim().toLowerCase()).filter(Boolean);
-        if (names.length === 0)
-            return ALL_RECENT.slice(0, 2);
-        const matched = ALL_RECENT.filter((file) => names.some((name) => file.path.toLowerCase().includes(name) || file.teamHint.toLowerCase().includes(name)));
-        return matched.length > 0 ? matched : ALL_RECENT.slice(0, Math.min(2, ALL_RECENT.length));
-    }, [canManage, visibleTeams]);
 
     const memberTotal = visibleTeams.reduce((sum, team) => sum + memberCount(team), 0);
     const meta = canManage
@@ -192,8 +167,7 @@ export const FileManagerAllFiles = forwardRef<FileManagerAllFilesHandle, Props>(
                                                 <TeamIcon />
                                                 <em className="fm-all__badge is-ok">{t('fileManager.teamActive')}</em>
                                             </div>
-                                            <strong>{teamCode(team.name)}</strong>
-                                            <span>{team.name}</span>
+                                            <strong>{team.name}</strong>
                                             <small>{count} {t('fileManager.members')}</small>
                                             <small className="fm-all__lead">{lead}</small>
                                         </button>
@@ -201,45 +175,6 @@ export const FileManagerAllFiles = forwardRef<FileManagerAllFilesHandle, Props>(
                                 })}
                             </div>
                         )}
-                    </section>
-
-                    <section className="fm-all__section">
-                        <div className="fm-all__section-head">
-                            <h3>{t('fileManager.recentSection')}</h3>
-                            <button type="button" className="fm-all__text-btn">{t('fileManager.openAll')}</button>
-                        </div>
-                        <div className="fm-all__table-wrap">
-                            <table className="fm-all__table">
-                                <thead>
-                                    <tr>
-                                        <th>{t('fileManager.colName')}</th>
-                                        <th>{t('fileManager.colChanged')}</th>
-                                        <th>{t('fileManager.colChangedBy')}</th>
-                                        <th>{t('fileManager.colAccess')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {recent.map((file) => (
-                                        <tr key={file.id}>
-                                            <td>
-                                                <div className="fm-all__file-cell">
-                                                    <KindIcon kind={file.kind} />
-                                                    <div>
-                                                        <strong>{file.name}</strong>
-                                                        <span>{file.path}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>{file.changed}</td>
-                                            <td>{file.changedBy}</td>
-                                            <td>
-                                                <em className={`fm-all__access is-${file.accessTone as AccessTone}`}>{file.access}</em>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
                     </section>
                 </div>
             </div>

@@ -50,6 +50,14 @@ describe('project folders', () => {
         ]);
         expect(settings.sidebarOrder).toEqual([]);
         expect(settings.archivedClients).toEqual([]);
+        expect(settings.archivedProjects).toEqual([]);
+    });
+
+    it('читает архив проектов', () => {
+        const settings = normalizeProjectDisplay({
+            archivedProjects: ['p1', 'p1', '', 'p2'],
+        });
+        expect(settings.archivedProjects).toEqual(['p1', 'p2']);
     });
 
     it('меняет местами папку и клиента', () => {
