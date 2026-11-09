@@ -31,7 +31,9 @@ function authBase(): string {
 }
 
 function redirectUri(): string {
-  return `${window.location.origin}/auth/callback.html`;
+  // Vite base is /outlook-addin/ in prod (same Hub domain)
+  const base = import.meta.env.BASE_URL || '/';
+  return new URL('auth/callback.html', `${window.location.origin}${base}`).href;
 }
 
 async function postJson<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {

@@ -31,12 +31,20 @@ ENV VITE_BUILD_REV=$BUILD_REV
 
 RUN echo "frontend build rev: $BUILD_REV" && npm run build
 
+# Outlook add-in → /outlook-addin/ on the same Hub domain
+COPY outlook-addin/package.json outlook-addin/package-lock.json ./outlook-addin/
+WORKDIR /app/outlook-addin
+RUN npm ci
+COPY outlook-addin/ ./
+RUN npm run build
+
 FROM nginx:1.27-alpine
 
 WORKDIR /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist ./
+COPY --from=builder /app/outlook-addin/dist ./outlook-addin
 
 EXPOSE 80
 

@@ -1,21 +1,28 @@
-# Kosta File — Outlook add-in (New Outlook)
+# Kosta File — Outlook add-in
 
-Мини-приложение для **New Outlook**: правила «отправитель / домен → matter» и загрузка `.eml` в `Correspondence/Emails`.
+Хостится **на том же домене Hub**:  
+`https://tickets.kostalegal.com/outlook-addin/`
 
-## Безопасность токенов
+Сборка фронта (Docker) копирует add-in в nginx под этот путь. Отдельный localhost:3001 для прода не нужен.
 
-Отдельная авторизация Microsoft (не hub-сессия):
+## Установка в Outlook
 
-| Что | Как |
-|-----|-----|
-| Access JWT | TTL 10 мин, `typ=outlook_fm`, `aud=file-manager`, `scope=fm.outlook.upload`, привязка к `device_id` |
-| Refresh | Opaque; на сервере только SHA-256; **ротация**; reuse → revoke семьи |
-| В add-in | Access **только в RAM**; refresh — AES-GCM в roaming/localStorage |
-| Scope FM | Только `clients`, `browse`, `folders` create, `documents` upload |
+1. Задеплойте фронт (чтобы открывался `/outlook-addin/index.html`).
+2. Azure App Registration → Redirect URI (**SPA**):  
+   `https://tickets.kostalegal.com/outlook-addin/auth/callback.html`
+3. Auth env:  
+   `AUTH_OUTLOOK_REDIRECT_URI=https://tickets.kostalegal.com/outlook-addin/auth/callback.html`
+4. Outlook → **Get Add-ins** → **My add-ins** → **Add from file** →  
+   `outlook-addin/manifest.xml`
+5. Откройте письмо → лента **Kosta File** → **В matter**.
+6. В настройках task pane:
+   - File Manager API: `https://ticketsback.kostalegal.com/api/v1/files`  
+     (или тот URL API, что у Hub)
+   - Auth: `https://ticketsback.kostalegal.com/api/v1/auth/outlook`  
+     (можно оставить пустым — выведется из API URL)
+   - **Войти через Microsoft**
 
-Вставка Bearer из Hub **удалена**.
-
-## Быстрый старт
+## Локальная разработка
 
 ```bash
 cd outlook-addin
@@ -23,40 +30,17 @@ npm install
 npm run dev
 ```
 
-HTTPS: `https://localhost:3001`
+Dev: `https://localhost:3001/outlook-addin/`  
+Для локального sideload временно подставьте localhost в копии `manifest.xml` или используйте прод-URL после деплоя.
 
-### Azure App Registration
+## Безопасность токенов
 
-1. Redirect URI (SPA): `https://localhost:3001/auth/callback.html`
-2. Тот же `AZURE_CLIENT_ID` / tenant, что у Hub (public + PKCE).
-3. На auth-сервисе: `AUTH_OUTLOOK_REDIRECT_URI=https://localhost:3001/auth/callback.html`
+Отдельная Azure-авторизация add-in (не hub cookie):
 
-### Sideload
+- Access JWT 10 мин, `typ=outlook_fm`, только filing-scope
+- Refresh opaque + ротация, AES-GCM в клиенте
+- Device binding (`X-Outlook-Device-Id`)
 
-1. `npm run dev`
-2. Outlook → Get add-ins → My add-ins → Add from file → `manifest.xml`
-3. В task pane: URL API → **Войти через Microsoft** → правила filing
+## API
 
-### Прод
-
-Замените в `manifest.xml` `https://localhost:3001` на боевой HTTPS-хост, соберите `npm run build`, укажите production redirect в Azure и `AUTH_OUTLOOK_REDIRECT_URI`.
-
-## API auth
-
-- `GET  /api/v1/auth/outlook/login-url`
-- `POST /api/v1/auth/outlook/exchange` — `{ code, redirectUri, codeVerifier, deviceId }`
-- `POST /api/v1/auth/outlook/refresh` — header `X-Outlook-Device-Id`
-- `POST /api/v1/auth/outlook/logout`
-- `GET  /api/v1/auth/outlook/me`
-
-## Структура
-
-```
-outlook-addin/
-  manifest.xml
-  public/auth/callback.html
-  src/
-    auth/          # PKCE, session, AES-GCM
-    api.ts         # FM client с auto-refresh
-    main.ts
-```
+- `GET/POST /api/v1/auth/outlook/*` (gateway → auth)

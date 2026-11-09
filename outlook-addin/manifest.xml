@@ -7,16 +7,16 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a1e-6b4d-4e9a-9c71-a1b2c3d4e5f6</Id>
-  <Version>0.1.0.0</Version>
+  <Version>0.1.1.0</Version>
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="Kosta File" />
   <Description DefaultValue="Автоматическая загрузка писем в matters файлового менеджера Kosta (аналог MacroView)." />
-  <IconUrl DefaultValue="https://localhost:3001/assets/icon-32.png" />
-  <HighResolutionIconUrl DefaultValue="https://localhost:3001/assets/icon-80.png" />
-  <SupportUrl DefaultValue="https://localhost:3001/" />
+  <IconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
+  <SupportUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/" />
   <AppDomains>
-    <AppDomain>https://localhost:3001</AppDomain>
+    <AppDomain>https://tickets.kostalegal.com</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox" />
@@ -29,7 +29,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://localhost:3001/index.html" />
+        <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -76,12 +76,12 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://localhost:3001/assets/icon-16.png" />
-        <bt:Image id="icon32" DefaultValue="https://localhost:3001/assets/icon-32.png" />
-        <bt:Image id="icon80" DefaultValue="https://localhost:3001/assets/icon-80.png" />
+        <bt:Image id="icon16" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-16.png" />
+        <bt:Image id="icon32" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
+        <bt:Image id="icon80" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://localhost:3001/index.html" />
+        <bt:Url id="taskpaneUrl" DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="Kosta File" />
@@ -128,12 +128,12 @@
       </Hosts>
       <Resources>
         <bt:Images>
-          <bt:Image id="icon16" DefaultValue="https://localhost:3001/assets/icon-16.png" />
-          <bt:Image id="icon32" DefaultValue="https://localhost:3001/assets/icon-32.png" />
-          <bt:Image id="icon80" DefaultValue="https://localhost:3001/assets/icon-80.png" />
+          <bt:Image id="icon16" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-16.png" />
+          <bt:Image id="icon32" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
+          <bt:Image id="icon80" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="taskpaneUrl" DefaultValue="https://localhost:3001/index.html" />
+          <bt:Url id="taskpaneUrl" DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="Kosta File" />

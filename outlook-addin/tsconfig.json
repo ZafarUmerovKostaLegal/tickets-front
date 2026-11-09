@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["office-js"]
+    "types": ["vite/client", "office-js"]
   },
   "include": ["src"]
 }
