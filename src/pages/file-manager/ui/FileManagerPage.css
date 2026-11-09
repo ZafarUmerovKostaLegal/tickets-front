@@ -1110,58 +1110,81 @@
   margin-left: 0.2rem;
 }
 
-.fm-ex__icons {
+.fm-ex__tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
-  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 0.35rem 0.75rem;
   align-content: start;
-  padding: 0.75rem;
+  padding: 0.75rem 0.85rem;
 }
 
-.fm-ex__icon {
+.fm-ex__tile {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 5.5rem;
-  padding: 0.55rem 0.35rem;
+  gap: 0.7rem;
+  min-height: 3.6rem;
+  padding: 0.45rem 0.55rem;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 3px;
   background: transparent;
   color: #1f2937;
   font: inherit;
-  font-size: 0.78rem;
-  text-align: center;
+  text-align: left;
   cursor: default;
 }
 
-.fm-ex__icon span {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  word-break: break-word;
-}
-
-.fm-ex__icon:hover {
+.fm-ex__tile:hover {
   border-color: #c9d1d9;
   background: #f5f8fc;
 }
 
-.fm-ex__icon.is-on {
+.fm-ex__tile.is-on {
   border-color: #7eb6f5;
   background: #cce4ff;
 }
 
-.fm-ex__glyph {
-  width: 2.4rem;
-  height: 2.4rem;
+.fm-ex__tile-ico {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
-.fm-ex__icon .fm-kind {
-  width: 2.6rem;
-  height: 1.8rem;
-  font-size: 0.68rem;
+.fm-ex__tile-ico .fm-ico {
+  width: 2.55rem;
+  height: 2.55rem;
+}
+
+.fm-ex__tile-ico .fm-kind {
+  width: 2.5rem;
+  height: 1.7rem;
+  font-size: 0.7rem;
+}
+
+.fm-ex__tile-meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fm-ex__tile-meta strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-ex__tile-meta small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fm-ex__menu {

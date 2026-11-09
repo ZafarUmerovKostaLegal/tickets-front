@@ -149,7 +149,7 @@ export function MatterWorkspace({
     const [uploading, setUploading] = useState(false);
     const [folderModal, setFolderModal] = useState<'create' | 'rename' | null>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('details');
+    const [viewMode, setViewMode] = useState<ViewMode>('icons');
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
     const [filter, setFilter] = useState('');
@@ -478,13 +478,13 @@ export function MatterWorkspace({
                                         <LevelBadge level={level} />
                                     </div>
                                     <div className="fm-ex__view-toggle" role="radiogroup" aria-label="view">
-                                        <button type="button" role="radio" aria-checked={viewMode === 'details'} className={viewMode === 'details' ? 'is-on' : ''}
-                                            title={tr('browser.viewDetails')} aria-label={tr('browser.viewDetails')} onClick={() => setViewMode('details')}>
-                                            <Icon name="list" />
-                                        </button>
                                         <button type="button" role="radio" aria-checked={viewMode === 'icons'} className={viewMode === 'icons' ? 'is-on' : ''}
                                             title={tr('browser.viewIcons')} aria-label={tr('browser.viewIcons')} onClick={() => setViewMode('icons')}>
                                             <Icon name="grid" />
+                                        </button>
+                                        <button type="button" role="radio" aria-checked={viewMode === 'details'} className={viewMode === 'details' ? 'is-on' : ''}
+                                            title={tr('browser.viewDetails')} aria-label={tr('browser.viewDetails')} onClick={() => setViewMode('details')}>
+                                            <Icon name="list" />
                                         </button>
                                     </div>
                                 </div>
@@ -543,10 +543,10 @@ export function MatterWorkspace({
                                             <p>{editable ? tr('browser.dropHint') : tr('browser.emptyFolder')}</p>
                                         </div>
                                     ) : viewMode === 'icons' ? (
-                                        <div className="fm-ex__icons">
+                                        <div className="fm-ex__tiles">
                                             {filteredFolders.map((folder) => (
                                                 <button key={folder.id} type="button"
-                                                    className={selection?.kind === 'folder' && selection.id === folder.id ? 'fm-ex__icon is-on' : 'fm-ex__icon'}
+                                                    className={selection?.kind === 'folder' && selection.id === folder.id ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
                                                     onClick={(event) => {
                                                         event.stopPropagation();
                                                         setSelection({ kind: 'folder', id: folder.id });
@@ -568,13 +568,18 @@ export function MatterWorkspace({
                                                             void moveDoc(folder.id, id);
                                                         }
                                                     } : undefined}>
-                                                    <Icon name="folder" className="fm-ico--folder fm-ex__glyph" />
-                                                    <span title={folder.name}>{folder.name}</span>
+                                                    <span className="fm-ex__tile-ico" aria-hidden>
+                                                        <Icon name="folder" className="fm-ico--folder" />
+                                                    </span>
+                                                    <span className="fm-ex__tile-meta">
+                                                        <strong title={folder.name}>{folder.name}</strong>
+                                                        <small>{tr('browser.folderType')}</small>
+                                                    </span>
                                                 </button>
                                             ))}
                                             {filteredDocs.map((doc) => (
                                                 <button key={doc.id} type="button"
-                                                    className={selection?.kind === 'document' && selection.id === doc.id ? 'fm-ex__icon is-on' : 'fm-ex__icon'}
+                                                    className={selection?.kind === 'document' && selection.id === doc.id ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
                                                     draggable={editable}
                                                     onDragStart={editable ? (event) => {
                                                         event.dataTransfer.setData(DOC_DRAG_TYPE, doc.id);
@@ -590,8 +595,13 @@ export function MatterWorkspace({
                                                         onNavigate({ matterId, folderId, docId: doc.id });
                                                     }}
                                                     onContextMenu={(event) => openCtx(event, { kind: 'document', doc })}>
-                                                    <FileBadge kind={doc.kind} />
-                                                    <span title={doc.name}>{doc.name}</span>
+                                                    <span className="fm-ex__tile-ico" aria-hidden>
+                                                        <FileBadge kind={doc.kind} />
+                                                    </span>
+                                                    <span className="fm-ex__tile-meta">
+                                                        <strong title={doc.name}>{doc.name}</strong>
+                                                        <small>{kindLabel(doc.kind, tr)} · {formatBytes(doc.sizeBytes, locale)}</small>
+                                                    </span>
                                                 </button>
                                             ))}
                                         </div>

@@ -108,7 +108,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         refresh: 'Refresh',
         home: 'Matter root',
         viewDetails: 'Details',
-        viewIcons: 'Icons',
+        viewIcons: 'Tiles',
         navigation: 'Folders',
         thisMatter: 'This matter',
         items: '{count} items',

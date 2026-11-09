@@ -106,7 +106,7 @@ export const fileManagerPageMessages = {
         refresh: 'Обновить',
         home: 'Корень matter',
         viewDetails: 'Таблица',
-        viewIcons: 'Значки',
+        viewIcons: 'Плитки',
         navigation: 'Папки',
         thisMatter: 'Этот matter',
         items: '{count} элементов',
