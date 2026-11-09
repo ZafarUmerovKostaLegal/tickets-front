@@ -4,11 +4,9 @@ import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { canManageFileManager } from '@shared/lib/fileManagerAccess';
-import { FileManagerAllFiles, type FileManagerAllFilesHandle } from './FileManagerAllFiles';
 import './FileManagerPage.css';
 
 type PageId =
-    | 'all'
     | 'explorer'
     | 'mine'
     | 'shared'
@@ -28,13 +26,12 @@ type PageId =
 type NavItem = {
     id: PageId;
     label: TranslationKey;
-    icon: 'home' | 'compass' | 'user' | 'share' | 'inbox' | 'clock' | 'star' | 'trash' | 'users' | 'shield' | 'grid' | 'list' | 'pulse' | 'server' | 'directory' | 'gear';
+    icon: 'compass' | 'user' | 'share' | 'inbox' | 'clock' | 'star' | 'trash' | 'users' | 'shield' | 'grid' | 'list' | 'pulse' | 'server' | 'directory' | 'gear';
     badge?: string;
     badgeTone?: 'muted' | 'alert';
 };
 
 const FILES: NavItem[] = [
-    { id: 'all', label: 'fileManager.all', icon: 'home' },
     { id: 'explorer', label: 'fileManager.explorer', icon: 'compass' },
     { id: 'mine', label: 'fileManager.mine', icon: 'user' },
     { id: 'shared', label: 'fileManager.shared', icon: 'share' },
@@ -68,8 +65,6 @@ const EMPLOYEE_PAGE_IDS = new Set<PageId>(EMPLOYEE_FILE_IDS);
 
 function NavIcon({ name }: { name: NavItem['icon'] }) {
     const common = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
-    if (name === 'home')
-        return <svg {...common}><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" /></svg>;
     if (name === 'compass')
         return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg>;
     if (name === 'user')
@@ -116,10 +111,9 @@ export function FileManagerPage() {
     const { t } = useI18n();
     const { user, loading } = useCurrentUser();
     const canManage = !loading && canManageFileManager(user);
-    const [page, setPage] = useState<PageId>('available');
-    const [pendingAction, setPendingAction] = useState<'upload' | 'create' | null>(null);
+    const [page, setPage] = useState<PageId>('explorer');
     const seededRef = useRef(false);
-    const allFilesRef = useRef<FileManagerAllFilesHandle | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
     const fileNav = canManage ? FILES : EMPLOYEE_FILES;
     const navItems = useMemo(() => (canManage ? [...FILES, ...ADMIN] : EMPLOYEE_FILES), [canManage]);
@@ -130,7 +124,7 @@ export function FileManagerPage() {
             return;
         if (!seededRef.current) {
             seededRef.current = true;
-            const next: PageId = canManage ? 'all' : 'mine';
+            const next: PageId = canManage ? 'explorer' : 'mine';
             if (next !== page) {
                 startTransition(() => {
                     setPage(next);
@@ -157,30 +151,9 @@ export function FileManagerPage() {
         });
     }, [canManage, page]);
 
-    useEffect(() => {
-        if (page !== 'all' || pendingAction == null)
-            return;
-        if (pendingAction === 'create')
-            allFilesRef.current?.openCreateFolder();
-        else
-            allFilesRef.current?.openUpload();
-        setPendingAction(null);
-    }, [page, pendingAction]);
-
     const onCreateClick = useCallback(() => {
-        if (!canManage) {
-            allFilesRef.current?.openUpload();
-            return;
-        }
-        if (page !== 'all') {
-            setPendingAction('create');
-            startTransition(() => {
-                setPage('all');
-            });
-            return;
-        }
-        allFilesRef.current?.openCreateFolder();
-    }, [canManage, page]);
+        fileRef.current?.click();
+    }, []);
 
     return (
         <div className="fm">
@@ -199,6 +172,7 @@ export function FileManagerPage() {
                     <button type="button" className="fm-side__create" onClick={onCreateClick}>
                         + {canManage ? t('fileManager.createUpload') : t('fileManager.upload')}
                     </button>
+                    <input ref={fileRef} className="fm-side__file" type="file" multiple hidden />
                     <p>{t('fileManager.files')}</p>
                     <nav aria-label={t('fileManager.files')}>
                         {fileNav.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
@@ -222,16 +196,12 @@ export function FileManagerPage() {
                 </aside>
                 <ViewTransition default="none" enter="none" exit="none" update="fm-section">
                     <main key={page} className="fm__main">
-                        {page === 'all' ? (
-                            <FileManagerAllFiles ref={allFilesRef} canManage={canManage} />
-                        ) : (
-                            <div className="fm__panel">
-                                <h2 className="fm__panel-title">{t(active.label)}</h2>
-                                {!canManage ? (
-                                    <p className="fm__panel-hint">{t('fileManager.availableProjects')}</p>
-                                ) : null}
-                            </div>
-                        )}
+                        <div className="fm__panel">
+                            <h2 className="fm__panel-title">{t(active.label)}</h2>
+                            {!canManage ? (
+                                <p className="fm__panel-hint">{t('fileManager.availableProjects')}</p>
+                            ) : null}
+                        </div>
                     </main>
                 </ViewTransition>
             </div>

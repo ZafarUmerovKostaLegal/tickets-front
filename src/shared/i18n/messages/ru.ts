@@ -604,7 +604,6 @@ export const ruMessages: Messages = {
         createUpload: 'Создать или загрузить',
         upload: 'Загрузить',
         files: 'Файлы',
-        all: 'Все файлы',
         explorer: 'Проводник',
         mine: 'Мои файлы',
         shared: 'Общие папки',
@@ -634,26 +633,6 @@ export const ruMessages: Messages = {
         create: 'Создать',
         remove: 'Удалить',
         uploadFiles: 'Загрузить файлы',
-        allMetaAdmin: 'Kosta Legal · {teams} команд · {members} участников',
-        allMetaEmployee: 'Kosta Legal · команда {team} · {members} участников',
-        statsAria: 'Сводка по хранилищу',
-        statFiles: 'Файлов в хранилище',
-        statWeek: 'за неделю',
-        statLinks: 'Активных публичных ссылок',
-        statExternal: 'внешних',
-        statNoPassword: 'без пароля',
-        statRequests: 'Запросов на доступ',
-        statWaiting: 'ждут более 24 ч',
-        statRejected: 'Отклонено сервером (24 ч)',
-        statLog: 'Подробнее в журнале',
-        teams: 'Команды',
-        teamsLoading: 'Загрузка команд…',
-        teamsError: 'Не удалось загрузить команды',
-        teamsEmpty: 'Нет доступных команд',
-        teamActive: 'Активна',
-        teamLeadUnknown: 'Руководитель не указан',
-        members: 'участников',
-        openTree: 'Открыть дерево',
     },
     pageTitle: {
         login: 'Вход',
@@ -1770,7 +1749,6 @@ export type Messages = {
         createUpload: string;
         upload: string;
         files: string;
-        all: string;
         explorer: string;
         mine: string;
         shared: string;
@@ -1800,26 +1778,6 @@ export type Messages = {
         create: string;
         remove: string;
         uploadFiles: string;
-        allMetaAdmin: string;
-        allMetaEmployee: string;
-        statsAria: string;
-        statFiles: string;
-        statWeek: string;
-        statLinks: string;
-        statExternal: string;
-        statNoPassword: string;
-        statRequests: string;
-        statWaiting: string;
-        statRejected: string;
-        statLog: string;
-        teams: string;
-        teamsLoading: string;
-        teamsError: string;
-        teamsEmpty: string;
-        teamActive: string;
-        teamLeadUnknown: string;
-        members: string;
-        openTree: string;
     };
     pageTitle: Record<
         | 'login'
