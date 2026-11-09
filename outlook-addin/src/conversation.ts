@@ -66,11 +66,13 @@ export async function listConversationMessages(): Promise<{
     throw new Error('Нет Azure-токена для Graph. Выйдите и войдите снова (нужен Mail.Read).');
 
   const conversationId = currentConversationId();
+  // Do NOT combine conversationId $filter with $orderby — Graph returns
+  // "The restriction or sort order is too complex for this operation."
   const filter = encodeURIComponent(`conversationId eq '${escapeODataString(conversationId)}'`);
   const select = encodeURIComponent('id,subject,internetMessageId,receivedDateTime,from');
   let url =
     `https://graph.microsoft.com/v1.0/me/messages`
-    + `?$filter=${filter}&$select=${select}&$orderby=${encodeURIComponent('receivedDateTime asc')}&$top=50`;
+    + `?$filter=${filter}&$select=${select}&$top=50`;
 
   const messages: ConversationMessageMeta[] = [];
   while (url) {
@@ -92,6 +94,7 @@ export async function listConversationMessages(): Promise<{
   if (!messages.length)
     throw new Error('В переписке не найдено сообщений (Graph). Проверьте согласие Mail.Read.');
 
+  messages.sort((a, b) => a.received.localeCompare(b.received));
   return { conversationId, messages };
 }
 
