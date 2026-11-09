@@ -600,6 +600,7 @@ export const enMessages = {
     },
     fileManager: {
         createUpload: 'Create or upload',
+        upload: 'Upload',
         files: 'Files',
         all: 'All files',
         explorer: 'Explorer',
@@ -622,6 +623,7 @@ export const enMessages = {
         of: 'of',
         tb: 'TB',
         storageWarn: '1 storage has a warning',
+        availableProjects: 'Available projects',
     },
     pageTitle: {
         login: 'Sign in',

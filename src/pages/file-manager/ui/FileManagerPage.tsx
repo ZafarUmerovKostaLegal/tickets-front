@@ -1,7 +1,9 @@
-import { startTransition, useCallback, useState, ViewTransition } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, ViewTransition } from 'react';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
+import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
+import { canManageFileManager } from '@shared/lib/fileManagerAccess';
 import './FileManagerPage.css';
 
 type PageId =
@@ -52,6 +54,8 @@ const ADMIN: NavItem[] = [
     { id: 'settings', label: 'fileManager.settings', icon: 'gear' },
 ];
 
+const ADMIN_PAGE_IDS = new Set<PageId>(ADMIN.map((item) => item.id));
+
 function NavIcon({ name }: { name: NavItem['icon'] }) {
     const common = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
     if (name === 'home')
@@ -98,20 +102,45 @@ function SideLink({ item, active, onSelect }: { item: NavItem; active: boolean; 
     );
 }
 
-const ALL_ITEMS = [...FILES, ...ADMIN];
-
 export function FileManagerPage() {
     const { t } = useI18n();
-    const [page, setPage] = useState<PageId>('all');
-    const active = ALL_ITEMS.find((item) => item.id === page) ?? FILES[0];
+    const { user, loading } = useCurrentUser();
+    const canManage = !loading && canManageFileManager(user);
+    const [page, setPage] = useState<PageId>('available');
+    const seededRef = useRef(false);
+
+    const navItems = useMemo(() => (canManage ? [...FILES, ...ADMIN] : FILES), [canManage]);
+    const active = navItems.find((item) => item.id === page) ?? FILES.find((item) => item.id === 'available') ?? FILES[0];
+
+    useEffect(() => {
+        if (loading)
+            return;
+        if (!seededRef.current) {
+            seededRef.current = true;
+            const next: PageId = canManage ? 'all' : 'available';
+            if (next !== page) {
+                startTransition(() => {
+                    setPage(next);
+                });
+            }
+            return;
+        }
+        if (canManage || !ADMIN_PAGE_IDS.has(page))
+            return;
+        startTransition(() => {
+            setPage('available');
+        });
+    }, [canManage, loading, page]);
 
     const selectPage = useCallback((id: PageId) => {
         if (id === page)
             return;
+        if (!canManage && ADMIN_PAGE_IDS.has(id))
+            return;
         startTransition(() => {
             setPage(id);
         });
-    }, [page]);
+    }, [canManage, page]);
 
     return (
         <div className="fm">
@@ -127,28 +156,37 @@ export function FileManagerPage() {
             </header>
             <div className="fm__body">
                 <aside className="fm-side">
-                    <button type="button" className="fm-side__create">+ {t('fileManager.createUpload')}</button>
+                    <button type="button" className="fm-side__create">
+                        + {canManage ? t('fileManager.createUpload') : t('fileManager.upload')}
+                    </button>
                     <p>{t('fileManager.files')}</p>
                     <nav aria-label={t('fileManager.files')}>
                         {FILES.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
                     </nav>
-                    <p>{t('fileManager.admin')}</p>
-                    <nav aria-label={t('fileManager.admin')}>
-                        {ADMIN.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
-                    </nav>
-                    <div className="fm-side__storage">
-                        <div>
-                            <strong>{t('fileManager.storageCount')}</strong>
-                            <span>1,8 {t('fileManager.of')} 5 {t('fileManager.tb')}</span>
-                        </div>
-                        <i aria-hidden><b /></i>
-                        <small>{t('fileManager.storageWarn')}</small>
-                    </div>
+                    {canManage ? (
+                        <>
+                            <p>{t('fileManager.admin')}</p>
+                            <nav aria-label={t('fileManager.admin')}>
+                                {ADMIN.map((item) => <SideLink key={item.id} item={item} active={page === item.id} onSelect={selectPage} />)}
+                            </nav>
+                            <div className="fm-side__storage">
+                                <div>
+                                    <strong>{t('fileManager.storageCount')}</strong>
+                                    <span>1,8 {t('fileManager.of')} 5 {t('fileManager.tb')}</span>
+                                </div>
+                                <i aria-hidden><b /></i>
+                                <small>{t('fileManager.storageWarn')}</small>
+                            </div>
+                        </>
+                    ) : null}
                 </aside>
                 <ViewTransition default="none" enter="none" exit="none" update="fm-section">
                     <main key={page} className="fm__main">
                         <div className="fm__panel">
                             <h2 className="fm__panel-title">{t(active.label)}</h2>
+                            {!canManage ? (
+                                <p className="fm__panel-hint">{t('fileManager.availableProjects')}</p>
+                            ) : null}
                         </div>
                     </main>
                 </ViewTransition>

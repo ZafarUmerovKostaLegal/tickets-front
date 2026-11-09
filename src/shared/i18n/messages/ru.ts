@@ -600,6 +600,7 @@ export const ruMessages: Messages = {
     },
     fileManager: {
         createUpload: 'Создать или загрузить',
+        upload: 'Загрузить',
         files: 'Файлы',
         all: 'Все файлы',
         explorer: 'Проводник',
@@ -622,6 +623,7 @@ export const ruMessages: Messages = {
         of: 'из',
         tb: 'ТБ',
         storageWarn: '1 хранилище с предупреждением',
+        availableProjects: 'Доступные проекты',
     },
     pageTitle: {
         login: 'Вход',
@@ -1734,6 +1736,7 @@ export type Messages = {
     >;
     fileManager: {
         createUpload: string;
+        upload: string;
         files: string;
         all: string;
         explorer: string;
@@ -1756,6 +1759,7 @@ export type Messages = {
         of: string;
         tb: string;
         storageWarn: string;
+        availableProjects: string;
     };
     pageTitle: Record<
         | 'login'

@@ -185,6 +185,13 @@
   letter-spacing: -0.02em;
 }
 
+.fm__panel-hint {
+  margin: 0.45rem 0 0;
+  color: var(--app-muted, #6b7280);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 @supports not (view-transition-name: none) {
   .fm__main {
     animation: fm-pane-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
