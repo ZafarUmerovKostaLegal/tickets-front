@@ -36,9 +36,9 @@ function loginUrlEndpoint(): string {
   return origin ? `${origin}/api/v1/auth/outlook/login-url` : '';
 }
 
-function azureExchangeUrl(): string {
+function azureBootstrapUrl(): string {
   const origin = gatewayOrigin();
-  return origin ? `${origin}/api/v1/auth/azure/exchange` : '';
+  return origin ? `${origin}/api/v1/auth/azure/bootstrap` : '';
 }
 
 function oauthRedirectUri(): string {
@@ -144,27 +144,46 @@ export async function loginWithHub(): Promise<AuthProfile> {
   const metaRes = await fetch(`${loginUrlEndpoint()}?${qs.toString()}`);
   if (!metaRes.ok)
     throw new Error('Не удалось получить URL входа Azure');
-  const meta = await metaRes.json() as { authorizeUrl: string };
+  const meta = await metaRes.json() as {
+    authorizeUrl: string;
+    clientId?: string;
+    tenantId?: string;
+  };
   const authorize = new URL(meta.authorizeUrl);
   authorize.searchParams.set('code_challenge', challenge);
   authorize.searchParams.set('code_challenge_method', 'S256');
   // Never use prompt=none in Outlook WebView — it causes AADSTS50058
 
+  const clientId = meta.clientId || authorize.searchParams.get('client_id') || '';
+  const tenantId = meta.tenantId
+    || authorize.pathname.split('/')[1]
+    || '';
+  if (!clientId || !tenantId)
+    throw new Error('В ответе login-url нет clientId/tenantId — задеплойте back');
+
   const code = await openOAuthDialog(authorize.toString(), state);
-  const exchangeRes = await fetch(azureExchangeUrl(), {
+
+  // SPA redirect URIs (AADSTS9002327): redeem the code in the browser, not on the server.
+  const azureTokens = await redeemSpaCodeInBrowser({
+    tenantId,
+    clientId,
+    code,
+    redirectUri,
+    codeVerifier: verifier,
+  });
+  const bootstrapRes = await fetch(azureBootstrapUrl(), {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
-      code,
-      redirectUri,
-      codeVerifier: verifier,
+      accessToken: azureTokens.access_token,
+      idToken: azureTokens.id_token,
     }),
   });
-  if (!exchangeRes.ok) {
-    let detail = `HTTP ${exchangeRes.status}`;
+  if (!bootstrapRes.ok) {
+    let detail = `HTTP ${bootstrapRes.status}`;
     try {
-      const body = await exchangeRes.json() as { detail?: string };
+      const body = await bootstrapRes.json() as { detail?: string };
       if (body.detail)
         detail = body.detail;
     } catch {
@@ -172,15 +191,51 @@ export async function loginWithHub(): Promise<AuthProfile> {
     }
     throw new Error(detail);
   }
-  const pair = await exchangeRes.json() as { access_token?: string };
+  const pair = await bootstrapRes.json() as { access_token?: string };
   if (!pair.access_token)
-    throw new Error('Пустой ответ exchange');
+    throw new Error('Пустой ответ bootstrap');
   storeHubAccessToken(pair.access_token);
   return fetchHubMe();
 }
 
+async function redeemSpaCodeInBrowser(input: {
+  tenantId: string;
+  clientId: string;
+  code: string;
+  redirectUri: string;
+  codeVerifier: string;
+}): Promise<{ access_token: string; id_token?: string }> {
+  const tokenUrl = `https://login.microsoftonline.com/${input.tenantId}/oauth2/v2.0/token`;
+  const response = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: input.clientId,
+      grant_type: 'authorization_code',
+      code: input.code,
+      redirect_uri: input.redirectUri,
+      code_verifier: input.codeVerifier,
+      scope: 'openid profile email offline_access User.Read',
+    }),
+  });
+  const payload = await response.json() as {
+    access_token?: string;
+    id_token?: string;
+    error?: string;
+    error_description?: string;
+  };
+  if (!response.ok || !payload.access_token) {
+    throw new Error(
+      humanizeOAuthError(payload.error_description || payload.error || `HTTP ${response.status}`),
+    );
+  }
+  return { access_token: payload.access_token, id_token: payload.id_token };
+}
+
 function humanizeOAuthError(raw: string): string {
   const text = (raw || '').trim();
+  if (/AADSTS9002327/i.test(text) || /Single-Page Application/i.test(text))
+    return 'SPA redirect: код Azure нужно обменивать в браузере. Задеплойте обновлённый front+back и войдите снова.';
   if (/AADSTS50058/i.test(text) || /silent sign-in/i.test(text))
     return 'Нужен обычный вход (тихий вход в Outlook недоступен). Нажмите «Войти в Kosta Hub».';
   if (/AADSTS65001/i.test(text) || /consent/i.test(text))
