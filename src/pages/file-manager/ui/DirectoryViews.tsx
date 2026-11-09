@@ -10,7 +10,6 @@ type ClientsProps = {
 };
 
 type ClientStatus = 'active' | 'archived' | 'all';
-type DocsFilter = 'any' | 'with' | 'without';
 
 export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) {
     const { tr } = useFm();
@@ -18,47 +17,29 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
     const [filter, setFilter] = useState('');
     const [status, setStatus] = useState<ClientStatus>('active');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
-    const [withOpen, setWithOpen] = useState(false);
-    const [docs, setDocs] = useState<DocsFilter>('any');
 
-    const rows = useMemo(() => {
-        const archivedCount = clients.stats?.archivedClients
-            ?? clients.clients.filter((client) => client.archived).length;
-        const list = clients.clients
-            .map((client) => ({
-                client,
-                open: client.matters.filter((matter) => !matter.closed).length,
-                mine: client.matters.filter((matter) => matter.mine).length,
-                documents: client.matters.reduce((sum, matter) => sum + matter.documents, 0),
-            }))
-            .filter(({ client, open, documents }) => {
-                if (status === 'active' && client.archived)
-                    return false;
-                if (status === 'archived' && !client.archived)
-                    return false;
-                if (favoritesOnly && !client.favorite)
-                    return false;
-                if (withOpen && open === 0)
-                    return false;
-                if (docs === 'with' && documents === 0)
-                    return false;
-                if (docs === 'without' && documents > 0)
-                    return false;
-                return matchesFilter(filter, client.name, ...client.matters.map((m) => m.code));
-            })
-            .sort((a, b) => Number(b.client.favorite) - Number(a.client.favorite)
-                || Number(a.client.archived) - Number(b.client.archived)
-                || a.client.name.localeCompare(b.client.name));
-        return { list, archivedCount };
-    }, [clients, filter, status, favoritesOnly, withOpen, docs]);
+    const archivedCount = clients.stats?.archivedClients
+        ?? clients.clients.filter((client) => client.archived).length;
 
-    const dirty = Boolean(filter) || status !== 'active' || favoritesOnly || withOpen || docs !== 'any';
+    const rows = useMemo(() => clients.clients
+        .filter((client) => {
+            if (status === 'active' && client.archived)
+                return false;
+            if (status === 'archived' && !client.archived)
+                return false;
+            if (favoritesOnly && !client.favorite)
+                return false;
+            return matchesFilter(filter, client.name);
+        })
+        .sort((a, b) => Number(b.favorite) - Number(a.favorite)
+            || Number(a.archived) - Number(b.archived)
+            || a.name.localeCompare(b.name)), [clients.clients, filter, status, favoritesOnly]);
+
+    const dirty = Boolean(filter) || status !== 'active' || favoritesOnly;
     const reset = () => {
         setFilter('');
         setStatus('active');
         setFavoritesOnly(false);
-        setWithOpen(false);
-        setDocs('any');
     };
 
     const toggleFavorite = async (clientId: string, favorite: boolean) => {
@@ -67,65 +48,35 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
             onChanged();
     };
 
-    const stats = clients.stats;
-
     return (
         <section className="fm-docs fm-docs--padded">
-            <div className="fm-filters">
-                <div className="fm-filters__row fm-filters__row--main">
-                    <label className="fm-search fm-search--wide">
-                        <Icon name="search" />
-                        <input autoFocus value={filter} placeholder={tr('directory.clientsSearch')} onChange={(event) => setFilter(event.target.value)} />
-                    </label>
-                    {dirty ? (
-                        <button type="button" className="fm-filters__reset" onClick={reset}>{tr('directory.resetFilters')}</button>
-                    ) : null}
-                </div>
-                <div className="fm-filters__row">
-                    <div className="fm-filters__group">
-                        <span>{tr('directory.status')}</span>
-                        <div className="fm-seg" role="radiogroup" aria-label={tr('directory.status')}>
-                            {([
-                                ['active', 'directory.statusActive'],
-                                ['archived', 'directory.statusArchived'],
-                                ['all', 'directory.statusAll'],
-                            ] as const).map(([id, key]) => (
-                                <button key={id} type="button" role="radio" aria-checked={status === id}
-                                    className={status === id ? 'is-on' : ''} onClick={() => setStatus(id)}>
-                                    {tr(key)}{id === 'archived' && rows.archivedCount ? ` (${rows.archivedCount})` : ''}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="fm-filters__chips" role="group" aria-label={tr('directory.more')}>
-                        <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
-                            onClick={() => setFavoritesOnly((value) => !value)}>
-                            <Icon name="star" />{tr('directory.favoritesOnly')}
-                        </button>
-                        <button type="button" className={withOpen ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={withOpen}
-                            onClick={() => setWithOpen((value) => !value)}>
-                            {tr('directory.withOpenMatters')}
-                        </button>
-                        <button type="button" className={docs === 'with' ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={docs === 'with'}
-                            onClick={() => setDocs((value) => (value === 'with' ? 'any' : 'with'))}>
-                            {tr('directory.withDocs')}
-                        </button>
-                        <button type="button" className={docs === 'without' ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={docs === 'without'}
-                            onClick={() => setDocs((value) => (value === 'without' ? 'any' : 'without'))}>
-                            {tr('directory.withoutDocs')}
-                        </button>
-                    </div>
-                    <div className="fm-filters__stats">
-                        {stats ? <span>{tr('directory.directoryStats', { clients: stats.clients, matters: stats.matters })}</span> : null}
-                        <small>{tr('directory.filtered', { count: rows.list.length })}</small>
-                    </div>
-                </div>
+            <div className="fm-toolbar fm-toolbar--filters">
+                <label className="fm-search fm-search--wide">
+                    <Icon name="search" />
+                    <input autoFocus value={filter} placeholder={tr('directory.clientsSearch')} onChange={(event) => setFilter(event.target.value)} />
+                </label>
+                <select value={status} aria-label={tr('directory.status')} onChange={(event) => setStatus(event.target.value as ClientStatus)}>
+                    <option value="active">{tr('directory.statusActive')}</option>
+                    <option value="archived">{tr('directory.statusArchived')}{archivedCount ? ` (${archivedCount})` : ''}</option>
+                    <option value="all">{tr('directory.statusAll')}</option>
+                </select>
+                <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
+                    onClick={() => setFavoritesOnly((value) => !value)}>
+                    <Icon name="star" />{tr('directory.favoritesOnly')}
+                </button>
+                {dirty ? (
+                    <button type="button" className="fm-filters__reset" onClick={reset}>{tr('directory.resetFilters')}</button>
+                ) : null}
+                <span className="fm-toolbar__stats">
+                    {clients.stats ? tr('directory.clientsTotal', { count: clients.stats.clients }) : null}
+                    <small>{tr('directory.filtered', { count: rows.length })}</small>
+                </span>
             </div>
-            {rows.list.length === 0 ? (
+            {rows.length === 0 ? (
                 <div className="fm-state">
                     <Icon name="building" />
-                    <p>{tr('tree.empty')}</p>
-                    <small>{tr('tree.emptyHint')}</small>
+                    <p>{tr('directory.clientsEmpty')}</p>
+                    <small>{tr('directory.clientsEmptyHint')}</small>
                 </div>
             ) : (
                 <div className="fm-table-wrap">
@@ -134,14 +85,10 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                             <tr>
                                 <th className="fm-table__star" aria-label={tr('pane.favoriteAdd')} />
                                 <th>{tr('common.client')}</th>
-                                <th className="fm-table__num">{tr('directory.matters')}</th>
-                                <th className="fm-table__num">{tr('directory.openMatters')}</th>
-                                <th className="fm-table__num">{tr('directory.mine')}</th>
-                                <th className="fm-table__num">{tr('directory.documents')}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.list.map(({ client, open, mine, documents }) => (
+                            {rows.map((client) => (
                                 <tr key={client.id} tabIndex={0} className={client.archived ? 'is-archived' : undefined}
                                     onClick={() => onOpenClient(client.id)}
                                     onKeyDown={(event) => {
@@ -165,10 +112,6 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                                             {client.archived ? <span className="fm-level fm-level--none">{tr('directory.archived')}</span> : null}
                                         </span>
                                     </td>
-                                    <td className="fm-table__num">{client.matters.length}</td>
-                                    <td className="fm-table__num">{open}</td>
-                                    <td className="fm-table__num">{mine || '—'}</td>
-                                    <td className="fm-table__num">{documents || '—'}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -192,6 +135,7 @@ type MattersProps = {
 type MatterListRow = MatterRow & { clientName: string };
 type MatterStatus = 'open' | 'closed' | 'all';
 type AccessFilter = 'all' | AccessLevel;
+type DocsFilter = 'any' | 'with' | 'without';
 
 export function MattersListView({ clients, clientId, mineOnly, onPickClient, onOpenMatter, onOpenClients, onChanged }: MattersProps) {
     const { tr } = useFm();
@@ -199,20 +143,14 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
     const [filter, setFilter] = useState('');
     const [status, setStatus] = useState<MatterStatus>('open');
     const [access, setAccess] = useState<AccessFilter>('all');
+    const [docs, setDocs] = useState<DocsFilter>('any');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [mineFilter, setMineFilter] = useState(false);
-    const [provisionedOnly, setProvisionedOnly] = useState(false);
-    const [docs, setDocs] = useState<DocsFilter>('any');
-    const [clientQuery, setClientQuery] = useState('');
     const client = clientId ? clients.clients.find((row) => row.id === clientId) ?? null : null;
 
-    const clientOptions = useMemo(() => {
-        const q = clientQuery.trim();
-        return clients.clients
-            .filter((row) => !q || matchesFilter(q, row.name) || row.id === clientId)
-            .slice()
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [clients.clients, clientQuery, clientId]);
+    const clientOptions = useMemo(() => clients.clients
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name)), [clients.clients]);
 
     const closedCount = clients.stats?.closedMatters
         ?? clients.clients.reduce((sum, row) => sum + row.matters.filter((matter) => matter.closed).length, 0);
@@ -221,10 +159,8 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
         .filter((row) => !clientId || row.id === clientId)
         .flatMap((row) => row.matters.map((matter) => ({ ...matter, clientName: row.name })))
         .filter((matter) => {
-            if (mineOnly || mineFilter) {
-                if (!matter.mine)
-                    return false;
-            }
+            if ((mineOnly || mineFilter) && !matter.mine)
+                return false;
             if (status === 'open' && matter.closed)
                 return false;
             if (status === 'closed' && !matter.closed)
@@ -232,8 +168,6 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
             if (access !== 'all' && matter.level !== access)
                 return false;
             if (favoritesOnly && !matter.favorite)
-                return false;
-            if (provisionedOnly && !matter.provisioned)
                 return false;
             if (docs === 'with' && matter.documents === 0)
                 return false;
@@ -245,11 +179,11 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
             || Number(a.closed) - Number(b.closed)
             || a.clientName.localeCompare(b.clientName)
             || a.name.localeCompare(b.name)), [
-        clients, clientId, mineOnly, mineFilter, status, access, favoritesOnly, provisionedOnly, docs, filter,
+        clients, clientId, mineOnly, mineFilter, status, access, favoritesOnly, docs, filter,
     ]);
 
     const dirty = Boolean(filter) || Boolean(clientId) || status !== 'open' || access !== 'all'
-        || favoritesOnly || (!mineOnly && mineFilter) || provisionedOnly || docs !== 'any' || Boolean(clientQuery);
+        || favoritesOnly || (!mineOnly && mineFilter) || docs !== 'any';
 
     const reset = () => {
         setFilter('');
@@ -257,9 +191,7 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
         setAccess('all');
         setFavoritesOnly(false);
         setMineFilter(false);
-        setProvisionedOnly(false);
         setDocs('any');
-        setClientQuery('');
         if (clientId)
             onPickClient(null);
     };
@@ -279,93 +211,48 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                     <span className="fm-crumbs__current">{client.name}</span>
                 </div>
             ) : null}
-            <div className="fm-filters">
-                <div className="fm-filters__row fm-filters__row--main">
-                    <label className="fm-search fm-search--wide">
-                        <Icon name="search" />
-                        <input autoFocus value={filter} placeholder={tr('directory.mattersSearch')} onChange={(event) => setFilter(event.target.value)} />
-                    </label>
-                    <div className="fm-filters__field">
-                        <span>{tr('directory.clientFilter')}</span>
-                        <div className="fm-filters__client">
-                            <input value={clientQuery} placeholder={tr('directory.filterClient')}
-                                aria-label={tr('directory.clientFilter')}
-                                onChange={(event) => setClientQuery(event.target.value)} />
-                            <select value={clientId ?? ''} onChange={(event) => onPickClient(event.target.value || null)}>
-                                <option value="">{tr('search.anyClient')}</option>
-                                {clientOptions.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                    {dirty ? (
-                        <button type="button" className="fm-filters__reset" onClick={reset}>{tr('directory.resetFilters')}</button>
-                    ) : null}
-                </div>
-                <div className="fm-filters__row">
-                    <div className="fm-filters__group">
-                        <span>{tr('directory.status')}</span>
-                        <div className="fm-seg" role="radiogroup" aria-label={tr('directory.status')}>
-                            {([
-                                ['open', 'directory.statusOpen', null as number | null],
-                                ['closed', 'directory.statusClosed', closedCount],
-                                ['all', 'directory.statusAll', null],
-                            ] as const).map(([id, key, count]) => (
-                                <button key={id} type="button" role="radio" aria-checked={status === id}
-                                    className={status === id ? 'is-on' : ''} onClick={() => setStatus(id)}>
-                                    {tr(key)}{count ? ` (${count})` : ''}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="fm-filters__group">
-                        <span>{tr('directory.access')}</span>
-                        <div className="fm-seg" role="radiogroup" aria-label={tr('directory.access')}>
-                            {([
-                                ['all', 'directory.accessAll'],
-                                ['manage', 'levels.manage'],
-                                ['edit', 'levels.edit'],
-                                ['read', 'levels.read'],
-                            ] as const).map(([id, key]) => (
-                                <button key={id} type="button" role="radio" aria-checked={access === id}
-                                    className={access === id ? 'is-on' : ''} onClick={() => setAccess(id)}>
-                                    {tr(key)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                <div className="fm-filters__row">
-                    <div className="fm-filters__chips" role="group" aria-label={tr('directory.more')}>
-                        <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
-                            onClick={() => setFavoritesOnly((value) => !value)}>
-                            <Icon name="star" />{tr('directory.favoritesOnly')}
-                        </button>
-                        {!mineOnly ? (
-                            <button type="button" className={mineFilter ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={mineFilter}
-                                onClick={() => setMineFilter((value) => !value)}>
-                                <Icon name="user" />{tr('directory.mineOnly')}
-                            </button>
-                        ) : null}
-                        <button type="button" className={docs === 'with' ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={docs === 'with'}
-                            onClick={() => setDocs((value) => (value === 'with' ? 'any' : 'with'))}>
-                            {tr('directory.withDocs')}
-                        </button>
-                        <button type="button" className={docs === 'without' ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={docs === 'without'}
-                            onClick={() => setDocs((value) => (value === 'without' ? 'any' : 'without'))}>
-                            {tr('directory.withoutDocs')}
-                        </button>
-                        <button type="button" className={provisionedOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={provisionedOnly}
-                            onClick={() => setProvisionedOnly((value) => !value)}>
-                            {tr('directory.provisioned')}
-                        </button>
-                    </div>
-                    <div className="fm-filters__stats">
-                        {clients.stats ? (
-                            <span>{tr('directory.directoryStats', { clients: clients.stats.clients, matters: clients.stats.matters })}</span>
-                        ) : null}
-                        <small>{tr('directory.filtered', { count: rows.length })}</small>
-                    </div>
-                </div>
+            <div className="fm-toolbar fm-toolbar--filters">
+                <label className="fm-search fm-search--wide">
+                    <Icon name="search" />
+                    <input autoFocus value={filter} placeholder={tr('directory.mattersSearch')} onChange={(event) => setFilter(event.target.value)} />
+                </label>
+                <select value={clientId ?? ''} aria-label={tr('common.client')} onChange={(event) => onPickClient(event.target.value || null)}>
+                    <option value="">{tr('search.anyClient')}</option>
+                    {clientOptions.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
+                </select>
+                <select value={status} aria-label={tr('directory.status')} onChange={(event) => setStatus(event.target.value as MatterStatus)}>
+                    <option value="open">{tr('directory.statusOpen')}</option>
+                    <option value="closed">{tr('directory.statusClosed')}{closedCount ? ` (${closedCount})` : ''}</option>
+                    <option value="all">{tr('directory.statusAll')}</option>
+                </select>
+                <select value={access} aria-label={tr('directory.access')} onChange={(event) => setAccess(event.target.value as AccessFilter)}>
+                    <option value="all">{tr('directory.accessAll')}</option>
+                    <option value="manage">{tr('levels.manage')}</option>
+                    <option value="edit">{tr('levels.edit')}</option>
+                    <option value="read">{tr('levels.read')}</option>
+                </select>
+                <select value={docs} aria-label={tr('directory.documents')} onChange={(event) => setDocs(event.target.value as DocsFilter)}>
+                    <option value="any">{tr('directory.docsAny')}</option>
+                    <option value="with">{tr('directory.withDocs')}</option>
+                    <option value="without">{tr('directory.withoutDocs')}</option>
+                </select>
+                <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
+                    onClick={() => setFavoritesOnly((value) => !value)}>
+                    <Icon name="star" />{tr('directory.favoritesOnly')}
+                </button>
+                {!mineOnly ? (
+                    <button type="button" className={mineFilter ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={mineFilter}
+                        onClick={() => setMineFilter((value) => !value)}>
+                        <Icon name="user" />{tr('directory.mineOnly')}
+                    </button>
+                ) : null}
+                {dirty ? (
+                    <button type="button" className="fm-filters__reset" onClick={reset}>{tr('directory.resetFilters')}</button>
+                ) : null}
+                <span className="fm-toolbar__stats">
+                    {clients.stats ? tr('directory.directoryStats', { clients: clients.stats.clients, matters: clients.stats.matters }) : null}
+                    <small>{tr('directory.filtered', { count: rows.length })}</small>
+                </span>
             </div>
             {rows.length === 0 ? (
                 <div className="fm-state">
