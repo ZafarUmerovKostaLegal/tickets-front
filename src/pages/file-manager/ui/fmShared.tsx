@@ -18,7 +18,8 @@ export function useFm() {
 export type IconName =
     | 'building' | 'briefcase' | 'folder' | 'folderOpen' | 'star' | 'clock' | 'lock' | 'search' | 'trash'
     | 'inbox' | 'shield' | 'grid' | 'list' | 'pulse' | 'template' | 'upload' | 'download' | 'plus' | 'chevron'
-    | 'close' | 'link' | 'edit' | 'restore' | 'eye' | 'user' | 'check' | 'x' | 'key';
+    | 'close' | 'link' | 'edit' | 'restore' | 'eye' | 'user' | 'check' | 'x' | 'key'
+    | 'up' | 'back' | 'refresh' | 'home' | 'sort';
 
 const PATHS: Record<IconName, ReactNode> = {
     building: <><rect x="5" y="3" width="14" height="18" rx="1.5" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3" /></>,
@@ -49,6 +50,11 @@ const PATHS: Record<IconName, ReactNode> = {
     check: <path d="m5 12 4.5 4.5L19 7" />,
     x: <path d="M6 6l12 12M18 6 6 18" />,
     key: <><circle cx="8" cy="15" r="4" /><path d="m11 12 9-9M17 6l3 3M15 8l2 2" /></>,
+    up: <path d="M12 19V5M7 10l5-5 5 5" />,
+    back: <path d="M19 12H5M10 7l-5 5 5 5" />,
+    refresh: <path d="M20 12a8 8 0 1 1-2.2-5.5M20 4v5h-5" />,
+    home: <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" />,
+    sort: <path d="M8 5v14M5 8l3-3 3 3M16 19V5M13 16l3 3 3-3" />,
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
