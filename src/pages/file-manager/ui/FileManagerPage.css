@@ -383,12 +383,13 @@
 
 .fm-all__practices {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 0.7rem;
+  width: 100%;
 }
 
 .fm-all__practices.is-single {
-  grid-template-columns: minmax(180px, 260px);
+  grid-template-columns: minmax(180px, 1fr);
 }
 
 .fm-all__practice {
