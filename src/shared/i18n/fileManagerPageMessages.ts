@@ -48,6 +48,8 @@ export const fileManagerPageMessages = {
         accessHint: 'Кто имеет доступ к этой папке или файлу. Права можно выдать, изменить или отозвать.',
         accessEmpty: 'Пока никому не выдан доступ',
         accessCount: '{count} сотрудников',
+        accountPh: 'DOMAIN\\user или user@domain',
+        movedToTrash: 'Перемещено в корзину',
     },
     common: {
         loading: 'Загрузка…',
@@ -260,7 +262,11 @@ export const fileManagerPageMessages = {
         purge: 'Удалить навсегда',
         purgeConfirm: 'Удалить «{name}» без возможности восстановления?',
         folderDocs: 'папка · {count} док.',
-        hint: 'Восстановить могут сотрудники с правом редактирования matter, удалить навсегда — только управляющие.',
+        hint: 'Общая корзина: документы matters и файлы сетевой папки. Восстановить matter-элементы могут сотрудники с правом редактирования; удалить навсегда — управляющие.',
+        source: 'Источник',
+        sourceMatter: 'Matter',
+        sourceNetwork: 'Сетевая папка',
+        networkFolder: 'Сетевая папка',
     },
     requests: {
         title: 'Запросы доступа',

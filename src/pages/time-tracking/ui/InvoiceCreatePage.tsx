@@ -623,6 +623,14 @@ export function InvoiceCreatePage() {
     setCreateInvoiceNumber((f.invoiceNumber ?? '').trim());
     setSelTime(new Set(f.selTime));
     setSelExp(new Set(f.selExp));
+    if (f.customBilledEnabled) {
+      setCustomBilledEnabled(true);
+      setCustomBilledAmount((f.customBilledAmount ?? '').trim());
+      setCustomBilledDescription((f.customBilledDescription ?? '').trim());
+      const ccy = String(f.customBilledCurrency ?? '').trim().toUpperCase();
+      if (TIME_TRACKING_PROJECT_CURRENCIES.includes(ccy as TimeManagerProjectCurrency))
+        setCustomBilledCurrency(ccy as TimeManagerProjectCurrency);
+    }
     resumeLoadProjectIdRef.current = f.createProjectId.trim() !== '' ? f.createProjectId : null;
   }, [searchParams, setSearchParams]);
 
@@ -686,6 +694,41 @@ export function InvoiceCreatePage() {
       }
       return Object.keys(next).length > 0 ? next : undefined;
     })();
+    const customAmountRaw = customBilledEnabled
+      ? customBilledAmount.trim().replace(/\s/g, '').replace(',', '.')
+      : '';
+    const customAmountNum = customBilledEnabled ? Number(customAmountRaw) : NaN;
+    if (customBilledEnabled && (!Number.isFinite(customAmountNum) || customAmountNum <= 0)) {
+      await showAlert({ message: t('timeTrackingPage.invoices.createDialog.customBilledRequired') });
+      return;
+    }
+    const customDesc = customBilledEnabled ? customBilledDescription.trim() : '';
+    if (customBilledEnabled && !customDesc) {
+      await showAlert({ message: t('timeTrackingPage.invoices.createDialog.customBilledDescriptionRequired') });
+      return;
+    }
+    const formattedCustomTotal = customBilledEnabled && Number.isFinite(customAmountNum)
+      ? `${customBilledCurrency} ${customAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : null;
+    const nextDoc = (() => {
+      const base = reusedDoc ? { ...reusedDoc } : { v: 1 as const };
+      if (!formattedCustomTotal)
+        return reusedDoc;
+      const cover = {
+        ...((base.cover && typeof base.cover === 'object' && !Array.isArray(base.cover))
+          ? (base.cover as Record<string, unknown>)
+          : {}),
+        totalFormatted: formattedCustomTotal,
+      };
+      const legal = {
+        ...((base.legal && typeof base.legal === 'object' && !Array.isArray(base.legal))
+          ? (base.legal as Record<string, unknown>)
+          : {}),
+        ...(customDesc ? { serviceDescriptionLine: customDesc } : {}),
+        extraExpensesAmount: `${customBilledCurrency} 0.00`,
+      };
+      return { ...base, v: 1 as const, cover, legal };
+    })();
     writeInvoicePreviewSession({
       v: 1,
       mode: 'create',
@@ -699,6 +742,14 @@ export function InvoiceCreatePage() {
         selTime: [...selTime],
         selExp: [...selExp],
         ...(createInvoiceNumber.trim() ? { invoiceNumber: createInvoiceNumber.trim() } : {}),
+        ...(customBilledEnabled
+          ? {
+            customBilledEnabled: true,
+            customBilledAmount: customBilledAmount.trim(),
+            customBilledCurrency,
+            customBilledDescription: customDesc,
+          }
+          : { customBilledEnabled: false }),
       },
       meta: {
         ...(clientLabel ? { clientLabel } : {}),
@@ -707,10 +758,10 @@ export function InvoiceCreatePage() {
         ...(selectedFrom ? { billingPeriodFrom: selectedFrom } : {}),
         ...(selectedTo ? { billingPeriodTo: selectedTo } : {}),
       },
-      ...(reusedDoc ? { documentOverrides: reusedDoc } : {}),
+      ...(nextDoc ? { documentOverrides: nextDoc } : {}),
     });
     navigate(routes.timeTrackingInvoicePreview);
-  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledTime, unbilledExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t]);
+  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledTime, unbilledExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t, customBilledEnabled, customBilledAmount, customBilledCurrency, customBilledDescription]);
 
   const handleCreate = useCallback(async () => {
     if (!createClientId) {
@@ -1153,6 +1204,111 @@ export function InvoiceCreatePage() {
                   </div>
                 </section>
 
+                {(createClientId && createProjectId) ? (
+                  <section className="tt-inv-page__section">
+                    <div className="tt-inv-page__section-head">
+                      <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.customBilledToggle')}</h2>
+                    </div>
+                    <label className="tt-ios-toggle-row">
+                      <span className="tt-ios-toggle-row__text">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledToggle')}
+                      </span>
+                      <span className="tt-ios-toggle">
+                        <input
+                          type="checkbox"
+                          className="tt-ios-toggle__input"
+                          checked={customBilledEnabled}
+                          onChange={(e) => enableCustomBilled(e.target.checked)}
+                          disabled={createBusy}
+                        />
+                        <span className="tt-ios-toggle__slider" aria-hidden />
+                      </span>
+                    </label>
+                    <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                      {t('timeTrackingPage.invoices.createDialog.customBilledHint')}
+                    </p>
+                    {selTime.size > 0 ? (
+                      <p className="tt-inv-page__section-desc">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledWorkedTime').replace(
+                          '{amount}',
+                          fmtMoney(workedTimeTotal, workedTimeCurrency, locale),
+                        )}
+                      </p>
+                    ) : null}
+                    {selExp.size > 0 ? (
+                      <p className="tt-inv-page__section-desc">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledWorkedExpenses').replace(
+                          '{amount}',
+                          fmtMoney(workedExpUsdTotal, 'USD', locale),
+                        )}
+                      </p>
+                    ) : null}
+                    {customBilledEnabled ? (
+                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-amount">
+                            {t('timeTrackingPage.invoices.createDialog.customBilledAmount')}
+                          </label>
+                          <input
+                            id="tt-inv-custom-billed-amount"
+                            type="text"
+                            inputMode="decimal"
+                            className="tt-inv-dialog__control"
+                            value={customBilledAmount}
+                            onChange={(e) => setCustomBilledAmount(e.target.value)}
+                            disabled={createBusy}
+                          />
+                        </div>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-ccy">
+                            {t('timeTrackingPage.invoices.createDialog.customBilledCurrency')}
+                          </label>
+                          <select
+                            id="tt-inv-custom-billed-ccy"
+                            className="tt-inv-dialog__control"
+                            value={customBilledCurrency}
+                            disabled={createBusy}
+                            onChange={(e) => {
+                              const next = e.target.value;
+                              setCustomBilledCurrency(
+                                TIME_TRACKING_PROJECT_CURRENCIES.includes(next as TimeManagerProjectCurrency)
+                                  ? (next as TimeManagerProjectCurrency)
+                                  : 'USD',
+                              );
+                            }}
+                          >
+                            {TIME_TRACKING_PROJECT_CURRENCIES.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="tt-inv-dialog__field" style={{ gridColumn: '1 / -1' }}>
+                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">
+                            {t('timeTrackingPage.invoices.createDialog.customBilledDescription')}
+                          </label>
+                          <input
+                            id="tt-inv-custom-billed-desc"
+                            type="text"
+                            className="tt-inv-dialog__control"
+                            value={customBilledDescription}
+                            onChange={(e) => setCustomBilledDescription(e.target.value)}
+                            disabled={createBusy}
+                          />
+                        </div>
+                        <p className="tt-inv-page__section-desc" style={{ gridColumn: '1 / -1', margin: 0 }} role="status">
+                          {customBilledFxLoading
+                            ? t('timeTrackingPage.invoices.createDialog.customBilledFxLoading')
+                            : customBilledFxError
+                              ? customBilledFxError
+                              : (customBilledFxHint ?? t('timeTrackingPage.invoices.createDialog.customBilledFxRule')
+                                .replace('{currency}', effectiveInvoiceCurrency)
+                                .replace('{date}', (customBilledFxRateDate ?? '').split('-').reverse().join('.') || '—'))}
+                        </p>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
+
                 <section className="tt-inv-page__section tt-inv-page__section--soft">
                   <div className="tt-inv-page__section-head">
                     <div>
@@ -1366,110 +1522,6 @@ export function InvoiceCreatePage() {
                   </section>
                 )}
 
-                {(createClientId && createProjectId) ? (
-                  <section className="tt-inv-page__section">
-                    <div className="tt-inv-page__section-head">
-                      <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.customBilledToggle')}</h2>
-                    </div>
-                    <label className="tt-ios-toggle-row">
-                      <span className="tt-ios-toggle-row__text">
-                        {t('timeTrackingPage.invoices.createDialog.customBilledToggle')}
-                      </span>
-                      <span className="tt-ios-toggle">
-                        <input
-                          type="checkbox"
-                          className="tt-ios-toggle__input"
-                          checked={customBilledEnabled}
-                          onChange={(e) => enableCustomBilled(e.target.checked)}
-                          disabled={createBusy}
-                        />
-                        <span className="tt-ios-toggle__slider" aria-hidden />
-                      </span>
-                    </label>
-                    <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
-                      {t('timeTrackingPage.invoices.createDialog.customBilledHint')}
-                    </p>
-                    {selTime.size > 0 ? (
-                      <p className="tt-inv-page__section-desc">
-                        {t('timeTrackingPage.invoices.createDialog.customBilledWorkedTime').replace(
-                          '{amount}',
-                          fmtMoney(workedTimeTotal, workedTimeCurrency, locale),
-                        )}
-                      </p>
-                    ) : null}
-                    {selExp.size > 0 ? (
-                      <p className="tt-inv-page__section-desc">
-                        {t('timeTrackingPage.invoices.createDialog.customBilledWorkedExpenses').replace(
-                          '{amount}',
-                          fmtMoney(workedExpUsdTotal, 'USD', locale),
-                        )}
-                      </p>
-                    ) : null}
-                    {customBilledEnabled ? (
-                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
-                        <div className="tt-inv-dialog__field">
-                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-amount">
-                            {t('timeTrackingPage.invoices.createDialog.customBilledAmount')}
-                          </label>
-                          <input
-                            id="tt-inv-custom-billed-amount"
-                            type="text"
-                            inputMode="decimal"
-                            className="tt-inv-dialog__control"
-                            value={customBilledAmount}
-                            onChange={(e) => setCustomBilledAmount(e.target.value)}
-                            disabled={createBusy}
-                          />
-                        </div>
-                        <div className="tt-inv-dialog__field">
-                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-ccy">
-                            {t('timeTrackingPage.invoices.createDialog.customBilledCurrency')}
-                          </label>
-                          <select
-                            id="tt-inv-custom-billed-ccy"
-                            className="tt-inv-dialog__control"
-                            value={customBilledCurrency}
-                            disabled={createBusy}
-                            onChange={(e) => {
-                              const next = e.target.value;
-                              setCustomBilledCurrency(
-                                TIME_TRACKING_PROJECT_CURRENCIES.includes(next as TimeManagerProjectCurrency)
-                                  ? (next as TimeManagerProjectCurrency)
-                                  : 'USD',
-                              );
-                            }}
-                          >
-                            {TIME_TRACKING_PROJECT_CURRENCIES.map((c) => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="tt-inv-dialog__field" style={{ gridColumn: '1 / -1' }}>
-                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">
-                            {t('timeTrackingPage.invoices.createDialog.customBilledDescription')}
-                          </label>
-                          <input
-                            id="tt-inv-custom-billed-desc"
-                            type="text"
-                            className="tt-inv-dialog__control"
-                            value={customBilledDescription}
-                            onChange={(e) => setCustomBilledDescription(e.target.value)}
-                            disabled={createBusy}
-                          />
-                        </div>
-                        <p className="tt-inv-page__section-desc" style={{ gridColumn: '1 / -1', margin: 0 }} role="status">
-                          {customBilledFxLoading
-                            ? t('timeTrackingPage.invoices.createDialog.customBilledFxLoading')
-                            : customBilledFxError
-                              ? customBilledFxError
-                              : (customBilledFxHint ?? t('timeTrackingPage.invoices.createDialog.customBilledFxRule')
-                                .replace('{currency}', effectiveInvoiceCurrency)
-                                .replace('{date}', (customBilledFxRateDate ?? '').split('-').reverse().join('.') || '—'))}
-                        </p>
-                      </div>
-                    ) : null}
-                  </section>
-                ) : null}
               </>
             )}
           </div>

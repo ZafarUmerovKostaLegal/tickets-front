@@ -50,6 +50,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         accessHint: 'Who can access this folder or file. Grant, change, or revoke permissions here.',
         accessEmpty: 'No one has been granted access yet',
         accessCount: '{count} people',
+        accountPh: 'DOMAIN\\user or user@domain',
+        movedToTrash: 'Moved to trash',
     },
     common: {
         loading: 'Loading…',
@@ -262,7 +264,11 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         purge: 'Delete forever',
         purgeConfirm: 'Delete “{name}” permanently?',
         folderDocs: 'folder · {count} docs',
-        hint: 'Users with edit access can restore; only managers can delete permanently.',
+        hint: 'Shared recycle bin for matter documents and network-folder files. Editors can restore matter items; only managers can purge them.',
+        source: 'Source',
+        sourceMatter: 'Matter',
+        sourceNetwork: 'Network folder',
+        networkFolder: 'Network folder',
     },
     requests: {
         title: 'Access requests',

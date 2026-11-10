@@ -13,6 +13,11 @@ export type InvoicePreviewFormDraftV1 = {
     selExp: string[];
     /** Опциональный ручной номер счёта; пусто = авто */
     invoiceNumber?: string;
+    /** Bill a custom total on the legal invoice (report lines still close as usual). */
+    customBilledEnabled?: boolean;
+    customBilledAmount?: string;
+    customBilledCurrency?: string;
+    customBilledDescription?: string;
 };
 
 export type InvoicePreviewMeta = {
@@ -63,7 +68,11 @@ function isFormDraft(o: unknown): o is InvoicePreviewFormDraftV1 {
         && typeof r.dueDate === 'string'
         && Array.isArray(selTime) && selTime.every((x) => typeof x === 'string')
         && Array.isArray(selExp) && selExp.every((x) => typeof x === 'string')
-        && (r.invoiceNumber === undefined || typeof r.invoiceNumber === 'string');
+        && (r.invoiceNumber === undefined || typeof r.invoiceNumber === 'string')
+        && (r.customBilledEnabled === undefined || typeof r.customBilledEnabled === 'boolean')
+        && (r.customBilledAmount === undefined || typeof r.customBilledAmount === 'string')
+        && (r.customBilledCurrency === undefined || typeof r.customBilledCurrency === 'string')
+        && (r.customBilledDescription === undefined || typeof r.customBilledDescription === 'string');
 }
 
 function parseMeta(raw: unknown): InvoicePreviewMeta {

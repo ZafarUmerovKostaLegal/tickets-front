@@ -51,6 +51,9 @@ pub fn list_unc_entries(path: String) -> Result<Vec<UncEntry>, String> {
             let t = e.file_type().map_err(|e| format!("{e}"))?;
             let is_dir = t.is_dir();
             let name = e.file_name().to_string_lossy().into_owned();
+            if name.eq_ignore_ascii_case(".kosta-trash") {
+                continue;
+            }
             v.push(UncEntry { name, is_dir });
         }
         v.sort_by(|a, b| a.name.cmp(&b.name));
@@ -808,5 +811,352 @@ pub fn set_folder_owner(args: SetFolderOwnerArgs) -> Result<(), String> {
             &all,
             "icacls /setowner: операция не выполнена (код выхода).",
         )
+    }
+}
+
+const TRASH_DIR: &str = ".kosta-trash";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UncTrashItem {
+    pub id: String,
+    pub name: String,
+    pub is_dir: bool,
+    pub original_path: String,
+    pub deleted_at: String,
+    pub deleted_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TrashMeta {
+    name: String,
+    is_dir: bool,
+    original_path: String,
+    deleted_at: String,
+    deleted_by: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteUncFileArgs {
+    pub path: String,
+    pub bytes_base64: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameUncArgs {
+    pub from: String,
+    pub to: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrashUncArgs {
+    pub path: String,
+    pub share_root: String,
+    pub deleted_by: String,
+    pub deleted_at: String,
+}
+
+fn trash_root_for(share_root: &str) -> std::path::PathBuf {
+    std::path::PathBuf::from(strip_verbatim_prefix_any(share_root.trim())).join(TRASH_DIR)
+}
+
+fn strip_verbatim_prefix_any(s: &str) -> &str {
+    s.strip_prefix(r"\\?\").unwrap_or(s)
+}
+
+fn ensure_windows() -> Result<(), String> {
+    #[cfg(not(windows))]
+    {
+        return Err("???????? ???????? ?????? ? Tauri ?? Windows".into());
+    }
+    #[cfg(windows)]
+    Ok(())
+}
+
+#[tauri::command]
+pub fn create_unc_dir(path: String) -> Result<(), String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        use std::fs;
+        let p = std::path::Path::new(strip_verbatim_prefix_any(path.trim()));
+        fs::create_dir_all(p).map_err(|e| format!("create_dir: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+        Err("unsupported".into())
+    }
+}
+
+#[tauri::command]
+pub fn write_unc_file(args: WriteUncFileArgs) -> Result<(), String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        use base64::Engine;
+        use std::fs;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(args.bytes_base64.trim())
+            .map_err(|e| format!("base64: {e}"))?;
+        let p = std::path::Path::new(strip_verbatim_prefix_any(args.path.trim()));
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("create_dir: {e}"))?;
+        }
+        fs::write(p, bytes).map_err(|e| format!("write: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = args;
+        Err("unsupported".into())
+    }
+}
+
+#[tauri::command]
+pub fn rename_unc_entry(args: RenameUncArgs) -> Result<(), String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        use std::fs;
+        let from = std::path::Path::new(strip_verbatim_prefix_any(args.from.trim()));
+        let to = std::path::Path::new(strip_verbatim_prefix_any(args.to.trim()));
+        if !from.exists() {
+            return Err(format!("???????? ?? ??????: {}", from.display()));
+        }
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("create_dir: {e}"))?;
+        }
+        fs::rename(from, to).map_err(|e| format!("rename: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = args;
+        Err("unsupported".into())
+    }
+}
+
+#[cfg(windows)]
+fn copy_path_recursive(from: &std::path::Path, to: &std::path::Path) -> Result<(), String> {
+    use std::fs;
+    if from.is_dir() {
+        fs::create_dir_all(to).map_err(|e| format!("create_dir: {e}"))?;
+        for entry in fs::read_dir(from).map_err(|e| format!("read_dir: {e}"))? {
+            let entry = entry.map_err(|e| format!("{e}"))?;
+            let name = entry.file_name();
+            copy_path_recursive(&entry.path(), &to.join(name))?;
+        }
+        Ok(())
+    } else {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("create_dir: {e}"))?;
+        }
+        fs::copy(from, to).map_err(|e| format!("copy: {e}"))?;
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub fn copy_unc_entry(args: RenameUncArgs) -> Result<(), String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        let from = std::path::Path::new(strip_verbatim_prefix_any(args.from.trim()));
+        let to = std::path::Path::new(strip_verbatim_prefix_any(args.to.trim()));
+        if !from.exists() {
+            return Err(format!("???????? ?? ??????: {}", from.display()));
+        }
+        copy_path_recursive(from, to)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = args;
+        Err("unsupported".into())
+    }
+}
+
+#[cfg(windows)]
+fn remove_path_recursive(path: &std::path::Path) -> Result<(), String> {
+    use std::fs;
+    if path.is_dir() {
+        fs::remove_dir_all(path).map_err(|e| format!("remove_dir: {e}"))
+    } else {
+        fs::remove_file(path).map_err(|e| format!("remove_file: {e}"))
+    }
+}
+
+#[tauri::command]
+pub fn move_unc_to_trash(args: TrashUncArgs) -> Result<UncTrashItem, String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        use std::fs;
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let src = std::path::Path::new(strip_verbatim_prefix_any(args.path.trim()));
+        if !src.exists() {
+            return Err(format!("???? ?? ??????: {}", src.display()));
+        }
+        let is_dir = src.is_dir();
+        let name = src
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "item".into());
+        let trash_root = trash_root_for(&args.share_root);
+        fs::create_dir_all(&trash_root).map_err(|e| format!("create trash: {e}"))?;
+        let millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        let id = format!("{millis}-{}", name.chars().take(40).collect::<String>().replace(['\\', '/', ':', '*', '?', '"', '<', '>', '|'], "_"));
+        let item_dir = trash_root.join(&id);
+        fs::create_dir_all(&item_dir).map_err(|e| format!("create trash item: {e}"))?;
+        let payload = item_dir.join("payload");
+        fs::rename(src, &payload).map_err(|e| format!("move to trash: {e}"))?;
+        let deleted_at = if args.deleted_at.trim().is_empty() {
+            format!(
+                "{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0)
+            )
+        } else {
+            args.deleted_at.trim().to_string()
+        };
+        let meta = TrashMeta {
+            name: name.clone(),
+            is_dir,
+            original_path: args.path.trim().to_string(),
+            deleted_at: deleted_at.clone(),
+            deleted_by: if args.deleted_by.trim().is_empty() {
+                "network".into()
+            } else {
+                args.deleted_by.trim().to_string()
+            },
+        };
+        let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| format!("meta json: {e}"))?;
+        fs::write(item_dir.join("meta.json"), meta_json).map_err(|e| format!("write meta: {e}"))?;
+        Ok(UncTrashItem {
+            id,
+            name,
+            is_dir,
+            original_path: meta.original_path,
+            deleted_at,
+            deleted_by: meta.deleted_by,
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = args;
+        Err("unsupported".into())
+    }
+}
+
+#[tauri::command]
+pub fn list_unc_trash(share_root: String) -> Result<Vec<UncTrashItem>, String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        use std::fs;
+        let trash_root = trash_root_for(&share_root);
+        if !trash_root.exists() {
+            return Ok(vec![]);
+        }
+        let mut out = Vec::new();
+        for entry in fs::read_dir(&trash_root).map_err(|e| format!("read trash: {e}"))? {
+            let entry = entry.map_err(|e| format!("{e}"))?;
+            if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                continue;
+            }
+            let id = entry.file_name().to_string_lossy().into_owned();
+            let meta_path = entry.path().join("meta.json");
+            let meta = if meta_path.exists() {
+                let raw = fs::read_to_string(&meta_path).map_err(|e| format!("read meta: {e}"))?;
+                serde_json::from_str::<TrashMeta>(&raw).map_err(|e| format!("parse meta: {e}"))?
+            } else {
+                TrashMeta {
+                    name: id.clone(),
+                    is_dir: entry.path().join("payload").is_dir(),
+                    original_path: String::new(),
+                    deleted_at: String::new(),
+                    deleted_by: "network".into(),
+                }
+            };
+            out.push(UncTrashItem {
+                id,
+                name: meta.name,
+                is_dir: meta.is_dir,
+                original_path: meta.original_path,
+                deleted_at: meta.deleted_at,
+                deleted_by: meta.deleted_by,
+            });
+        }
+        out.sort_by(|a, b| b.deleted_at.cmp(&a.deleted_at));
+        Ok(out)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = share_root;
+        Err("unsupported".into())
+    }
+}
+
+#[tauri::command]
+pub fn restore_unc_trash(share_root: String, id: String) -> Result<(), String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        use std::fs;
+        let item_dir = trash_root_for(&share_root).join(id.trim());
+        let meta_path = item_dir.join("meta.json");
+        let payload = item_dir.join("payload");
+        if !payload.exists() {
+            return Err("??????? ??????? ?? ??????".into());
+        }
+        let meta = if meta_path.exists() {
+            let raw = fs::read_to_string(&meta_path).map_err(|e| format!("read meta: {e}"))?;
+            serde_json::from_str::<TrashMeta>(&raw).map_err(|e| format!("parse meta: {e}"))?
+        } else {
+            return Err("meta.json ???????????".into());
+        };
+        let dest = std::path::Path::new(strip_verbatim_prefix_any(&meta.original_path));
+        if dest.exists() {
+            return Err(format!("???? ??? ?????: {}", dest.display()));
+        }
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("create_dir: {e}"))?;
+        }
+        fs::rename(&payload, dest).map_err(|e| format!("restore: {e}"))?;
+        remove_path_recursive(&item_dir)?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (share_root, id);
+        Err("unsupported".into())
+    }
+}
+
+#[tauri::command]
+pub fn purge_unc_trash(share_root: String, id: String) -> Result<(), String> {
+    ensure_windows()?;
+    #[cfg(windows)]
+    {
+        let item_dir = trash_root_for(&share_root).join(id.trim());
+        if !item_dir.exists() {
+            return Ok(());
+        }
+        remove_path_recursive(&item_dir)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (share_root, id);
+        Err("unsupported".into())
     }
 }

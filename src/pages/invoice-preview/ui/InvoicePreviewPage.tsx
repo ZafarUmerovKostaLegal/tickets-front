@@ -563,8 +563,29 @@ export function InvoicePreviewPage() {
         () => (timeReportPack ? billedAmountsFromTimeReport(resolvedTimeReportPack) : null),
         [timeReportPack, resolvedTimeReportPack],
     );
+    const customBilledOverride = useMemo(() => {
+        if (session?.mode !== 'create' || !session.form.customBilledEnabled)
+            return null;
+        const raw = String(session.form.customBilledAmount ?? '').trim().replace(/\s/g, '').replace(',', '.');
+        const amount = Number(raw);
+        if (!Number.isFinite(amount) || amount <= 0)
+            return null;
+        const currency = String(session.form.customBilledCurrency ?? '').trim().toUpperCase()
+            || reportBill?.currency
+            || packCurrencyCode(displayModel);
+        return { amount: Math.round(amount * 100) / 100, currency };
+    }, [session, reportBill?.currency, displayModel]);
     const pricedModel = useMemo(() => {
         const base = coverModel ?? fallbackCoverModel();
+        if (customBilledOverride) {
+            const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
+            const total = Math.round((customBilledOverride.amount + vat) * 100) / 100;
+            return {
+                ...base,
+                servicesAmountFormatted: formatTimeReportAmount(customBilledOverride.amount, customBilledOverride.currency),
+                totalFormatted: formatTimeReportAmount(total, customBilledOverride.currency),
+            };
+        }
         if (!reportBill)
             return base;
         const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
@@ -574,15 +595,24 @@ export function InvoicePreviewPage() {
             servicesAmountFormatted: formatTimeReportAmount(reportBill.services, reportBill.currency),
             totalFormatted: formatTimeReportAmount(total, reportBill.currency),
         };
-    }, [coverModel, reportBill, legalOverrides.vatAmount]);
+    }, [coverModel, reportBill, legalOverrides.vatAmount, customBilledOverride]);
     const pricedLegal = useMemo(() => {
+        if (customBilledOverride) {
+            return {
+                ...legalOverrides,
+                extraExpensesAmount: formatTimeReportAmount(0, customBilledOverride.currency),
+                ...(session?.mode === 'create' && session.form.customBilledDescription?.trim()
+                    ? { serviceDescriptionLine: session.form.customBilledDescription.trim() }
+                    : {}),
+            };
+        }
         if (!reportBill)
             return legalOverrides;
         return {
             ...legalOverrides,
             extraExpensesAmount: formatTimeReportAmount(reportBill.expenses, reportBill.currency),
         };
-    }, [legalOverrides, reportBill]);
+    }, [legalOverrides, reportBill, customBilledOverride, session]);
 
     const combinedReportPages = useMemo(
         () => combinedReport ? Math.max(1, planCombinedReportPreviewPages(combinedReport).length) : 0,

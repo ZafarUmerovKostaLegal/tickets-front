@@ -7,129 +7,34 @@ import {
     type DragEvent,
     type MouseEvent as ReactMouseEvent,
 } from 'react';
-import type { AclLevel } from '../api/filesApi';
 import { FmSelect } from './fmSelect';
-import { ConfirmModal, Icon, Modal, useFm } from './fmShared';
+import { ConfirmModal, Icon, Modal, useAction, useFm } from './fmShared';
+import {
+    connectNetDrive,
+    copyNetEntryTo,
+    createNetFolder,
+    deleteNetEntries,
+    grantNetAccess,
+    listNetEntries,
+    loadNetAcl,
+    loadNetDriveConnection,
+    moveNetEntries,
+    netCrumbs,
+    netDriveAvailable,
+    renameNetEntry,
+    revokeNetAccess,
+    uniqueChildName,
+    uploadNetFiles,
+    type NetAclRule,
+    type NetEntry,
+} from './networkFolderLogic';
 
-type DemoEntry = {
-    id: string;
-    name: string;
-    kind: 'folder' | 'file';
-};
-
-type TreeMap = Record<string, DemoEntry[]>;
-
-type DemoUser = {
-    id: number;
-    name: string;
-    position: string;
-};
-
-type AclRule = {
-    userId: number;
-    userName: string;
-    position: string;
-    level: AclLevel;
-    note: string;
-};
-
-type AclMap = Record<string, AclRule[]>;
-
-type Clipboard = {
-    mode: 'cut' | 'copy';
-    entries: DemoEntry[];
-    fromKey: string;
-};
-
-type CtxMenu = {
-    x: number;
-    y: number;
-    target: { kind: 'blank' } | { kind: 'entry'; entry: DemoEntry };
-};
-
-type NameModal = {
-    mode: 'create' | 'rename';
-    initial: string;
-};
-
+type Clipboard = { mode: 'cut' | 'copy'; entries: NetEntry[] };
+type CtxMenu = { x: number; y: number; target: { kind: 'blank' } | { kind: 'entry'; entry: NetEntry } };
+type NameModal = { mode: 'create' | 'rename'; initial: string };
 type DrawerTab = 'details' | 'access';
 
-const ROOT_KEY = '';
-const ACL_LEVELS: AclLevel[] = ['read', 'edit', 'manage', 'deny'];
-
-const DEMO_USERS: DemoUser[] = [
-    { id: 1, name: 'Анна Иванова', position: 'Partner' },
-    { id: 2, name: 'Борис Петров', position: 'Associate' },
-    { id: 3, name: 'Клара Ким', position: 'Paralegal' },
-    { id: 4, name: 'David Lee', position: 'Counsel' },
-    { id: 5, name: 'Елена Смирнова', position: 'Associate' },
-];
-
-const INITIAL_ROOT: DemoEntry[] = [
-    { id: 'agreements', name: 'Agreements', kind: 'folder' },
-    { id: 'billing', name: 'Billing', kind: 'folder' },
-    { id: 'corporate', name: 'Corporate Documents', kind: 'folder' },
-    { id: 'correspondence', name: 'Correspondence', kind: 'folder' },
-    { id: 'court', name: 'Court Documents', kind: 'folder' },
-    { id: 'drafts', name: 'Drafts', kind: 'folder' },
-    { id: 'research', name: 'Research & Memos', kind: 'folder' },
-];
-
-const INITIAL_NESTED: TreeMap = {
-    [ROOT_KEY]: INITIAL_ROOT,
-    agreements: [
-        { id: 'nda', name: 'NDA Template.docx', kind: 'file' },
-        { id: 'msa', name: 'Master Service Agreement.docx', kind: 'file' },
-    ],
-    billing: [
-        { id: 'invoice', name: 'Invoice Q3.pdf', kind: 'file' },
-    ],
-    drafts: [
-        { id: 'memo-draft', name: 'Client Memo Draft.docx', kind: 'file' },
-    ],
-};
-
-const INITIAL_ACL: AclMap = {
-    agreements: [
-        { userId: 1, userName: 'Анна Иванова', position: 'Partner', level: 'manage', note: 'Владелец' },
-        { userId: 2, userName: 'Борис Петров', position: 'Associate', level: 'edit', note: '' },
-        { userId: 3, userName: 'Клара Ким', position: 'Paralegal', level: 'read', note: '' },
-    ],
-    billing: [
-        { userId: 1, userName: 'Анна Иванова', position: 'Partner', level: 'manage', note: '' },
-        { userId: 4, userName: 'David Lee', position: 'Counsel', level: 'edit', note: 'Финансы' },
-    ],
-    research: [
-        { userId: 2, userName: 'Борис Петров', position: 'Associate', level: 'edit', note: '' },
-        { userId: 5, userName: 'Елена Смирнова', position: 'Associate', level: 'read', note: '' },
-    ],
-};
-
-function cloneTree(source: TreeMap): TreeMap {
-    return Object.fromEntries(
-        Object.entries(source).map(([key, rows]) => [key, rows.map((row) => ({ ...row }))]),
-    );
-}
-
-function cloneAcl(source: AclMap): AclMap {
-    return Object.fromEntries(
-        Object.entries(source).map(([key, rows]) => [key, rows.map((row) => ({ ...row }))]),
-    );
-}
-
-function uid(prefix: string): string {
-    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function uniqueName(existing: DemoEntry[], base: string): string {
-    const names = new Set(existing.map((row) => row.name.toLowerCase()));
-    if (!names.has(base.toLowerCase()))
-        return base;
-    let index = 2;
-    while (names.has(`${base} (${index})`.toLowerCase()))
-        index += 1;
-    return `${base} (${index})`;
-}
+const ACL_LEVELS: Array<NetAclRule['level']> = ['read', 'edit', 'manage'];
 
 function NamePrompt({
     title,
@@ -142,15 +47,22 @@ function NamePrompt({
     label: string;
     initial: string;
     onClose: () => void;
-    onSubmit: (name: string) => boolean;
+    onSubmit: (name: string) => Promise<boolean> | boolean;
 }) {
     const { tr } = useFm();
     const [name, setName] = useState(initial);
-    const submit = () => {
-        if (!name.trim())
+    const [busy, setBusy] = useState(false);
+    const submit = async () => {
+        if (!name.trim() || busy)
             return;
-        if (onSubmit(name.trim()))
-            onClose();
+        setBusy(true);
+        try {
+            if (await onSubmit(name.trim()))
+                onClose();
+        }
+        finally {
+            setBusy(false);
+        }
     };
     return (
         <Modal
@@ -159,7 +71,7 @@ function NamePrompt({
             footer={(
                 <>
                     <button type="button" className="fm-btn" onClick={onClose}>{tr('common.cancel')}</button>
-                    <button type="button" className="fm-btn fm-btn--primary" disabled={!name.trim()} onClick={submit}>
+                    <button type="button" className="fm-btn fm-btn--primary" disabled={busy || !name.trim()} onClick={() => void submit()}>
                         {tr('common.save')}
                     </button>
                 </>
@@ -174,7 +86,7 @@ function NamePrompt({
                     onChange={(event) => setName(event.target.value)}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter')
-                            submit();
+                            void submit();
                     }}
                 />
             </label>
@@ -188,6 +100,7 @@ function DetailsDrawer({
     childCount,
     rules,
     tab,
+    loadingAcl,
     onTab,
     onClose,
     onOpen,
@@ -197,26 +110,26 @@ function DetailsDrawer({
     onChangeLevel,
     onRemove,
 }: {
-    entry: DemoEntry;
+    entry: NetEntry;
     location: string;
     childCount: number;
-    rules: AclRule[];
+    rules: NetAclRule[];
     tab: DrawerTab;
+    loadingAcl: boolean;
     onTab: (tab: DrawerTab) => void;
     onClose: () => void;
     onOpen: () => void;
     onRename: () => void;
     onDelete: () => void;
-    onGrant: (user: DemoUser, level: AclLevel, note: string) => void;
-    onChangeLevel: (userId: number, level: AclLevel) => void;
-    onRemove: (userId: number) => void;
+    onGrant: (account: string, level: NetAclRule['level'], note: string) => Promise<void>;
+    onChangeLevel: (account: string, level: NetAclRule['level']) => Promise<void>;
+    onRemove: (account: string) => Promise<void>;
 }) {
     const { tr } = useFm();
-    const [userId, setUserId] = useState('');
-    const [level, setLevel] = useState<AclLevel>('read');
+    const [account, setAccount] = useState('');
+    const [level, setLevel] = useState<NetAclRule['level']>('read');
     const [note, setNote] = useState('');
-    const grantedIds = new Set(rules.map((row) => row.userId));
-    const availableUsers = DEMO_USERS.filter((user) => !grantedIds.has(user.id));
+    const [busy, setBusy] = useState(false);
 
     return (
         <aside className="fm-pane fm-netfolder__drawer" aria-label={tr('networkFolder.details')}>
@@ -229,9 +142,7 @@ function DetailsDrawer({
                 </span>
                 <div>
                     <h3 title={entry.name}>{entry.name}</h3>
-                    <p>
-                        {entry.kind === 'folder' ? tr('browser.folderType') : tr('browser.fileType')}
-                    </p>
+                    <p>{entry.kind === 'folder' ? tr('browser.folderType') : tr('browser.fileType')}</p>
                 </div>
                 <button type="button" className="fm-icon-btn" aria-label={tr('common.close')} onClick={onClose}>
                     <Icon name="close" />
@@ -240,18 +151,10 @@ function DetailsDrawer({
 
             <div className="fm-pane__actions">
                 {entry.kind === 'folder' ? (
-                    <button type="button" className="fm-btn fm-btn--primary" onClick={onOpen}>
-                        {tr('browser.open')}
-                    </button>
+                    <button type="button" className="fm-btn fm-btn--primary" onClick={onOpen}>{tr('browser.open')}</button>
                 ) : null}
-                <button type="button" className="fm-btn" onClick={onRename}>
-                    <Icon name="edit" />
-                    {tr('browser.renameFolder')}
-                </button>
-                <button type="button" className="fm-btn" onClick={onDelete}>
-                    <Icon name="trash" />
-                    {tr('browser.deleteFolder')}
-                </button>
+                <button type="button" className="fm-btn" onClick={onRename}><Icon name="edit" />{tr('browser.renameFolder')}</button>
+                <button type="button" className="fm-btn" onClick={onDelete}><Icon name="trash" />{tr('browser.deleteFolder')}</button>
             </div>
 
             <div className="fm-tabs" role="tablist">
@@ -267,66 +170,48 @@ function DetailsDrawer({
             <div className="fm-pane__body">
                 {tab === 'details' ? (
                     <dl className="fm-netfolder__props">
-                        <div>
-                            <dt>{tr('common.name')}</dt>
-                            <dd>{entry.name}</dd>
-                        </div>
+                        <div><dt>{tr('common.name')}</dt><dd>{entry.name}</dd></div>
                         <div>
                             <dt>{tr('networkFolder.type')}</dt>
-                            <dd>
-                                {entry.kind === 'folder' ? tr('browser.folderType') : tr('browser.fileType')}
-                            </dd>
+                            <dd>{entry.kind === 'folder' ? tr('browser.folderType') : tr('browser.fileType')}</dd>
                         </div>
-                        <div>
-                            <dt>{tr('networkFolder.location')}</dt>
-                            <dd>{location}</dd>
-                        </div>
+                        <div><dt>{tr('networkFolder.location')}</dt><dd>{location}</dd></div>
                         {entry.kind === 'folder' ? (
-                            <div>
-                                <dt>{tr('networkFolder.contains')}</dt>
-                                <dd>{tr('browser.items', { count: childCount })}</dd>
-                            </div>
+                            <div><dt>{tr('networkFolder.contains')}</dt><dd>{tr('browser.items', { count: childCount })}</dd></div>
                         ) : null}
-                        <div>
-                            <dt>{tr('networkFolder.access')}</dt>
-                            <dd>{tr('networkFolder.accessCount', { count: rules.length })}</dd>
-                        </div>
                     </dl>
                 ) : (
                     <div className="fm-netfolder__access">
                         <p className="fm-hint">{tr('networkFolder.accessHint')}</p>
-
                         <form
                             className="fm-grant fm-netfolder__grant"
                             onSubmit={(event) => {
                                 event.preventDefault();
-                                const user = DEMO_USERS.find((row) => String(row.id) === userId);
-                                if (!user)
+                                if (!account.trim() || busy)
                                     return;
-                                onGrant(user, level, note.trim());
-                                setUserId('');
-                                setLevel('read');
-                                setNote('');
+                                setBusy(true);
+                                void onGrant(account.trim(), level, note.trim()).finally(() => {
+                                    setBusy(false);
+                                    setAccount('');
+                                    setNote('');
+                                    setLevel('read');
+                                });
                             }}
                         >
-                            <div className="fm-field">
+                            <label className="fm-field">
                                 <span>{tr('security.addUser')}</span>
-                                <FmSelect
-                                    value={userId}
-                                    options={availableUsers.map((user) => ({
-                                        value: String(user.id),
-                                        label: `${user.name} · ${user.position}`,
-                                    }))}
-                                    onChange={setUserId}
-                                    placeholder={tr('security.searchUser')}
+                                <input
+                                    value={account}
+                                    placeholder={tr('networkFolder.accountPh')}
+                                    onChange={(event) => setAccount(event.target.value)}
                                 />
-                            </div>
+                            </label>
                             <div className="fm-field">
                                 <span>{tr('security.addLevel')}</span>
                                 <FmSelect
                                     value={level}
                                     options={ACL_LEVELS.map((item) => ({ value: item, label: tr(`levels.${item}`) }))}
-                                    onChange={(next) => setLevel(next as AclLevel)}
+                                    onChange={(next) => setLevel(next as NetAclRule['level'])}
                                     placeholder={tr('security.addLevel')}
                                 />
                             </div>
@@ -334,41 +219,39 @@ function DetailsDrawer({
                                 <span>{tr('security.note')}</span>
                                 <input value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} />
                             </label>
-                            <button type="submit" className="fm-btn fm-btn--primary" disabled={!userId}>
-                                <Icon name="plus" />
-                                {tr('security.add')}
+                            <button type="submit" className="fm-btn fm-btn--primary" disabled={busy || !account.trim()}>
+                                <Icon name="plus" />{tr('security.add')}
                             </button>
                         </form>
 
-                        {rules.length === 0 ? (
-                            <div className="fm-state">{tr('networkFolder.accessEmpty')}</div>
-                        ) : (
+                        {loadingAcl ? <div className="fm-state">{tr('common.loading')}</div> : null}
+                        {!loadingAcl && rules.length === 0 ? <div className="fm-state">{tr('networkFolder.accessEmpty')}</div> : null}
+                        {!loadingAcl && rules.length > 0 ? (
                             <ul className="fm-netfolder__acl">
                                 {rules.map((rule) => (
                                     <li key={rule.userId} className={rule.level === 'deny' ? 'is-denied' : undefined}>
                                         <div className="fm-netfolder__acl-user">
                                             <strong>{rule.userName}</strong>
-                                            <small>{rule.position}{rule.note ? ` · ${rule.note}` : ''}</small>
+                                            <small>
+                                                {rule.position === 'inherited' ? tr('security.inherited') : tr('security.explicit')}
+                                                {rule.note ? ` · ${rule.note}` : ''}
+                                            </small>
                                         </div>
                                         <FmSelect
-                                            value={rule.level}
+                                            value={rule.level === 'deny' ? 'read' : rule.level}
                                             className={`fm-filter-select--level fm-level--${rule.level}`}
                                             buttonClassName={`fm-level-select fm-level--${rule.level}`}
                                             options={ACL_LEVELS.map((item) => ({ value: item, label: tr(`levels.${item}`) }))}
-                                            onChange={(next) => onChangeLevel(rule.userId, next as AclLevel)}
+                                            onChange={(next) => void onChangeLevel(rule.revokeAccount, next as NetAclRule['level'])}
                                             placeholder={tr('security.addLevel')}
                                         />
-                                        <button
-                                            type="button"
-                                            className="fm-btn"
-                                            onClick={() => onRemove(rule.userId)}
-                                        >
+                                        <button type="button" className="fm-btn" onClick={() => void onRemove(rule.revokeAccount)}>
                                             {tr('security.remove')}
                                         </button>
                                     </li>
                                 ))}
                             </ul>
-                        )}
+                        ) : null}
                     </div>
                 )}
             </div>
@@ -378,12 +261,20 @@ function DetailsDrawer({
 
 export function NetworkFolderView() {
     const { tr } = useFm();
-    const [tree, setTree] = useState<TreeMap>(() => cloneTree(INITIAL_NESTED));
-    const [acl, setAcl] = useState<AclMap>(() => cloneAcl(INITIAL_ACL));
-    const [path, setPath] = useState<string[]>([]);
+    const act = useAction();
+    const available = netDriveAvailable();
+    const [root, setRoot] = useState<string | null>(null);
+    const [username, setUsername] = useState('');
+    const [current, setCurrent] = useState<string | null>(null);
+    const [entries, setEntries] = useState<NetEntry[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [drawerTab, setDrawerTab] = useState<DrawerTab>('details');
+    const [aclRules, setAclRules] = useState<NetAclRule[]>([]);
+    const [aclLoading, setAclLoading] = useState(false);
+    const [childCount, setChildCount] = useState(0);
     const [clipboard, setClipboard] = useState<Clipboard | null>(null);
     const [menu, setMenu] = useState<CtxMenu | null>(null);
     const [nameModal, setNameModal] = useState<NameModal | null>(null);
@@ -392,35 +283,97 @@ export function NetworkFolderView() {
     const fileRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
-    const folderKey = path[path.length - 1] ?? ROOT_KEY;
-    const entries = tree[folderKey] ?? [];
     const selected = useMemo(
         () => entries.filter((row) => selectedIds.includes(row.id)),
         [entries, selectedIds],
     );
     const selectedOne = selected.length === 1 ? selected[0] : null;
-    const empty = entries.length === 0;
     const showDrawer = drawerOpen && selectedOne !== null;
-    const selectedRules = selectedOne ? (acl[selectedOne.id] ?? []) : [];
-    const selectedChildCount = selectedOne?.kind === 'folder' ? (tree[selectedOne.id] ?? []).length : 0;
+    const crumbs = root && current ? netCrumbs(root, current) : [];
+    const locationLabel = crumbs.map((item) => item.label).join(' \\ ') || root || '';
 
-    const crumbLabels = useMemo(() => {
-        const labels: { id: string; name: string }[] = [];
-        let key = ROOT_KEY;
-        for (const segment of path) {
-            const row = (tree[key] ?? []).find((item) => item.id === segment);
-            labels.push({ id: segment, name: row?.name ?? segment });
-            key = segment;
+    const reload = useCallback(async (path: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            setEntries(await listNetEntries(path));
         }
-        return labels;
-    }, [path, tree]);
+        catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+            setEntries([]);
+        }
+        finally {
+            setLoading(false);
+        }
+    }, []);
 
-    const locationLabel = useMemo(() => {
-        const parts = [tr('networkFolder.root'), ...crumbLabels.map((item) => item.name)];
-        return parts.join(' \\ ');
-    }, [crumbLabels, tr]);
+    const connect = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const connected = await connectNetDrive();
+            setRoot(connected.root);
+            setUsername(connected.username);
+            setCurrent(connected.root);
+            await reload(connected.root);
+        }
+        catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message === 'needCredentials' ? tr('networkFolder.needCredentials') : message);
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [reload, tr]);
 
-    const closeMenu = () => setMenu(null);
+    useEffect(() => {
+        if (!available)
+            return;
+        if (!loadNetDriveConnection()) {
+            setError(tr('networkFolder.needCredentials'));
+            return;
+        }
+        void connect();
+    // Auto-connect once when the desktop app opens Network Folder.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [available]);
+
+    useEffect(() => {
+        if (!showDrawer || !selectedOne)
+            return;
+        let alive = true;
+        setAclLoading(true);
+        void loadNetAcl(selectedOne.path)
+            .then((rules) => {
+                if (alive)
+                    setAclRules(rules);
+            })
+            .catch(() => {
+                if (alive)
+                    setAclRules([]);
+            })
+            .finally(() => {
+                if (alive)
+                    setAclLoading(false);
+            });
+        if (selectedOne.kind === 'folder') {
+            void listNetEntries(selectedOne.path)
+                .then((rows) => {
+                    if (alive)
+                        setChildCount(rows.length);
+                })
+                .catch(() => {
+                    if (alive)
+                        setChildCount(0);
+                });
+        }
+        else {
+            setChildCount(0);
+        }
+        return () => {
+            alive = false;
+        };
+    }, [selectedOne, showDrawer]);
 
     const selectOnly = (id: string | null) => {
         setSelectedIds(id ? [id] : []);
@@ -428,216 +381,130 @@ export function NetworkFolderView() {
             setDrawerOpen(false);
     };
 
-    const openDetails = (entry?: DemoEntry, tab: DrawerTab = 'details') => {
-        if (entry)
-            setSelectedIds([entry.id]);
+    const openDetails = (entry: NetEntry, tab: DrawerTab = 'details') => {
+        setSelectedIds([entry.id]);
         setDrawerTab(tab);
         setDrawerOpen(true);
-        closeMenu();
+        setMenu(null);
     };
 
-    const openFolder = (id: string) => {
-        setPath((prev) => [...prev, id]);
+    const openFolder = (entry: NetEntry) => {
+        setCurrent(entry.path);
         selectOnly(null);
-        closeMenu();
+        setMenu(null);
+        void reload(entry.path);
+    };
+
+    const goPath = (path: string) => {
+        setCurrent(path);
+        selectOnly(null);
+        void reload(path);
     };
 
     const goUp = () => {
-        setPath((prev) => prev.slice(0, -1));
-        selectOnly(null);
-        closeMenu();
-    };
-
-    const goCrumb = (index: number) => {
-        if (index < 0) {
-            setPath([]);
-            selectOnly(null);
+        if (!root || !current || current.toLowerCase() === root.toLowerCase())
             return;
+        const parent = current.slice(0, Math.max(0, current.lastIndexOf('\\')));
+        const next = parent.length >= root.length ? parent : root;
+        goPath(next);
+    };
+
+    const refreshAcl = async (path: string) => {
+        setAclLoading(true);
+        try {
+            setAclRules(await loadNetAcl(path));
         }
-        setPath((prev) => prev.slice(0, index + 1));
-        selectOnly(null);
-    };
-
-    const updateFolder = (key: string, updater: (rows: DemoEntry[]) => DemoEntry[]) => {
-        setTree((prev) => {
-            const next = { ...prev };
-            next[key] = updater([...(prev[key] ?? [])]);
-            return next;
-        });
-    };
-
-    const removeSubtree = (map: TreeMap, folderId: string) => {
-        const children = map[folderId] ?? [];
-        delete map[folderId];
-        for (const child of children) {
-            if (child.kind === 'folder')
-                removeSubtree(map, child.id);
+        catch {
+            setAclRules([]);
+        }
+        finally {
+            setAclLoading(false);
         }
     };
 
-    const createFolder = (name: string) => {
-        const id = uid('folder');
-        updateFolder(folderKey, (rows) => [
-            ...rows,
-            { id, name: uniqueName(rows, name), kind: 'folder' },
-        ]);
-        setTree((prev) => ({ ...prev, [id]: prev[id] ?? [] }));
-        selectOnly(id);
-        return true;
-    };
-
-    const renameSelected = (name: string) => {
-        if (!selectedOne)
+    const createFolder = async (name: string) => {
+        if (!current)
             return false;
-        updateFolder(folderKey, (rows) => rows.map((row) => {
-            if (row.id !== selectedOne.id)
-                return row;
-            const others = rows.filter((item) => item.id !== row.id);
-            return { ...row, name: uniqueName(others, name) };
-        }));
-        return true;
+        const finalName = uniqueChildName(entries.map((row) => row.name), name);
+        const ok = await act(async () => {
+            await createNetFolder(current, finalName);
+            return true;
+        }, tr('pane.saved'));
+        if (ok)
+            await reload(current);
+        return Boolean(ok);
     };
 
-    const deleteSelected = () => {
-        if (selected.length === 0)
-            return;
-        const ids = new Set(selected.map((row) => row.id));
-        setTree((prev) => {
-            const next = { ...prev };
-            next[folderKey] = (next[folderKey] ?? []).filter((row) => !ids.has(row.id));
-            for (const row of selected) {
-                if (row.kind === 'folder')
-                    removeSubtree(next, row.id);
-            }
-            return next;
-        });
-        setAcl((prev) => {
-            const next = { ...prev };
-            for (const id of ids)
-                delete next[id];
-            return next;
-        });
-        selectOnly(null);
-        setConfirmDelete(false);
+    const renameSelected = async (name: string) => {
+        if (!selectedOne || !current)
+            return false;
+        const others = entries.filter((row) => row.id !== selectedOne.id).map((row) => row.name);
+        const finalName = uniqueChildName(others, name);
+        const ok = await act(async () => {
+            await renameNetEntry(selectedOne, finalName);
+            return true;
+        }, tr('pane.saved'));
+        if (ok) {
+            await reload(current);
+            setDrawerOpen(false);
+        }
+        return Boolean(ok);
     };
 
-    const addFiles = (files: File[]) => {
-        if (files.length === 0)
+    const deleteSelected = async () => {
+        if (!root || !current || selected.length === 0)
             return;
-        updateFolder(folderKey, (rows) => {
-            const next = [...rows];
-            for (const file of files) {
-                next.push({
-                    id: uid('file'),
-                    name: uniqueName(next, file.name),
-                    kind: 'file',
-                });
-            }
-            return next;
-        });
+        const ok = await act(async () => {
+            await deleteNetEntries(selected, root, username || 'network');
+            return true;
+        }, tr('networkFolder.movedToTrash'));
+        if (ok) {
+            selectOnly(null);
+            setConfirmDelete(false);
+            await reload(current);
+        }
+    };
+
+    const addFiles = async (files: File[]) => {
+        if (!current || files.length === 0)
+            return;
+        const ok = await act(async () => {
+            await uploadNetFiles(current, files);
+            return true;
+        }, tr('browser.uploaded', { count: files.length }));
+        if (ok)
+            await reload(current);
     };
 
     const cutOrCopy = (mode: 'cut' | 'copy') => {
         if (selected.length === 0)
             return;
-        setClipboard({
-            mode,
-            entries: selected.map((row) => ({ ...row })),
-            fromKey: folderKey,
-        });
-        closeMenu();
+        setClipboard({ mode, entries: selected.map((row) => ({ ...row })) });
+        setMenu(null);
     };
 
-    const pasteClipboard = () => {
-        if (!clipboard)
+    const pasteClipboard = async () => {
+        if (!clipboard || !current)
             return;
-        const sourceKey = clipboard.fromKey;
-        setTree((prev) => {
-            const next = { ...prev };
-            const targetRows = [...(next[folderKey] ?? [])];
-            const pasted: DemoEntry[] = [];
-
-            for (const entry of clipboard.entries) {
-                if (clipboard.mode === 'cut' && sourceKey === folderKey) {
-                    pasted.push(entry);
-                    continue;
-                }
-                if (clipboard.mode === 'copy' || sourceKey !== folderKey) {
-                    const copy: DemoEntry = {
-                        ...entry,
-                        id: clipboard.mode === 'copy' ? uid(entry.kind) : entry.id,
-                        name: uniqueName(targetRows.concat(pasted), entry.name),
-                    };
-                    pasted.push(copy);
-                    if (entry.kind === 'folder' && clipboard.mode === 'copy') {
-                        next[copy.id] = (next[entry.id] ?? []).map((child) => ({
-                            ...child,
-                            id: uid(child.kind),
-                        }));
-                    }
-                    else if (entry.kind === 'folder' && clipboard.mode === 'cut' && !next[copy.id]) {
-                        next[copy.id] = next[entry.id] ?? [];
-                    }
+        const ok = await act(async () => {
+            if (clipboard.mode === 'cut')
+                await moveNetEntries(clipboard.entries, current);
+            else {
+                const existing = (await listNetEntries(current)).map((row) => row.name);
+                for (const entry of clipboard.entries) {
+                    const name = uniqueChildName(existing, entry.name);
+                    existing.push(name);
+                    await copyNetEntryTo(entry, current, name);
                 }
             }
-
-            if (clipboard.mode === 'cut' && sourceKey !== folderKey) {
-                const movingIds = new Set(clipboard.entries.map((row) => row.id));
-                next[sourceKey] = (next[sourceKey] ?? []).filter((row) => !movingIds.has(row.id));
-            }
-
-            if (!(clipboard.mode === 'cut' && sourceKey === folderKey))
-                next[folderKey] = [...targetRows, ...pasted];
-
-            return next;
-        });
-        if (clipboard.mode === 'cut')
-            setClipboard(null);
-        closeMenu();
-    };
-
-    const grantAccess = (user: DemoUser, level: AclLevel, note: string) => {
-        if (!selectedOne)
-            return;
-        const entryId = selectedOne.id;
-        setAcl((prev) => {
-            const rows = [...(prev[entryId] ?? [])];
-            const index = rows.findIndex((row) => row.userId === user.id);
-            const rule: AclRule = {
-                userId: user.id,
-                userName: user.name,
-                position: user.position,
-                level,
-                note,
-            };
-            if (index >= 0)
-                rows[index] = rule;
-            else
-                rows.push(rule);
-            return { ...prev, [entryId]: rows };
-        });
-    };
-
-    const changeAccessLevel = (userId: number, level: AclLevel) => {
-        if (!selectedOne)
-            return;
-        const entryId = selectedOne.id;
-        setAcl((prev) => ({
-            ...prev,
-            [entryId]: (prev[entryId] ?? []).map((row) => (
-                row.userId === userId ? { ...row, level } : row
-            )),
-        }));
-    };
-
-    const removeAccess = (userId: number) => {
-        if (!selectedOne)
-            return;
-        const entryId = selectedOne.id;
-        setAcl((prev) => ({
-            ...prev,
-            [entryId]: (prev[entryId] ?? []).filter((row) => row.userId !== userId),
-        }));
+            return true;
+        }, tr('pane.saved'));
+        if (ok) {
+            if (clipboard.mode === 'cut')
+                setClipboard(null);
+            await reload(current);
+        }
+        setMenu(null);
     };
 
     const openCtx = (event: ReactMouseEvent, target: CtxMenu['target']) => {
@@ -651,56 +518,6 @@ export function NetworkFolderView() {
         setMenu({ x: Math.max(8, x), y: Math.max(8, y), target });
     };
 
-    const onDropFiles = (event: DragEvent) => {
-        event.preventDefault();
-        setDropping(false);
-        addFiles(Array.from(event.dataTransfer.files ?? []));
-    };
-
-    const onKeyDown = useCallback((event: KeyboardEvent) => {
-        if (nameModal || confirmDelete)
-            return;
-        const meta = event.ctrlKey || event.metaKey;
-        if (event.key === 'Delete' && selected.length > 0) {
-            event.preventDefault();
-            setConfirmDelete(true);
-        }
-        else if (event.key === 'F2' && selectedOne) {
-            event.preventDefault();
-            setNameModal({ mode: 'rename', initial: selectedOne.name });
-        }
-        else if (event.key === 'Backspace' && path.length > 0 && !meta) {
-            event.preventDefault();
-            goUp();
-        }
-        else if (meta && event.key.toLowerCase() === 'c') {
-            event.preventDefault();
-            cutOrCopy('copy');
-        }
-        else if (meta && event.key.toLowerCase() === 'x') {
-            event.preventDefault();
-            cutOrCopy('cut');
-        }
-        else if (meta && event.key.toLowerCase() === 'v') {
-            event.preventDefault();
-            pasteClipboard();
-        }
-        else if (meta && event.key.toLowerCase() === 'a') {
-            event.preventDefault();
-            setSelectedIds(entries.map((row) => row.id));
-        }
-        else if (event.key === 'Enter' && selectedOne?.kind === 'folder') {
-            event.preventDefault();
-            openFolder(selectedOne.id);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [confirmDelete, entries, nameModal, path.length, selected, selectedOne, clipboard, folderKey]);
-
-    useEffect(() => {
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [onKeyDown]);
-
     useEffect(() => {
         if (!menu)
             return;
@@ -709,10 +526,33 @@ export function NetworkFolderView() {
         return () => window.removeEventListener('click', close);
     }, [menu]);
 
+    if (!available) {
+        return (
+            <section className="fm-docs fm-docs--padded">
+                <div className="fm-state">
+                    <Icon name="folder" className="fm-ico--folder" />
+                    <p>{tr('networkFolder.desktopOnly')}</p>
+                </div>
+            </section>
+        );
+    }
+
+    if (!root) {
+        return (
+            <section className="fm-docs fm-docs--padded">
+                <div className="fm-state">
+                    <Icon name="link" />
+                    <p>{error ?? tr('networkFolder.connectHint')}</p>
+                    <button type="button" className="fm-btn fm-btn--primary" disabled={loading} onClick={() => void connect()}>
+                        {loading ? tr('networkFolder.connecting') : tr('networkFolder.connect')}
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
     const statusText = selected.length > 0
-        ? (selectedOne
-            ? selectedOne.name
-            : tr('networkFolder.selectedCount', { count: selected.length }))
+        ? (selectedOne ? selectedOne.name : tr('networkFolder.selectedCount', { count: selected.length }))
         : tr('browser.items', { count: entries.length });
 
     return (
@@ -729,80 +569,50 @@ export function NetworkFolderView() {
                     if (!event.currentTarget.contains(event.relatedTarget as Node | null))
                         setDropping(false);
                 }}
-                onDrop={onDropFiles}
+                onDrop={(event: DragEvent) => {
+                    event.preventDefault();
+                    setDropping(false);
+                    void addFiles(Array.from(event.dataTransfer.files ?? []));
+                }}
             >
                 <div className="fm-netfolder__bar">
                     <button type="button" className="fm-btn" onClick={() => setNameModal({ mode: 'create', initial: tr('networkFolder.newFolderName') })}>
-                        <Icon name="folder" className="fm-ico--folder" />
-                        {tr('browser.newFolder')}
+                        <Icon name="folder" className="fm-ico--folder" />{tr('browser.newFolder')}
                     </button>
                     <button type="button" className="fm-btn" onClick={() => fileRef.current?.click()}>
-                        <Icon name="upload" />
-                        {tr('browser.upload')}
+                        <Icon name="upload" />{tr('browser.upload')}
                     </button>
                     <span className="fm-netfolder__sep" aria-hidden />
-                    <button type="button" className="fm-btn" disabled={selected.length === 0} onClick={() => cutOrCopy('cut')}>
-                        {tr('browser.cut')}
+                    <button type="button" className="fm-btn" disabled={selected.length === 0} onClick={() => cutOrCopy('cut')}>{tr('browser.cut')}</button>
+                    <button type="button" className="fm-btn" disabled={selected.length === 0} onClick={() => cutOrCopy('copy')}>{tr('browser.copy')}</button>
+                    <button type="button" className="fm-btn" disabled={!clipboard} onClick={() => void pasteClipboard()}>{tr('browser.paste')}</button>
+                    <span className="fm-netfolder__sep" aria-hidden />
+                    <button type="button" className="fm-btn" disabled={!selectedOne} onClick={() => selectedOne && setNameModal({ mode: 'rename', initial: selectedOne.name })}>
+                        <Icon name="edit" />{tr('browser.renameFolder')}
                     </button>
-                    <button type="button" className="fm-btn" disabled={selected.length === 0} onClick={() => cutOrCopy('copy')}>
-                        {tr('browser.copy')}
-                    </button>
-                    <button type="button" className="fm-btn" disabled={!clipboard} onClick={pasteClipboard}>
-                        {tr('browser.paste')}
+                    <button type="button" className="fm-btn" disabled={selected.length === 0} onClick={() => setConfirmDelete(true)}>
+                        <Icon name="trash" />{tr('browser.deleteFolder')}
                     </button>
                     <span className="fm-netfolder__sep" aria-hidden />
-                    <button
-                        type="button"
-                        className="fm-btn"
-                        disabled={!selectedOne}
-                        onClick={() => selectedOne && setNameModal({ mode: 'rename', initial: selectedOne.name })}
-                    >
-                        <Icon name="edit" />
-                        {tr('browser.renameFolder')}
+                    <button type="button" className={showDrawer ? 'fm-btn is-on' : 'fm-btn'} disabled={!selectedOne} onClick={() => selectedOne && openDetails(selectedOne, 'details')}>
+                        <Icon name="eye" />{tr('networkFolder.details')}
                     </button>
-                    <button
-                        type="button"
-                        className="fm-btn"
-                        disabled={selected.length === 0}
-                        onClick={() => setConfirmDelete(true)}
-                    >
-                        <Icon name="trash" />
-                        {tr('browser.deleteFolder')}
+                    <button type="button" className="fm-btn" disabled={!selectedOne} onClick={() => selectedOne && openDetails(selectedOne, 'access')}>
+                        <Icon name="shield" />{tr('networkFolder.access')}
                     </button>
-                    <span className="fm-netfolder__sep" aria-hidden />
-                    <button
-                        type="button"
-                        className={showDrawer ? 'fm-btn is-on' : 'fm-btn'}
-                        disabled={!selectedOne}
-                        onClick={() => selectedOne && openDetails(selectedOne, 'details')}
-                    >
-                        <Icon name="eye" />
-                        {tr('networkFolder.details')}
+                    <button type="button" className="fm-btn" disabled={!current || current.toLowerCase() === root.toLowerCase()} onClick={goUp}>
+                        <Icon name="up" />{tr('browser.up')}
                     </button>
-                    <button
-                        type="button"
-                        className="fm-btn"
-                        disabled={!selectedOne}
-                        onClick={() => selectedOne && openDetails(selectedOne, 'access')}
-                    >
-                        <Icon name="shield" />
-                        {tr('networkFolder.access')}
-                    </button>
-                    <button type="button" className="fm-btn" disabled={path.length === 0} onClick={goUp}>
-                        <Icon name="up" />
-                        {tr('browser.up')}
+                    <button type="button" className="fm-btn" disabled={loading || !current} onClick={() => current && void reload(current)}>
+                        <Icon name="refresh" />{tr('browser.refresh')}
                     </button>
                 </div>
 
                 <nav className="fm-crumbs fm-netfolder__crumbs" aria-label={tr('networkFolder.root')}>
-                    <button type="button" onClick={() => goCrumb(-1)}>
-                        <Icon name="folder" className="fm-ico--folder" />
-                        {tr('networkFolder.root')}
-                    </button>
-                    {crumbLabels.map((crumb, index) => (
-                        <span key={crumb.id} className="fm-crumbs__part">
-                            <Icon name="chevron" />
-                            <button type="button" onClick={() => goCrumb(index)}>{crumb.name}</button>
+                    {crumbs.map((crumb, index) => (
+                        <span key={crumb.path} className="fm-crumbs__part">
+                            {index > 0 ? <Icon name="chevron" /> : <Icon name="folder" className="fm-ico--folder" />}
+                            <button type="button" onClick={() => goPath(crumb.path)}>{crumb.label}</button>
                         </span>
                     ))}
                 </nav>
@@ -812,208 +622,106 @@ export function NetworkFolderView() {
                     className="fm-tiles__content"
                     onClick={() => {
                         selectOnly(null);
-                        closeMenu();
+                        setMenu(null);
                     }}
                     onContextMenu={(event) => openCtx(event, { kind: 'blank' })}
                 >
-                    {empty ? (
+                    {loading ? <div className="fm-state">{tr('common.loading')}</div> : null}
+                    {!loading && error ? <div className="fm-state"><p>{error}</p></div> : null}
+                    {!loading && !error && entries.length === 0 ? (
                         <div className="fm-ex__empty">
                             <Icon name="folderOpen" className="fm-ico--folder" />
                             <p>{tr('browser.emptyFolder')}</p>
                             <p className="fm-muted">{tr('browser.dropHint')}</p>
                         </div>
-                    ) : (
+                    ) : null}
+                    {!loading && !error && entries.length > 0 ? (
                         <div className="fm-ex__tiles">
-                            {path.length > 0 ? (
-                                <button
-                                    type="button"
-                                    className="fm-ex__tile fm-ex__tile--up"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        goUp();
-                                    }}
-                                >
-                                    <span className="fm-ex__tile-ico" aria-hidden>
-                                        <Icon name="up" />
-                                    </span>
-                                    <span className="fm-ex__tile-meta">
-                                        <strong>..</strong>
-                                        <small>{tr('browser.up')}</small>
-                                    </span>
+                            {current && root && current.toLowerCase() !== root.toLowerCase() ? (
+                                <button type="button" className="fm-ex__tile fm-ex__tile--up" onClick={(event) => { event.stopPropagation(); goUp(); }}>
+                                    <span className="fm-ex__tile-ico" aria-hidden><Icon name="up" /></span>
+                                    <span className="fm-ex__tile-meta"><strong>..</strong><small>{tr('browser.up')}</small></span>
                                 </button>
                             ) : null}
-                            {entries.map((entry) => {
-                                const isCut = clipboard?.mode === 'cut'
-                                    && clipboard.fromKey === folderKey
-                                    && clipboard.entries.some((item) => item.id === entry.id);
-                                return (
-                                    <button
-                                        key={entry.id}
-                                        type="button"
-                                        className={[
-                                            'fm-ex__tile',
-                                            selectedIds.includes(entry.id) ? 'is-on' : '',
-                                            isCut ? 'is-closed' : '',
-                                        ].filter(Boolean).join(' ')}
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            if (event.ctrlKey || event.metaKey) {
-                                                setSelectedIds((prev) => (
-                                                    prev.includes(entry.id)
-                                                        ? prev.filter((id) => id !== entry.id)
-                                                        : [...prev, entry.id]
-                                                ));
-                                            }
-                                            else if (event.shiftKey && selectedIds.length > 0) {
-                                                const anchor = entries.findIndex((row) => row.id === selectedIds[0]);
-                                                const current = entries.findIndex((row) => row.id === entry.id);
-                                                if (anchor >= 0 && current >= 0) {
-                                                    const [from, to] = anchor < current ? [anchor, current] : [current, anchor];
-                                                    setSelectedIds(entries.slice(from, to + 1).map((row) => row.id));
-                                                }
-                                                else {
-                                                    selectOnly(entry.id);
-                                                }
-                                            }
-                                            else {
-                                                selectOnly(entry.id);
-                                            }
-                                            closeMenu();
-                                        }}
-                                        onDoubleClick={(event) => {
-                                            event.stopPropagation();
-                                            if (entry.kind === 'folder')
-                                                openFolder(entry.id);
-                                            else
-                                                openDetails(entry, 'details');
-                                        }}
-                                        onContextMenu={(event) => openCtx(event, { kind: 'entry', entry })}
-                                    >
-                                        <span className="fm-ex__tile-ico" aria-hidden>
-                                            <Icon
-                                                name={entry.kind === 'folder' ? 'folder' : 'list'}
-                                                className={entry.kind === 'folder' ? 'fm-ico--folder' : undefined}
-                                            />
-                                        </span>
-                                        <span className="fm-ex__tile-meta">
-                                            <strong title={entry.name}>{entry.name}</strong>
-                                            <small>
-                                                {entry.kind === 'folder'
-                                                    ? tr('browser.folderType')
-                                                    : tr('browser.fileType')}
-                                            </small>
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                            {entries.map((entry) => (
+                                <button
+                                    key={entry.id}
+                                    type="button"
+                                    className={selectedIds.includes(entry.id) ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        if (event.ctrlKey || event.metaKey) {
+                                            setSelectedIds((prev) => (
+                                                prev.includes(entry.id)
+                                                    ? prev.filter((id) => id !== entry.id)
+                                                    : [...prev, entry.id]
+                                            ));
+                                        }
+                                        else {
+                                            selectOnly(entry.id);
+                                        }
+                                        setMenu(null);
+                                    }}
+                                    onDoubleClick={(event) => {
+                                        event.stopPropagation();
+                                        if (entry.kind === 'folder')
+                                            openFolder(entry);
+                                        else
+                                            openDetails(entry, 'details');
+                                    }}
+                                    onContextMenu={(event) => openCtx(event, { kind: 'entry', entry })}
+                                >
+                                    <span className="fm-ex__tile-ico" aria-hidden>
+                                        <Icon
+                                            name={entry.kind === 'folder' ? 'folder' : 'list'}
+                                            className={entry.kind === 'folder' ? 'fm-ico--folder' : undefined}
+                                        />
+                                    </span>
+                                    <span className="fm-ex__tile-meta">
+                                        <strong title={entry.name}>{entry.name}</strong>
+                                        <small>{entry.kind === 'folder' ? tr('browser.folderType') : tr('browser.fileType')}</small>
+                                    </span>
+                                </button>
+                            ))}
                         </div>
-                    )}
+                    ) : null}
 
                     {menu ? (
-                        <div
-                            className="fm-ex__menu"
-                            style={{ left: menu.x, top: menu.y }}
-                            role="menu"
-                            onClick={(event) => event.stopPropagation()}
-                        >
+                        <div className="fm-ex__menu" style={{ left: menu.x, top: menu.y }} role="menu" onClick={(event) => event.stopPropagation()}>
                             {menu.target.kind === 'entry' ? (
                                 <>
                                     {menu.target.entry.kind === 'folder' ? (
-                                        <button
-                                            type="button"
-                                            role="menuitem"
-                                            onClick={() => openFolder(menu.target.kind === 'entry' ? menu.target.entry.id : '')}
-                                        >
+                                        <button type="button" role="menuitem" onClick={() => openFolder(menu.target.kind === 'entry' ? menu.target.entry : entries[0])}>
                                             {tr('browser.open')}
                                         </button>
                                     ) : null}
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            if (menu.target.kind === 'entry')
-                                                openDetails(menu.target.entry, 'details');
-                                        }}
-                                    >
+                                    <button type="button" role="menuitem" onClick={() => menu.target.kind === 'entry' && openDetails(menu.target.entry, 'details')}>
                                         {tr('networkFolder.details')}
                                     </button>
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            if (menu.target.kind === 'entry')
-                                                openDetails(menu.target.entry, 'access');
-                                        }}
-                                    >
+                                    <button type="button" role="menuitem" onClick={() => menu.target.kind === 'entry' && openDetails(menu.target.entry, 'access')}>
                                         {tr('networkFolder.access')}
                                     </button>
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            if (menu.target.kind === 'entry')
-                                                setNameModal({ mode: 'rename', initial: menu.target.entry.name });
-                                            closeMenu();
-                                        }}
-                                    >
-                                        {tr('browser.renameFolder')}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        className="is-danger"
-                                        onClick={() => {
-                                            setConfirmDelete(true);
-                                            closeMenu();
-                                        }}
-                                    >
+                                    <button type="button" role="menuitem" onClick={() => {
+                                        if (menu.target.kind === 'entry')
+                                            setNameModal({ mode: 'rename', initial: menu.target.entry.name });
+                                        setMenu(null);
+                                    }}>{tr('browser.renameFolder')}</button>
+                                    <button type="button" role="menuitem" className="is-danger" onClick={() => { setConfirmDelete(true); setMenu(null); }}>
                                         {tr('browser.deleteFolder')}
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    {path.length > 0 ? (
-                                        <button type="button" role="menuitem" onClick={() => { goUp(); }}>
-                                            {tr('browser.up')}
-                                        </button>
-                                    ) : null}
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            setNameModal({ mode: 'create', initial: tr('networkFolder.newFolderName') });
-                                            closeMenu();
-                                        }}
-                                    >
+                                    <button type="button" role="menuitem" onClick={() => { setNameModal({ mode: 'create', initial: tr('networkFolder.newFolderName') }); setMenu(null); }}>
                                         {tr('browser.newFolder')}
                                     </button>
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            fileRef.current?.click();
-                                            closeMenu();
-                                        }}
-                                    >
+                                    <button type="button" role="menuitem" onClick={() => { fileRef.current?.click(); setMenu(null); }}>
                                         {tr('browser.upload')}
                                     </button>
                                     {clipboard ? (
-                                        <button type="button" role="menuitem" onClick={pasteClipboard}>
-                                            {tr('browser.paste')}
-                                        </button>
+                                        <button type="button" role="menuitem" onClick={() => void pasteClipboard()}>{tr('browser.paste')}</button>
                                     ) : null}
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        onClick={() => {
-                                            setTree(cloneTree(INITIAL_NESTED));
-                                            setAcl(cloneAcl(INITIAL_ACL));
-                                            setPath([]);
-                                            selectOnly(null);
-                                            setClipboard(null);
-                                            closeMenu();
-                                        }}
-                                    >
+                                    <button type="button" role="menuitem" onClick={() => { if (current) void reload(current); setMenu(null); }}>
                                         {tr('browser.refresh')}
                                     </button>
                                 </>
@@ -1023,20 +731,14 @@ export function NetworkFolderView() {
                 </div>
 
                 <div className="fm-netfolder__status">{statusText}</div>
-                {dropping ? (
-                    <div className="fm-dropzone">
-                        <Icon name="upload" />
-                        {tr('browser.dropHint')}
-                    </div>
-                ) : null}
-
+                {dropping ? <div className="fm-dropzone"><Icon name="upload" />{tr('browser.dropHint')}</div> : null}
                 <input
                     ref={fileRef}
                     type="file"
                     multiple
                     hidden
                     onChange={(event) => {
-                        addFiles(Array.from(event.target.files ?? []));
+                        void addFiles(Array.from(event.target.files ?? []));
                         event.target.value = '';
                     }}
                 />
@@ -1046,34 +748,52 @@ export function NetworkFolderView() {
                 <DetailsDrawer
                     entry={selectedOne}
                     location={locationLabel}
-                    childCount={selectedChildCount}
-                    rules={selectedRules}
+                    childCount={childCount}
+                    rules={aclRules}
                     tab={drawerTab}
+                    loadingAcl={aclLoading}
                     onTab={setDrawerTab}
                     onClose={() => setDrawerOpen(false)}
                     onOpen={() => {
                         if (selectedOne.kind === 'folder')
-                            openFolder(selectedOne.id);
+                            openFolder(selectedOne);
                     }}
                     onRename={() => setNameModal({ mode: 'rename', initial: selectedOne.name })}
                     onDelete={() => setConfirmDelete(true)}
-                    onGrant={grantAccess}
-                    onChangeLevel={changeAccessLevel}
-                    onRemove={removeAccess}
+                    onGrant={async (account, level) => {
+                        const ok = await act(async () => {
+                            await grantNetAccess(selectedOne.path, account, level);
+                            return true;
+                        }, tr('security.changed'));
+                        if (ok)
+                            await refreshAcl(selectedOne.path);
+                    }}
+                    onChangeLevel={async (account, level) => {
+                        const ok = await act(async () => {
+                            await grantNetAccess(selectedOne.path, account, level);
+                            return true;
+                        }, tr('security.changed'));
+                        if (ok)
+                            await refreshAcl(selectedOne.path);
+                    }}
+                    onRemove={async (account) => {
+                        const ok = await act(async () => {
+                            await revokeNetAccess(selectedOne.path, account);
+                            return true;
+                        }, tr('security.changed'));
+                        if (ok)
+                            await refreshAcl(selectedOne.path);
+                    }}
                 />
             ) : null}
 
             {nameModal ? (
                 <NamePrompt
                     title={nameModal.mode === 'create' ? tr('browser.newFolder') : tr('browser.renameFolder')}
-                    label={nameModal.mode === 'create' || selectedOne?.kind === 'folder'
-                        ? tr('browser.folderName')
-                        : tr('networkFolder.fileName')}
+                    label={nameModal.mode === 'create' || selectedOne?.kind === 'folder' ? tr('browser.folderName') : tr('networkFolder.fileName')}
                     initial={nameModal.initial}
                     onClose={() => setNameModal(null)}
-                    onSubmit={(name) => (
-                        nameModal.mode === 'create' ? createFolder(name) : renameSelected(name)
-                    )}
+                    onSubmit={(name) => (nameModal.mode === 'create' ? createFolder(name) : renameSelected(name))}
                 />
             ) : null}
 
@@ -1086,7 +806,7 @@ export function NetworkFolderView() {
                     confirmLabel={tr('common.delete')}
                     danger
                     onClose={() => setConfirmDelete(false)}
-                    onConfirm={deleteSelected}
+                    onConfirm={() => void deleteSelected()}
                 />
             ) : null}
         </div>

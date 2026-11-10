@@ -1,11 +1,24 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { filesApi, type ClientsResponse, type DocumentRow, type FileKind } from '../api/filesApi';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+    canUseTauriNetDrive,
+    loadNetDriveSettings,
+    tauriListUncTrash,
+    tauriPurgeUncTrash,
+    tauriRestoreUncTrash,
+    type TauriUncTrashItem,
+} from '@entities/network-drive';
+import { trimUnc } from '@shared/lib/uncPath';
+import { filesApi, type ClientsResponse, type DocumentRow, type FileKind, type TrashItem } from '../api/filesApi';
 import { formatBytes, formatDateTime } from '../lib/filesFormat';
 import { DocumentTable } from './DocumentTable';
 import { DocumentPane } from './DocumentPane';
 import { FmSelect } from './fmSelect';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, StateBlock, useAction, useFm, useLoad, type Loadable } from './fmShared';
 import type { Location } from './MatterWorkspace';
+
+type UnifiedTrashItem =
+    | { source: 'matter'; item: TrashItem }
+    | { source: 'network'; item: TauriUncTrashItem; shareRoot: string };
 
 type ListProps = {
     viewerId: number;
@@ -235,18 +248,61 @@ export function TrashView({ onChanged }: { onChanged: () => void }) {
     const { tr, locale } = useFm();
     const act = useAction();
     const load = useLoad(() => filesApi.trash(), []);
-    const [purge, setPurge] = useState<{ kind: string; id: string; name: string } | null>(null);
-    const items = load.data?.items ?? [];
+    const [networkItems, setNetworkItems] = useState<Array<{ item: TauriUncTrashItem; shareRoot: string }>>([]);
+    const [networkError, setNetworkError] = useState<string | null>(null);
+    const [purge, setPurge] = useState<UnifiedTrashItem | null>(null);
+
+    const reloadNetwork = async () => {
+        if (!canUseTauriNetDrive()) {
+            setNetworkItems([]);
+            setNetworkError(null);
+            return;
+        }
+        const settings = loadNetDriveSettings();
+        if (!settings?.unc.trim()) {
+            setNetworkItems([]);
+            setNetworkError(null);
+            return;
+        }
+        const shareRoot = trimUnc(settings.unc);
+        try {
+            const rows = await tauriListUncTrash(shareRoot);
+            setNetworkItems(rows.map((item) => ({ item, shareRoot })));
+            setNetworkError(null);
+        }
+        catch (err) {
+            setNetworkItems([]);
+            setNetworkError(err instanceof Error ? err.message : String(err));
+        }
+    };
+
+    useEffect(() => {
+        void reloadNetwork();
+    }, [load.data]);
+
+    const items = useMemo<UnifiedTrashItem[]>(() => {
+        const matter = (load.data?.items ?? []).map((item) => ({ source: 'matter' as const, item }));
+        const network = networkItems.map((row) => ({ source: 'network' as const, item: row.item, shareRoot: row.shareRoot }));
+        return [...matter, ...network];
+    }, [load.data, networkItems]);
+
+    const reloadAll = () => {
+        load.reload();
+        void reloadNetwork();
+    };
+
     return (
         <section className="fm-docs fm-docs--padded">
             <p className="fm-hint">{tr('trash.hint')}</p>
-            <StateBlock loading={load.loading && !load.data} error={load.error} onRetry={load.reload}
-                empty={load.data && items.length === 0 ? <><Icon name="trash" /><p>{tr('trash.empty')}</p></> : undefined}>
+            {networkError ? <p className="fm-hint">{tr('trash.sourceNetwork')}: {networkError}</p> : null}
+            <StateBlock loading={load.loading && !load.data} error={load.error} onRetry={reloadAll}
+                empty={!load.loading && items.length === 0 ? <><Icon name="trash" /><p>{tr('trash.empty')}</p></> : undefined}>
                 <div className="fm-table-wrap">
                     <table className="fm-table fm-table--trash">
                         <thead>
                             <tr>
                                 <th>{tr('table.name')}</th>
+                                <th>{tr('trash.source')}</th>
                                 <th>{tr('common.clientMatter')}</th>
                                 <th>{tr('trash.deleted')}</th>
                                 <th>{tr('trash.deletedBy')}</th>
@@ -254,59 +310,123 @@ export function TrashView({ onChanged }: { onChanged: () => void }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item) => (
-                                <tr key={`${item.kind}:${item.id}`}>
-                                    <td>
-                                        <span className="fm-table__name">
-                                            <span className="fm-table__ico" aria-hidden>
-                                                {item.kind === 'folder'
-                                                    ? <Icon name="folder" className="fm-ico--folder" />
-                                                    : <FileBadge kind={item.fileKind ?? 'file'} />}
+                            {items.map((row) => {
+                                if (row.source === 'matter') {
+                                    const item = row.item;
+                                    return (
+                                        <tr key={`matter:${item.kind}:${item.id}`}>
+                                            <td>
+                                                <span className="fm-table__name">
+                                                    <span className="fm-table__ico" aria-hidden>
+                                                        {item.kind === 'folder'
+                                                            ? <Icon name="folder" className="fm-ico--folder" />
+                                                            : <FileBadge kind={item.fileKind ?? 'file'} />}
+                                                    </span>
+                                                    <span>
+                                                        <strong>{item.name}</strong>
+                                                        <small>{item.kind === 'folder' ? tr('trash.folderDocs', { count: item.documents ?? 0 }) : formatBytes(item.sizeBytes ?? 0, locale)}</small>
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td>{tr('trash.sourceMatter')}</td>
+                                            <td>
+                                                <span className="fm-table__matter">
+                                                    <small>{item.clientName}</small>
+                                                    <span>{item.matterName}</span>
+                                                </span>
+                                            </td>
+                                            <td className="fm-nowrap">{formatDateTime(item.deletedAt, locale)}</td>
+                                            <td>{item.deletedBy}</td>
+                                            <td className="fm-table__actions">
+                                                <span className="fm-table__actions-row">
+                                                    <button type="button" className="fm-btn" onClick={async () => {
+                                                        const ok = await act(() => filesApi.restoreTrash(item.kind, item.id), tr('pane.saved'));
+                                                        if (ok) {
+                                                            reloadAll();
+                                                            onChanged();
+                                                        }
+                                                    }}><Icon name="restore" />{tr('trash.restore')}</button>
+                                                    {item.canPurge ? (
+                                                        <button type="button" className="fm-btn fm-btn--danger" onClick={() => setPurge(row)}>
+                                                            {tr('trash.purge')}
+                                                        </button>
+                                                    ) : null}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+                                const item = row.item;
+                                return (
+                                    <tr key={`network:${item.id}`}>
+                                        <td>
+                                            <span className="fm-table__name">
+                                                <span className="fm-table__ico" aria-hidden>
+                                                    {item.isDir
+                                                        ? <Icon name="folder" className="fm-ico--folder" />
+                                                        : <Icon name="list" />}
+                                                </span>
+                                                <span>
+                                                    <strong>{item.name}</strong>
+                                                    <small>{item.isDir ? tr('browser.folderType') : tr('browser.fileType')}</small>
+                                                </span>
                                             </span>
-                                            <span>
-                                                <strong>{item.name}</strong>
-                                                <small>{item.kind === 'folder' ? tr('trash.folderDocs', { count: item.documents ?? 0 }) : formatBytes(item.sizeBytes ?? 0, locale)}</small>
+                                        </td>
+                                        <td>{tr('trash.sourceNetwork')}</td>
+                                        <td>
+                                            <span className="fm-table__matter">
+                                                <small>{tr('trash.networkFolder')}</small>
+                                                <span title={item.originalPath}>{item.originalPath || '—'}</span>
                                             </span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className="fm-table__matter">
-                                            <small>{item.clientName}</small>
-                                            <span>{item.matterName}</span>
-                                        </span>
-                                    </td>
-                                    <td className="fm-nowrap">{formatDateTime(item.deletedAt, locale)}</td>
-                                    <td>{item.deletedBy}</td>
-                                    <td className="fm-table__actions">
-                                        <span className="fm-table__actions-row">
-                                            <button type="button" className="fm-btn" onClick={async () => {
-                                                const ok = await act(() => filesApi.restoreTrash(item.kind, item.id), tr('pane.saved'));
-                                                if (ok) {
-                                                    load.reload();
-                                                    onChanged();
-                                                }
-                                            }}><Icon name="restore" />{tr('trash.restore')}</button>
-                                            {item.canPurge ? (
-                                                <button type="button" className="fm-btn fm-btn--danger" onClick={() => setPurge({ kind: item.kind, id: item.id, name: item.name })}>
+                                        </td>
+                                        <td className="fm-nowrap">{formatDateTime(item.deletedAt || null, locale)}</td>
+                                        <td>{item.deletedBy}</td>
+                                        <td className="fm-table__actions">
+                                            <span className="fm-table__actions-row">
+                                                <button type="button" className="fm-btn" onClick={async () => {
+                                                    const ok = await act(async () => {
+                                                        await tauriRestoreUncTrash(row.shareRoot, item.id);
+                                                        return true;
+                                                    }, tr('pane.saved'));
+                                                    if (ok) {
+                                                        reloadAll();
+                                                        onChanged();
+                                                    }
+                                                }}><Icon name="restore" />{tr('trash.restore')}</button>
+                                                <button type="button" className="fm-btn fm-btn--danger" onClick={() => setPurge(row)}>
                                                     {tr('trash.purge')}
                                                 </button>
-                                            ) : null}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
             </StateBlock>
             {purge ? (
-                <ConfirmModal title={tr('trash.purge')} text={tr('trash.purgeConfirm', { name: purge.name })} confirmLabel={tr('trash.purge')} danger
+                <ConfirmModal
+                    title={tr('trash.purge')}
+                    text={tr('trash.purgeConfirm', { name: purge.source === 'matter' ? purge.item.name : purge.item.name })}
+                    confirmLabel={tr('trash.purge')}
+                    danger
                     onClose={() => setPurge(null)}
                     onConfirm={async () => {
-                        const ok = await act(() => filesApi.purgeTrash(purge.kind, purge.id));
+                        if (purge.source === 'matter') {
+                            const ok = await act(() => filesApi.purgeTrash(purge.item.kind, purge.item.id));
+                            if (ok)
+                                reloadAll();
+                            return;
+                        }
+                        const ok = await act(async () => {
+                            await tauriPurgeUncTrash(purge.shareRoot, purge.item.id);
+                            return true;
+                        });
                         if (ok)
-                            load.reload();
-                    }} />
+                            reloadAll();
+                    }}
+                />
             ) : null}
         </section>
     );
