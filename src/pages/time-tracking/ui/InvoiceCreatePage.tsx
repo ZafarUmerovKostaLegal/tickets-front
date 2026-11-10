@@ -711,23 +711,25 @@ export function InvoiceCreatePage() {
       ? `${customBilledCurrency} ${customAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : null;
     const nextDoc = (() => {
-      const base = reusedDoc ? { ...reusedDoc } : { v: 1 as const };
       if (!formattedCustomTotal)
         return reusedDoc;
+      const base: Record<string, unknown> = reusedDoc ? { ...reusedDoc } : { v: 1 };
+      const prevCover = base.cover;
+      const prevLegal = base.legal;
       const cover = {
-        ...((base.cover && typeof base.cover === 'object' && !Array.isArray(base.cover))
-          ? (base.cover as Record<string, unknown>)
+        ...((prevCover && typeof prevCover === 'object' && !Array.isArray(prevCover))
+          ? (prevCover as Record<string, unknown>)
           : {}),
         totalFormatted: formattedCustomTotal,
       };
       const legal = {
-        ...((base.legal && typeof base.legal === 'object' && !Array.isArray(base.legal))
-          ? (base.legal as Record<string, unknown>)
+        ...((prevLegal && typeof prevLegal === 'object' && !Array.isArray(prevLegal))
+          ? (prevLegal as Record<string, unknown>)
           : {}),
         ...(customDesc ? { serviceDescriptionLine: customDesc } : {}),
         extraExpensesAmount: `${customBilledCurrency} 0.00`,
       };
-      return { ...base, v: 1 as const, cover, legal };
+      return { ...base, v: 1, cover, legal };
     })();
     writeInvoicePreviewSession({
       v: 1,
