@@ -421,12 +421,10 @@ export function NetworkFolderView() {
 
     const closeMenu = () => setMenu(null);
 
-    const selectOnly = (id: string | null, openDrawer = false) => {
+    const selectOnly = (id: string | null) => {
         setSelectedIds(id ? [id] : []);
         if (!id)
             setDrawerOpen(false);
-        else if (openDrawer)
-            setDrawerOpen(true);
     };
 
     const openDetails = (entry?: DemoEntry, tab: DrawerTab = 'details') => {
@@ -483,7 +481,7 @@ export function NetworkFolderView() {
             { id, name: uniqueName(rows, name), kind: 'folder' },
         ]);
         setTree((prev) => ({ ...prev, [id]: prev[id] ?? [] }));
-        selectOnly(id, true);
+        selectOnly(id);
         return true;
     };
 
@@ -873,12 +871,11 @@ export function NetworkFolderView() {
                                                     setSelectedIds(entries.slice(from, to + 1).map((row) => row.id));
                                                 }
                                                 else {
-                                                    selectOnly(entry.id, true);
+                                                    selectOnly(entry.id);
                                                 }
                                             }
                                             else {
-                                                selectOnly(entry.id, true);
-                                                setDrawerTab('details');
+                                                selectOnly(entry.id);
                                             }
                                             closeMenu();
                                         }}

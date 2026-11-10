@@ -175,7 +175,7 @@ function FileManagerWorkspace() {
         }
     };
 
-    const workspaceView = view === 'matter';
+    const workspaceView = view === 'matter' || view === 'networkFolder';
 
     return (
         <div className="fm__body">
@@ -190,7 +190,7 @@ function FileManagerWorkspace() {
                 ) : null}
             </aside>
             <ViewTransition default="none" enter="none" exit="none" update="fm-section">
-                <main key={workspaceView ? `matter:${matterId}` : `${view}:${clientId ?? ''}`} className={workspaceView ? 'fm__main fm__main--browser' : 'fm__main'}>
+                <main key={view === 'matter' ? `matter:${matterId}` : `${view}:${clientId ?? ''}`} className={workspaceView ? 'fm__main fm__main--browser' : 'fm__main'}>
                     {!workspaceView ? (
                         <header className="fm__view-head">
                             <Icon name={active.icon} />
