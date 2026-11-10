@@ -2486,15 +2486,27 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   background: var(--fm-surface);
 }
 
+.fm-disk__readonly {
+  margin: 0;
+  padding: 0.45rem 1rem 0;
+}
+
 .fm-disk__body {
   flex: 1;
+  min-height: 0;
+}
+
+.fm-disk__tiles {
+  padding: 1rem 1.25rem 1.25rem;
 }
 
 .fm-disk__status {
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  margin: 0.75rem 0 0;
+  margin: 0;
+  padding: 0.55rem 1.25rem 0.75rem;
+  border-top: 1px solid var(--fm-border);
   color: var(--fm-muted);
   font-size: 0.8rem;
 }
