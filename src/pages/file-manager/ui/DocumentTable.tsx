@@ -76,8 +76,12 @@ export function DocumentTable({
                             <td />
                             <td colSpan={showMatter ? 2 : 1}>
                                 <span className="fm-table__name">
-                                    <Icon name="folder" className="fm-ico--folder" />
-                                    <strong>{folder.name}</strong>
+                                    <span className="fm-table__ico" aria-hidden>
+                                        <Icon name="folder" className="fm-ico--folder" />
+                                    </span>
+                                    <span>
+                                        <strong>{folder.name}</strong>
+                                    </span>
                                 </span>
                             </td>
                             <td />
@@ -115,7 +119,9 @@ export function DocumentTable({
                                 </td>
                                 <td>
                                     <span className="fm-table__name">
-                                        <FileBadge kind={doc.kind} />
+                                        <span className="fm-table__ico" aria-hidden>
+                                            <FileBadge kind={doc.kind} />
+                                        </span>
                                         <span>
                                             <strong title={doc.name}>{doc.name}</strong>
                                             <small>{doc.docNumber}{doc.docType ? ` · ${tr(`docTypes.${doc.docType}`)}` : ''}</small>

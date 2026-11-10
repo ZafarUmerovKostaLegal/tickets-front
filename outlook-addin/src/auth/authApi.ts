@@ -257,12 +257,9 @@ function humanizeOAuthError(raw: string): string {
 const OAUTH_AUTHORIZE_KEY = 'kosta.outlook.oauth.authorize';
 
 function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<string> {
-  // Short bridge URL only — New Outlook dialog often has a separate storage partition,
-  // so we deliver authorizeUrl via dialog.messageChild after {type:'ready'}.
   try {
     localStorage.setItem(OAUTH_AUTHORIZE_KEY, authorizeUrl);
   } catch {
-    /* optional cache */
   }
   const bridge = hubLoginPageUrl();
 

@@ -1268,13 +1268,29 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 .fm-table__name {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
   min-width: 0;
 }
 
-.fm-table__name > span {
+.fm-table__ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 1.55rem;
+  flex-shrink: 0;
+}
+
+.fm-table__ico .fm-ico {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.fm-table__name > span:not(.fm-table__ico) {
   display: flex;
   flex-direction: column;
+  gap: 0.12rem;
+  justify-content: center;
   min-width: 0;
 }
 
@@ -1282,6 +1298,7 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   max-width: 32rem;
   overflow: hidden;
   font-weight: 600;
+  line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1290,20 +1307,70 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 .fm-table__matter small {
   color: var(--fm-muted);
   font-size: 0.74rem;
+  line-height: 1.25;
 }
 
 .fm-table__matter {
   display: flex;
   flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  line-height: 1.25;
 }
 
-.fm-table__actions {
-  text-align: right;
+.fm-table__matter > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.fm-table__actions {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.fm-table__actions-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+
 .fm-table__actions .fm-btn + .fm-btn {
-  margin-left: 0.4rem;
+  margin-left: 0;
+}
+
+.fm-table--trash {
+  table-layout: fixed;
+}
+
+.fm-table--trash th:nth-child(1),
+.fm-table--trash td:nth-child(1) {
+  width: 34%;
+}
+
+.fm-table--trash th:nth-child(2),
+.fm-table--trash td:nth-child(2) {
+  width: 22%;
+}
+
+.fm-table--trash th:nth-child(3),
+.fm-table--trash td:nth-child(3) {
+  width: 12rem;
+}
+
+.fm-table--trash th:nth-child(4),
+.fm-table--trash td:nth-child(4) {
+  width: 10rem;
+}
+
+.fm-table--trash th:nth-child(5),
+.fm-table--trash td:nth-child(5) {
+  width: auto;
 }
 
 .fm-more {

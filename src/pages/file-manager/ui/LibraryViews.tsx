@@ -221,14 +221,14 @@ export function TrashView({ onChanged }: { onChanged: () => void }) {
             <StateBlock loading={load.loading && !load.data} error={load.error} onRetry={load.reload}
                 empty={load.data && items.length === 0 ? <><Icon name="trash" /><p>{tr('trash.empty')}</p></> : undefined}>
                 <div className="fm-table-wrap">
-                    <table className="fm-table">
+                    <table className="fm-table fm-table--trash">
                         <thead>
                             <tr>
                                 <th>{tr('table.name')}</th>
                                 <th>{tr('common.clientMatter')}</th>
                                 <th>{tr('trash.deleted')}</th>
                                 <th>{tr('trash.deletedBy')}</th>
-                                <th />
+                                <th className="fm-table__actions" />
                             </tr>
                         </thead>
                         <tbody>
@@ -236,7 +236,11 @@ export function TrashView({ onChanged }: { onChanged: () => void }) {
                                 <tr key={`${item.kind}:${item.id}`}>
                                     <td>
                                         <span className="fm-table__name">
-                                            {item.kind === 'folder' ? <Icon name="folder" className="fm-ico--folder" /> : <FileBadge kind={item.fileKind ?? 'file'} />}
+                                            <span className="fm-table__ico" aria-hidden>
+                                                {item.kind === 'folder'
+                                                    ? <Icon name="folder" className="fm-ico--folder" />
+                                                    : <FileBadge kind={item.fileKind ?? 'file'} />}
+                                            </span>
                                             <span>
                                                 <strong>{item.name}</strong>
                                                 <small>{item.kind === 'folder' ? tr('trash.folderDocs', { count: item.documents ?? 0 }) : formatBytes(item.sizeBytes ?? 0, locale)}</small>
@@ -244,23 +248,28 @@ export function TrashView({ onChanged }: { onChanged: () => void }) {
                                         </span>
                                     </td>
                                     <td>
-                                        <span className="fm-table__matter"><small>{item.clientName}</small><span>{item.matterName}</span></span>
+                                        <span className="fm-table__matter">
+                                            <small>{item.clientName}</small>
+                                            <span>{item.matterName}</span>
+                                        </span>
                                     </td>
-                                    <td>{formatDateTime(item.deletedAt, locale)}</td>
+                                    <td className="fm-nowrap">{formatDateTime(item.deletedAt, locale)}</td>
                                     <td>{item.deletedBy}</td>
                                     <td className="fm-table__actions">
-                                        <button type="button" className="fm-btn" onClick={async () => {
-                                            const ok = await act(() => filesApi.restoreTrash(item.kind, item.id), tr('pane.saved'));
-                                            if (ok) {
-                                                load.reload();
-                                                onChanged();
-                                            }
-                                        }}><Icon name="restore" />{tr('trash.restore')}</button>
-                                        {item.canPurge ? (
-                                            <button type="button" className="fm-btn fm-btn--danger" onClick={() => setPurge({ kind: item.kind, id: item.id, name: item.name })}>
-                                                {tr('trash.purge')}
-                                            </button>
-                                        ) : null}
+                                        <span className="fm-table__actions-row">
+                                            <button type="button" className="fm-btn" onClick={async () => {
+                                                const ok = await act(() => filesApi.restoreTrash(item.kind, item.id), tr('pane.saved'));
+                                                if (ok) {
+                                                    load.reload();
+                                                    onChanged();
+                                                }
+                                            }}><Icon name="restore" />{tr('trash.restore')}</button>
+                                            {item.canPurge ? (
+                                                <button type="button" className="fm-btn fm-btn--danger" onClick={() => setPurge({ kind: item.kind, id: item.id, name: item.name })}>
+                                                    {tr('trash.purge')}
+                                                </button>
+                                            ) : null}
+                                        </span>
                                     </td>
                                 </tr>
                             ))}

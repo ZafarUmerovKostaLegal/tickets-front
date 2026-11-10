@@ -209,8 +209,12 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                                     </td>
                                     <td>
                                         <span className="fm-table__name">
-                                            <Icon name="building" className="fm-ico--client" />
-                                            <strong>{client.name}</strong>
+                                            <span className="fm-table__ico" aria-hidden>
+                                                <Icon name="building" className="fm-ico--client" />
+                                            </span>
+                                            <span>
+                                                <strong>{client.name}</strong>
+                                            </span>
                                             {client.archived ? <span className="fm-level fm-level--none">{tr('directory.archived')}</span> : null}
                                         </span>
                                     </td>
@@ -455,7 +459,9 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                                     </td>
                                     <td>
                                         <span className="fm-table__name">
-                                            <Icon name={matter.closed || matter.level === 'read' ? 'lock' : 'briefcase'} className="fm-ico--client" />
+                                            <span className="fm-table__ico" aria-hidden>
+                                                <Icon name={matter.closed || matter.level === 'read' ? 'lock' : 'briefcase'} className="fm-ico--client" />
+                                            </span>
                                             <span>
                                                 <strong>{matter.name}</strong>
                                                 {matter.code ? <small>{matter.code}</small> : null}
