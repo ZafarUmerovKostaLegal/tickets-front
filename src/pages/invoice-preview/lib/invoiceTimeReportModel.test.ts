@@ -417,4 +417,19 @@ describe('summaryRowsForOfficialRates', () => {
         expect(rows[0]?.hourlyRate).toBe('USD 250.00');
         expect(rows[0]?.hours).toBe('3,81');
     });
+
+    it('uses the card rate even when fallbackRate drifted from amount÷hours', () => {
+        const rows = summaryRowsForOfficialRates({
+            initials: 'ADA',
+            name: 'Alina Abdullaeva',
+            title: 'Junior Associate',
+            currency: 'USD',
+            hours: 2,
+            amount: 299.42,
+            fallbackRate: 149.71,
+            slices: [{ rate: 150, hours: 2, amount: 299.42, validFrom: '2026-04-01' }],
+        });
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.hourlyRate).toBe('USD 150.00');
+    });
 });

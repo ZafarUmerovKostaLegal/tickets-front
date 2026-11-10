@@ -140,14 +140,16 @@ function resolveDetailHourlyRate(opts: {
     hours: number;
     amount: number;
 }): number {
-    const unit = Number(opts.unitAmount);
-    if (Number.isFinite(unit) && unit > 0)
-        return unit;
+    // Prefer explicit rate fields; amount÷hours is only a last resort (often FX drift).
+    // stampOfficialBillableRates + applyCardRatesWhereAmountMissing overwrite with the card when available.
     const src = Number(opts.rateSource);
     if (Number.isFinite(src) && src > 0)
-        return src;
+        return Math.round(src * 100) / 100;
+    const unit = Number(opts.unitAmount);
+    if (Number.isFinite(unit) && unit > 0)
+        return Math.round(unit * 100) / 100;
     if (opts.hours > 0 && Number.isFinite(opts.amount) && opts.amount !== 0)
-        return opts.amount / opts.hours;
+        return Math.round((opts.amount / opts.hours) * 100) / 100;
     return 0;
 }
 
@@ -294,7 +296,10 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     cardFrom?: string;
 };
 
-/** Fill missing rate/amount from the official rate card after stampOfficialBillableRates. */
+/**
+ * Prefer the official rate card for the Rate column.
+ * Do not leave amount÷hours (FX drift) as the displayed hourly rate when a card rate exists.
+ */
 function applyCardRatesWhereAmountMissing(details: BuildingDetail[], currency: string): void {
     for (const detail of details) {
         if (detail.rowKind !== 'time')
@@ -305,10 +310,8 @@ function applyCardRatesWhereAmountMissing(details: BuildingDetail[], currency: s
         const hours = sumRoundedTimeReportHours([detail.hoursNum]);
         if (!(hours > 0))
             continue;
-        if (!(detail.rateNum > 0)) {
-            detail.rateNum = rate;
-            detail.hourlyRate = formatDetailHourlyRate(rate, currency);
-        }
+        detail.rateNum = rate;
+        detail.hourlyRate = formatDetailHourlyRate(rate, currency);
         if (Math.abs(detail.amtNum) > 1e-9)
             continue;
         detail.amtNum = roundMoney2(hours * rate);

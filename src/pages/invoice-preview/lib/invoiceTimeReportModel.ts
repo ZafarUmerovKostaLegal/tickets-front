@@ -709,8 +709,11 @@ export function summaryRowsForOfficialRates(input: {
             return b.validFrom.localeCompare(a.validFrom);
         return b.rate - a.rate;
     });
-    if (distinct.length < 2) {
+    if (distinct.length === 0) {
         return [officialSummaryRow(input, input.title, input.hours, input.fallbackRate, input.amount)];
+    }
+    if (distinct.length === 1) {
+        return [officialSummaryRow(input, input.title, input.hours, distinct[0]!.rate, input.amount)];
     }
     const ratedHours = distinct.reduce((sum, slice) => sum + slice.hours, 0);
     const ratedAmount = distinct.reduce((sum, slice) => sum + slice.amount, 0);
