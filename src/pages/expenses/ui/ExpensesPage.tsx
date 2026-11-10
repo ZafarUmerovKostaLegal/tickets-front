@@ -36,7 +36,7 @@ import {
     expensesPeriodFilterLabel,
 } from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
-import { isEmployeePersonalFundsPayout, shouldHideCorporateCardFromCompanyMainList } from '@entities/expenses/model/expensePaymentDetails';
+import { belongsInCorporateCardSection, isEmployeePersonalFundsPayout, shouldHideCorporateCardFromCompanyMainList } from '@entities/expenses/model/expensePaymentDetails';
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import type { User } from '@entities/user/model/types';
@@ -705,6 +705,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             sortBy: filterSort,
             scopeMode,
             forceExpenseType: isClientScope ? 'client_expense' : undefined,
+            excludeExpenseType: isCorporateCardScope ? 'client_expense' : undefined,
             forcePaymentMethod: isCorporateCardScope ? 'card' : undefined,
         }, { signal: controller.signal, getReuseWindowMs: 0 })
             .then((next) => {
@@ -830,6 +831,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             pageSize: EXPENSES_LIST_PAGE_SIZE,
             scopeMode,
             forceExpenseType: isClientScope ? 'client_expense' : undefined,
+            excludeExpenseType: isCorporateCardScope ? 'client_expense' : undefined,
             forcePaymentMethod: isCorporateCardScope ? 'card' : undefined,
         });
         fetchExpenses(params, { signal: controller.signal, getReuseWindowMs: 0 })
@@ -1409,9 +1411,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             })
             .filter((r): r is ExpenseRequest => r !== null)
             .filter((r) => {
-                if (variant !== 'default')
-                    return true;
-                return !shouldHideCorporateCardFromCompanyMainList(r);
+                if (variant === 'default')
+                    return !shouldHideCorporateCardFromCompanyMainList(r);
+                if (variant === 'corporateCard')
+                    return belongsInCorporateCardSection(r);
+                return true;
             });
     }, [requests, authorCache, variant]);
     const editingRequestForPanel = useMemo(() => {

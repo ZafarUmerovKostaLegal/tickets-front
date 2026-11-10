@@ -7,6 +7,7 @@ import {
     isEmployeePersonalFundsPayout,
     isAwaitingVendorPayment,
     isAwaitingEmployeeReimbursement,
+    belongsInCorporateCardSection,
     isOfficeCorporateCardPayment,
     shouldHideCorporateCardFromCompanyMainList,
 } from './expensePaymentDetails';
@@ -99,13 +100,21 @@ describe('isAwaitingVendorPayment', () => {
 });
 
 describe('shouldHideCorporateCardFromCompanyMainList', () => {
-    it('hides office card spend that is not a client expense', () => {
+    it('keeps client+card in the general list and moves other card spend to Corporate Card', () => {
         expect(isOfficeCorporateCardPayment({ paymentMethod: 'card' })).toBe(true);
         expect(shouldHideCorporateCardFromCompanyMainList({
             paymentMethod: 'card',
             expenseType: 'services',
         })).toBe(true);
+        expect(belongsInCorporateCardSection({
+            paymentMethod: 'card',
+            expenseType: 'services',
+        })).toBe(true);
         expect(shouldHideCorporateCardFromCompanyMainList({
+            paymentMethod: 'card',
+            expenseType: 'client_expense',
+        })).toBe(false);
+        expect(belongsInCorporateCardSection({
             paymentMethod: 'card',
             expenseType: 'client_expense',
         })).toBe(false);

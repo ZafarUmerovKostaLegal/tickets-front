@@ -68,7 +68,7 @@ export function isOfficeCorporateCardPayment(req: {
 
 /**
  * Company main registry hides corporate-card spend unless it is a client expense.
- * Those rows live in the dedicated Corporate Card section.
+ * Client + corporate card stays in the general list; other card spend goes to Corporate Card.
  */
 export function shouldHideCorporateCardFromCompanyMainList(req: {
     paymentMethod?: string | null;
@@ -77,4 +77,12 @@ export function shouldHideCorporateCardFromCompanyMainList(req: {
     if (!isOfficeCorporateCardPayment(req))
         return false;
     return String(req.expenseType ?? '').trim() !== 'client_expense';
+}
+
+/** Corporate Card section: office-card spend that is not a client expense. */
+export function belongsInCorporateCardSection(req: {
+    paymentMethod?: string | null;
+    expenseType?: string | null;
+}): boolean {
+    return shouldHideCorporateCardFromCompanyMainList(req);
 }
