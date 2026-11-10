@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { filesApi, type AuditRow, type ClientsResponse } from '../api/filesApi';
 import { formatBytes, formatDateTime, parseTemplate } from '../lib/filesFormat';
+import { FmSelect } from './fmSelect';
 import { Icon, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 
 const AUDIT_ACTIONS = [
@@ -44,6 +45,17 @@ export function AuditView({ clients, initialMatterId }: { clients: ClientsRespon
 
     const matters = clients.clients.flatMap((client) => client.matters.map((matter) => ({ ...matter, clientName: client.name })));
     const total = load.data?.total ?? 0;
+    const actionOptions = useMemo(() => [
+        { value: '', label: tr('audit.anyAction') },
+        ...AUDIT_ACTIONS.map((id) => ({ value: id, label: tr(`audit.actions.${id}`) })),
+    ], [tr]);
+    const matterOptions = useMemo(() => [
+        { value: '', label: tr('search.anyMatter') },
+        ...matters.map((matter) => ({
+            value: matter.id,
+            label: `${matter.clientName} · ${matter.code ? `${matter.code} · ` : ''}${matter.name}`,
+        })),
+    ], [matters, tr]);
 
     const exportCsv = async () => {
         const header = [tr('audit.when'), tr('common.user'), tr('audit.action'), tr('common.matter'), tr('audit.target'), tr('audit.detail')];
@@ -61,22 +73,24 @@ export function AuditView({ clients, initialMatterId }: { clients: ClientsRespon
                     <Icon name="search" />
                     <input value={text} placeholder={tr('audit.search')} onChange={(event) => setText(event.target.value)} />
                 </label>
-                <select value={action} onChange={(event) => {
-                    setAction(event.target.value);
-                    setOffset(0);
-                }}>
-                    <option value="">{tr('audit.anyAction')}</option>
-                    {AUDIT_ACTIONS.map((id) => <option key={id} value={id}>{tr(`audit.actions.${id}`)}</option>)}
-                </select>
-                <select value={matterId} onChange={(event) => {
-                    setMatterId(event.target.value);
-                    setOffset(0);
-                }}>
-                    <option value="">{tr('search.anyMatter')}</option>
-                    {matters.map((matter) => (
-                        <option key={matter.id} value={matter.id}>{matter.clientName} · {matter.code ? `${matter.code} · ` : ''}{matter.name}</option>
-                    ))}
-                </select>
+                <FmSelect
+                    value={action}
+                    options={actionOptions}
+                    placeholder={tr('audit.action')}
+                    onChange={(next) => {
+                        setAction(next);
+                        setOffset(0);
+                    }}
+                />
+                <FmSelect
+                    value={matterId}
+                    options={matterOptions}
+                    placeholder={tr('common.matter')}
+                    onChange={(next) => {
+                        setMatterId(next);
+                        setOffset(0);
+                    }}
+                />
                 <span className="fm-muted">{tr('audit.total', { count: total })}</span>
                 <button type="button" className="fm-btn" disabled={items.length === 0} onClick={exportCsv}><Icon name="download" />{tr('audit.export')}</button>
             </div>

@@ -123,6 +123,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         mineOnly: 'Mine only',
         clientsEmpty: 'No clients',
         clientsEmptyHint: 'Change the filter or check access in time tracking.',
+        filterNoMatch: 'No matches',
         viewList: 'List',
         viewTiles: 'Tiles',
         matterType: 'Matter',

@@ -464,6 +464,63 @@
   max-width: 14rem;
 }
 
+.fm-toolbar--filters > .fm-filter-select,
+.fm-toolbar > .fm-filter-select,
+.fm-toolbar--search > .fm-filter-select {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 9.5rem;
+  max-width: 16rem;
+}
+
+.fm-filter-select .tsp-srch__btn {
+  min-height: 2.1rem;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  background: var(--fm-surface);
+  color: var(--fm-text);
+  box-shadow: none;
+}
+
+.fm-filter-select .tsp-srch__btn:hover:not(:disabled) {
+  background: var(--fm-hover);
+  border-color: var(--fm-border);
+}
+
+.fm-filter-select .tsp-srch__btn:focus {
+  border-color: var(--fm-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fm-accent) 18%, transparent);
+}
+
+.fm-filter-select .tsp-srch__btn-text {
+  font-size: 0.86rem;
+  color: var(--fm-text);
+}
+
+.fm-filter-select .tsp-srch__btn-text--placeholder {
+  color: var(--fm-muted);
+}
+
+.fm-filter-select--compact {
+  min-width: 8.5rem;
+  max-width: 11rem;
+}
+
+.fm-filter-select--level {
+  min-width: 9.5rem;
+  max-width: 12rem;
+}
+
+.fm-field > .fm-filter-select {
+  width: 100%;
+  max-width: none;
+}
+
+.fm-requests__actions > .fm-filter-select {
+  min-width: 8.5rem;
+}
+
 .fm-chip {
   display: inline-flex;
   align-items: center;

@@ -8,6 +8,7 @@ import {
     type MouseEvent as ReactMouseEvent,
 } from 'react';
 import type { AclLevel } from '../api/filesApi';
+import { FmSelect } from './fmSelect';
 import { ConfirmModal, Icon, Modal, useFm } from './fmShared';
 
 type DemoEntry = {
@@ -308,25 +309,27 @@ function DetailsDrawer({
                                 setNote('');
                             }}
                         >
-                            <label className="fm-field">
+                            <div className="fm-field">
                                 <span>{tr('security.addUser')}</span>
-                                <select value={userId} onChange={(event) => setUserId(event.target.value)}>
-                                    <option value="">{tr('security.searchUser')}</option>
-                                    {availableUsers.map((user) => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.name} · {user.position}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="fm-field">
+                                <FmSelect
+                                    value={userId}
+                                    options={availableUsers.map((user) => ({
+                                        value: String(user.id),
+                                        label: `${user.name} · ${user.position}`,
+                                    }))}
+                                    onChange={setUserId}
+                                    placeholder={tr('security.searchUser')}
+                                />
+                            </div>
+                            <div className="fm-field">
                                 <span>{tr('security.addLevel')}</span>
-                                <select value={level} onChange={(event) => setLevel(event.target.value as AclLevel)}>
-                                    {ACL_LEVELS.map((item) => (
-                                        <option key={item} value={item}>{tr(`levels.${item}`)}</option>
-                                    ))}
-                                </select>
-                            </label>
+                                <FmSelect
+                                    value={level}
+                                    options={ACL_LEVELS.map((item) => ({ value: item, label: tr(`levels.${item}`) }))}
+                                    onChange={(next) => setLevel(next as AclLevel)}
+                                    placeholder={tr('security.addLevel')}
+                                />
+                            </div>
                             <label className="fm-field fm-field--grow">
                                 <span>{tr('security.note')}</span>
                                 <input value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} />
@@ -347,16 +350,14 @@ function DetailsDrawer({
                                             <strong>{rule.userName}</strong>
                                             <small>{rule.position}{rule.note ? ` · ${rule.note}` : ''}</small>
                                         </div>
-                                        <select
-                                            className={`fm-level-select fm-level--${rule.level}`}
+                                        <FmSelect
                                             value={rule.level}
-                                            onChange={(event) => onChangeLevel(rule.userId, event.target.value as AclLevel)}
-                                            aria-label={tr('security.addLevel')}
-                                        >
-                                            {ACL_LEVELS.map((item) => (
-                                                <option key={item} value={item}>{tr(`levels.${item}`)}</option>
-                                            ))}
-                                        </select>
+                                            className={`fm-filter-select--level fm-level--${rule.level}`}
+                                            buttonClassName={`fm-level-select fm-level--${rule.level}`}
+                                            options={ACL_LEVELS.map((item) => ({ value: item, label: tr(`levels.${item}`) }))}
+                                            onChange={(next) => onChangeLevel(rule.userId, next as AclLevel)}
+                                            placeholder={tr('security.addLevel')}
+                                        />
                                         <button
                                             type="button"
                                             className="fm-btn"

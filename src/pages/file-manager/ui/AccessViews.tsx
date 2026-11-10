@@ -3,9 +3,11 @@ import { listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-
 import { SearchableSelect } from '@shared/ui';
 import { filesApi, type AccessRequest, type AclLevel, type ClientsResponse, type MatterRow, type RequestableMatter } from '../api/filesApi';
 import { formatDateTime } from '../lib/filesFormat';
+import { FmSelect } from './fmSelect';
 import { Icon, LevelBadge, Modal, StateBlock, useAction, useFm, useLoad } from './fmShared';
 
 const ACL_LEVELS: AclLevel[] = ['read', 'edit', 'manage', 'deny'];
+const GRANT_LEVELS = ['read', 'edit', 'manage'] as const;
 
 type MatterOption = MatterRow & { clientName: string };
 
@@ -139,9 +141,13 @@ export function RequestsView({ canManage, onChanged }: { canManage: boolean; onC
                                 <RequestStatus request={request} />
                                 {canManage && request.status === 'pending' ? (
                                     <div className="fm-requests__actions">
-                                        <select value={grant[request.id] ?? request.level} onChange={(event) => setGrant({ ...grant, [request.id]: event.target.value })}>
-                                            {(['read', 'edit', 'manage'] as const).map((level) => <option key={level} value={level}>{tr(`levels.${level}`)}</option>)}
-                                        </select>
+                                        <FmSelect
+                                            value={grant[request.id] ?? request.level}
+                                            className="fm-filter-select--compact"
+                                            options={GRANT_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
+                                            onChange={(level) => setGrant({ ...grant, [request.id]: level })}
+                                            placeholder={tr('security.addLevel')}
+                                        />
                                         <button type="button" className="fm-btn fm-btn--primary" onClick={() => decide(request, true)}><Icon name="check" />{tr('requests.approve')}</button>
                                         <button type="button" className="fm-btn" onClick={() => decide(request, false)}><Icon name="x" />{tr('requests.reject')}</button>
                                     </div>
@@ -234,12 +240,15 @@ export function SecurityView({ clients, matterId, onPickMatter }: {
                                         placeholder={tr('security.searchUser')}
                                     />
                                 </div>
-                                <label className="fm-field">
+                                <div className="fm-field">
                                     <span>{tr('security.addLevel')}</span>
-                                    <select value={addLevel} onChange={(event) => setAddLevel(event.target.value as AclLevel)}>
-                                        {ACL_LEVELS.map((level) => <option key={level} value={level}>{tr(`levels.${level}`)}</option>)}
-                                    </select>
-                                </label>
+                                    <FmSelect
+                                        value={addLevel}
+                                        options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
+                                        onChange={(level) => setAddLevel(level as AclLevel)}
+                                        placeholder={tr('security.addLevel')}
+                                    />
+                                </div>
                                 <label className="fm-field fm-field--grow">
                                     <span>{tr('security.note')}</span>
                                     <input value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
@@ -275,10 +284,14 @@ export function SecurityView({ clients, matterId, onPickMatter }: {
                                                             </span>
                                                         </td>
                                                         <td>
-                                                            <select className={`fm-level-select fm-level--${member.level}`} value={member.level}
-                                                                onChange={(event) => void setLevel(member.userId, member.name, event.target.value as AclLevel, rule?.note ?? '')}>
-                                                                {ACL_LEVELS.map((level) => <option key={level} value={level}>{tr(`levels.${level}`)}</option>)}
-                                                            </select>
+                                                            <FmSelect
+                                                                value={member.level}
+                                                                className={`fm-filter-select--level fm-level--${member.level}`}
+                                                                buttonClassName={`fm-level-select fm-level--${member.level}`}
+                                                                options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
+                                                                onChange={(level) => void setLevel(member.userId, member.name, level as AclLevel, rule?.note ?? '')}
+                                                                placeholder={tr('security.addLevel')}
+                                                            />
                                                         </td>
                                                         <td className="fm-muted">
                                                             {rule ? `${rule.note ? `${rule.note} · ` : ''}${rule.grantedBy} · ${formatDateTime(rule.grantedAt, locale)}` : '—'}
@@ -474,14 +487,15 @@ export function MatrixView({ clients }: { clients: ClientsResponse }) {
                             placeholder={tr('matrix.pickMatter')}
                         />
                     </div>
-                    <label className="fm-field">
+                    <div className="fm-field">
                         <span>{tr('security.addLevel')}</span>
-                        <select value={grantLevel} onChange={(event) => setGrantLevel(event.target.value as AclLevel)}>
-                            {ACL_LEVELS.map((level) => (
-                                <option key={level} value={level}>{tr(`levels.${level}`)}</option>
-                            ))}
-                        </select>
-                    </label>
+                        <FmSelect
+                            value={grantLevel}
+                            options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
+                            onChange={(level) => setGrantLevel(level as AclLevel)}
+                            placeholder={tr('security.addLevel')}
+                        />
+                    </div>
                     <label className="fm-field fm-field--grow">
                         <span>{tr('matrix.note')}</span>
                         <input value={grantNote} maxLength={500} onChange={(event) => setGrantNote(event.target.value)} />

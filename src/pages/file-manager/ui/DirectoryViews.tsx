@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { filesApi, type AccessLevel, type ClientsResponse, type MatterRow } from '../api/filesApi';
 import { matchesFilter } from '../lib/filesFormat';
+import { FmSelect } from './fmSelect';
 import { Icon, LevelBadge, useAction, useFm } from './fmShared';
 
 type DirectoryLayout = 'list' | 'tiles';
@@ -106,11 +107,16 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                     <Icon name="search" />
                     <input autoFocus value={filter} placeholder={tr('directory.clientsSearch')} onChange={(event) => setFilter(event.target.value)} />
                 </label>
-                <select value={status} aria-label={tr('directory.status')} onChange={(event) => setStatus(event.target.value as ClientStatus)}>
-                    <option value="active">{tr('directory.statusActive')}</option>
-                    <option value="archived">{tr('directory.statusArchived')}{archivedCount ? ` (${archivedCount})` : ''}</option>
-                    <option value="all">{tr('directory.statusAll')}</option>
-                </select>
+                <FmSelect
+                    value={status}
+                    placeholder={tr('directory.status')}
+                    onChange={(next) => setStatus(next as ClientStatus)}
+                    options={[
+                        { value: 'active', label: tr('directory.statusActive') },
+                        { value: 'archived', label: `${tr('directory.statusArchived')}${archivedCount ? ` (${archivedCount})` : ''}` },
+                        { value: 'all', label: tr('directory.statusAll') },
+                    ]}
+                />
                 <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
                     onClick={() => setFavoritesOnly((value) => !value)}>
                     <Icon name="star" />{tr('directory.favoritesOnly')}
@@ -328,26 +334,46 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                     <Icon name="search" />
                     <input autoFocus value={filter} placeholder={tr('directory.mattersSearch')} onChange={(event) => setFilter(event.target.value)} />
                 </label>
-                <select value={clientId ?? ''} aria-label={tr('common.client')} onChange={(event) => onPickClient(event.target.value || null)}>
-                    <option value="">{tr('search.anyClient')}</option>
-                    {clientOptions.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
-                </select>
-                <select value={status} aria-label={tr('directory.status')} onChange={(event) => setStatus(event.target.value as MatterStatus)}>
-                    <option value="open">{tr('directory.statusOpen')}</option>
-                    <option value="closed">{tr('directory.statusClosed')}{closedCount ? ` (${closedCount})` : ''}</option>
-                    <option value="all">{tr('directory.statusAll')}</option>
-                </select>
-                <select value={access} aria-label={tr('directory.access')} onChange={(event) => setAccess(event.target.value as AccessFilter)}>
-                    <option value="all">{tr('directory.accessAll')}</option>
-                    <option value="manage">{tr('levels.manage')}</option>
-                    <option value="edit">{tr('levels.edit')}</option>
-                    <option value="read">{tr('levels.read')}</option>
-                </select>
-                <select value={docs} aria-label={tr('directory.documents')} onChange={(event) => setDocs(event.target.value as DocsFilter)}>
-                    <option value="any">{tr('directory.docsAny')}</option>
-                    <option value="with">{tr('directory.withDocs')}</option>
-                    <option value="without">{tr('directory.withoutDocs')}</option>
-                </select>
+                <FmSelect
+                    value={clientId ?? ''}
+                    placeholder={tr('common.client')}
+                    onChange={(next) => onPickClient(next || null)}
+                    options={[
+                        { value: '', label: tr('search.anyClient') },
+                        ...clientOptions.map((row) => ({ value: row.id, label: row.name })),
+                    ]}
+                />
+                <FmSelect
+                    value={status}
+                    placeholder={tr('directory.status')}
+                    onChange={(next) => setStatus(next as MatterStatus)}
+                    options={[
+                        { value: 'open', label: tr('directory.statusOpen') },
+                        { value: 'closed', label: `${tr('directory.statusClosed')}${closedCount ? ` (${closedCount})` : ''}` },
+                        { value: 'all', label: tr('directory.statusAll') },
+                    ]}
+                />
+                <FmSelect
+                    value={access}
+                    placeholder={tr('directory.access')}
+                    onChange={(next) => setAccess(next as AccessFilter)}
+                    options={[
+                        { value: 'all', label: tr('directory.accessAll') },
+                        { value: 'manage', label: tr('levels.manage') },
+                        { value: 'edit', label: tr('levels.edit') },
+                        { value: 'read', label: tr('levels.read') },
+                    ]}
+                />
+                <FmSelect
+                    value={docs}
+                    placeholder={tr('directory.documents')}
+                    onChange={(next) => setDocs(next as DocsFilter)}
+                    options={[
+                        { value: 'any', label: tr('directory.docsAny') },
+                        { value: 'with', label: tr('directory.withDocs') },
+                        { value: 'without', label: tr('directory.withoutDocs') },
+                    ]}
+                />
                 <button type="button" className={favoritesOnly ? 'fm-chip is-on' : 'fm-chip'} aria-pressed={favoritesOnly}
                     onClick={() => setFavoritesOnly((value) => !value)}>
                     <Icon name="star" />{tr('directory.favoritesOnly')}

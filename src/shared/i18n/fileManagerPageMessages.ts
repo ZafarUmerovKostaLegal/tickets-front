@@ -121,6 +121,7 @@ export const fileManagerPageMessages = {
         mineOnly: 'Только мои',
         clientsEmpty: 'Нет клиентов',
         clientsEmptyHint: 'Измените фильтр или проверьте доступ в учёте времени.',
+        filterNoMatch: 'Ничего не найдено',
         viewList: 'Список',
         viewTiles: 'Плитки',
         matterType: 'Matter',

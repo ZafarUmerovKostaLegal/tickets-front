@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { filesApi, type ClientsResponse, type DocumentRow, type FileKind } from '../api/filesApi';
 import { formatBytes, formatDateTime } from '../lib/filesFormat';
 import { DocumentTable } from './DocumentTable';
 import { DocumentPane } from './DocumentPane';
+import { FmSelect } from './fmSelect';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, StateBlock, useAction, useFm, useLoad, type Loadable } from './fmShared';
 import type { Location } from './MatterWorkspace';
 
@@ -71,6 +72,21 @@ export function SearchView({ clients, ...props }: ListProps & { clients: Clients
     const matters = clients.clients
         .filter((client) => !form.clientId || client.id === form.clientId)
         .flatMap((client) => client.matters);
+    const clientOptions = useMemo(() => [
+        { value: '', label: tr('search.anyClient') },
+        ...clients.clients.map((client) => ({ value: client.id, label: client.name })),
+    ], [clients.clients, tr]);
+    const matterOptions = useMemo(() => [
+        { value: '', label: tr('search.anyMatter') },
+        ...matters.map((matter) => ({
+            value: matter.id,
+            label: `${matter.code ? `${matter.code} · ` : ''}${matter.name}`,
+        })),
+    ], [matters, tr]);
+    const kindOptions = useMemo(() => [
+        { value: '', label: tr('kinds.all') },
+        ...KINDS.map((kind) => ({ value: kind, label: tr(`kinds.${kind}`) })),
+    ], [tr]);
     const submit = () => {
         setQuery({ ...form });
         setSubmitted(true);
@@ -84,18 +100,24 @@ export function SearchView({ clients, ...props }: ListProps & { clients: Clients
                 <Icon name="search" />
                 <input autoFocus value={form.q} placeholder={tr('search.placeholder')} onChange={(event) => setForm({ ...form, q: event.target.value })} />
             </label>
-            <select value={form.clientId} onChange={(event) => setForm({ ...form, clientId: event.target.value, matterId: '' })}>
-                <option value="">{tr('search.anyClient')}</option>
-                {clients.clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
-            </select>
-            <select value={form.matterId} onChange={(event) => setForm({ ...form, matterId: event.target.value })}>
-                <option value="">{tr('search.anyMatter')}</option>
-                {matters.map((matter) => <option key={matter.id} value={matter.id}>{matter.code ? `${matter.code} · ` : ''}{matter.name}</option>)}
-            </select>
-            <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}>
-                <option value="">{tr('kinds.all')}</option>
-                {KINDS.map((kind) => <option key={kind} value={kind}>{tr(`kinds.${kind}`)}</option>)}
-            </select>
+            <FmSelect
+                value={form.clientId}
+                options={clientOptions}
+                placeholder={tr('common.client')}
+                onChange={(clientId) => setForm({ ...form, clientId, matterId: '' })}
+            />
+            <FmSelect
+                value={form.matterId}
+                options={matterOptions}
+                placeholder={tr('common.matter')}
+                onChange={(matterId) => setForm({ ...form, matterId })}
+            />
+            <FmSelect
+                value={form.kind}
+                options={kindOptions}
+                placeholder={tr('kinds.all')}
+                onChange={(kind) => setForm({ ...form, kind })}
+            />
             <button type="submit" className="fm-btn fm-btn--primary">{tr('search.submit')}</button>
             {load.data ? <span className="fm-muted">{tr('search.found', { count: load.data.total })}</span> : null}
         </form>

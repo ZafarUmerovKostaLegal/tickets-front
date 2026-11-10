@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { filesApi, type DocumentDetail, type DocumentRow, type FolderRow } from '../api/filesApi';
 import { canEdit, formatBytes, formatDateTime, previewMode } from '../lib/filesFormat';
+import { FmSelect } from './fmSelect';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, Modal, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 
 export const DOC_TYPES = ['agreement', 'correspondence', 'pleading', 'memo', 'corporate', 'poa', 'evidence', 'invoice', 'other'] as const;
@@ -136,21 +137,33 @@ function Properties({ detail, folders, editable, onSaved }: {
                 <span>{tr('common.name')}</span>
                 <input value={name} disabled={!editable} maxLength={300} onChange={(event) => setName(event.target.value)} />
             </label>
-            <label className="fm-field">
+            <div className="fm-field">
                 <span>{tr('pane.docType')}</span>
-                <select value={docType} disabled={!editable} onChange={(event) => setDocType(event.target.value)}>
-                    <option value="">{tr('docTypes.none')}</option>
-                    {DOC_TYPES.map((type) => <option key={type} value={type}>{tr(`docTypes.${type}`)}</option>)}
-                </select>
-            </label>
+                <FmSelect
+                    value={docType}
+                    disabled={!editable}
+                    options={[
+                        { value: '', label: tr('docTypes.none') },
+                        ...DOC_TYPES.map((type) => ({ value: type, label: tr(`docTypes.${type}`) })),
+                    ]}
+                    onChange={setDocType}
+                    placeholder={tr('pane.docType')}
+                />
+            </div>
             {folders.length > 0 ? (
-                <label className="fm-field">
+                <div className="fm-field">
                     <span>{tr('pane.move')}</span>
-                    <select value={folderId} disabled={!editable} onChange={(event) => setFolderId(event.target.value)}>
-                        <option value="">{tr('tree.root')}</option>
-                        {folderOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-                    </select>
-                </label>
+                    <FmSelect
+                        value={folderId}
+                        disabled={!editable}
+                        options={[
+                            { value: '', label: tr('tree.root') },
+                            ...folderOptions.map((option) => ({ value: option.id, label: option.label })),
+                        ]}
+                        onChange={setFolderId}
+                        placeholder={tr('pane.move')}
+                    />
+                </div>
             ) : null}
             <label className="fm-field">
                 <span>{tr('pane.description')}</span>
