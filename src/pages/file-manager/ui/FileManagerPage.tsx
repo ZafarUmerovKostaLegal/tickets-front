@@ -6,11 +6,11 @@ import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
 import { AuditView, MonitoringView, TemplateView } from './AdminViews';
-import { MatrixView, RequestAccessModal, RequestsView, SecurityView } from './AccessViews';
+import { MatrixView, RequestsView, SecurityView } from './AccessViews';
 import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
 import { MatterWorkspace, type Location } from './MatterWorkspace';
-import { Icon, StateBlock, ToastHost, useFm, useLoad, useNotify, type IconName } from './fmShared';
+import { Icon, StateBlock, ToastHost, useFm, useLoad, type IconName } from './fmShared';
 import './FileManagerPage.css';
 
 type View =
@@ -53,10 +53,7 @@ type GoParams = Partial<Location> & { clientId?: string | null };
 
 function FileManagerWorkspace() {
     const { tr } = useFm();
-    const notify = useNotify();
     const [params, setParams] = useSearchParams();
-    const [uploadSignal, setUploadSignal] = useState(0);
-    const [requesting, setRequesting] = useState(false);
     const [badgeTick, setBadgeTick] = useState(0);
     const clients = useLoad(() => filesApi.clients(), []);
 
@@ -101,16 +98,6 @@ function FileManagerWorkspace() {
     const active = [...workspace, ...ADMIN].find((item) => item.id === navView) ?? WORKSPACE[0];
     const serviceDown = clients.error !== null && clients.data === null;
 
-    const onUpload = () => {
-        if (view === 'matter' && matterId) {
-            setUploadSignal((n) => n + 1);
-            return;
-        }
-        notify(tr('browser.pickMatterFirst'), 'error');
-        if (view !== 'matters' && view !== 'myMatters')
-            go('matters');
-    };
-
     const renderItem = (item: NavItem) => (
         <button key={item.id} type="button" className={navView === item.id ? 'is-on' : ''} aria-current={navView === item.id ? 'page' : undefined}
             onClick={() => {
@@ -153,7 +140,7 @@ function FileManagerWorkspace() {
                         folderId={folderId}
                         docId={docId}
                         viewerId={viewerId}
-                        uploadSignal={uploadSignal}
+                        uploadSignal={0}
                         onNavigate={openMatter}
                         onOpenClients={() => go('clients')}
                         onOpenClient={openClient}
@@ -189,12 +176,6 @@ function FileManagerWorkspace() {
     return (
         <div className="fm__body">
             <aside className="fm-side">
-                <button type="button" className="fm-side__create" onClick={onUpload}>
-                    <Icon name="upload" />{tr('nav.upload')}
-                </button>
-                <button type="button" className="fm-side__secondary" onClick={() => setRequesting(true)} disabled={!clients.data}>
-                    <Icon name="key" />{tr('nav.requestAccess')}
-                </button>
                 <p>{tr('nav.workspace')}</p>
                 <nav aria-label={tr('nav.workspace')}>{workspace.map(renderItem)}</nav>
                 {canManage ? (
@@ -221,9 +202,6 @@ function FileManagerWorkspace() {
                     )}
                 </main>
             </ViewTransition>
-            {requesting && clients.data ? (
-                <RequestAccessModal requestable={clients.data.requestable} onClose={() => setRequesting(false)} onSent={refreshAll} />
-            ) : null}
         </div>
     );
 }
