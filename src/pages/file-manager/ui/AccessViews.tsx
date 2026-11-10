@@ -312,13 +312,75 @@ export function MatrixView({ clients }: { clients: ClientsResponse }) {
     const act = useAction();
     const [clientId, setClientId] = useState(clients.clients[0]?.id ?? '');
     const matrix = useLoad(clientId ? () => filesApi.matrix(clientId) : null, [clientId]);
-    const [cell, setCell] = useState<{ userId: number; userName: string; matterId: string; matterName: string; level: AclLevel | null; explicit: boolean } | null>(null);
+    const usersCatalog = useLoad(() => listTimeTrackingUsers(), []);
+    const [cell, setCell] = useState<{
+        userId: number;
+        userName: string;
+        matterId: string;
+        matterName: string;
+        level: AclLevel | null;
+        explicit: boolean;
+    } | null>(null);
+    const [cellNote, setCellNote] = useState('');
+    const [userQuery, setUserQuery] = useState('');
+    const [hideClosed, setHideClosed] = useState(true);
+    const [onlyExplicit, setOnlyExplicit] = useState(false);
+    const [grantUser, setGrantUser] = useState('');
+    const [grantMatter, setGrantMatter] = useState('');
+    const [grantLevel, setGrantLevel] = useState<AclLevel>('edit');
+    const [grantNote, setGrantNote] = useState('');
+
     const data = matrix.data && matrix.data.client.id === clientId ? matrix.data : null;
     const explicit = useMemo(() => new Set(data?.explicit ?? []), [data]);
+    const activeUsers = useMemo(
+        () => (usersCatalog.data ?? []).filter((user) => !user.is_blocked && !user.is_archived),
+        [usersCatalog.data],
+    );
+
+    const visibleMatters = useMemo(() => {
+        if (!data)
+            return [];
+        return hideClosed ? data.matters.filter((matter) => !matter.closed) : data.matters;
+    }, [data, hideClosed]);
+
+    const visibleUsers = useMemo(() => {
+        if (!data)
+            return [];
+        const q = userQuery.trim().toLowerCase();
+        return data.users.filter((user) => {
+            if (q) {
+                const hay = `${user.name} ${user.position}`.toLowerCase();
+                if (!hay.includes(q))
+                    return false;
+            }
+            if (onlyExplicit) {
+                return visibleMatters.some((matter) => explicit.has(`${user.userId}:${matter.id}`));
+            }
+            return true;
+        });
+    }, [data, userQuery, onlyExplicit, visibleMatters, explicit]);
+
+    const cellTitle = (level: AclLevel | null, isExplicit: boolean) => {
+        const levelLabel = level ? tr(`levels.${level}`) : tr('levels.none');
+        const source = level
+            ? (isExplicit ? tr('matrix.explicit') : tr('matrix.inherited'))
+            : tr('matrix.legendNone');
+        return `${levelLabel} · ${source}`;
+    };
+
+    const applyLevel = async (matterId: string, userId: number, name: string, level: AclLevel, note = '') => {
+        const ok = await act(
+            () => filesApi.setAcl(matterId, { userId, userName: name, level, note }),
+            tr('security.changed'),
+        );
+        if (ok)
+            matrix.reload();
+        return Boolean(ok);
+    };
 
     return (
         <section className="fm-docs fm-docs--padded">
-            <div className="fm-toolbar">
+            <div className="fm-toolbar fm-toolbar--filters fm-matrix-toolbar">
                 <div className="fm-field fm-field--inline">
                     <span>{tr('matrix.pickClient')}</span>
                     <SearchableSelect
@@ -327,80 +389,233 @@ export function MatrixView({ clients }: { clients: ClientsResponse }) {
                         getOptionValue={(client) => client.id}
                         getOptionLabel={(client) => client.name}
                         getSearchText={(client) => client.name}
-                        onSelect={(client) => setClientId(client.id)}
+                        onSelect={(client) => {
+                            setClientId(client.id);
+                            setGrantMatter('');
+                            setCell(null);
+                        }}
                         placeholder={tr('matrix.pickClient')}
                     />
                 </div>
+                <label className="fm-search">
+                    <Icon name="search" />
+                    <input
+                        value={userQuery}
+                        onChange={(event) => setUserQuery(event.target.value)}
+                        placeholder={tr('matrix.searchUser')}
+                        aria-label={tr('matrix.searchUser')}
+                    />
+                </label>
+                <label className="fm-check">
+                    <input type="checkbox" checked={hideClosed} onChange={(event) => setHideClosed(event.target.checked)} />
+                    {tr('matrix.hideClosed')}
+                </label>
+                <label className="fm-check">
+                    <input type="checkbox" checked={onlyExplicit} onChange={(event) => setOnlyExplicit(event.target.checked)} />
+                    {tr('matrix.onlyExplicit')}
+                </label>
             </div>
+
+            <ul className="fm-matrix-legend" aria-label={tr('matrix.title')}>
+                {ACL_LEVELS.map((level) => (
+                    <li key={level}>
+                        <span className={`fm-cell fm-level--${level}`}>{tr(`matrix.abbr.${level}`)}</span>
+                        <span>{tr(`levels.${level}`)}</span>
+                    </li>
+                ))}
+                <li>
+                    <span className="fm-cell fm-cell--none">{tr('matrix.abbr.none')}</span>
+                    <span>{tr('matrix.legendNone')}</span>
+                </li>
+                <li className="fm-matrix-legend__explicit">
+                    <span className="fm-cell fm-level--edit is-explicit">{tr('matrix.abbr.edit')}</span>
+                    <span>{tr('matrix.explicit')}</span>
+                </li>
+            </ul>
+
             <p className="fm-hint">{tr('matrix.hint')}</p>
-            <StateBlock loading={matrix.loading && !data} error={matrix.error} onRetry={matrix.reload}
-                empty={data && data.users.length === 0 ? tr('matrix.empty') : undefined}>
-                {data ? (
-                    <div className="fm-table-wrap fm-matrix-wrap">
-                        <table className="fm-matrix">
-                            <thead>
-                                <tr>
-                                    <th>{tr('common.user')}</th>
-                                    {data.matters.map((matter) => (
-                                        <th key={matter.id} title={matter.name} className={matter.closed ? 'is-closed' : undefined}>
-                                            <span>{matterLabel(matter)}</span>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.users.map((user) => (
-                                    <tr key={user.userId}>
-                                        <th>
-                                            <span>{user.name}</span>
-                                            {user.position ? <small>{user.position}</small> : null}
-                                        </th>
-                                        {data.matters.map((matter) => {
-                                            const key = `${user.userId}:${matter.id}`;
-                                            const level = data.cells[key] ?? null;
-                                            const isExplicit = explicit.has(key);
-                                            return (
-                                                <td key={matter.id}>
-                                                    <button type="button"
-                                                        className={['fm-cell', level ? `fm-level--${level}` : 'fm-cell--none', isExplicit ? 'is-explicit' : ''].filter(Boolean).join(' ')}
-                                                        title={level ? tr(`levels.${level}`) : tr('levels.none')}
-                                                        onClick={() => setCell({ userId: user.userId, userName: user.name, matterId: matter.id, matterName: matterLabel(matter), level, explicit: isExplicit })}>
-                                                        {level ? tr(`levels.${level}`).slice(0, 1) : '·'}
-                                                    </button>
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+
+            {data ? (
+                <form
+                    className="fm-grant"
+                    onSubmit={async (event) => {
+                        event.preventDefault();
+                        const user = activeUsers.find((row) => String(row.id) === grantUser);
+                        const matter = data.matters.find((row) => row.id === grantMatter);
+                        if (!user || !matter)
+                            return;
+                        if (await applyLevel(matter.id, user.id, userName(user), grantLevel, grantNote)) {
+                            setGrantUser('');
+                            setGrantNote('');
+                        }
+                    }}
+                >
+                    <div className="fm-field">
+                        <span>{tr('security.addUser')}</span>
+                        <SearchableSelect<TimeTrackingUserRow>
+                            value={grantUser}
+                            items={activeUsers}
+                            getOptionValue={(user) => String(user.id)}
+                            getOptionLabel={userName}
+                            getSearchText={(user) => `${userName(user)} ${user.email} ${user.position ?? ''}`}
+                            onSelect={(user) => setGrantUser(String(user.id))}
+                            placeholder={tr('security.searchUser')}
+                        />
                     </div>
+                    <div className="fm-field">
+                        <span>{tr('matrix.pickMatter')}</span>
+                        <SearchableSelect
+                            value={grantMatter}
+                            items={data.matters}
+                            getOptionValue={(matter) => matter.id}
+                            getOptionLabel={(matter) => matterLabel(matter)}
+                            getSearchText={(matter) => `${matter.code} ${matter.name}`}
+                            onSelect={(matter) => setGrantMatter(matter.id)}
+                            placeholder={tr('matrix.pickMatter')}
+                        />
+                    </div>
+                    <label className="fm-field">
+                        <span>{tr('security.addLevel')}</span>
+                        <select value={grantLevel} onChange={(event) => setGrantLevel(event.target.value as AclLevel)}>
+                            {ACL_LEVELS.map((level) => (
+                                <option key={level} value={level}>{tr(`levels.${level}`)}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="fm-field fm-field--grow">
+                        <span>{tr('matrix.note')}</span>
+                        <input value={grantNote} maxLength={500} onChange={(event) => setGrantNote(event.target.value)} />
+                    </label>
+                    <button type="submit" className="fm-btn fm-btn--primary" disabled={!grantUser || !grantMatter}>
+                        <Icon name="plus" />{tr('matrix.grant')}
+                    </button>
+                </form>
+            ) : null}
+
+            <StateBlock
+                loading={matrix.loading && !data}
+                error={matrix.error}
+                onRetry={matrix.reload}
+                empty={data && data.users.length === 0 ? tr('matrix.empty') : undefined}
+            >
+                {data ? (
+                    visibleUsers.length === 0 || visibleMatters.length === 0 ? (
+                        <div className="fm-state">{tr('matrix.noFilterMatches')}</div>
+                    ) : (
+                        <div className="fm-table-wrap fm-matrix-wrap">
+                            <table className="fm-matrix">
+                                <thead>
+                                    <tr>
+                                        <th>{tr('common.user')}</th>
+                                        {visibleMatters.map((matter) => (
+                                            <th key={matter.id} title={matter.name} className={matter.closed ? 'is-closed' : undefined}>
+                                                <span>{matterLabel(matter)}</span>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {visibleUsers.map((user) => (
+                                        <tr key={user.userId}>
+                                            <th>
+                                                <span>{user.name}</span>
+                                                {user.position ? <small>{user.position}</small> : null}
+                                            </th>
+                                            {visibleMatters.map((matter) => {
+                                                const key = `${user.userId}:${matter.id}`;
+                                                const level = data.cells[key] ?? null;
+                                                const isExplicit = explicit.has(key);
+                                                return (
+                                                    <td key={matter.id}>
+                                                        <button
+                                                            type="button"
+                                                            className={[
+                                                                'fm-cell',
+                                                                level ? `fm-level--${level}` : 'fm-cell--none',
+                                                                isExplicit ? 'is-explicit' : '',
+                                                            ].filter(Boolean).join(' ')}
+                                                            title={cellTitle(level, isExplicit)}
+                                                            onClick={() => {
+                                                                setCellNote('');
+                                                                setCell({
+                                                                    userId: user.userId,
+                                                                    userName: user.name,
+                                                                    matterId: matter.id,
+                                                                    matterName: matterLabel(matter),
+                                                                    level,
+                                                                    explicit: isExplicit,
+                                                                });
+                                                            }}
+                                                        >
+                                                            {level ? tr(`matrix.abbr.${level}`) : tr('matrix.abbr.none')}
+                                                        </button>
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
                 ) : null}
             </StateBlock>
+
             {cell ? (
                 <Modal title={`${cell.userName} · ${cell.matterName}`} onClose={() => setCell(null)}>
+                    <p className="fm-matrix-cell-meta">
+                        <strong>{tr('matrix.current')}:</strong>{' '}
+                        {cell.level ? tr(`levels.${cell.level}`) : tr('levels.none')}
+                        {' · '}
+                        {cell.level
+                            ? (cell.explicit ? tr('matrix.explicit') : tr('matrix.inherited'))
+                            : tr('matrix.legendNone')}
+                    </p>
+                    <p className="fm-hint">{tr('matrix.editHint')}</p>
                     <div className="fm-level-pick">
                         {ACL_LEVELS.map((level) => (
-                            <button key={level} type="button" className={cell.level === level ? `fm-level-pick__btn is-on fm-level--${level}` : `fm-level-pick__btn fm-level--${level}`}
+                            <button
+                                key={level}
+                                type="button"
+                                className={cell.level === level && cell.explicit
+                                    ? `fm-level-pick__btn is-on fm-level--${level}`
+                                    : `fm-level-pick__btn fm-level--${level}`}
                                 onClick={async () => {
-                                    const ok = await act(() => filesApi.setAcl(cell.matterId, { userId: cell.userId, userName: cell.userName, level }), tr('security.changed'));
-                                    if (ok) {
+                                    if (await applyLevel(cell.matterId, cell.userId, cell.userName, level, cellNote))
                                         setCell(null);
-                                        matrix.reload();
-                                    }
-                                }}>
+                                }}
+                            >
+                                <span className="fm-level-pick__abbr">{tr(`matrix.abbr.${level}`)}</span>
                                 {tr(`levels.${level}`)}
                             </button>
                         ))}
                     </div>
+                    <label className="fm-field">
+                        <span>{tr('matrix.note')}</span>
+                        <input
+                            value={cellNote}
+                            maxLength={500}
+                            onChange={(event) => setCellNote(event.target.value)}
+                            placeholder={tr('matrix.note')}
+                        />
+                    </label>
                     {cell.explicit ? (
-                        <button type="button" className="fm-btn" onClick={async () => {
-                            const ok = await act(() => filesApi.removeAcl(cell.matterId, cell.userId), tr('security.changed'));
-                            if (ok) {
-                                setCell(null);
-                                matrix.reload();
-                            }
-                        }}>{tr('security.remove')}</button>
+                        <button
+                            type="button"
+                            className="fm-btn"
+                            onClick={async () => {
+                                const ok = await act(
+                                    () => filesApi.removeAcl(cell.matterId, cell.userId),
+                                    tr('security.changed'),
+                                );
+                                if (ok) {
+                                    setCell(null);
+                                    matrix.reload();
+                                }
+                            }}
+                        >
+                            {tr('security.remove')}
+                        </button>
                     ) : null}
                 </Modal>
             ) : null}
