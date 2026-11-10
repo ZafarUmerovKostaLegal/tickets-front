@@ -51,7 +51,6 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).toContain('attendance');
         expect(ids).not.toContain('accounting');
         expect(ids).not.toContain('hr');
-        expect(ids).not.toContain('networkDrive');
     });
 
     it('партнёр видит admin и accounting, но не contacts', () => {

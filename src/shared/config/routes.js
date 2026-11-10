@@ -17,7 +17,6 @@ export const routes = {
     timeTrackingInvoiceDetail: '/time-tracking/invoices/:invoiceId',
     todo: '/todo',
     admin: '/admin',
-    networkDriveAccess: '/admin/network-drive',
     userEdit: '/admin/user/:id',
     projectDetail: '/time-tracking/project/:id',
     timesheet: '/timesheet',

@@ -42,7 +42,6 @@
   .ticket-detail,
   .td-page__main,
   .project-detail-page,
-  .ndrive__main,
   .user-edit-page__main {
     padding-bottom: var(--mob-safe-bottom);
   }
@@ -170,7 +169,6 @@
   .rules-page__header,
   .inv__header,
   .ap__header,
-  .ndrive__header,
   .vacation-schedule-page__header,
   .csched-page__header,
   .corr__header,
@@ -190,7 +188,6 @@
   .rules-page__title,
   .inv__title,
   .ap__title,
-  .ndrive__title,
   .vacation-schedule-page__title,
   .csched-page__title,
   .corr__title,
@@ -205,7 +202,6 @@
   .rules-page__subtitle,
   .inv__subtitle,
   .ap__subtitle,
-  .ndrive__subtitle,
   .corr__subtitle,
   .acct-page__subtitle,
   .contacts-page__subtitle {
@@ -220,7 +216,6 @@
   .rules-page__title,
   .inv__title,
   .ap__title,
-  .ndrive__title,
   .vacation-schedule-page__title,
   .csched-page__title,
   .corr__title,
@@ -985,22 +980,8 @@
 }
 
 @media (max-width: 768px) {
-  .ndrive__explorer-layout {
-    flex-direction: column;
-  }
 
-  .ndrive__sidebar {
-    width: 100%;
-    max-width: none;
-    height: auto;
-    max-height: 220px;
-    overflow-y: auto;
-  }
 
-  .ndrive__file-list {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
 }
 
 @media (max-width: 768px) {

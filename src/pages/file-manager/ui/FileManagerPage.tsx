@@ -10,12 +10,11 @@ import { MatrixView, RequestsView, SecurityView } from './AccessViews';
 import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
 import { MatterWorkspace, type Location } from './MatterWorkspace';
-import { NetworkFolderView } from './NetworkFolderView';
 import { Icon, StateBlock, ToastHost, useFm, useLoad, type IconName } from './fmShared';
 import './FileManagerPage.css';
 
 type View =
-    | 'clients' | 'matters' | 'myMatters' | 'networkFolder' | 'matter' | 'favorites' | 'recent' | 'search' | 'trash' | 'requests'
+    | 'clients' | 'matters' | 'myMatters' | 'matter' | 'favorites' | 'recent' | 'search' | 'trash' | 'requests'
     | 'security' | 'matrix' | 'audit' | 'monitoring' | 'templates';
 
 type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' };
@@ -24,7 +23,6 @@ const WORKSPACE: NavItem[] = [
     { id: 'clients', label: 'nav.clients', icon: 'building' },
     { id: 'matters', label: 'nav.allMatters', icon: 'briefcase' },
     { id: 'myMatters', label: 'nav.myMatters', icon: 'user' },
-    { id: 'networkFolder', label: 'nav.networkFolder', icon: 'folder' },
     { id: 'favorites', label: 'nav.favorites', icon: 'star' },
     { id: 'recent', label: 'nav.recent', icon: 'clock' },
     { id: 'search', label: 'nav.search', icon: 'search' },
@@ -158,8 +156,6 @@ function FileManagerWorkspace() {
                 return <SearchView clients={data} viewerId={viewerId} onLocate={openMatter} />;
             case 'trash':
                 return <TrashView onChanged={refreshAll} />;
-            case 'networkFolder':
-                return <NetworkFolderView />;
             case 'requests':
                 return <RequestsView canManage={canManage} onChanged={refreshAll} />;
             case 'security':
@@ -175,7 +171,7 @@ function FileManagerWorkspace() {
         }
     };
 
-    const workspaceView = view === 'matter' || view === 'networkFolder';
+    const workspaceView = view === 'matter';
 
     return (
         <div className="fm__body">

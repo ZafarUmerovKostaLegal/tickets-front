@@ -151,7 +151,6 @@ export const enMessages = {
         vacationSchedule: 'Vacation schedule',
         inventory: 'Inventory',
         admin: 'Admin panel',
-        networkDrive: 'Network drive',
         attendance: 'Attendance',
         callSchedule: 'Call schedule',
         rules: 'Rules',

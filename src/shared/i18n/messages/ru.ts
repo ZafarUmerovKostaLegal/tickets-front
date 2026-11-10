@@ -589,7 +589,6 @@ export const ruMessages: Messages = {
         vacationSchedule: 'График отпусков',
         inventory: 'Инвентаризация',
         admin: 'Админ-панель',
-        networkDrive: 'Сетевой диск',
         attendance: 'Посещаемость',
         callSchedule: 'Расписание звонков',
         rules: 'Правила',
@@ -1700,7 +1699,6 @@ export type Messages = {
         | 'vacationSchedule'
         | 'inventory'
         | 'admin'
-        | 'networkDrive'
         | 'attendance'
         | 'callSchedule'
         | 'rules'

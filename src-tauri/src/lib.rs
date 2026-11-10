@@ -1,5 +1,4 @@
 mod dms_explorer;
-mod network_drive;
 
 #[cfg(desktop)]
 fn configure_main_window(app: &tauri::App) -> tauri::Result<()> {
@@ -95,21 +94,6 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      network_drive::list_unc_entries,
-      network_drive::get_folder_acl,
-      network_drive::connect_unc_share,
-      network_drive::grant_folder_access,
-      network_drive::revoke_folder_access,
-      network_drive::get_folder_owner,
-      network_drive::set_folder_owner,
-      network_drive::create_unc_dir,
-      network_drive::write_unc_file,
-      network_drive::rename_unc_entry,
-      network_drive::copy_unc_entry,
-      network_drive::move_unc_to_trash,
-      network_drive::list_unc_trash,
-      network_drive::restore_unc_trash,
-      network_drive::purge_unc_trash,
       dms_explorer::show_dms_explorer,
       dms_explorer::dms_write_temp_file,
       dms_explorer::dms_open_path,

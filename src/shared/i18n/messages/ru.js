@@ -151,7 +151,6 @@ export const ruMessages = {
         vacationSchedule: 'График отпусков',
         inventory: 'Инвентаризация',
         admin: 'Админ-панель',
-        networkDrive: 'Сетевой диск',
         attendance: 'Посещаемость',
         callSchedule: 'Расписание звонков',
         rules: 'Правила',

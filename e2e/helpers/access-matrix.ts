@@ -32,8 +32,6 @@ export const ROUTE_ACCESS_MATRIX: RouteAccessExpectation[] = [
     { path: '/contacts', persona: 'employee', expectUrl: /\/home$/ },
     { path: '/expenses/requests', persona: 'employee', expectUrl: /\/expenses/ },
     { path: '/expenses/report', persona: 'employee', expectUrl: /\/expenses/ },
-    { path: '/admin/network-drive', persona: 'employee', expectUrl: /\/home$/ },
-
     
     { path: '/inventory', persona: 'employee', expectUrl: /\/inventory$/ },
     { path: '/call-schedule', persona: 'employee', expectUrl: /\/call-schedule$/ },
@@ -92,7 +90,6 @@ export const ALL_APP_PATHS = [
     '/internal-communication',
     '/admin',
     '/admin/user/1',
-    '/admin/network-drive',
     '/attendance',
     '/inventory',
     '/call-schedule',

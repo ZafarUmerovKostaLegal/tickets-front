@@ -44,7 +44,6 @@ export const HUB_SECTIONS: HubSectionDef[] = [
             'internalCommunication',
             'rules',
             'help',
-            'networkDrive',
             'itSecurity',
         ],
         accent: '#5E8575',

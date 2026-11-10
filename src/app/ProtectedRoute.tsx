@@ -27,7 +27,6 @@ function ProtectedRouteLoading() {
       </div>
     </div>);
 }
-const ADMIN_ROLE = 'Администратор';
 type ProtectedRouteProps = {
     children: ReactNode;
     adminOnly?: boolean;
@@ -52,12 +51,7 @@ export function ProtectedRoute({ children, adminOnly = false, fallback = null }:
         return <Navigate to={routes.login} state={{ archived: true }} replace/>;
     }
     if (adminOnly) {
-        const strictAdminOnly = location.pathname === routes.networkDriveAccess;
-        if (strictAdminOnly) {
-            if (user.role !== ADMIN_ROLE)
-                return <Navigate to={routes.home} replace/>;
-        }
-        else if (location.pathname === routes.admin || location.pathname.startsWith('/admin/')) {
+        if (location.pathname === routes.admin || location.pathname.startsWith('/admin/')) {
             if (!isPartnerOrgRole(user.role, user.position))
                 return <Navigate to={routes.home} replace/>;
         }

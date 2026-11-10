@@ -30,7 +30,6 @@ export const HUB_SECTIONS = [
             'internalCommunication',
             'rules',
             'help',
-            'networkDrive',
             'itSecurity',
         ],
         accent: '#5E8575',

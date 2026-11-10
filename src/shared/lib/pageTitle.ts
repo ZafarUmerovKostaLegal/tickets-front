@@ -105,7 +105,6 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         [routes.internalCommunication]: 'nav.internalCommunication',
         [routes.itSecurity]: 'nav.itSecurity',
         [routes.admin]: 'nav.admin',
-        [routes.networkDriveAccess]: 'nav.networkDrive',
     };
 
     if (routeTitleByPath[path])

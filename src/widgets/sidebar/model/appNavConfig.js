@@ -1,11 +1,10 @@
-import { isTauri } from '@tauri-apps/api/core';
 import { routes } from '@shared/config';
 import { canAccessExpensesSection } from '@entities/expenses/model/expenseModeration';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { canAccessAdminPanel, canAccessAdminOnlyModules, canAccessAttendance, isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
-import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconShield, } from '../ui/SidebarIcons';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconShield, } from '../ui/SidebarIcons';
 const EMPLOYEE_NAV_IDS = new Set([
     'home',
     'timeTracking',
@@ -35,7 +34,6 @@ export const APP_NAV_DEFINITIONS = [
     { id: 'vacationSchedule', to: routes.vacationSchedule, icon: IconCalendarCheck },
     { id: 'inventory', to: routes.inventory, icon: IconBox },
     { id: 'admin', to: routes.admin, icon: IconGear },
-    { id: 'networkDrive', to: routes.networkDriveAccess, icon: IconFolderNetwork, adminOnly: true, adminOnlyStrict: true, desktopOnly: true },
     { id: 'attendance', to: routes.attendance, icon: IconClock },
     { id: 'callSchedule', to: routes.callSchedule, icon: IconPhone },
     { id: 'rules', to: routes.rules, icon: IconFileText },
@@ -77,13 +75,8 @@ export function getVisibleAppNavItems(user, loading) {
                 return true;
             if (item.adminModulesOnly)
                 return canAccessAdminOnlyModules(user?.role);
-            if (item.adminOnlyStrict)
-                return user?.role === 'Администратор';
             return canAccessAdminPanel(user?.role, user?.position);
         });
-    }
-    if (!loading && !isTauri()) {
-        visible = visible.filter((item) => !item.desktopOnly);
     }
     if (loading || !canAccessItSecurity(user)) {
         visible = visible.filter((item) => item.id !== 'itSecurity');

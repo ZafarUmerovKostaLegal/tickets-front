@@ -35,7 +35,6 @@ const AuthCallbackPage = lazy(() => import('@pages/auth-callback').then(m => ({ 
 const HomePage = lazy(() => import('@pages/home').then(m => ({ default: m.HomePage })));
 const TicketsPage = lazy(() => import('@pages/tickets').then(m => ({ default: m.TicketsPage })));
 const AdminPage = lazy(() => import('@pages/admin').then(m => ({ default: m.AdminPage })));
-const NetworkDriveAccessPage = lazy(() => import('@pages/network-drive').then(m => ({ default: m.NetworkDriveAccessPage })));
 const AttendancePage = lazy(() => import('@pages/attendance').then(m => ({ default: m.AttendancePage })));
 const VacationSchedulePage = lazy(() => import('@pages/vacation-schedule').then(m => ({ default: m.VacationSchedulePage })));
 const CallSchedulePage = lazy(() => import('@pages/call-schedule').then(m => ({ default: m.CallSchedulePage })));
@@ -199,9 +198,6 @@ const router = createBrowserRouter([
                     <ItSecurityPage />
                   </ItSecurityAccessRoute>) },
             { path: routes.admin, element: withProtected(<AdminPage />, true) },
-            { path: routes.networkDriveAccess, element: withProtected(<DesktopOnlyRoute>
-              <NetworkDriveAccessPage />
-            </DesktopOnlyRoute>, true) },
             { path: routes.userEdit, element: withProtected(<UserEditPage />, true) },
             { path: '*', element: <Navigate to={routes.home} replace/> },
         ],
