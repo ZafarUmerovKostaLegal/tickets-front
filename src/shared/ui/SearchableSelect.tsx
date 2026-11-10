@@ -52,6 +52,7 @@ type Props<T> = {
     portalZIndex?: number;
 
     portalMinWidth?: number;
+    portalMaxHeight?: number;
     portalDropdownClassName?: string;
 
     onTabFromDropdown?: (direction: 'forward' | 'backward') => void;
@@ -82,6 +83,7 @@ function SearchableSelectInner<T>({
     portalDropdown = false,
     portalZIndex = 5000,
     portalMinWidth,
+    portalMaxHeight,
     portalDropdownClassName,
     onTabFromDropdown,
 }: Props<T>, ref: React.ForwardedRef<SearchableSelectRef>) {
@@ -216,14 +218,17 @@ function SearchableSelectInner<T>({
             if (typeof window === 'undefined')
                 return;
             const r = el.getBoundingClientRect();
-            setPortalBox(computePortalDropdownBox(
+            const box = computePortalDropdownBox(
                 { top: r.top, bottom: r.bottom, left: r.left, width: r.width },
                 { width: window.innerWidth, height: window.innerHeight },
                 {
                     minWidth: portalMinWidth ?? 300,
                     obstacleBottom: readViewportBottomObstacle(r.bottom),
                 },
-            ));
+            );
+            setPortalBox(portalMaxHeight && portalMaxHeight > 0
+                ? { ...box, maxH: Math.min(box.maxH, portalMaxHeight) }
+                : box);
         };
         update();
         window.addEventListener('resize', update);
@@ -232,7 +237,7 @@ function SearchableSelectInner<T>({
             window.removeEventListener('resize', update);
             window.removeEventListener('scroll', update, true);
         };
-    }, [open, portalDropdown, portalMinWidth]);
+    }, [open, portalDropdown, portalMinWidth, portalMaxHeight]);
 
     useEffect(() => {
         if (!open)

@@ -13,6 +13,7 @@ type Props = {
     disabled?: boolean;
     portalDropdown?: boolean;
     portalMinWidth?: number;
+    portalMaxHeight?: number;
 };
 
 export function FmSelect({
@@ -24,7 +25,8 @@ export function FmSelect({
     buttonClassName,
     disabled,
     portalDropdown = true,
-    portalMinWidth = 220,
+    portalMinWidth = 360,
+    portalMaxHeight = 280,
 }: Props) {
     const { tr } = useFm();
     return (
@@ -35,8 +37,10 @@ export function FmSelect({
             className={['fm-filter-select', className].filter(Boolean).join(' ')}
             buttonClassName={buttonClassName}
             portalDropdown={portalDropdown}
+            portalDropdownClassName="fm-filter-select__menu"
             portalZIndex={2200}
             portalMinWidth={portalMinWidth}
+            portalMaxHeight={portalMaxHeight}
             getOptionValue={(item) => item.value}
             getOptionLabel={(item) => item.label}
             getSearchText={(item) => item.label}
