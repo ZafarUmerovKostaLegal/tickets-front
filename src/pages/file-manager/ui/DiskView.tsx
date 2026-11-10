@@ -328,8 +328,8 @@ export function DiskView() {
     useEffect(() => {
         if (!menu && !cmdMenu)
             return;
-        const close = (event: MouseEvent) => {
-            if (cmdRef.current?.contains(event.target as Node))
+        const close = (event: Event) => {
+            if (event.type === 'click' && cmdRef.current?.contains(event.target as Node))
                 return;
             setMenu(null);
             setCmdMenu(null);
