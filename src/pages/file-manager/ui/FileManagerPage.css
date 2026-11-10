@@ -2495,33 +2495,164 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   min-height: 100%;
 }
 
-.fm-disk__bar {
+.fm-disk-cmd {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.2rem 0.35rem;
   align-items: center;
-  padding: 0.65rem 1rem 0.45rem;
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--fm-border);
-  background: var(--fm-surface);
+  background: color-mix(in srgb, var(--fm-surface) 92%, var(--fm-soft));
 }
 
-.fm-disk__sep {
+.fm-disk-cmd__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.fm-disk-cmd__sep {
   width: 1px;
-  height: 1.4rem;
-  margin: 0 0.15rem;
+  height: 1.55rem;
+  margin: 0 0.25rem;
   background: var(--fm-border);
+}
+
+.fm-disk-cmd__spacer {
+  flex: 1 1 0.5rem;
+  min-width: 0.5rem;
+}
+
+.fm-disk-cmd__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.fm-disk-cmd__btn--text {
+  padding-inline: 0.55rem;
+}
+
+.fm-disk-cmd__btn .fm-ico {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--fm-muted);
+}
+
+.fm-disk-cmd__caret {
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+  transform: rotate(90deg);
+  opacity: 0.7;
+}
+
+.fm-disk-cmd__btn:hover:not(:disabled) {
+  background: var(--fm-hover);
+}
+
+.fm-disk-cmd__btn:hover:not(:disabled) .fm-ico {
+  color: var(--fm-text);
+}
+
+.fm-disk-cmd__btn.is-on {
+  background: var(--fm-select);
+  color: var(--fm-accent);
+}
+
+.fm-disk-cmd__btn.is-on .fm-ico {
+  color: var(--fm-accent);
+}
+
+.fm-disk-cmd__btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.fm-disk-cmd__menu-wrap {
+  position: relative;
+}
+
+.fm-disk-cmd__menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 12;
+  display: flex;
+  min-width: 11.5rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.3rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  background: var(--fm-surface);
+  box-shadow: 0 10px 28px rgb(15 23 42 / 0.16);
+}
+
+.fm-disk-cmd__menu--end {
+  left: auto;
+  right: 0;
+}
+
+.fm-disk-cmd__menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fm-disk-cmd__menu button .fm-ico {
+  width: 1rem;
+  height: 1rem;
+  color: var(--fm-muted);
+}
+
+.fm-disk-cmd__menu button:hover:not(:disabled) {
+  background: var(--fm-hover);
+}
+
+.fm-disk-cmd__menu button.is-on {
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+}
+
+.fm-disk-cmd__menu button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .fm-disk__filter {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin-left: auto;
-  min-width: 12rem;
+  min-width: 11rem;
+  max-width: 16rem;
   padding: 0.25rem 0.55rem;
   border: 1px solid var(--fm-border);
   border-radius: 8px;
-  background: var(--fm-soft);
+  background: var(--fm-surface);
 }
 
 .fm-disk__filter input {
@@ -2534,9 +2665,41 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 }
 
 .fm-disk__crumbs {
-  padding: 0.45rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--fm-border);
   background: var(--fm-surface);
+}
+
+.fm-disk__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fm-muted);
+  cursor: pointer;
+}
+
+.fm-disk__nav-btn:hover:not(:disabled) {
+  background: var(--fm-hover);
+  color: var(--fm-text);
+}
+
+.fm-disk__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.fm-disk__details {
+  padding: 0.35rem 0.75rem 0.75rem;
 }
 
 .fm-disk__readonly {

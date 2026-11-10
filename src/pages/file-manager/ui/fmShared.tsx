@@ -19,7 +19,7 @@ export type IconName =
     | 'building' | 'briefcase' | 'folder' | 'folderOpen' | 'star' | 'clock' | 'lock' | 'search' | 'trash'
     | 'inbox' | 'shield' | 'grid' | 'list' | 'pulse' | 'template' | 'upload' | 'download' | 'plus' | 'chevron'
     | 'close' | 'link' | 'edit' | 'restore' | 'eye' | 'user' | 'check' | 'x' | 'key'
-    | 'up' | 'back' | 'refresh' | 'home' | 'sort';
+    | 'up' | 'back' | 'refresh' | 'home' | 'sort' | 'cut' | 'copy' | 'paste' | 'rename' | 'more' | 'panes';
 
 const PATHS: Record<IconName, ReactNode> = {
     building: <><rect x="5" y="3" width="14" height="18" rx="1.5" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3" /></>,
@@ -55,6 +55,12 @@ const PATHS: Record<IconName, ReactNode> = {
     refresh: <path d="M20 12a8 8 0 1 1-2.2-5.5M20 4v5h-5" />,
     home: <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" />,
     sort: <path d="M8 5v14M5 8l3-3 3 3M16 19V5M13 16l3 3 3-3" />,
+    cut: <path d="M6 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm0 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM20 4 8.5 12 20 20" />,
+    copy: <><rect x="9" y="9" width="11" height="11" rx="1.5" /><path d="M5 15V5a1 1 0 0 1 1-1h10" /></>,
+    paste: <><path d="M9 4h6v3H9z" /><rect x="6" y="6" width="12" height="14" rx="1.5" /><path d="M9 12h6M9 16h4" /></>,
+    rename: <path d="M5 19h4l10-10-4-4L5 15zm11-13 4 4M4 21h7" />,
+    more: <><circle cx="6" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="18" cy="12" r="1.2" fill="currentColor" stroke="none" /></>,
+    panes: <><rect x="3" y="5" width="7" height="14" rx="1" /><rect x="12" y="5" width="9" height="14" rx="1" /></>,
 };
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {

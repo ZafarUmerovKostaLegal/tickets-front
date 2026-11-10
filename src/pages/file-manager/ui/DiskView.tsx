@@ -16,6 +16,7 @@ import {
     useAction,
     useFm,
     useLoad,
+    type IconName,
 } from './fmShared';
 
 const ACL_LEVELS: AclLevel[] = ['read', 'edit', 'manage', 'deny'];
@@ -30,6 +31,10 @@ type CtxMenu = {
     target: Entry | { kind: 'blank' };
 };
 
+type CmdMenu = 'create' | 'sort' | 'more' | 'view' | null;
+type SortKey = 'name' | 'date' | 'size';
+type Layout = 'tiles' | 'details';
+
 function userLabel(user: TimeTrackingUserRow): string {
     return (user.display_name ?? '').trim() || user.email;
 }
@@ -43,6 +48,32 @@ function kindLabel(kind: string, tr: (key: string) => string): string {
     const key = `kinds.${asFileKind(kind)}`;
     const label = tr(key);
     return label === key ? tr('browser.fileType') : label;
+}
+
+function compareText(a: string, b: string) {
+    return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+}
+
+function sortFolders(items: DiskFolder[], sortBy: SortKey) {
+    const next = [...items];
+    next.sort((a, b) => {
+        if (sortBy === 'date')
+            return (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || compareText(a.name, b.name);
+        return compareText(a.name, b.name);
+    });
+    return next;
+}
+
+function sortFiles(items: DiskFile[], sortBy: SortKey) {
+    const next = [...items];
+    next.sort((a, b) => {
+        if (sortBy === 'date')
+            return (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || compareText(a.name, b.name);
+        if (sortBy === 'size')
+            return ((b.sizeBytes ?? 0) - (a.sizeBytes ?? 0)) || compareText(a.name, b.name);
+        return compareText(a.name, b.name);
+    });
+    return next;
 }
 
 function NameModal({ title, initial, label, onClose, onSubmit }: {
@@ -229,12 +260,48 @@ function AccessDrawer({
     );
 }
 
+function CmdButton({
+    icon,
+    label,
+    title,
+    disabled,
+    active,
+    caret,
+    onClick,
+}: {
+    icon: IconName;
+    label?: string;
+    title?: string;
+    disabled?: boolean;
+    active?: boolean;
+    caret?: boolean;
+    onClick?: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            className={`fm-disk-cmd__btn${label ? ' fm-disk-cmd__btn--text' : ''}${active ? ' is-on' : ''}`}
+            title={title ?? label}
+            aria-label={title ?? label}
+            disabled={disabled}
+            onClick={onClick}
+        >
+            <Icon name={icon} />
+            {label ? <span>{label}</span> : null}
+            {caret ? <Icon name="chevron" className="fm-disk-cmd__caret" /> : null}
+        </button>
+    );
+}
+
 export function DiskView() {
     const { tr, locale } = useFm();
     const act = useAction();
     const [folderId, setFolderId] = useState<string | null>(null);
     const [selected, setSelected] = useState<Entry | null>(null);
     const [filter, setFilter] = useState('');
+    const [sortBy, setSortBy] = useState<SortKey>('name');
+    const [layout, setLayout] = useState<Layout>('tiles');
+    const [cmdMenu, setCmdMenu] = useState<CmdMenu>(null);
     const [dropping, setDropping] = useState(false);
     const [createOpen, setCreateOpen] = useState(false);
     const [accessOpen, setAccessOpen] = useState(false);
@@ -243,6 +310,7 @@ export function DiskView() {
     const [data, setData] = useState<DiskBrowse | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const cmdRef = useRef<HTMLDivElement>(null);
     const load = useLoad(() => diskApi.browse(folderId), [folderId]);
 
     useEffect(() => {
@@ -254,12 +322,18 @@ export function DiskView() {
         setSelected(null);
         setAccessOpen(false);
         setMenu(null);
+        setCmdMenu(null);
     }, [folderId]);
 
     useEffect(() => {
-        if (!menu)
+        if (!menu && !cmdMenu)
             return;
-        const close = () => setMenu(null);
+        const close = (event: MouseEvent) => {
+            if (cmdRef.current?.contains(event.target as Node))
+                return;
+            setMenu(null);
+            setCmdMenu(null);
+        };
         window.addEventListener('click', close);
         window.addEventListener('resize', close);
         window.addEventListener('scroll', close, true);
@@ -268,7 +342,7 @@ export function DiskView() {
             window.removeEventListener('resize', close);
             window.removeEventListener('scroll', close, true);
         };
-    }, [menu]);
+    }, [menu, cmdMenu]);
 
     const folders = data?.folders ?? [];
     const files = data?.files ?? [];
@@ -277,21 +351,25 @@ export function DiskView() {
     const path = data?.path ?? [];
     const q = filter.trim().toLowerCase();
     const visibleFolders = useMemo(
-        () => folders.filter((item) => !q || item.name.toLowerCase().includes(q)),
-        [folders, q],
+        () => sortFolders(folders.filter((item) => !q || item.name.toLowerCase().includes(q)), sortBy),
+        [folders, q, sortBy],
     );
     const visibleFiles = useMemo(
-        () => files.filter((item) => !q || item.name.toLowerCase().includes(q)),
-        [files, q],
+        () => sortFiles(files.filter((item) => !q || item.name.toLowerCase().includes(q)), sortBy),
+        [files, q, sortBy],
     );
     const upId = path.length > 1 ? path[path.length - 2]!.id : null;
     const currentName = path.length ? path[path.length - 1]!.name : tr('disk.root');
     const empty = !load.loading && visibleFolders.length === 0 && visibleFiles.length === 0;
+    const hasSelection = selected !== null;
+    const canDownload = selected?.kind === 'file';
+    const canDelete = canEdit && hasSelection;
 
     const applyBrowse = (next: DiskBrowse) => {
         setData(next);
         setSelected(null);
         setMenu(null);
+        setCmdMenu(null);
     };
 
     const uploadFiles = async (list: FileList | File[]) => {
@@ -319,6 +397,7 @@ export function DiskView() {
     const openCtx = (event: ReactMouseEvent, target: CtxMenu['target']) => {
         event.preventDefault();
         event.stopPropagation();
+        setCmdMenu(null);
         const host = contentRef.current;
         if (!host) {
             setMenu({ x: event.clientX, y: event.clientY, target });
@@ -342,50 +421,329 @@ export function DiskView() {
         });
     };
 
+    const toggleCmd = (next: Exclude<CmdMenu, null>) => {
+        setMenu(null);
+        setCmdMenu((current) => (current === next ? null : next));
+    };
+
+    const renderTiles = () => (
+        <div className="fm-ex__tiles fm-ex__tiles--page fm-disk__tiles">
+            {path.length ? (
+                <button
+                    type="button"
+                    className="fm-ex__tile fm-ex__tile--up"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        setFolderId(upId);
+                    }}
+                    onDoubleClick={(event) => {
+                        event.stopPropagation();
+                        setFolderId(upId);
+                    }}
+                >
+                    <span className="fm-ex__tile-ico" aria-hidden>
+                        <Icon name="up" />
+                    </span>
+                    <span className="fm-ex__tile-meta">
+                        <strong>..</strong>
+                        <small>{tr('browser.up')}</small>
+                    </span>
+                </button>
+            ) : null}
+            {visibleFolders.map((item) => {
+                const active = selected?.kind === 'folder' && selected.item.id === item.id;
+                return (
+                    <button
+                        key={`folder:${item.id}`}
+                        type="button"
+                        className={active ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setSelected({ kind: 'folder', item });
+                            setMenu(null);
+                        }}
+                        onDoubleClick={(event) => {
+                            event.stopPropagation();
+                            setFolderId(item.id);
+                        }}
+                        onContextMenu={(event) => openCtx(event, { kind: 'folder', item })}
+                    >
+                        <span className="fm-ex__tile-ico" aria-hidden>
+                            <Icon name="folder" className="fm-ico--folder" />
+                        </span>
+                        <span className="fm-ex__tile-meta">
+                            <strong title={item.name}>{item.name}</strong>
+                            <small>{tr('browser.folderType')}</small>
+                        </span>
+                    </button>
+                );
+            })}
+            {visibleFiles.map((item) => {
+                const active = selected?.kind === 'file' && selected.item.id === item.id;
+                const sizeLabel = item.sizeBytes != null ? formatBytes(item.sizeBytes, locale) : item.size;
+                return (
+                    <button
+                        key={`file:${item.id}`}
+                        type="button"
+                        className={active ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setSelected({ kind: 'file', item });
+                            setMenu(null);
+                        }}
+                        onDoubleClick={(event) => {
+                            event.stopPropagation();
+                            void downloadFile(item);
+                        }}
+                        onContextMenu={(event) => openCtx(event, { kind: 'file', item })}
+                    >
+                        <span className="fm-ex__tile-ico" aria-hidden>
+                            <FileBadge kind={asFileKind(String(item.kind))} />
+                        </span>
+                        <span className="fm-ex__tile-meta">
+                            <strong title={item.name}>{item.name}</strong>
+                            <small>
+                                {kindLabel(String(item.kind), tr)}
+                                {sizeLabel ? ` · ${sizeLabel}` : ''}
+                            </small>
+                        </span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+
+    const renderDetails = () => (
+        <div className="fm-table-wrap fm-disk__details">
+            <table className="fm-table">
+                <thead>
+                    <tr>
+                        <th>{tr('table.name')}</th>
+                        <th>{tr('disk.type')}</th>
+                        <th>{tr('table.modified')}</th>
+                        <th>{tr('table.size')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {visibleFolders.map((item) => {
+                        const active = selected?.kind === 'folder' && selected.item.id === item.id;
+                        return (
+                            <tr
+                                key={`folder:${item.id}`}
+                                className={active ? 'is-selected' : undefined}
+                                onClick={() => setSelected({ kind: 'folder', item })}
+                                onDoubleClick={() => setFolderId(item.id)}
+                                onContextMenu={(event) => openCtx(event, { kind: 'folder', item })}
+                            >
+                                <td>
+                                    <span className="fm-table__name">
+                                        <span className="fm-table__ico" aria-hidden><Icon name="folder" className="fm-ico--folder" /></span>
+                                        <strong>{item.name}</strong>
+                                    </span>
+                                </td>
+                                <td>{tr('browser.folderType')}</td>
+                                <td className="fm-nowrap">{formatDateTime(item.createdAt, locale)}</td>
+                                <td>—</td>
+                            </tr>
+                        );
+                    })}
+                    {visibleFiles.map((item) => {
+                        const active = selected?.kind === 'file' && selected.item.id === item.id;
+                        return (
+                            <tr
+                                key={`file:${item.id}`}
+                                className={active ? 'is-selected' : undefined}
+                                onClick={() => setSelected({ kind: 'file', item })}
+                                onDoubleClick={() => void downloadFile(item)}
+                                onContextMenu={(event) => openCtx(event, { kind: 'file', item })}
+                            >
+                                <td>
+                                    <span className="fm-table__name">
+                                        <span className="fm-table__ico" aria-hidden><FileBadge kind={asFileKind(String(item.kind))} /></span>
+                                        <strong>{item.name}</strong>
+                                    </span>
+                                </td>
+                                <td>{kindLabel(String(item.kind), tr)}</td>
+                                <td className="fm-nowrap">{formatDateTime(item.createdAt, locale)}</td>
+                                <td>{item.sizeBytes != null ? formatBytes(item.sizeBytes, locale) : item.size}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+
     return (
         <div className={`fm-disk${accessOpen ? ' fm-disk--drawer' : ''}`}>
             <div className="fm-disk__main">
-                <div className="fm-disk__bar">
-                    <button type="button" className="fm-btn" disabled={!path.length} onClick={() => setFolderId(upId)} title={tr('browser.up')}>
-                        <Icon name="up" />{tr('browser.up')}
-                    </button>
-                    <button type="button" className="fm-btn" onClick={() => load.reload()} title={tr('browser.refresh')}>
-                        <Icon name="refresh" />{tr('browser.refresh')}
-                    </button>
-                    <span className="fm-disk__sep" aria-hidden />
-                    {canEdit ? (
-                        <>
-                            <button type="button" className="fm-btn" onClick={() => setCreateOpen(true)}>
-                                <Icon name="plus" />{tr('browser.newFolder')}
-                            </button>
-                            <button type="button" className="fm-btn fm-btn--primary" onClick={() => fileRef.current?.click()}>
-                                <Icon name="upload" />{tr('browser.upload')}
-                            </button>
-                            <input
-                                ref={fileRef}
-                                type="file"
-                                multiple
-                                hidden
-                                onChange={(event) => {
-                                    const list = event.target.files;
-                                    event.target.value = '';
-                                    if (list)
-                                        void uploadFiles(list);
-                                }}
+                <div className="fm-disk-cmd" ref={cmdRef}>
+                    <div className="fm-disk-cmd__group">
+                        <div className="fm-disk-cmd__menu-wrap">
+                            <CmdButton
+                                icon="plus"
+                                label={tr('disk.create')}
+                                caret
+                                disabled={!canEdit}
+                                active={cmdMenu === 'create'}
+                                onClick={() => toggleCmd('create')}
                             />
+                            {cmdMenu === 'create' ? (
+                                <div className="fm-disk-cmd__menu" role="menu">
+                                    <button type="button" onClick={() => { setCreateOpen(true); setCmdMenu(null); }}>
+                                        <Icon name="folder" className="fm-ico--folder" />{tr('browser.newFolder')}
+                                    </button>
+                                    <button type="button" onClick={() => { fileRef.current?.click(); setCmdMenu(null); }}>
+                                        <Icon name="upload" />{tr('browser.upload')}
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    <span className="fm-disk-cmd__sep" aria-hidden />
+
+                    <div className="fm-disk-cmd__group">
+                        <CmdButton icon="cut" title={`${tr('browser.cut')} (${tr('disk.soon')})`} disabled />
+                        <CmdButton icon="copy" title={`${tr('browser.copy')} (${tr('disk.soon')})`} disabled />
+                        <CmdButton icon="paste" title={`${tr('browser.paste')} (${tr('disk.soon')})`} disabled />
+                        <CmdButton icon="rename" title={`${tr('browser.renameFolder')} (${tr('disk.soon')})`} disabled />
+                        <CmdButton
+                            icon="download"
+                            title={tr('pane.download')}
+                            disabled={!canDownload}
+                            onClick={() => {
+                                if (selected?.kind === 'file')
+                                    void downloadFile(selected.item);
+                            }}
+                        />
+                        <CmdButton
+                            icon="trash"
+                            title={tr('common.delete')}
+                            disabled={!canDelete}
+                            onClick={() => {
+                                if (selected)
+                                    setPurge(selected);
+                            }}
+                        />
+                    </div>
+
+                    <span className="fm-disk-cmd__sep" aria-hidden />
+
+                    <div className="fm-disk-cmd__group">
+                        <div className="fm-disk-cmd__menu-wrap">
+                            <CmdButton
+                                icon="sort"
+                                label={tr('disk.sort')}
+                                caret
+                                active={cmdMenu === 'sort'}
+                                onClick={() => toggleCmd('sort')}
+                            />
+                            {cmdMenu === 'sort' ? (
+                                <div className="fm-disk-cmd__menu" role="menu">
+                                    {([
+                                        ['name', 'disk.sortName'],
+                                        ['date', 'disk.sortDate'],
+                                        ['size', 'disk.sortSize'],
+                                    ] as const).map(([key, label]) => (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            className={sortBy === key ? 'is-on' : undefined}
+                                            onClick={() => { setSortBy(key); setCmdMenu(null); }}
+                                        >
+                                            {tr(label)}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                        <div className="fm-disk-cmd__menu-wrap">
+                            <CmdButton
+                                icon="more"
+                                title={tr('nav.more')}
+                                active={cmdMenu === 'more'}
+                                onClick={() => toggleCmd('more')}
+                            />
+                            {cmdMenu === 'more' ? (
+                                <div className="fm-disk-cmd__menu" role="menu">
+                                    <button type="button" disabled={!path.length} onClick={() => { setFolderId(upId); setCmdMenu(null); }}>
+                                        <Icon name="up" />{tr('browser.up')}
+                                    </button>
+                                    <button type="button" onClick={() => { load.reload(); setCmdMenu(null); }}>
+                                        <Icon name="refresh" />{tr('browser.refresh')}
+                                    </button>
+                                    {canManage ? (
+                                        <button type="button" onClick={() => { setAccessOpen(true); setCmdMenu(null); }}>
+                                            <Icon name="shield" />{tr('disk.access')}
+                                        </button>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    {canManage ? (
+                        <>
+                            <span className="fm-disk-cmd__sep" aria-hidden />
+                            <div className="fm-disk-cmd__group">
+                                <CmdButton
+                                    icon="shield"
+                                    label={tr('disk.access')}
+                                    active={accessOpen}
+                                    onClick={() => setAccessOpen((value) => !value)}
+                                />
+                            </div>
                         </>
                     ) : null}
-                    {canManage ? (
-                        <button type="button" className={`fm-btn${accessOpen ? ' is-on' : ''}`} onClick={() => setAccessOpen((v) => !v)}>
-                            <Icon name="shield" />{tr('disk.access')}
-                        </button>
-                    ) : null}
+
+                    <div className="fm-disk-cmd__spacer" />
+
+                    <div className="fm-disk-cmd__group">
+                        <div className="fm-disk-cmd__menu-wrap">
+                            <CmdButton
+                                icon="panes"
+                                label={tr('disk.view')}
+                                caret
+                                active={cmdMenu === 'view'}
+                                onClick={() => toggleCmd('view')}
+                            />
+                            {cmdMenu === 'view' ? (
+                                <div className="fm-disk-cmd__menu fm-disk-cmd__menu--end" role="menu">
+                                    <button type="button" className={layout === 'tiles' ? 'is-on' : undefined} onClick={() => { setLayout('tiles'); setCmdMenu(null); }}>
+                                        <Icon name="grid" />{tr('disk.viewTiles')}
+                                    </button>
+                                    <button type="button" className={layout === 'details' ? 'is-on' : undefined} onClick={() => { setLayout('details'); setCmdMenu(null); }}>
+                                        <Icon name="list" />{tr('disk.viewDetails')}
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+
                     <label className="fm-disk__filter">
                         <Icon name="search" />
                         <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={tr('disk.filter')} />
                     </label>
+
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        hidden
+                        onChange={(event) => {
+                            const list = event.target.files;
+                            event.target.value = '';
+                            if (list)
+                                void uploadFiles(list);
+                        }}
+                    />
                 </div>
+
                 <nav className="fm-crumbs fm-disk__crumbs" aria-label={tr('disk.root')}>
+                    <button type="button" className="fm-disk__nav-btn" disabled={!path.length} onClick={() => setFolderId(upId)} title={tr('browser.up')}>
+                        <Icon name="up" />
+                    </button>
                     <button type="button" className={!folderId ? 'is-on' : undefined} onClick={() => setFolderId(null)}>
                         {tr('disk.root')}
                     </button>
@@ -422,92 +780,7 @@ export function DiskView() {
                             onRetry={load.reload}
                             empty={empty ? <div className="fm-ex__empty"><Icon name="folder" /><p>{tr('disk.empty')}</p></div> : undefined}
                         >
-                            {!empty ? (
-                                <div className="fm-ex__tiles fm-ex__tiles--page fm-disk__tiles">
-                                    {path.length ? (
-                                        <button
-                                            type="button"
-                                            className="fm-ex__tile fm-ex__tile--up"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                setFolderId(upId);
-                                            }}
-                                            onDoubleClick={(event) => {
-                                                event.stopPropagation();
-                                                setFolderId(upId);
-                                            }}
-                                        >
-                                            <span className="fm-ex__tile-ico" aria-hidden>
-                                                <Icon name="up" />
-                                            </span>
-                                            <span className="fm-ex__tile-meta">
-                                                <strong>..</strong>
-                                                <small>{tr('browser.up')}</small>
-                                            </span>
-                                        </button>
-                                    ) : null}
-                                    {visibleFolders.map((item) => {
-                                        const active = selected?.kind === 'folder' && selected.item.id === item.id;
-                                        return (
-                                            <button
-                                                key={`folder:${item.id}`}
-                                                type="button"
-                                                className={active ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setSelected({ kind: 'folder', item });
-                                                    setMenu(null);
-                                                }}
-                                                onDoubleClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setFolderId(item.id);
-                                                }}
-                                                onContextMenu={(event) => openCtx(event, { kind: 'folder', item })}
-                                            >
-                                                <span className="fm-ex__tile-ico" aria-hidden>
-                                                    <Icon name="folder" className="fm-ico--folder" />
-                                                </span>
-                                                <span className="fm-ex__tile-meta">
-                                                    <strong title={item.name}>{item.name}</strong>
-                                                    <small>{tr('browser.folderType')}</small>
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                    {visibleFiles.map((item) => {
-                                        const active = selected?.kind === 'file' && selected.item.id === item.id;
-                                        const sizeLabel = item.sizeBytes != null ? formatBytes(item.sizeBytes, locale) : item.size;
-                                        return (
-                                            <button
-                                                key={`file:${item.id}`}
-                                                type="button"
-                                                className={active ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setSelected({ kind: 'file', item });
-                                                    setMenu(null);
-                                                }}
-                                                onDoubleClick={(event) => {
-                                                    event.stopPropagation();
-                                                    void downloadFile(item);
-                                                }}
-                                                onContextMenu={(event) => openCtx(event, { kind: 'file', item })}
-                                            >
-                                                <span className="fm-ex__tile-ico" aria-hidden>
-                                                    <FileBadge kind={asFileKind(String(item.kind))} />
-                                                </span>
-                                                <span className="fm-ex__tile-meta">
-                                                    <strong title={item.name}>{item.name}</strong>
-                                                    <small>
-                                                        {kindLabel(String(item.kind), tr)}
-                                                        {sizeLabel ? ` · ${sizeLabel}` : ''}
-                                                    </small>
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            ) : null}
+                            {!empty ? (layout === 'tiles' ? renderTiles() : renderDetails()) : null}
                         </StateBlock>
                         {menu ? (() => {
                             const target = menu.target;
