@@ -7,9 +7,11 @@ describe('scheduleOnlyAccount', () => {
         expect(isScheduleOnlyAccount({ email: 'other@kostalegal.com' })).toBe(false);
     });
 
-    it('пускает только страницу учёта времени', () => {
+    it('пускает учёт времени и файловый менеджер', () => {
         expect(isScheduleOnlyAllowedPath('/time-tracking')).toBe(true);
         expect(isScheduleOnlyAllowedPath('/time-tracking?tab=expenses')).toBe(true);
+        expect(isScheduleOnlyAllowedPath('/files')).toBe(true);
+        expect(isScheduleOnlyAllowedPath('/files/explorer')).toBe(true);
         expect(isScheduleOnlyAllowedPath('/home')).toBe(false);
         expect(isScheduleOnlyAllowedPath('/expenses')).toBe(false);
         expect(isScheduleOnlyAllowedPath('/time-tracking/invoices/new')).toBe(false);

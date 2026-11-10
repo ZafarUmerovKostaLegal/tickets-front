@@ -95,7 +95,7 @@ export function getNavTranslationKey(id: AppNavId): TranslationKey {
 
 export function getVisibleAppNavItems(user: User | null | undefined, loading: boolean): AppNavItemDef[] {
     if (!loading && isScheduleOnlyAccount(user)) {
-        return APP_NAV_DEFINITIONS.filter((item) => item.id === 'timeTracking');
+        return APP_NAV_DEFINITIONS.filter((item) => item.id === 'timeTracking' || item.id === 'fileManager');
     }
     if (!loading && isMeetingRoomAccount(user)) {
         return APP_NAV_DEFINITIONS.filter((item) => MEETING_ROOM_NAV_IDS.has(item.id));

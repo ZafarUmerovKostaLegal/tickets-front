@@ -20,5 +20,9 @@ export function scheduleOnlyLandingPath(): string {
 
 export function isScheduleOnlyAllowedPath(pathname: string | null | undefined): boolean {
     const path = (pathname || '/').split('?')[0] || '/';
-    return path === routes.timeTracking;
+    if (path === routes.timeTracking)
+        return true;
+    if (path === routes.fileManager || path.startsWith(`${routes.fileManager}/`))
+        return true;
+    return false;
 }
