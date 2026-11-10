@@ -52,6 +52,7 @@ import {
     type InvoiceTimeReportPack,
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
+import { summarizeBilledOverrideLines } from '@pages/time-tracking/lib/invoicePageShared';
 
 /** Notes only. The task name stays in the Task column. */
 function timeReportDescriptionText(raw: string | null | undefined): string {
@@ -225,6 +226,17 @@ function lineAmount(ln: InvoiceLineDto): number {
     return Number.isFinite(t) ? t : 0;
 }
 
+/** Worked/report amount when billedAmount zeroed lineTotal but left sourceAmount. */
+function reportLineAmount(ln: InvoiceLineDto, billedOverride: boolean): number {
+    const billed = lineAmount(ln);
+    if (!billedOverride || Math.abs(billed) > 1e-9)
+        return billed;
+    const src = Number(ln.sourceAmount);
+    if (Number.isFinite(src) && Math.abs(src) > 1e-9)
+        return roundMoney2(src);
+    return 0;
+}
+
 /** UZS invoices show the som amount entered on the expense, not the USD equivalent. */
 function expenseAmountForInvoiceCurrency(
     currency: string,
@@ -281,6 +293,28 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     cardRate?: number;
     cardFrom?: string;
 };
+
+/** Fill missing rate/amount from the official rate card after stampOfficialBillableRates. */
+function applyCardRatesWhereAmountMissing(details: BuildingDetail[], currency: string): void {
+    for (const detail of details) {
+        if (detail.rowKind !== 'time')
+            continue;
+        const rate = detail.cardRate;
+        if (rate == null || !(rate > 0))
+            continue;
+        const hours = sumRoundedTimeReportHours([detail.hoursNum]);
+        if (!(hours > 0))
+            continue;
+        if (!(detail.rateNum > 0)) {
+            detail.rateNum = rate;
+            detail.hourlyRate = formatDetailHourlyRate(rate, currency);
+        }
+        if (Math.abs(detail.amtNum) > 1e-9)
+            continue;
+        detail.amtNum = roundMoney2(hours * rate);
+        detail.amount = formatTimeReportAmount(detail.amtNum, currency);
+    }
+}
 
 /** Task names as shown in the time report, keyed by time entry id. */
 async function reportTaskNameByEntryId(projectId: string, dateFrom: string, dateTo: string): Promise<Map<string, string>> {
@@ -701,6 +735,7 @@ export async function resolveInvoiceTimeReportPack(
             }
 
             await stampOfficialBillableRates(details, pid, currency);
+            applyCardRatesWhereAmountMissing(details, currency);
             return overlayExpenseAmountsFromRegistry(
                 packFromDetails(details, users, currency, initialsByAuthId),
                 pid,
@@ -709,6 +744,7 @@ export async function resolveInvoiceTimeReportPack(
 
         const inv = await getInvoice(session.invoiceId, true);
         const lines = [...(inv.lines ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+        const billedOverride = summarizeBilledOverrideLines(lines, inv.currency ?? currency).isBilledOverride;
         const details: BuildingDetail[] = [];
         const taskNameById = await loadProjectTaskNameById(inv.clientId, inv.projectId ?? '');
         const entryDates = (inv.lines ?? [])
@@ -841,7 +877,10 @@ export async function resolveInvoiceTimeReportPack(
         for (const ln of lines) {
             const kind = lineKind(ln);
             const desc = (ln.description ?? '').trim() || '—';
-            const amt = lineAmount(ln);
+            // Custom billed total stays on the legal invoice; time report shows worked amounts.
+            if (billedOverride && kind !== 'time' && kind !== 'expense')
+                continue;
+            const amt = reportLineAmount(ln, billedOverride);
 
             if (kind === 'time') {
                 const embeddedIso = ln.timeEntryWorkDate?.trim().slice(0, 10);
@@ -897,7 +936,9 @@ export async function resolveInvoiceTimeReportPack(
                 const snap = await resolveExpenseLineSnap(ln);
                 const expenseAmt = snap.amount != null && snap.amount > 0
                     ? snap.amount
-                    : preferExpenseUsdForInvoice(currency, ln, null);
+                    : (billedOverride && Math.abs(amt) > 1e-9
+                        ? amt
+                        : preferExpenseUsdForInvoice(currency, ln, null));
                 details.push({
                     date: snap.dateIso ? dateDisplayFromIso(snap.dateIso, lang) : '—',
                     initials: '—',
@@ -934,6 +975,7 @@ export async function resolveInvoiceTimeReportPack(
         }
 
         await stampOfficialBillableRates(details, inv.projectId ?? '', currency);
+        applyCardRatesWhereAmountMissing(details, currency);
         return overlayExpenseAmountsFromRegistry(
             packFromDetails(details, users, currency, initialsByAuthId),
             inv.projectId,

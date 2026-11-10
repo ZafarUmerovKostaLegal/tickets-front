@@ -36,6 +36,7 @@ import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from 
 import { getUsers } from '@entities/user';
 import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { alignCombinedReportToProjectCurrency, applyLinkedTaskNames, applyStoredUserInitials, linkedTaskHintsForInvoiceLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { summarizeBilledOverrideLines } from '@pages/time-tracking/lib/invoicePageShared';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { CombinedReportPage } from './CombinedReportPage';
@@ -176,6 +177,8 @@ export function InvoicePreviewPage() {
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [showInitiatorName, setShowInitiatorName] = useState(false);
     const [combinedReport, setCombinedReport] = useState<CombinedReportSnapshot | null>(null);
+    /** Existing invoice with billedAmount: legal/cover keep this total; time report shows worked sums. */
+    const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string } | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
@@ -321,6 +324,7 @@ export function InvoicePreviewPage() {
         setTimeReportPack(null);
         setShowInitiatorName(false);
         setCombinedReport(null);
+        setExistingBilledServices(null);
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
         (async () => {
@@ -346,6 +350,18 @@ export function InvoicePreviewPage() {
                     setInvoiceStatus(String(inv.status ?? '').toLowerCase() || null);
                     invoiceCurrency = String(inv.currency ?? '').trim().toUpperCase() || null;
                     invoiceIssueDate = String(inv.issueDate ?? '').trim().slice(0, 10) || null;
+                    const billedOverride = summarizeBilledOverrideLines(invoiceLines, invoiceCurrency);
+                    if (billedOverride.isBilledOverride) {
+                        const amount = Math.round(
+                            billedOverride.visibleLines.reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100,
+                        ) / 100;
+                        if (amount > 0) {
+                            setExistingBilledServices({
+                                amount,
+                                currency: invoiceCurrency || billedOverride.workedCurrency || 'USD',
+                            });
+                        }
+                    }
                     docFromApi = parseInvoiceDocumentOverrides(inv.documentOverrides);
                     if (!docFromApi?.legal?.invoiceNumber && inv.invoiceNumber?.trim()) {
                         docFromApi = {
@@ -564,17 +580,20 @@ export function InvoicePreviewPage() {
         [timeReportPack, resolvedTimeReportPack],
     );
     const customBilledOverride = useMemo(() => {
-        if (session?.mode !== 'create' || !session.form.customBilledEnabled)
-            return null;
-        const raw = String(session.form.customBilledAmount ?? '').trim().replace(/\s/g, '').replace(',', '.');
-        const amount = Number(raw);
-        if (!Number.isFinite(amount) || amount <= 0)
-            return null;
-        const currency = String(session.form.customBilledCurrency ?? '').trim().toUpperCase()
-            || reportBill?.currency
-            || packCurrencyCode(displayModel);
-        return { amount: Math.round(amount * 100) / 100, currency };
-    }, [session, reportBill?.currency, displayModel]);
+        if (session?.mode === 'create' && session.form.customBilledEnabled) {
+            const raw = String(session.form.customBilledAmount ?? '').trim().replace(/\s/g, '').replace(',', '.');
+            const amount = Number(raw);
+            if (!Number.isFinite(amount) || amount <= 0)
+                return null;
+            const currency = String(session.form.customBilledCurrency ?? '').trim().toUpperCase()
+                || reportBill?.currency
+                || packCurrencyCode(displayModel);
+            return { amount: Math.round(amount * 100) / 100, currency };
+        }
+        if (existingBilledServices && existingBilledServices.amount > 0)
+            return existingBilledServices;
+        return null;
+    }, [session, reportBill?.currency, displayModel, existingBilledServices]);
     const pricedModel = useMemo(() => {
         const base = coverModel ?? fallbackCoverModel();
         if (customBilledOverride) {

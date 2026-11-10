@@ -293,6 +293,43 @@ describe('mergeTimeReportPackPreferLiveExpenses', () => {
             { hours: '2,80', hourlyRate: 'USD 100.00', title: 'Junior Associate' },
         ]);
     });
+
+    it('restores worked amounts from live when a billed-override pack was saved as USD 0.00', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        saved.detailSlots = [{
+            date: '21.05.2026',
+            initials: 'ADA',
+            task: 'Emails',
+            description: 'Saved note',
+            hours: '0,08',
+            hourlyRate: '',
+            amount: 'USD 0.00',
+        }];
+        saved.detailTotalAmountDisplay = 'USD 1,812.50';
+        saved.summaryGrandAmountDisplay = 'USD 1,812.50';
+        live.detailSlots = [{
+            date: '21.05.2026',
+            initials: 'ADA',
+            task: 'Emails',
+            description: 'Live note',
+            hours: '0,08',
+            hourlyRate: 'USD 150.00',
+            amount: 'USD 12.00',
+        }];
+        live.detailTotalAmountDisplay = 'USD 12.00';
+        live.summarySlots = [
+            summary({ initials: 'ADA', name: 'Alina', title: 'Junior Associate', hours: '0,08', hourlyRate: 'USD 150.00', totalPrice: 'USD 12.00' }),
+        ];
+        live.summaryGrandAmountDisplay = 'USD 12.00';
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.detailSlots[0]?.amount).toBe('USD 12.00');
+        expect(merged.detailSlots[0]?.hourlyRate).toBe('USD 150.00');
+        expect(merged.detailSlots[0]?.description).toBe('Saved note');
+        expect(merged.detailTotalAmountDisplay).toBe('USD 12.00');
+        expect(merged.summaryGrandAmountDisplay).toBe('USD 12.00');
+        expect(merged.summarySlots[0]?.totalPrice).toBe('USD 12.00');
+    });
 });
 
 function summary(partial: Partial<InvoiceTimeReportSummaryRow>): InvoiceTimeReportSummaryRow {

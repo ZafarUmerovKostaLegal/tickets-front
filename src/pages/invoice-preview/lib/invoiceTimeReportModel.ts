@@ -235,6 +235,15 @@ export function applyLinkedTaskNamesToTimeReportPack(
     return changed ? { ...pack, detailSlots, mehnatSlots } : pack;
 }
 
+function sameTimeReportLineIgnoreAmount(
+    a: InvoiceTimeReportDetailRow,
+    b: InvoiceTimeReportDetailRow,
+): boolean {
+    return a.date.trim() === b.date.trim()
+        && a.initials.trim().toUpperCase() === b.initials.trim().toUpperCase()
+        && normReportHours(a.hours) === normReportHours(b.hours);
+}
+
 /** Saved wording stays; Task always comes from the live row (task linked in the DB). */
 function mergeTimeRowsKeepLiveDescription(
     saved: readonly InvoiceTimeReportDetailRow[],
@@ -248,9 +257,15 @@ function mergeTimeRowsKeepLiveDescription(
     const savedRows = trimTrailingEmptyDetailSlots(saved);
     const used = new Set<number>();
     return liveRows.map((liveRow) => {
-        const match = savedRows.findIndex((savedRow, index) => (
+        let match = savedRows.findIndex((savedRow, index) => (
             !used.has(index) && sameTimeReportLine(liveRow, savedRow)
         ));
+        // Billed-override restore changes amount (0 → sourceAmount); still keep saved notes.
+        if (match < 0) {
+            match = savedRows.findIndex((savedRow, index) => (
+                !used.has(index) && sameTimeReportLineIgnoreAmount(liveRow, savedRow)
+            ));
+        }
         if (match < 0)
             return liveRow;
         used.add(match);
@@ -273,6 +288,8 @@ function mergeTimeRowsKeepLiveDescription(
  * Keep saved wording for time lines and expenses, take expense amounts from the
  * live pack, and take summary rows from the live pack so a rate-card change
  * shows up in a draft that was saved as one line per person.
+ * Detail/mehnat totals also come from live so a billed-override restore
+ * (sourceAmount / rate card) replaces a previously saved USD 0.00 pack.
  */
 export function mergeTimeReportPackPreferLiveExpenses(
     saved: InvoiceTimeReportPack,
@@ -285,12 +302,26 @@ export function mergeTimeReportPackPreferLiveExpenses(
     const fixedFeeTotalAmountDisplay = (live.fixedFeeTotalAmountDisplay ?? '').trim()
         || (saved.fixedFeeTotalAmountDisplay ?? '');
     const summaryFromLive = mergeSummarySlotsPreferLiveRates(saved, live);
+    const liveDetailTotals = {
+        detailTotalHoursDisplay: (live.detailTotalHoursDisplay ?? '').trim()
+            || saved.detailTotalHoursDisplay,
+        detailTotalAmountDisplay: (live.detailTotalAmountDisplay ?? '').trim()
+            || saved.detailTotalAmountDisplay,
+        mehnatSlots: trimTrailingEmptyDetailSlots(live.mehnatSlots ?? []).length
+            ? live.mehnatSlots
+            : saved.mehnatSlots,
+        mehnatTotalHoursDisplay: (live.mehnatTotalHoursDisplay ?? '').trim()
+            || (saved.mehnatTotalHoursDisplay ?? ''),
+        mehnatTotalAmountDisplay: (live.mehnatTotalAmountDisplay ?? '').trim()
+            || (saved.mehnatTotalAmountDisplay ?? ''),
+    };
     if (!hasLiveExpenses) {
         return withSummaryOrderedBySeniority({
             ...saved,
             detailSlots,
             fixedFeeSlots,
             fixedFeeTotalAmountDisplay,
+            ...liveDetailTotals,
             ...summaryFromLive,
         });
     }
@@ -307,6 +338,7 @@ export function mergeTimeReportPackPreferLiveExpenses(
         fixedFeeTotalAmountDisplay,
         expenseSlots,
         expenseTotalAmountDisplay,
+        ...liveDetailTotals,
         ...summaryFromLive,
     });
 }
