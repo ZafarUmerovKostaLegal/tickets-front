@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useMemo, useState, ViewTransition } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useState, ViewTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
@@ -20,15 +20,18 @@ type View =
 
 type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' };
 
-const WORKSPACE: NavItem[] = [
-    { id: 'clients', label: 'nav.clients', icon: 'building' },
-    { id: 'matters', label: 'nav.allMatters', icon: 'briefcase' },
-    { id: 'myMatters', label: 'nav.myMatters', icon: 'user' },
+const PRIMARY: NavItem[] = [
     { id: 'disk', label: 'nav.disk', icon: 'folder' },
+    { id: 'myMatters', label: 'nav.myMatters', icon: 'user' },
     { id: 'favorites', label: 'nav.favorites', icon: 'star' },
-    { id: 'recent', label: 'nav.recent', icon: 'clock' },
     { id: 'search', label: 'nav.search', icon: 'search' },
     { id: 'trash', label: 'nav.trash', icon: 'trash' },
+];
+
+const MORE: NavItem[] = [
+    { id: 'clients', label: 'nav.clients', icon: 'building' },
+    { id: 'matters', label: 'nav.allMatters', icon: 'briefcase' },
+    { id: 'recent', label: 'nav.recent', icon: 'clock' },
 ];
 
 const EMPLOYEE_EXTRA: NavItem[] = [{ id: 'requests', label: 'nav.myRequests', icon: 'inbox' }];
@@ -43,12 +46,14 @@ const ADMIN: NavItem[] = [
 ];
 
 const ADMIN_VIEWS = new Set<View>(['matrix', 'audit', 'monitoring']);
+const WORKSPACE = [...PRIMARY, ...MORE];
+const MORE_VIEW_IDS = new Set<View>([...MORE.map((item) => item.id), 'matter', 'requests']);
 const ALL_VIEWS = new Set<View>([...WORKSPACE, ...ADMIN, { id: 'matter' as View }].map((item) => item.id));
 
 function readView(value: string | null, matterId: string | null): View {
     if (value && ALL_VIEWS.has(value as View))
         return value === 'matter' && !matterId ? 'matters' : value as View;
-    return matterId ? 'matter' : 'clients';
+    return matterId ? 'matter' : 'disk';
 }
 
 type GoParams = Partial<Location> & { clientId?: string | null };
@@ -65,11 +70,19 @@ function FileManagerWorkspace() {
     const docId = params.get('doc');
     const clientId = params.get('client');
     const requested = readView(params.get('view'), matterId);
-    const view: View = !canManage && ADMIN_VIEWS.has(requested) ? 'clients' : requested;
+    const view: View = !canManage && ADMIN_VIEWS.has(requested) ? 'disk' : requested;
+    const moreItems = useMemo(() => (canManage ? MORE : [...MORE, ...EMPLOYEE_EXTRA]), [canManage]);
+    const moreActive = MORE_VIEW_IDS.has(view) && !(view === 'requests' && canManage);
+    const [moreOpen, setMoreOpen] = useState(moreActive);
+
+    useEffect(() => {
+        if (moreActive)
+            setMoreOpen(true);
+    }, [moreActive]);
 
     const go = useCallback((next: View, loc: GoParams = {}, replace = false) => {
         const search = new URLSearchParams();
-        if (next !== 'clients')
+        if (next !== 'disk')
             search.set('view', next);
         if (loc.clientId)
             search.set('client', loc.clientId);
@@ -95,9 +108,8 @@ function FileManagerWorkspace() {
         setBadgeTick((n) => n + 1);
     }, [reloadClients]);
 
-    const workspace = useMemo(() => (canManage ? WORKSPACE : [...WORKSPACE, ...EMPLOYEE_EXTRA]), [canManage]);
     const navView: View = view === 'matter' ? 'matters' : view;
-    const active = [...workspace, ...ADMIN].find((item) => item.id === navView) ?? WORKSPACE[0];
+    const active = [...PRIMARY, ...moreItems, ...ADMIN].find((item) => item.id === navView) ?? PRIMARY[0];
     const serviceDown = clients.error !== null && clients.data === null;
 
     const renderItem = (item: NavItem) => (
@@ -181,7 +193,25 @@ function FileManagerWorkspace() {
         <div className="fm__body">
             <aside className="fm-side">
                 <p>{tr('nav.workspace')}</p>
-                <nav aria-label={tr('nav.workspace')}>{workspace.map(renderItem)}</nav>
+                <nav aria-label={tr('nav.workspace')}>
+                    {PRIMARY.map(renderItem)}
+                    <div className={`fm-side__group${moreOpen ? ' is-open' : ''}${moreActive ? ' is-active' : ''}`}>
+                        <button
+                            type="button"
+                            className="fm-side__group-toggle"
+                            aria-expanded={moreOpen}
+                            onClick={() => setMoreOpen((open) => !open)}
+                        >
+                            <Icon name="chevron" className="fm-side__group-chevron" />
+                            <span>{tr('nav.more')}</span>
+                        </button>
+                        {moreOpen ? (
+                            <div className="fm-side__group-items" role="group" aria-label={tr('nav.more')}>
+                                {moreItems.map(renderItem)}
+                            </div>
+                        ) : null}
+                    </div>
+                </nav>
                 {canManage ? (
                     <>
                         <p>{tr('nav.admin')}</p>

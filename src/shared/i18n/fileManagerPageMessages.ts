@@ -2,6 +2,7 @@ export const fileManagerPageMessages = {
     nav: {
         workspace: 'Рабочая область',
         matters: 'Clients & Matters',
+        more: 'Ещё',
         clients: 'Клиенты',
         allMatters: 'Matters',
         myMatters: 'Мои Matters',

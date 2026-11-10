@@ -4,6 +4,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
     nav: {
         workspace: 'Workspace',
         matters: 'Clients & Matters',
+        more: 'More',
         clients: 'Clients',
         allMatters: 'Matters',
         myMatters: 'My Matters',
