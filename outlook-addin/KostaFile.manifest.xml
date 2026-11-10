@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Outlook: Classic Windows, New Outlook, OWA, Mac, Mobile -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -7,23 +8,26 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a1e-6b4d-4e9a-9c71-a1b2c3d4e5f6</Id>
-  <Version>0.2.5.0</Version>
+  <Version>0.3.0.0</Version>
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="Kosta File" />
-  <Description DefaultValue="Автоматическая загрузка писем в matters файлового менеджера Kosta (аналог MacroView)." />
+  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Работает в Outlook Classic, New Outlook и Outlook в браузере." />
   <IconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
   <SupportUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/" />
   <AppDomains>
     <AppDomain>https://tickets.kostalegal.com</AppDomain>
+    <AppDomain>https://ticketsback.kostalegal.com</AppDomain>
+    <AppDomain>https://login.microsoftonline.com</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox" />
   </Hosts>
+  <!-- 1.5: Classic desktop + pinning; on-prem Classic stops at ~1.6 -->
   <Requirements>
     <Sets>
-      <Set Name="Mailbox" MinVersion="1.8" />
+      <Set Name="Mailbox" MinVersion="1.5" />
     </Sets>
   </Requirements>
   <FormSettings>
@@ -32,6 +36,13 @@
         <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
+      <TabletSettings>
+        <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
+        <RequestedHeight>450</RequestedHeight>
+      </TabletSettings>
+      <PhoneSettings>
+        <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
+      </PhoneSettings>
     </Form>
   </FormSettings>
   <Permissions>ReadWriteMailbox</Permissions>
@@ -42,7 +53,7 @@
 
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
-      <bt:Sets DefaultMinVersion="1.8">
+      <bt:Sets DefaultMinVersion="1.5">
         <bt:Set Name="Mailbox" />
       </bt:Sets>
     </Requirements>
@@ -66,7 +77,6 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />
-                    <SupportsPinning>true</SupportsPinning>
                   </Action>
                 </Control>
               </Group>
@@ -95,7 +105,7 @@
 
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.8">
+        <bt:Sets DefaultMinVersion="1.5">
           <bt:Set Name="Mailbox" />
         </bt:Sets>
       </Requirements>
@@ -110,7 +120,7 @@
                     <Label resid="openLabel" />
                     <Supertip>
                       <Title resid="openLabel" />
-                      <Description resid="openTip" />
+                      <Description resid="openTipPin" />
                     </Supertip>
                     <Icon>
                       <bt:Image size="16" resid="icon16" />
@@ -126,6 +136,24 @@
               </OfficeTab>
             </ExtensionPoint>
           </DesktopFormFactor>
+          <MobileFormFactor>
+            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
+              <Group id="kostaFileMobileGroup">
+                <Label resid="groupLabel" />
+                <Control xsi:type="MobileButton" id="kostaFileMobileOpen">
+                  <Label resid="openLabel" />
+                  <Icon>
+                    <bt:Image size="25" resid="icon32" />
+                    <bt:Image size="32" resid="icon32" />
+                    <bt:Image size="48" resid="icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="taskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </ExtensionPoint>
+          </MobileFormFactor>
         </Host>
       </Hosts>
       <Resources>
@@ -142,7 +170,8 @@
           <bt:String id="openLabel" DefaultValue="В matter" />
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="openTip" DefaultValue="Загрузить письмо в matter по правилу отправителя/домена. Закрепите панель (булавка), чтобы не закрывалась при смене письма." />
+          <bt:String id="openTip" DefaultValue="Загрузить письмо в matter по правилу отправителя/домена" />
+          <bt:String id="openTipPin" DefaultValue="Загрузить письмо в matter. В Classic/New Outlook закрепите панель (булавка), чтобы не закрывалась при смене письма." />
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>

@@ -1,30 +1,46 @@
-# Kosta File — Outlook add-in
+# Kosta File — Office add-in
 
 `https://tickets.kostalegal.com/outlook-addin/`
 
-Авторизация **та же, что у Hub** (Microsoft → session cookie). Отдельный Outlook-логин не нужен.
+Авторизация **та же, что у Hub** (Microsoft → session cookie).
 
-## Установка (файл)
+Два манифеста (у Microsoft нельзя смешать Mail и Word/Excel/PPT в одном `MailApp`):
 
-1. **Custom Add-ins** → **Add from File…** → `KostaFile.manifest.xml`
-2. Письмо → **Kosta File** → **В matter**
-3. **Настройки** → **Войти в Kosta Hub** (если сессии ещё нет в WebView Outlook)
+| Файл | Клиенты |
+|------|---------|
+| `KostaFile.manifest.xml` | **Outlook Classic** (Windows), New Outlook, Outlook в браузере, Mac, Mobile |
+| `KostaFile.Office.manifest.xml` | **Word**, **Excel**, **PowerPoint** (Desktop) |
+
+Версия манифестов: `0.3.0.0` · Mailbox **1.5+** (шире Classic, включая pinning где поддерживается).
+
+## Установка Outlook (Classic / New)
+
+1. **Get Add-ins** → **My add-ins** → **Add a custom add-in** → **Add from File…**
+2. Выберите `KostaFile.manifest.xml`
+3. Откройте письмо → лента **Kosta File** → **В matter**
+4. **Настройки** → **Войти в Kosta Hub** (если сессии ещё нет в WebView)
+
+**Classic Windows:** после sideload перезапустите Outlook. Кнопка на вкладке сообщения (Message). Закрепите task pane булавкой, если доступна.
+
+**Централизованное развёртывание (рекомендуется для фирмы):** Microsoft 365 Admin → Integrated apps → Upload custom apps → тот же XML.
+
+## Установка Word / Excel / PowerPoint
+
+1. Insert → Add-ins → Upload My Add-in → `KostaFile.Office.manifest.xml`
+2. Home → **Kosta File** → **В matter**
+3. Выберите matter → **Сохранить в matter** (файл уйдёт в `Correspondence/Documents`)
 
 ## Статус в Outlook
 
-После успешной загрузки в File Manager на письмо ставится категория **Saved to Kosta** (видна в списке писем). SharePoint пока не подключён.
+После успешной загрузки в File Manager на письмо ставится категория **Saved to Kosta**.
 
-## Панель не должна закрываться
+## Вся переписка (тред, Outlook)
 
-В манифесте включён **SupportsPinning**. Откройте Kosta File → в шапке панели Apps нажмите **булавку (Pin)** — после этого панель остаётся открытой при смене писем, автозагрузка продолжает работать.
+На вкладке **Письмо**:
+- **Сохранить переписку** — один файл `Conversation_*.eml`
+- **Обновить переписку** — новая версия того же документа (check-in)
 
-## Вся переписка (тред)
-
-На вкладке **Письмо** → блок **Вся переписка**:
-- **Сохранить переписку** — один файл `Conversation_*.eml` со всей перепиской (как тред в Outlook)
-- **Обновить переписку** — пересобирает тот же документ (новая версия через check-in)
-
-Нужны: вход с согласием **Mail.Read**, matter (из правила или выбор вручную). После добавления Mail.Read выйдите и войдите снова.
+Нужны: вход с согласием **Mail.Read**, matter (правило или выбор вручную).
 
 ## API
 

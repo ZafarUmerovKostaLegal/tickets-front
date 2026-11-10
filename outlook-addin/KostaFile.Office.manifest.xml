@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Word / Excel / PowerPoint — отдельный TaskPaneApp (MailApp нельзя смешать с Document hosts) -->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+
+  <Id>a7e91c2b-4d5f-4a8e-9b01-c2d3e4f5a6b7</Id>
+  <Version>0.3.0.0</Version>
+  <ProviderName>Kosta Legal</ProviderName>
+  <DefaultLocale>ru-RU</DefaultLocale>
+  <DisplayName DefaultValue="Kosta File" />
+  <Description DefaultValue="Загрузка текущего документа Word/Excel/PowerPoint в matter файлового менеджера Kosta." />
+  <IconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
+  <SupportUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/" />
+  <AppDomains>
+    <AppDomain>https://tickets.kostalegal.com</AppDomain>
+    <AppDomain>https://ticketsback.kostalegal.com</AppDomain>
+    <AppDomain>https://login.microsoftonline.com</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Document" />
+    <Host Name="Workbook" />
+    <Host Name="Presentation" />
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="getStartedTitle" />
+            <Description resid="getStartedDesc" />
+            <LearnMoreUrl resid="learnMoreUrl" />
+          </GetStarted>
+          <FunctionFile resid="taskpaneUrl" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="kostaFileDocGroup">
+                <Label resid="groupLabel" />
+                <Icon>
+                  <bt:Image size="16" resid="icon16" />
+                  <bt:Image size="32" resid="icon32" />
+                  <bt:Image size="80" resid="icon80" />
+                </Icon>
+                <Control xsi:type="Button" id="kostaFileDocOpen">
+                  <Label resid="openLabel" />
+                  <Supertip>
+                    <Title resid="openLabel" />
+                    <Description resid="openTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16" />
+                    <bt:Image size="32" resid="icon32" />
+                    <bt:Image size="80" resid="icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>KostaFilePane</TaskpaneId>
+                    <SourceLocation resid="taskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="getStartedTitle" />
+            <Description resid="getStartedDesc" />
+            <LearnMoreUrl resid="learnMoreUrl" />
+          </GetStarted>
+          <FunctionFile resid="taskpaneUrl" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="kostaFileXlsGroup">
+                <Label resid="groupLabel" />
+                <Icon>
+                  <bt:Image size="16" resid="icon16" />
+                  <bt:Image size="32" resid="icon32" />
+                  <bt:Image size="80" resid="icon80" />
+                </Icon>
+                <Control xsi:type="Button" id="kostaFileXlsOpen">
+                  <Label resid="openLabel" />
+                  <Supertip>
+                    <Title resid="openLabel" />
+                    <Description resid="openTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16" />
+                    <bt:Image size="32" resid="icon32" />
+                    <bt:Image size="80" resid="icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>KostaFilePane</TaskpaneId>
+                    <SourceLocation resid="taskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+      <Host xsi:type="Presentation">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="getStartedTitle" />
+            <Description resid="getStartedDesc" />
+            <LearnMoreUrl resid="learnMoreUrl" />
+          </GetStarted>
+          <FunctionFile resid="taskpaneUrl" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="kostaFilePptGroup">
+                <Label resid="groupLabel" />
+                <Icon>
+                  <bt:Image size="16" resid="icon16" />
+                  <bt:Image size="32" resid="icon32" />
+                  <bt:Image size="80" resid="icon80" />
+                </Icon>
+                <Control xsi:type="Button" id="kostaFilePptOpen">
+                  <Label resid="openLabel" />
+                  <Supertip>
+                    <Title resid="openLabel" />
+                    <Description resid="openTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16" />
+                    <bt:Image size="32" resid="icon32" />
+                    <bt:Image size="80" resid="icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>KostaFilePane</TaskpaneId>
+                    <SourceLocation resid="taskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-16.png" />
+        <bt:Image id="icon32" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
+        <bt:Image id="icon80" DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="taskpaneUrl" DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
+        <bt:Url id="learnMoreUrl" DefaultValue="https://tickets.kostalegal.com/outlook-addin/" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="groupLabel" DefaultValue="Kosta File" />
+        <bt:String id="openLabel" DefaultValue="В matter" />
+        <bt:String id="getStartedTitle" DefaultValue="Kosta File" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="openTip" DefaultValue="Загрузить текущий документ в matter Kosta File Manager" />
+        <bt:String id="getStartedDesc" DefaultValue="Откройте панель Kosta File и сохраните документ в нужный matter." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

@@ -1,10 +1,19 @@
 import './styles.css';
-import { checkinDocument, ensureEmailsFolder, listMatters, pingApi, uploadToMatter, type MatterOption } from './api';
+import {
+  checkinDocument,
+  ensureDocumentsFolder,
+  ensureEmailsFolder,
+  listMatters,
+  pingApi,
+  uploadToMatter,
+  type MatterOption,
+} from './api';
 import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
 import { clearLegacyOutlookTokens, getProfile, isAuthenticated, readAzureAccessToken } from './auth/session';
 import { listConversationMessages } from './conversation';
 import { buildConversationEml } from './conversationBuild';
 import { buildEml, readCurrentMail, type MailSnapshot } from './email';
+import { hostLabel, readCurrentOfficeDocument } from './officeDoc';
 import { itemHasSavedCategory, markItemSavedToKosta, SAVED_CATEGORY } from './outlookCategory';
 import { describeMatch, matchRule } from './rules';
 import {
@@ -28,6 +37,7 @@ if (!app)
   throw new Error('#app missing');
 
 let tab: Tab = 'file';
+let officeHost: Office.HostType | null = null;
 let mail: MailSnapshot | null = null;
 let matters: MatterOption[] = [];
 let statusText = '';
@@ -36,7 +46,19 @@ let busy = false;
 let outlookSavedCategory = false;
 /** Matter override for full-thread save when no sender rule matches. */
 let threadMatterId = '';
+/** Matter for Word/Excel/PowerPoint upload. */
+let documentMatterId = '';
 let draft: { match: string; matterId: string; autoFile: boolean } = { match: '', matterId: '', autoFile: true };
+
+function isOutlookHost(): boolean {
+  return officeHost === Office.HostType.Outlook;
+}
+
+function isDocumentHost(): boolean {
+  return officeHost === Office.HostType.Word
+    || officeHost === Office.HostType.Excel
+    || officeHost === Office.HostType.PowerPoint;
+}
 
 function setStatus(text: string, kind: '' | 'ok' | 'error' = '') {
   statusText = text;
@@ -326,18 +348,68 @@ function renderRules(): string {
   `;
 }
 
-function renderFile(): string {
+function matterSelectOptions(selectedId: string): string {
+  return matters.map((matter) => {
+    const label = `${matter.clientName} · ${matter.code ? `${matter.code} · ` : ''}${matter.name}`;
+    const selected = selectedId === matter.id ? 'selected' : '';
+    return `<option value="${escape(matter.id)}" ${selected}>${escape(label)}</option>`;
+  }).join('');
+}
+
+async function fileOfficeDocument(): Promise<void> {
+  const matter = matters.find((row) => row.id === documentMatterId);
+  if (!matter) {
+    setStatus('Выберите matter для документа', 'error');
+    return;
+  }
+  busy = true;
+  setStatus(`Читаем файл ${hostLabel(officeHost ?? undefined)}…`);
+  try {
+    const file = await readCurrentOfficeDocument(officeHost ?? undefined);
+    setStatus(`Загрузка «${file.name}»…`);
+    const folderId = await ensureDocumentsFolder(matter.id);
+    await uploadToMatter(
+      matter.id,
+      folderId,
+      file,
+      `${hostLabel(officeHost ?? undefined)} · ${getProfile()?.email || ''}`,
+    );
+    setStatus(
+      `Сохранено в «${matter.name}» / Correspondence/Documents\n${file.name}`,
+      'ok',
+    );
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), 'error');
+  } finally {
+    busy = false;
+    render();
+  }
+}
+
+function renderDocumentFile(): string {
   if (!isAuthenticated())
     return `<section class="card gate"><p class="hint">Войдите через Microsoft на вкладке «Настройки».</p></section>`;
+  const matterOptions = matterSelectOptions(documentMatterId);
+  return `
+    <section class="card">
+      <h2>Текущий документ · ${escape(hostLabel(officeHost ?? undefined))}</h2>
+      <p class="hint">Сохраняет открытый файл в Correspondence/Documents выбранного matter.</p>
+      <label class="field">Matter
+        <select id="documentMatter"><option value="">Выберите matter…</option>${matterOptions}</select>
+      </label>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="primary" id="fileDocument" ${!documentMatterId || busy ? 'disabled' : ''}>Сохранить в matter</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderMailFile(): string {
   const s = getSettings();
   const rule = mail ? matchRule(mail.fromEmail, s.rules) : null;
   const filed = mail ? wasFiled(mail.messageId) : false;
   const threadTarget = resolveThreadTarget();
-  const matterOptions = matters.map((matter) => {
-    const label = `${matter.clientName} · ${matter.code ? `${matter.code} · ` : ''}${matter.name}`;
-    const selected = (rule?.matterId || threadMatterId) === matter.id ? 'selected' : '';
-    return `<option value="${escape(matter.id)}" ${selected}>${escape(label)}</option>`;
-  }).join('');
+  const matterOptions = matterSelectOptions(rule?.matterId || threadMatterId);
   let autoHint = 'Автозагрузка срабатывает при открытии письма, пока открыта эта панель.';
   if (mail && rule?.autoFile && !filed)
     autoHint = `Авто: при открытии/смене письма загрузим в «${rule.matterName}».`;
@@ -363,7 +435,7 @@ function renderFile(): string {
             ? `<span class="chip chip-saved">${escape(SAVED_CATEGORY)}</span>`
             : ''}
         </div>
-      ` : `<p class="hint">Откройте письмо в Outlook.</p>`}
+      ` : `<p class="hint">Откройте письмо в Outlook (Classic или New).</p>`}
       <p class="hint">${escape(autoHint)}</p>
       <div class="row" style="margin-top:10px">
         <button type="button" id="refreshMail">Обновить / авто</button>
@@ -387,22 +459,38 @@ function renderFile(): string {
   `;
 }
 
+function renderFile(): string {
+  if (!isAuthenticated())
+    return `<section class="card gate"><p class="hint">Войдите через Microsoft на вкладке «Настройки».</p></section>`;
+  if (isDocumentHost())
+    return renderDocumentFile();
+  if (isOutlookHost())
+    return renderMailFile();
+  return `<section class="card gate"><p class="hint">Откройте надстройку в Outlook, Word, Excel или PowerPoint.</p></section>`;
+}
+
 function render(): void {
+  const fileTabLabel = isDocumentHost() ? 'Документ' : 'Письмо';
+  const sub = isOutlookHost()
+    ? 'Outlook Classic / New · закрепите панель (📌)'
+    : isDocumentHost()
+      ? `${hostLabel(officeHost ?? undefined)} · сессия Hub`
+      : 'Сессия Hub';
   app!.innerHTML = `
     <header class="brand">
       <img class="brand-logo" src="${ASSET_BASE}assets/logo.svg" width="28" height="40" alt="Kosta Legal" />
       <div class="brand-copy">
         <h1>Kosta File</h1>
-        <p class="sub">Сессия Hub · закрепите панель (📌), чтобы не закрывалась</p>
+        <p class="sub">${escape(sub)}</p>
       </div>
     </header>
     <nav class="tabs" aria-label="Разделы">
-      <button type="button" data-tab="file" class="${tab === 'file' ? 'is-on' : ''}">Письмо</button>
-      <button type="button" data-tab="rules" class="${tab === 'rules' ? 'is-on' : ''}">Правила</button>
+      <button type="button" data-tab="file" class="${tab === 'file' ? 'is-on' : ''}">${escape(fileTabLabel)}</button>
+      ${isOutlookHost() ? `<button type="button" data-tab="rules" class="${tab === 'rules' ? 'is-on' : ''}">Правила</button>` : ''}
       <button type="button" data-tab="settings" class="${tab === 'settings' ? 'is-on' : ''}">Настройки</button>
     </nav>
     ${tab === 'file' ? renderFile() : ''}
-    ${tab === 'rules' ? renderRules() : ''}
+    ${tab === 'rules' && isOutlookHost() ? renderRules() : ''}
     ${tab === 'settings' ? renderSettings() : ''}
     ${statusText ? `<div class="status ${statusKind ? `is-${statusKind}` : ''}">${escape(statusText)}</div>` : ''}
   `;
@@ -413,8 +501,10 @@ function bind(): void {
   app!.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((button) => {
     button.onclick = () => {
       tab = button.dataset.tab as Tab;
+      if (tab === 'rules' && !isOutlookHost())
+        tab = 'file';
       render();
-      if (tab === 'file' && isAuthenticated()) {
+      if (tab === 'file' && isAuthenticated() && isOutlookHost()) {
         void refreshMail().then(() => render()).catch((error) => {
           setStatus(error instanceof Error ? error.message : String(error), 'error');
         });
@@ -438,10 +528,12 @@ function bind(): void {
         } catch {
           /* optional until API ready */
         }
-        try {
-          await refreshMail({ autoFile: true });
-        } catch {
-          /* mail optional */
+        if (isOutlookHost()) {
+          try {
+            await refreshMail({ autoFile: true });
+          } catch {
+            /* mail optional */
+          }
         }
       } catch (error) {
         setStatus(error instanceof Error ? error.message : String(error), 'error');
@@ -587,6 +679,20 @@ function bind(): void {
     };
   }
 
+  const documentMatter = app!.querySelector<HTMLSelectElement>('#documentMatter');
+  if (documentMatter) {
+    documentMatter.onchange = () => {
+      documentMatterId = documentMatter.value;
+      render();
+    };
+  }
+  const fileDocument = app!.querySelector<HTMLButtonElement>('#fileDocument');
+  if (fileDocument) {
+    fileDocument.onclick = () => {
+      void fileOfficeDocument();
+    };
+  }
+
   const ruleMatch = app!.querySelector<HTMLInputElement>('#ruleMatch');
   if (ruleMatch)
     ruleMatch.oninput = () => { draft.match = ruleMatch.value; };
@@ -598,10 +704,13 @@ function bind(): void {
     ruleAuto.onchange = () => { draft.autoFile = ruleAuto.checked; };
 }
 
-function wireOutlook(): void {
+function wireOffice(): void {
   Office.onReady(async (info) => {
-    if (info.host !== Office.HostType.Outlook) {
-      setStatus('Откройте надстройку внутри Outlook', 'error');
+    officeHost = info.host ?? null;
+    const supported = isOutlookHost() || isDocumentHost();
+    if (!supported) {
+      setStatus('Откройте надстройку в Outlook, Word, Excel или PowerPoint', 'error');
+      render();
       return;
     }
     await loadRoamingSettings();
@@ -610,7 +719,7 @@ function wireOutlook(): void {
       try {
         await fetchHubMe();
         await refreshMatters();
-        setStatus(`Сессия: ${getProfile()?.email || 'OK'}`, 'ok');
+        setStatus(`Сессия: ${getProfile()?.email || 'OK'} · ${hostLabel(officeHost ?? undefined)}`, 'ok');
       } catch {
         setStatus('');
       }
@@ -618,29 +727,34 @@ function wireOutlook(): void {
       setStatus('Нажмите «Войти в Kosta Hub» и завершите вход в открывшемся окне', '');
     }
     render();
+    if (!isOutlookHost())
+      return;
     try {
       await refreshMail({ autoFile: true });
       render();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error), 'error');
     }
-    Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, async () => {
-      try {
-        // When pinned, item can briefly be null (no selection).
-        if (!Office.context.mailbox.item) {
-          mail = null;
-          outlookSavedCategory = false;
+    try {
+      Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, async () => {
+        try {
+          if (!Office.context.mailbox.item) {
+            mail = null;
+            outlookSavedCategory = false;
+            render();
+            return;
+          }
+          await refreshMail({ autoFile: true });
           render();
-          return;
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : String(error), 'error');
         }
-        await refreshMail({ autoFile: true });
-        render();
-      } catch (error) {
-        setStatus(error instanceof Error ? error.message : String(error), 'error');
-      }
-    });
+      });
+    } catch {
+      /* Classic / older clients without ItemChanged */
+    }
   });
 }
 
 render();
-wireOutlook();
+wireOffice();

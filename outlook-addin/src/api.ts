@@ -113,6 +113,23 @@ export async function ensureEmailsFolder(matterId: string): Promise<string | nul
   return emails.id;
 }
 
+/** Correspondence/Documents for Word / Excel / PowerPoint uploads. */
+export async function ensureDocumentsFolder(matterId: string): Promise<string | null> {
+  const root = await browse(matterId, null);
+  let correspondence = root.folders.find((folder) => folder.name.toLowerCase() === 'correspondence');
+  if (!correspondence) {
+    const created = await createFolder(matterId, 'Correspondence', null);
+    correspondence = { id: created.id, parentId: null, name: 'Correspondence' };
+  }
+  const inside = await browse(matterId, correspondence.id);
+  let documents = inside.folders.find((folder) => folder.name.toLowerCase() === 'documents');
+  if (!documents) {
+    const created = await createFolder(matterId, 'Documents', correspondence.id);
+    documents = { id: created.id, parentId: correspondence.id, name: 'Documents' };
+  }
+  return documents.id;
+}
+
 export type UploadedDocument = {
   id: string;
   name?: string;

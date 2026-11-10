@@ -325,7 +325,6 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
             return;
           }
           const dialog = result.value;
-          // Retry delivery — dialog asks via ready, and we also push a few times.
           let pushes = 0;
           const push = () => {
             if (settled || pushes > 8)
