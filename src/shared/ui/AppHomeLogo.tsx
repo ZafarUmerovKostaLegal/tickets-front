@@ -6,16 +6,20 @@ export type AppHomeLogoProps = {
     className?: string;
 
     withSeparator?: boolean;
+    to?: string;
+    ariaLabel?: string;
+    title?: string;
 };
 
 function joinClasses(...parts: (string | false | undefined)[]): string {
     return parts.filter(Boolean).join(' ');
 }
 
-export function AppHomeLogo({ className, withSeparator = false }: AppHomeLogoProps) {
+export function AppHomeLogo({ className, withSeparator = false, to, ariaLabel, title }: AppHomeLogoProps) {
     const navigate = useNavigate();
     const { t } = useI18n();
-    const label = t('brand.homeAria');
+    const label = ariaLabel ?? t('brand.homeAria');
+    const tip = title ?? label;
 
     return (
       <>
@@ -23,9 +27,9 @@ export function AppHomeLogo({ className, withSeparator = false }: AppHomeLogoPro
         <button
           type="button"
           className={joinClasses('app-home-logo', className)}
-          onClick={() => navigate(routes.home)}
+          onClick={() => navigate(to ?? routes.home)}
           aria-label={label}
-          title={label}
+          title={tip}
         >
           <img
             src="/logo.svg"

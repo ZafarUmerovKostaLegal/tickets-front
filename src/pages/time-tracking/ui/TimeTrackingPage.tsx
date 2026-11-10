@@ -473,15 +473,36 @@ export function TimeTrackingPage() {
               </div>
             </>) : hasAccess && user ? (<>
               <div className="time-page__navbar-sep time-page__navbar-sep--tabs" aria-hidden="true"/>
-              <span className="time-page__navbar-current" title={activeTabLabel}>{activeTabLabel}</span>
-              {scheduleOnly ? null : <div className="time-page__navbar-tabs" role="tablist" aria-label={t('timeTrackingPage.page.sectionsTablistAria')}>
-                {visibleTabDefs.map((tab) => (<button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-controls={`time-tab-${tab.id}`} id={`time-tab-btn-${tab.id}`} className={`time-page__navbar-tab${activeTab === tab.id ? ' time-page__navbar-tab--active' : ''}`} onClick={() => handleTabChange(tab.id)} aria-label={tab.id === 'reports' && forReviewBadgeAria ? `${tab.label}. ${forReviewBadgeAria}` : undefined}>
-                    <span className="time-page__navbar-tab-inner">
-                      {tab.label}
-                      {tab.id === 'reports' && forReviewBadge ? (<span className="time-page__navbar-tab-badge" aria-hidden>{forReviewBadge}</span>) : null}
-                    </span>
-                  </button>))}
-              </div>}
+              {scheduleOnly ? (
+                <div className="time-page__navbar-tabs" role="navigation" aria-label={t('timeTrackingPage.page.scheduleModulesAria')}>
+                  <button
+                    type="button"
+                    className="time-page__navbar-tab time-page__navbar-tab--active"
+                    aria-current="page"
+                  >
+                    <span className="time-page__navbar-tab-inner">{t('timeTrackingPage.page.scheduleTimeTracking')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="time-page__navbar-tab"
+                    onClick={() => navigate(routes.fileManager)}
+                  >
+                    <span className="time-page__navbar-tab-inner">{t('timeTrackingPage.page.scheduleFileManager')}</span>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="time-page__navbar-current" title={activeTabLabel}>{activeTabLabel}</span>
+                  <div className="time-page__navbar-tabs" role="tablist" aria-label={t('timeTrackingPage.page.sectionsTablistAria')}>
+                    {visibleTabDefs.map((tab) => (<button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-controls={`time-tab-${tab.id}`} id={`time-tab-btn-${tab.id}`} className={`time-page__navbar-tab${activeTab === tab.id ? ' time-page__navbar-tab--active' : ''}`} onClick={() => handleTabChange(tab.id)} aria-label={tab.id === 'reports' && forReviewBadgeAria ? `${tab.label}. ${forReviewBadgeAria}` : undefined}>
+                        <span className="time-page__navbar-tab-inner">
+                          {tab.label}
+                          {tab.id === 'reports' && forReviewBadge ? (<span className="time-page__navbar-tab-badge" aria-hidden>{forReviewBadge}</span>) : null}
+                        </span>
+                      </button>))}
+                  </div>
+                </>
+              )}
             </>) : null}
           <div className="time-page__navbar-spacer"/>
           <div className="time-page__navbar-settings">

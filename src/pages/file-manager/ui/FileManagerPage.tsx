@@ -1,7 +1,10 @@
 import { startTransition, useCallback, useEffect, useMemo, useState, ViewTransition } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
+import { routes } from '@shared/config';
+import { useCurrentUser } from '@shared/hooks';
+import { isScheduleOnlyAccount, scheduleOnlyLandingPath } from '@shared/lib/scheduleOnlyAccount';
 import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
@@ -242,14 +245,39 @@ function FileManagerWorkspace() {
 
 export function FileManagerPage() {
     const { t } = useI18n();
+    const navigate = useNavigate();
+    const { user } = useCurrentUser();
+    const scheduleOnly = isScheduleOnlyAccount(user);
+    const scheduleHome = scheduleOnlyLandingPath();
     return (
         <div className="fm">
             <header className="fm__header">
                 <div className="fm__header-inner">
                     <div className="fm__header-start">
-                        <AppBackButton className="app-back-btn" />
-                        <AppHomeLogo withSeparator />
-                        <h1 className="fm__title">{t('nav.fileManager')}</h1>
+                        <AppBackButton
+                            className="app-back-btn"
+                            to={scheduleOnly ? scheduleHome : routes.home}
+                            label={scheduleOnly ? t('timeTrackingPage.page.scheduleTimeTracking') : undefined}
+                            ariaLabel={scheduleOnly ? t('timeTrackingPage.page.scheduleTimeTracking') : undefined}
+                        />
+                        <AppHomeLogo
+                            withSeparator
+                            to={scheduleOnly ? scheduleHome : undefined}
+                            ariaLabel={scheduleOnly ? t('timeTrackingPage.page.scheduleLogoAria') : undefined}
+                            title={scheduleOnly ? t('timeTrackingPage.page.scheduleLogoTitle') : undefined}
+                        />
+                        {scheduleOnly ? (
+                            <nav className="fm__schedule-nav" aria-label={t('timeTrackingPage.page.scheduleModulesAria')}>
+                                <button type="button" className="fm__schedule-nav-btn" onClick={() => navigate(scheduleHome)}>
+                                    {t('timeTrackingPage.page.scheduleTimeTracking')}
+                                </button>
+                                <button type="button" className="fm__schedule-nav-btn is-on" aria-current="page">
+                                    {t('timeTrackingPage.page.scheduleFileManager')}
+                                </button>
+                            </nav>
+                        ) : (
+                            <h1 className="fm__title">{t('nav.fileManager')}</h1>
+                        )}
                     </div>
                     <div className="fm__header-end">
                         {canUseDmsDesktop() ? (
