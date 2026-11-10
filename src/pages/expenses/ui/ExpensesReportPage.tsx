@@ -401,6 +401,9 @@ export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company
           <NavLink to={routes.expenses} className="exp-report-nav__link">
             ← Расходы компании
           </NavLink>
+          <NavLink to={routes.expensesCorporateCard} className="exp-report-nav__link exp-report-nav__link--muted">
+            Корпоративная карта
+          </NavLink>
           <NavLink to={routes.expensesPartners} className="exp-report-nav__link exp-report-nav__link--muted">
             Расходы партнёров
           </NavLink>

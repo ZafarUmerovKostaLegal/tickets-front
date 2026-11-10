@@ -69,6 +69,7 @@ const ClientExpensesPage = lazy(() => import('@pages/expenses/ui/ClientExpensesP
 const PartnerExpensesPage = lazy(() => import('@pages/expenses/ui/PartnerExpensesPage').then(m => ({ default: m.PartnerExpensesPage })));
 const PartnerExpensesReportPage = lazy(() => import('@pages/expenses/ui/PartnerExpensesReportPage').then(m => ({ default: m.PartnerExpensesReportPage })));
 const ExpensesCashPage = lazy(() => import('@pages/expenses/ui/ExpensesCashPage').then(m => ({ default: m.ExpensesCashPage })));
+const CorporateCardExpensesPage = lazy(() => import('@pages/expenses/ui/CorporateCardExpensesPage').then(m => ({ default: m.CorporateCardExpensesPage })));
 const InvoicePreviewRouteLazy = lazy(() => import('@app/InvoicePreviewRoute').then(m => ({ default: m.InvoicePreviewRoute })));
 const ReportPreviewRouteLazy = lazy(() => import('@app/ReportPreviewRoute').then(m => ({ default: m.ReportPreviewRoute })));
 
@@ -176,6 +177,10 @@ const router = createBrowserRouter([
                     {
                         path: 'cash',
                         element: <Suspense fallback={<LazyFallback />}><ExpensesCashPage /></Suspense>,
+                    },
+                    {
+                        path: 'corporate-card',
+                        element: <Suspense fallback={<LazyFallback />}><CorporateCardExpensesPage /></Suspense>,
                     },
                     {
                         path: 'partners/report',

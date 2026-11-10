@@ -44,6 +44,7 @@ export async function fetchExpenseStatusCounts(
         scopeMode?: ExpensesScopeMode;
         forceExpenseType?: ExpenseType;
         excludeExpenseType?: ExpenseType;
+        forcePaymentMethod?: string;
     },
     init?: RequestInitAuth,
 ): Promise<ExpenseStatusCountMap> {
@@ -65,6 +66,7 @@ export async function fetchExpenseStatusCounts(
         scopeMode: args.scopeMode,
         forceExpenseType: args.forceExpenseType,
         excludeExpenseType: args.excludeExpenseType,
+        forcePaymentMethod: args.forcePaymentMethod,
     });
 
     const jobs: Array<Promise<readonly [ExpenseStatusCountKey, number]>> = [

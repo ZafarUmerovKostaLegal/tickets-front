@@ -36,7 +36,7 @@ import {
     expensesPeriodFilterLabel,
 } from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
-import { isEmployeePersonalFundsPayout } from '@entities/expenses/model/expensePaymentDetails';
+import { isEmployeePersonalFundsPayout, shouldHideCorporateCardFromCompanyMainList } from '@entities/expenses/model/expensePaymentDetails';
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import type { User } from '@entities/user/model/types';
@@ -59,7 +59,7 @@ import './ExpensesPage.css';
 
 const ExpensesFormPanel = lazy(() => import('./ExpensesFormPanel').then((m) => ({ default: m.ExpensesFormPanel })));
 const ExpensesReportModal = lazy(() => import('@features/expense-report').then((m) => ({ default: m.ExpensesReportModal })));
-export type ExpensesPageVariant = 'default' | 'moderationQueue' | 'partner' | 'client';
+export type ExpensesPageVariant = 'default' | 'moderationQueue' | 'partner' | 'client' | 'corporateCard';
 export type ExpensesPageProps = {
     variant?: ExpensesPageVariant;
 };
@@ -574,6 +574,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const isModerationQueue = variant === 'moderationQueue';
     const isPartnerScope = variant === 'partner';
     const isClientScope = variant === 'client';
+    const isCorporateCardScope = variant === 'corporateCard';
     const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
     const filterStorageUserId = user?.id ?? null;
     const filterOwnerKey = !currentUserLoading && filterStorageUserId != null
@@ -704,6 +705,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             sortBy: filterSort,
             scopeMode,
             forceExpenseType: isClientScope ? 'client_expense' : undefined,
+            forcePaymentMethod: isCorporateCardScope ? 'card' : undefined,
         }, { signal: controller.signal, getReuseWindowMs: 0 })
             .then((next) => {
                 if (!cancelled)
@@ -726,6 +728,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         hydratedFilterOwnerKey,
         isModerationQueue,
         isClientScope,
+        isCorporateCardScope,
         canModerate,
         debouncedSearch,
         filterType,
@@ -827,6 +830,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             pageSize: EXPENSES_LIST_PAGE_SIZE,
             scopeMode,
             forceExpenseType: isClientScope ? 'client_expense' : undefined,
+            forcePaymentMethod: isCorporateCardScope ? 'card' : undefined,
         });
         fetchExpenses(params, { signal: controller.signal, getReuseWindowMs: 0 })
             .then(data => {
@@ -863,6 +867,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         isModerationQueue,
         isPartnerScope,
         isClientScope,
+        isCorporateCardScope,
         scopeMode,
         debouncedSearch,
         filterStatus,
@@ -1402,8 +1407,13 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     return null;
                 }
             })
-            .filter((r): r is ExpenseRequest => r !== null);
-    }, [requests, authorCache]);
+            .filter((r): r is ExpenseRequest => r !== null)
+            .filter((r) => {
+                if (variant !== 'default')
+                    return true;
+                return !shouldHideCorporateCardFromCompanyMainList(r);
+            });
+    }, [requests, authorCache, variant]);
     const editingRequestForPanel = useMemo(() => {
         if (!editingReq)
             return null;
@@ -1461,7 +1471,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             ? !!(filterStatus || filterSubtype || filterPartnerUserId || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
             : isClientScope
                 ? !!(filterStatus || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
-                : !!(filterStatus || filterType || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
+                : isCorporateCardScope
+                    ? !!(filterStatus || filterType || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+                    : !!(filterStatus || filterType || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
     const activeFilterChipCount = useMemo(() => {
         let n = 0;
         if (!isModerationQueue && filterStatus)
@@ -1659,10 +1671,22 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                         ? 'Расходы партнёров'
                                         : isClientScope
                                             ? 'Расходы за клиентов'
-                                            : 'Расходы компании'}
+                                            : isCorporateCardScope
+                                                ? 'Корпоративная карта'
+                                                : 'Расходы компании'}
                             </h1>
                             <div className="exp-header-queue-wrap">
                                 {!isPartnerScope && (<>
+                                    {!isCorporateCardScope && (
+                                    <NavLink to={routes.expensesCorporateCard} className="exp-queue-nav">
+                                        Корпоративная карта
+                                    </NavLink>
+                                    )}
+                                    {isCorporateCardScope && (
+                                    <NavLink to={routes.expenses} className="exp-queue-nav">
+                                        Расходы компании
+                                    </NavLink>
+                                    )}
                                     {canModerate && (
                                     <NavLink to={routes.expensesReport} className="exp-queue-nav">
                                         Аналитика
@@ -1680,6 +1704,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                 {isPartnerScope && (<>
                                     <NavLink to={routes.expenses} className="exp-queue-nav">
                                         Расходы компании
+                                    </NavLink>
+                                    <NavLink to={routes.expensesCorporateCard} className="exp-queue-nav">
+                                        Корпоративная карта
                                     </NavLink>
                                     {canModerate && (
                                     <NavLink to={routes.expensesReport} className="exp-queue-nav">

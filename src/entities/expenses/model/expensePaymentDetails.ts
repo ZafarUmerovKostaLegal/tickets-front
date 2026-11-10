@@ -58,3 +58,23 @@ export function isAwaitingVendorPayment(req: {
     return req.status === 'approved'
         && !isEmployeePersonalFundsPayout(req);
 }
+
+/** Office corporate card payment method (`card`). */
+export function isOfficeCorporateCardPayment(req: {
+    paymentMethod?: string | null;
+}): boolean {
+    return String(req.paymentMethod ?? '').trim().toLowerCase() === 'card';
+}
+
+/**
+ * Company main registry hides corporate-card spend unless it is a client expense.
+ * Those rows live in the dedicated Corporate Card section.
+ */
+export function shouldHideCorporateCardFromCompanyMainList(req: {
+    paymentMethod?: string | null;
+    expenseType?: string | null;
+}): boolean {
+    if (!isOfficeCorporateCardPayment(req))
+        return false;
+    return String(req.expenseType ?? '').trim() !== 'client_expense';
+}

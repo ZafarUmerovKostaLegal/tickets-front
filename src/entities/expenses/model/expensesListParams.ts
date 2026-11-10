@@ -50,6 +50,8 @@ export function buildExpensesListParams(args: {
     /** Force type (client tab) or exclude type (company tab without client expenses). */
     forceExpenseType?: ExpenseType;
     excludeExpenseType?: ExpenseType;
+    /** Force payment method (corporate card / cash queues). */
+    forcePaymentMethod?: string;
 }): ListParams {
     const pageSize = args.pageSize ?? EXPENSES_LIST_PAGE_SIZE;
     const page = Math.max(1, args.page);
@@ -92,6 +94,8 @@ export function buildExpensesListParams(args: {
         p.isReimbursable = true;
     if (args.filterReimb === 'non_reimbursable')
         p.isReimbursable = false;
+    if (args.forcePaymentMethod)
+        p.paymentMethod = args.forcePaymentMethod;
     if (!args.isModerationQueue && args.filterStatus === AWAITING_PAYMENT_STATUS_FILTER) {
         p.status = 'approved';
         p.isReimbursable = true;

@@ -1,4 +1,4 @@
-export type ExpensesFiltersVariant = 'default' | 'moderationQueue' | 'partner' | 'client';
+export type ExpensesFiltersVariant = 'default' | 'moderationQueue' | 'partner' | 'client' | 'corporateCard';
 
 export type ExpensesFilterSlotId =
     | 'status'

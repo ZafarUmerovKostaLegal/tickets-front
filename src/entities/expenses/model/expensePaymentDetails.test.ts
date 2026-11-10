@@ -7,6 +7,8 @@ import {
     isEmployeePersonalFundsPayout,
     isAwaitingVendorPayment,
     isAwaitingEmployeeReimbursement,
+    isOfficeCorporateCardPayment,
+    shouldHideCorporateCardFromCompanyMainList,
 } from './expensePaymentDetails';
 
 describe('expense payment details', () => {
@@ -92,6 +94,24 @@ describe('isAwaitingVendorPayment', () => {
             status: 'paid',
             isReimbursable: true,
             paymentMethod: 'transfer',
+        })).toBe(false);
+    });
+});
+
+describe('shouldHideCorporateCardFromCompanyMainList', () => {
+    it('hides office card spend that is not a client expense', () => {
+        expect(isOfficeCorporateCardPayment({ paymentMethod: 'card' })).toBe(true);
+        expect(shouldHideCorporateCardFromCompanyMainList({
+            paymentMethod: 'card',
+            expenseType: 'services',
+        })).toBe(true);
+        expect(shouldHideCorporateCardFromCompanyMainList({
+            paymentMethod: 'card',
+            expenseType: 'client_expense',
+        })).toBe(false);
+        expect(shouldHideCorporateCardFromCompanyMainList({
+            paymentMethod: 'cash',
+            expenseType: 'services',
         })).toBe(false);
     });
 });

@@ -38,6 +38,10 @@ describe('routes helpers', () => {
         expect(routes.expensesClients).toBe('/expenses/clients');
     });
 
+    it('expensesCorporateCard route exists', () => {
+        expect(routes.expensesCorporateCard).toBe('/expenses/corporate-card');
+    });
+
     it('getInvoiceCreateUrl и getInvoiceDetailUrl', () => {
         expect(getInvoiceCreateUrl()).toBe(routes.timeTrackingInvoiceCreate);
         expect(getInvoiceCreateUrl({ resume: true })).toBe(`${routes.timeTrackingInvoiceCreate}?resume=1`);
