@@ -1807,35 +1807,7 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   font-weight: 650;
 }
 
-.fm-netfolder__toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.fm-netfolder__toolbar .fm-search {
-  flex: 1 1 14rem;
-  min-width: 12rem;
-}
-
-.fm-netfolder__crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-  margin-bottom: 0.55rem;
-  font-size: 0.84rem;
-}
-
-.fm-netfolder__crumb {
-  display: inline-flex;
-  gap: 0.35rem;
-  align-items: center;
-}
-
-.fm-netfolder__table {
+.fm-netfolder.fm-tiles {
   min-height: 18rem;
 }
 
