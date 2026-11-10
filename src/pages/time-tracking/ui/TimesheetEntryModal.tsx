@@ -153,7 +153,7 @@ function resolveInitialForm(entry: TimeEntry | undefined, defaultDate: string, p
 const ENTRY_MODAL_ENTER_ANIM = 'tsp-m-in';
 const ENTRY_MODAL_ENTER_FALLBACK_MS = 300;
 
-export function EntryModal({ entry, clone, defaultDate, projects, projectsLoading, projectsLoadError, tasksByProjectId, loadingProjectTaskIds, onRequestProjectTasks, entriesSubjectAuthUserId, viewerCanOverrideWeeklyLock, preferredTaskName, preserveCloneHours, onClose, onSave, }: {
+export function EntryModal({ entry, clone, defaultDate, projects, projectsLoading, projectsLoadError, tasksByProjectId, loadingProjectTaskIds, onRequestProjectTasks, entriesSubjectAuthUserId, viewerCanOverrideWeeklyLock, preferredTaskName, preserveCloneHours, timerActive = false, onClose, onSave, }: {
     entry?: TimeEntry;
     clone?: TimeEntry;
     defaultDate: string;
@@ -167,6 +167,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
     viewerCanOverrideWeeklyLock: boolean;
     preferredTaskName?: string;
     preserveCloneHours?: boolean;
+    timerActive?: boolean;
     onClose: () => void;
     onSave: (e: TimeEntry) => void | Promise<void>;
 }) {
@@ -368,6 +369,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
         : null;
     const entryVoided = Boolean(entry?.isVoided);
     const formDateLocked = reportingDayBlocked || entryVoided;
+    const timerFieldsLocked = Boolean(entry && timerActive);
     const getEntryModalTabStops = useCallback((): HTMLElement[] => {
         const modal = modalRef.current;
         if (!modal)
@@ -470,43 +472,56 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
             setError(t('timeTrackingPage.errors.noteTooShort'));
             return;
         }
-        const h = parseHoursStrict(form.hours);
-        if (form.hours && (isNaN(h) || h < 0)) {
-            setError(t('timeTrackingPage.errors.timeInvalid'));
-            return;
+        let rawHours = 0;
+        let durationSeconds = 0;
+        if (timerFieldsLocked && entry) {
+            rawHours = Number.isFinite(entry.hours) ? entry.hours : 0;
+            durationSeconds = entry.durationSeconds > 0
+                ? entry.durationSeconds
+                : (rawHours > 0 ? Math.max(1, Math.round(rawHours * 3600)) : 0);
         }
-        if (form.hours && h > MAX_MODAL_ENTRY_HOURS) {
-            setError(t('timeTrackingPage.errors.maxHoursExceeded'));
-            return;
+        else {
+            const h = parseHoursStrict(form.hours);
+            if (form.hours && (isNaN(h) || h < 0)) {
+                setError(t('timeTrackingPage.errors.timeInvalid'));
+                return;
+            }
+            if (form.hours && h > MAX_MODAL_ENTRY_HOURS) {
+                setError(t('timeTrackingPage.errors.maxHoursExceeded'));
+                return;
+            }
+            rawHours = form.hours ? h : 0;
+            durationSeconds = rawHours > 0 ? Math.max(1, Math.round(rawHours * 3600)) : 0;
+            if (form.hours && durationSeconds > 0 && !isValidDurationSeconds(durationSeconds)) {
+                if (durationSeconds < MIN_ENTRY_SECONDS) {
+                    setError(t('timeTrackingPage.errors.minOneMinute'));
+                }
+                else if (durationSeconds > MAX_ENTRY_SECONDS) {
+                    setError(t('timeTrackingPage.errors.maxDuration'));
+                }
+                else {
+                    setError(t('timeTrackingPage.errors.badDuration'));
+                }
+                return;
+            }
         }
-        const rawHours = form.hours ? h : 0;
-        const durationSeconds = rawHours > 0 ? Math.max(1, Math.round(rawHours * 3600)) : 0;
-        if (form.hours && durationSeconds > 0 && !isValidDurationSeconds(durationSeconds)) {
-            if (durationSeconds < MIN_ENTRY_SECONDS) {
-                setError(t('timeTrackingPage.errors.minOneMinute'));
-            }
-            else if (durationSeconds > MAX_ENTRY_SECONDS) {
-                setError(t('timeTrackingPage.errors.maxDuration'));
-            }
-            else {
-                setError(t('timeTrackingPage.errors.badDuration'));
-            }
-            return;
-        }
+        const lockedProject = timerFieldsLocked && entry
+            ? (projects.find((p) => p.id === entry.projectId) ?? projects.find((p) => p.name === entry.project && (!entry.client || p.client === entry.client)) ?? proj)
+            : proj;
         const payload: TimeEntry = {
             id: entry?.id ?? `te_${Date.now()}`,
-            date: form.date,
-            project: proj.name,
-            client: proj.client,
-            projectId: proj.id,
-            projectCurrency: proj.currency,
+            date: timerFieldsLocked && entry ? entry.date : form.date,
+            project: lockedProject.name,
+            client: lockedProject.client,
+            projectId: lockedProject.id,
+            projectCurrency: lockedProject.currency,
             taskId: form.taskId || undefined,
             task: form.task,
             notes: form.notes,
             hours: rawHours,
             durationSeconds,
             billable: form.billable,
-            color: proj.color,
+            color: lockedProject.color,
             billableAmount: entry?.billableAmount ?? null,
             billableCurrency: entry?.billableCurrency ?? null,
             billableFxAsOf: undefined,
@@ -612,7 +627,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
             <div className="tsp-m__body tsp-m__body--time-entry">
                 <p className="tsp-m__lbl tsp-m__lbl--section">{t('timeTrackingPage.modal.projectTaskSection')}</p>
                 <div className="tsp-m__te-field">
-                    <SearchableSelect<ProjectOption> ref={projSelectRef} portalDropdown portalZIndex={12000} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" buttonId={`${uid}-proj-btn`} value={form.projectId} items={flatProjects} getOptionValue={(p) => p.id} getOptionLabel={(p) => `${p.name} — (${p.client})`} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} getGroupLabel={(p) => p.client} groupItemSort={(a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })} disabled={formDateLocked} onTabFromDropdown={(direction) => handleSelectTabFromDropdown(`${uid}-proj-btn`, direction)} renderButtonContent={(p) => (<span className="tsp-srch__btn-pick">
+                    <SearchableSelect<ProjectOption> ref={projSelectRef} portalDropdown portalZIndex={12000} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" buttonId={`${uid}-proj-btn`} value={form.projectId} items={flatProjects} getOptionValue={(p) => p.id} getOptionLabel={(p) => `${p.name} — (${p.client})`} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} getGroupLabel={(p) => p.client} groupItemSort={(a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })} disabled={formDateLocked || timerFieldsLocked} onTabFromDropdown={(direction) => handleSelectTabFromDropdown(`${uid}-proj-btn`, direction)} renderButtonContent={(p) => (<span className="tsp-srch__btn-pick">
                         <span className="tsp-srch__btn-pick-client">{p.client}</span>
                         <span className="tsp-srch__btn-pick-proj">{p.name}</span>
                     </span>)} placeholder={t('timeTrackingPage.modal.projectPlaceholder')} emptyListText={t('timeTrackingPage.modal.noProjects')} noMatchText={t('timeTrackingPage.notFound')} onSelect={(p) => {
@@ -667,7 +682,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
                     <div className="tsp-m__f tsp-m__f--te-hours">
                         <div className="tsp-m__te-hours-head" ref={hoursHelpRef}>
                             <label className="tsp-m__te-hours-lbl" htmlFor={`${uid}-h`}>{t('timeTrackingPage.modal.hoursLabel')}</label>
-                            <button type="button" className="tsp-m__te-hours-help" tabIndex={-1} aria-label={t('timeTrackingPage.modal.hoursHintTitle')} aria-expanded={hoursHintOpen} onClick={() => setHoursHintOpen((open) => !open)} disabled={formDateLocked}>
+                            <button type="button" className="tsp-m__te-hours-help" tabIndex={-1} aria-label={t('timeTrackingPage.modal.hoursHintTitle')} aria-expanded={hoursHintOpen} onClick={() => setHoursHintOpen((open) => !open)} disabled={formDateLocked || timerFieldsLocked}>
                                 ?
                             </button>
                             {hoursHintOpen && (<div className="tsp-m__te-hours-popover" role="tooltip">
@@ -675,15 +690,21 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
                                 <p className="tsp-m__te-hours-popover-body">{t('timeTrackingPage.modal.hoursHintBody')}</p>
                             </div>)}
                         </div>
-                        <input id={`${uid}-h`} type="text" className={`tsp-m__inp tsp-m__inp--h${hoursExceedsLimit ? ' tsp-m__inp--invalid' : ''}`} placeholder="0:00" autoComplete="off" spellCheck={false} inputMode="numeric" value={form.hours} onChange={e => setForm(f => ({ ...f, hours: sanitizeColonHoursInput(e.target.value) }))} onKeyDown={handleEntryModalEnterSubmit} disabled={formDateLocked} aria-invalid={hoursExceedsLimit || undefined} />
+                        <input id={`${uid}-h`} type="text" className={`tsp-m__inp tsp-m__inp--h${hoursExceedsLimit ? ' tsp-m__inp--invalid' : ''}`} placeholder="0:00" autoComplete="off" spellCheck={false} inputMode="numeric" value={form.hours} onChange={e => setForm(f => ({ ...f, hours: sanitizeColonHoursInput(e.target.value) }))} onKeyDown={handleEntryModalEnterSubmit} disabled={formDateLocked || timerFieldsLocked} aria-invalid={hoursExceedsLimit || undefined} />
                         {hoursExceedsLimit && (<p className="tsp-m__err tsp-m__err--inline" role="alert">
                             {t('timeTrackingPage.errors.maxHoursExceeded')}
                         </p>)}
                     </div>
                 </div>
-                {hoursForTimerHint === 0 && (<p className="tsp-m__field-note tsp-m__field-note--timer tsp-m__field-note--tight">
-                    {t('timeTrackingPage.modal.timerZeroHint')}
-                </p>)}
+                {timerFieldsLocked ? (
+                    <p className="tsp-m__field-note tsp-m__field-note--timer tsp-m__field-note--tight" role="status">
+                        {t('timeTrackingPage.modal.timerFieldsLockedHint')}
+                    </p>
+                ) : hoursForTimerHint === 0 ? (
+                    <p className="tsp-m__field-note tsp-m__field-note--timer tsp-m__field-note--tight">
+                        {t('timeTrackingPage.modal.timerZeroHint')}
+                    </p>
+                ) : null}
                 {entry && entry.billableAmount != null && Number.isFinite(entry.billableAmount) && (<div className="tsp-m__f">
                     <p className="tsp-m__field-note tsp-m__field-note--tight">
                         API: <strong>
@@ -734,7 +755,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
                         buttonClassName={`tsp-m__date-ttp-btn${isOtherDayThanToday ? ' tsp-m__date-ttp-btn--other-day' : ''}`}
                         value={form.date}
                         onChange={(iso) => setForm((f) => ({ ...f, date: iso }))}
-                        disabled={formDateLocked}
+                        disabled={formDateLocked || timerFieldsLocked}
                         isDateDisabled={(iso) => isClosedReportingWeekEditingBlockedForSubject(entriesSubjectAuthUserId, iso, viewerCanOverrideWeeklyLock)}
                         portal
                         portalZIndex={12500}

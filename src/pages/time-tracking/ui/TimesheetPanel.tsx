@@ -1913,7 +1913,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         </div>
         {viewMode === 'calendar' ? timesheetFooter : null}
 
-        {modal.open && entriesAuthUserId != null && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? modal.clone?.id ?? 'new'}_${modal.preferredTaskName ?? ''}`} entry={modal.edit} clone={modal.clone} defaultDate={modal.date} preferredTaskName={modal.preferredTaskName} preserveCloneHours={modal.preserveCloneHours} projects={entryModalProjects} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByProjectId={tasksByProjectId} loadingProjectTaskIds={loadingProjectTaskIds} onRequestProjectTasks={requestProjectTasks} entriesSubjectAuthUserId={entriesAuthUserId} viewerCanOverrideWeeklyLock={viewerCanOverrideWeeklyLock} onClose={closeModal} onSave={saveEntry} />)}
+        {modal.open && entriesAuthUserId != null && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? modal.clone?.id ?? 'new'}_${modal.preferredTaskName ?? ''}`} entry={modal.edit} clone={modal.clone} defaultDate={modal.date} preferredTaskName={modal.preferredTaskName} preserveCloneHours={modal.preserveCloneHours} timerActive={Boolean(modal.edit && runningTimer?.entryId === modal.edit.id)} projects={entryModalProjects} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByProjectId={tasksByProjectId} loadingProjectTaskIds={loadingProjectTaskIds} onRequestProjectTasks={requestProjectTasks} entriesSubjectAuthUserId={entriesAuthUserId} viewerCanOverrideWeeklyLock={viewerCanOverrideWeeklyLock} onClose={closeModal} onSave={saveEntry} />)}
         {outlookDayAgenda ? (
             <TimesheetOutlookDayAgendaModal
                 day={outlookDayAgenda.day}

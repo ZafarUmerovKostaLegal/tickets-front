@@ -441,6 +441,7 @@ export const timeTrackingPageMessagesEn: TimeTrackingPageMessages = {
         noTasksInDirectoryHint:
             'No tasks for this project — add them in the task directory (pick client and project), then refresh the timesheet.',
         timerZeroHint: '0:00 — timesheet entry; time is sent to the server after timer Stop.',
+        timerFieldsLockedHint: 'While the timer is running, project and time cannot be changed — that could lose tracked time. Task and notes are still editable.',
         fxUnavailable: 'CB rate unavailable — amount was not calculated on the server. Try saving again later.',
         voidViewOnlyPrefix: 'Entry removed from tracking by a manager',
         voidReallocParen: ' (reallocation)',
