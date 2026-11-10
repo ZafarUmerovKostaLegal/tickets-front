@@ -89,11 +89,16 @@
 .td-page__header-start,
 .icom-page__header-start,
 .its-page__header-start,
-.fm__header-start {
+.fm__header-start,
+.fm__header-end {
   display: flex;
   align-items: center;
   gap: var(--app-page-header-gap);
   min-width: 0;
+}
+
+.fm__header-end {
+  flex-shrink: 0;
 }
 
 .help-page__header-start,

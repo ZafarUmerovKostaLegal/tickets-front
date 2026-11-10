@@ -39,6 +39,7 @@ export const routes = {
     kostaLegalAi: '/kosta-legal-ai',
     legalHub: '/legal-hub',
     fileManager: '/files',
+    dmsExplorer: '/files/explorer',
     legalHubMember: '/legal-hub/member/:memberId',
     legalHubMemberReports: '/legal-hub/member/:memberId/reports',
     legalHubMemberStats: '/legal-hub/member/:memberId/stats',

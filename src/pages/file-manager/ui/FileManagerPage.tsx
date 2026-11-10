@@ -2,6 +2,7 @@ import { startTransition, useCallback, useMemo, useState, ViewTransition } from 
 import { useSearchParams } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
+import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
 import { AuditView, MonitoringView, TemplateView } from './AdminViews';
@@ -238,7 +239,23 @@ export function FileManagerPage() {
                         <AppHomeLogo withSeparator />
                         <h1 className="fm__title">{t('nav.fileManager')}</h1>
                     </div>
-                    <AppPageSettings />
+                    <div className="fm__header-end">
+                        {canUseDmsDesktop() ? (
+                            <button
+                                type="button"
+                                className="fm-btn fm-btn--primary"
+                                onClick={() => {
+                                    void openDmsExplorerWindow().catch((error) => {
+                                        console.error(error);
+                                    });
+                                }}
+                            >
+                                <Icon name="grid" />
+                                DMS Explorer
+                            </button>
+                        ) : null}
+                        <AppPageSettings />
+                    </div>
                 </div>
             </header>
             <ToastHost>

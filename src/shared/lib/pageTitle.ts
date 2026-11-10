@@ -40,6 +40,8 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         return t('pageTitle.authCallback');
     if (path === routes.home)
         return t('nav.home');
+    if (path === routes.dmsExplorer)
+        return 'Kosta DMS Explorer';
 
     if (path === routes.timeTracking) {
         const tab = new URLSearchParams(search).get('tab');

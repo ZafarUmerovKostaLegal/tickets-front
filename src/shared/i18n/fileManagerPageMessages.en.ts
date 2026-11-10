@@ -274,6 +274,10 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         searchUser: 'Find a user…',
         changed: 'Permissions updated',
     },
+    dmsExplorer: {
+        open: 'DMS Explorer',
+        title: 'Kosta DMS Explorer',
+    },
     matrix: {
         title: 'Access matrix',
         pickClient: 'Select a client',

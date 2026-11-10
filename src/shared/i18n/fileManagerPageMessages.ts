@@ -272,6 +272,10 @@ export const fileManagerPageMessages = {
         searchUser: 'Найти сотрудника…',
         changed: 'Права обновлены',
     },
+    dmsExplorer: {
+        open: 'DMS Explorer',
+        title: 'Kosta DMS Explorer',
+    },
     matrix: {
         title: 'Матрица доступа',
         pickClient: 'Выберите клиента',

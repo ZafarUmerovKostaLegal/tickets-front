@@ -1,3 +1,4 @@
+mod dms_explorer;
 mod network_drive;
 
 #[cfg(desktop)]
@@ -20,15 +21,19 @@ fn configure_main_window(app: &tauri::App) -> tauri::Result<()> {
     }
   });
 
-  let show = MenuItem::with_id(app, "show", "Открыть", true, None::<&str>)?;
+  let show = MenuItem::with_id(app, "show", "Открыть Hub", true, None::<&str>)?;
+  let dms = MenuItem::with_id(app, "dms", "Kosta DMS Explorer", true, None::<&str>)?;
   let quit = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
-  let menu = Menu::with_items(app, &[&show, &quit])?;
+  let menu = Menu::with_items(app, &[&show, &dms, &quit])?;
   let mut tray = TrayIconBuilder::new()
     .menu(&menu)
     .show_menu_on_left_click(false)
     .tooltip("Kosta Legal")
     .on_menu_event(|app, event| match event.id.as_ref() {
       "show" => show_main(app),
+      "dms" => {
+        let _ = dms_explorer::show_dms_explorer(app.clone());
+      }
       "quit" => app.exit(0),
       _ => {}
     })
@@ -97,6 +102,10 @@ pub fn run() {
       network_drive::revoke_folder_access,
       network_drive::get_folder_owner,
       network_drive::set_folder_owner,
+      dms_explorer::show_dms_explorer,
+      dms_explorer::dms_write_temp_file,
+      dms_explorer::dms_open_path,
+      dms_explorer::dms_send_outlook_attachment,
       show_chat_notification,
     ])
     .run(tauri::generate_context!())
