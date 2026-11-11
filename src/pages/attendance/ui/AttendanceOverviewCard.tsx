@@ -951,13 +951,12 @@ export function AttendanceOverviewCard() {
                                     {listRows.map((row) => (
                                         <tr
                                             key={row.key}
-                                            className={`att-overview__list-row att-overview__list-row--${
-                                                row.status === 'late'
+                                            className={`att-overview__list-row att-overview__list-row--${row.status === 'late'
                                                     ? 'late'
                                                     : row.status === 'absent'
                                                         ? 'absent'
                                                         : 'onTime'
-                                            }`}
+                                                }`}
                                         >
                                             {isPeriodMode ? (
                                                 <td className="att-overview__date-cell">
@@ -970,9 +969,8 @@ export function AttendanceOverviewCard() {
                                                         <span className="att-overview__person-name">{row.name}</span>
                                                         {row.statusLabel ? (
                                                             <span
-                                                                className={`att-overview__status-tag att-overview__status-tag--${
-                                                                    row.status === 'late' ? 'late' : 'absent'
-                                                                }`}
+                                                                className={`att-overview__status-tag att-overview__status-tag--${row.status === 'late' ? 'late' : 'absent'
+                                                                    }`}
                                                             >
                                                                 {row.statusLabel}
                                                             </span>
