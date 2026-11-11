@@ -704,29 +704,6 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                                         );
                                     })}
                                 </ul>
-                                <input
-                                    ref={fileInputRef}
-                                    className="lh-drawer__file-input"
-                                    type="file"
-                                    multiple
-                                    tabIndex={-1}
-                                    aria-hidden
-                                    onChange={(event) => {
-                                        const picked = [...(event.target.files ?? [])];
-                                        const mode = fileModeRef.current;
-                                        const targetId = fileTargetRef.current;
-                                        event.target.value = '';
-                                        if (picked.length === 0)
-                                            return;
-                                        void uploadLegalHubFiles(task.id, picked, mode === 'item' && targetId ? { checkId: targetId } : undefined).then((activity) => {
-                                            if (activity == null) {
-                                                setReviewError(t('legalHub.taskFileError'));
-                                                return;
-                                            }
-                                            applyActivity(activity);
-                                        });
-                                    }}
-                                />
                                 <form
                                     className="lh-drawer__add"
                                     onSubmit={(event) => {
@@ -882,12 +859,38 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                     {missingFile ? <p className="lh-drawer__note">{t('legalHub.taskReviewNeedsFile')}</p> : null}
                     {!missingFile && missingReviewer ? <p className="lh-drawer__note">{t(needsPartner ? 'legalHub.taskReviewNeedsPartner' : 'legalHub.taskReviewNeedsPerson')}</p> : null}
                     {reviewError ? <p className="lh-drawer__note">{reviewError}</p> : null}
-                    <div className="lh-drawer__foot-row">
+                    <div className={`lh-drawer__foot-row${inReview ? '' : ' lh-drawer__foot-row--single'}`}>
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
                         {inReview ? <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button> : null}
                     </div>
                     {status === 'partner' && !approved ? <p className="lh-drawer__note">{t('legalHub.taskReviewerOnly')}</p> : null}
                 </footer>
+                <input
+                    ref={fileInputRef}
+                    className="lh-drawer__file-input"
+                    type="file"
+                    multiple
+                    tabIndex={-1}
+                    aria-hidden
+                    onChange={(event) => {
+                        const picked = [...(event.target.files ?? [])];
+                        const mode = fileModeRef.current;
+                        const targetId = fileTargetRef.current;
+                        event.target.value = '';
+                        if (picked.length === 0)
+                            return;
+                        void uploadLegalHubFiles(task.id, picked, mode === 'item' && targetId ? { checkId: targetId } : undefined).then((activity) => {
+                            if (activity == null) {
+                                setReviewError(t('legalHub.taskFileError'));
+                                return;
+                            }
+                            setReviewError('');
+                            applyActivity(activity);
+                            if (mode === 'task')
+                                setTab('files');
+                        });
+                    }}
+                />
             </div>
         </div>,
         document.body,
