@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-tracking';
 import { SearchableSelect } from '@shared/ui';
-import { filesApi, type AccessRequest, type AclLevel, type ClientsResponse, type MatterRow, type RequestableMatter } from '../api/filesApi';
+import { filesApi, type AccessRequest, type AclLevel, type ClientsResponse, type MatterRow, type RequestableMatter, type SecurityMember } from '../api/filesApi';
 import { formatDateTime } from '../lib/filesFormat';
 import { FmSelect } from './fmSelect';
 import { Icon, LevelBadge, Modal, StateBlock, useAction, useFm, useLoad } from './fmShared';
@@ -165,6 +165,45 @@ function userName(user: TimeTrackingUserRow): string {
     return (user.display_name ?? '').trim() || user.email;
 }
 
+function personInitials(name: string, stored?: string | null): string {
+    const ready = (stored ?? '').trim();
+    if (ready)
+        return ready.slice(0, 3).toUpperCase();
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length === 0)
+        return '?';
+    if (parts.length === 1) {
+        const token = parts[0]!;
+        return (token.length <= 2 ? token : token.slice(0, 2)).toUpperCase();
+    }
+    return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
+}
+
+function cleanPersonName(raw: string, fallback: string): string {
+    const name = raw.trim();
+    if (!name)
+        return fallback;
+    if (/^auth-user-\d+(@|$)/i.test(name))
+        return fallback;
+    if (/^[^\s@]+@[^\s@]+$/.test(name)) {
+        const local = name.slice(0, name.indexOf('@'));
+        if (/^auth-user-\d+$/i.test(local))
+            return fallback;
+        return local.replace(/[._]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
+    }
+    return name;
+}
+
+type SecurityFilter = 'all' | 'explicit' | 'inherited' | 'wall';
+
+function sourceRank(source: SecurityMember['source'], level: AclLevel): number {
+    if (level === 'deny')
+        return 0;
+    if (source === 'acl' || source === 'both')
+        return 1;
+    return 2;
+}
+
 export function SecurityView({ clients, matterId, onPickMatter }: {
     clients: ClientsResponse;
     matterId: string | null;
@@ -178,10 +217,63 @@ export function SecurityView({ clients, matterId, onPickMatter }: {
     const [addUser, setAddUser] = useState('');
     const [addLevel, setAddLevel] = useState<AclLevel>('read');
     const [note, setNote] = useState('');
+    const [filter, setFilter] = useState<SecurityFilter>('all');
+    const [peopleQuery, setPeopleQuery] = useState('');
 
     const activeUsers = useMemo(() => (users.data ?? []).filter((user) => !user.is_blocked && !user.is_archived), [users.data]);
+    const catalogById = useMemo(() => new Map(activeUsers.map((user) => [user.id, user])), [activeUsers]);
     const data = security.data && security.data.matter.id === matterId ? security.data : null;
-    const aclByUser = new Map((data?.acl ?? []).map((row) => [row.userId, row]));
+    const aclByUser = useMemo(() => new Map((data?.acl ?? []).map((row) => [row.userId, row])), [data]);
+
+    const people = useMemo(() => {
+        if (!data)
+            return [];
+        const q = peopleQuery.trim().toLowerCase();
+        return data.effective
+            .map((member) => {
+                const catalog = catalogById.get(member.userId);
+                const fallback = tr('security.userFallback', { id: String(member.userId) });
+                const name = cleanPersonName(
+                    (catalog?.display_name ?? '').trim() || member.name || catalog?.email || '',
+                    fallback,
+                );
+                const position = (member.position || catalog?.position || '').trim();
+                return {
+                    ...member,
+                    name,
+                    position,
+                    initials: personInitials(name, catalog?.initials),
+                    email: catalog?.email ?? '',
+                };
+            })
+            .filter((member) => {
+                if (filter === 'wall' && member.level !== 'deny')
+                    return false;
+                if (filter === 'explicit' && member.source === 'timeTracking')
+                    return false;
+                if (filter === 'inherited' && member.source !== 'timeTracking')
+                    return false;
+                if (!q)
+                    return true;
+                return `${member.name} ${member.position} ${member.email}`.toLowerCase().includes(q);
+            })
+            .sort((left, right) => {
+                const bySource = sourceRank(left.source, left.level) - sourceRank(right.source, right.level);
+                if (bySource !== 0)
+                    return bySource;
+                return left.name.localeCompare(right.name, locale);
+            });
+    }, [catalogById, data, filter, locale, peopleQuery, tr]);
+
+    const counts = useMemo(() => {
+        const rows = data?.effective ?? [];
+        return {
+            all: rows.length,
+            explicit: rows.filter((row) => row.source !== 'timeTracking').length,
+            inherited: rows.filter((row) => row.source === 'timeTracking').length,
+            wall: rows.filter((row) => row.level === 'deny').length,
+        };
+    }, [data]);
 
     const setLevel = async (userId: number, name: string, level: AclLevel, comment = '') => {
         if (!matterId)
@@ -192,125 +284,234 @@ export function SecurityView({ clients, matterId, onPickMatter }: {
         return Boolean(ok);
     };
 
+    const filters: { id: SecurityFilter; label: string; count: number }[] = [
+        { id: 'all', label: tr('security.filterAll'), count: counts.all },
+        { id: 'explicit', label: tr('security.filterExplicit'), count: counts.explicit },
+        { id: 'inherited', label: tr('security.filterInherited'), count: counts.inherited },
+        { id: 'wall', label: tr('security.filterWall'), count: counts.wall },
+    ];
+
     return (
-        <section className="fm-docs fm-docs--padded">
-            <div className="fm-toolbar">
-                <div className="fm-field fm-field--inline">
-                    <span>{tr('security.pickMatter')}</span>
-                    <SearchableSelect<MatterOption>
-                        value={matterId ?? ''}
-                        items={options}
-                        getOptionValue={(item) => item.id}
-                        getOptionLabel={(item) => matterLabel(item)}
-                        getSearchText={(item) => `${item.clientName} ${item.code} ${item.name}`}
-                        getGroupLabel={(item) => item.clientName}
-                        onSelect={(item) => onPickMatter(item.id)}
-                        placeholder={tr('security.pickMatter')}
-                    />
+        <section className="fm-docs fm-docs--padded fm-sec">
+            <header className="fm-sec__hero">
+                <div className="fm-sec__hero-main">
+                    <div className="fm-field fm-field--inline fm-sec__matter">
+                        <span>{tr('security.pickMatter')}</span>
+                        <SearchableSelect<MatterOption>
+                            value={matterId ?? ''}
+                            items={options}
+                            getOptionValue={(item) => item.id}
+                            getOptionLabel={(item) => matterLabel(item)}
+                            getSearchText={(item) => `${item.clientName} ${item.code} ${item.name}`}
+                            getGroupLabel={(item) => item.clientName}
+                            onSelect={(item) => onPickMatter(item.id)}
+                            placeholder={tr('security.pickMatter')}
+                        />
+                    </div>
+                    {data ? (
+                        <div className="fm-sec__matter-meta">
+                            <strong>{data.matter.clientName}</strong>
+                            <span>{matterLabel(data.matter)}</span>
+                        </div>
+                    ) : (
+                        <p className="fm-sec__hint">{tr('security.pickMatterFirst')}</p>
+                    )}
                 </div>
-            </div>
-            <div className="fm-notes">
-                <p><Icon name="key" />{tr('security.managersNote')}</p>
-                <p><Icon name="shield" />{tr('security.wallNote')}</p>
-            </div>
+                <div className="fm-sec__tips">
+                    <p><Icon name="key" /><span>{tr('security.managersNote')}</span></p>
+                    <p><Icon name="shield" /><span>{tr('security.wallNote')}</span></p>
+                </div>
+            </header>
+
             {!matterId ? null : (
                 <StateBlock loading={security.loading && !data} error={security.error} onRetry={security.reload}>
                     {data ? (
                         <>
-                            <h3 className="fm-section-title">{data.matter.clientName} · {matterLabel(data.matter)}</h3>
-                            <form className="fm-grant" onSubmit={async (event) => {
-                                event.preventDefault();
-                                const user = activeUsers.find((row) => String(row.id) === addUser);
-                                if (!user)
-                                    return;
-                                if (await setLevel(user.id, userName(user), addLevel, note)) {
-                                    setAddUser('');
-                                    setNote('');
-                                }
-                            }}>
-                                <div className="fm-field">
-                                    <span>{tr('security.addUser')}</span>
-                                    <SearchableSelect<TimeTrackingUserRow>
-                                        value={addUser}
-                                        items={activeUsers}
-                                        getOptionValue={(user) => String(user.id)}
-                                        getOptionLabel={userName}
-                                        getSearchText={(user) => `${userName(user)} ${user.email} ${user.position ?? ''}`}
-                                        onSelect={(user) => setAddUser(String(user.id))}
-                                        placeholder={tr('security.searchUser')}
-                                    />
+                            <form
+                                className="fm-sec__grant"
+                                onSubmit={async (event) => {
+                                    event.preventDefault();
+                                    const user = activeUsers.find((row) => String(row.id) === addUser);
+                                    if (!user)
+                                        return;
+                                    if (await setLevel(user.id, userName(user), addLevel, note)) {
+                                        setAddUser('');
+                                        setNote('');
+                                    }
+                                }}
+                            >
+                                <div className="fm-sec__grant-head">
+                                    <h3>{tr('security.grantTitle')}</h3>
                                 </div>
-                                <div className="fm-field">
-                                    <span>{tr('security.addLevel')}</span>
-                                    <FmSelect
-                                        value={addLevel}
-                                        options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
-                                        onChange={(level) => setAddLevel(level as AclLevel)}
-                                        placeholder={tr('security.addLevel')}
-                                    />
-                                </div>
-                                <label className="fm-field fm-field--grow">
-                                    <span>{tr('security.note')}</span>
-                                    <input value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
-                                </label>
-                                <button type="submit" className="fm-btn fm-btn--primary" disabled={!addUser}><Icon name="plus" />{tr('security.add')}</button>
-                            </form>
-                            {data.effective.length === 0 ? <div className="fm-state">{tr('security.empty')}</div> : (
-                                <div className="fm-table-wrap">
-                                    <table className="fm-table">
-                                        <thead>
-                                            <tr>
-                                                <th>{tr('common.user')}</th>
-                                                <th>{tr('security.effective')}</th>
-                                                <th>{tr('security.addLevel')}</th>
-                                                <th>{tr('security.note')}</th>
-                                                <th />
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.effective.map((member) => {
-                                                const rule = aclByUser.get(member.userId);
+                                <div className="fm-sec__grant-grid">
+                                    <div className="fm-field">
+                                        <span>{tr('security.addUser')}</span>
+                                        <SearchableSelect<TimeTrackingUserRow>
+                                            value={addUser}
+                                            items={activeUsers}
+                                            getOptionValue={(user) => String(user.id)}
+                                            getOptionLabel={(user) => {
+                                                const name = cleanPersonName(userName(user), tr('security.userFallback', { id: String(user.id) }));
+                                                const position = (user.position ?? '').trim();
+                                                return position ? `${name} · ${position}` : name;
+                                            }}
+                                            getSearchText={(user) => `${userName(user)} ${user.email} ${user.position ?? ''}`}
+                                            onSelect={(user) => setAddUser(String(user.id))}
+                                            placeholder={tr('security.searchUser')}
+                                            renderButtonContent={(user) => {
+                                                const name = cleanPersonName(userName(user), tr('security.userFallback', { id: String(user.id) }));
                                                 return (
-                                                    <tr key={member.userId} className={member.level === 'deny' ? 'is-denied' : undefined}>
-                                                        <td>
-                                                            <span className="fm-table__matter">
-                                                                <span>{member.name}</span>
-                                                                {member.position ? <small>{member.position}</small> : null}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`fm-source fm-source--${member.source}`}>
-                                                                {tr(member.source === 'timeTracking' ? 'security.inherited' : member.source === 'acl' ? 'security.explicit' : 'security.both')}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <FmSelect
-                                                                value={member.level}
-                                                                className={`fm-filter-select--level fm-level--${member.level}`}
-                                                                buttonClassName={`fm-level-select fm-level--${member.level}`}
-                                                                options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
-                                                                onChange={(level) => void setLevel(member.userId, member.name, level as AclLevel, rule?.note ?? '')}
-                                                                placeholder={tr('security.addLevel')}
-                                                            />
-                                                        </td>
-                                                        <td className="fm-muted">
-                                                            {rule ? `${rule.note ? `${rule.note} · ` : ''}${rule.grantedBy} · ${formatDateTime(rule.grantedAt, locale)}` : '—'}
-                                                        </td>
-                                                        <td className="fm-table__actions">
-                                                            {rule ? (
-                                                                <button type="button" className="fm-btn" onClick={async () => {
-                                                                    const ok = await act(() => filesApi.removeAcl(data.matter.id, member.userId), tr('security.changed'));
-                                                                    if (ok)
-                                                                        security.reload();
-                                                                }}>{tr('security.remove')}</button>
-                                                            ) : null}
-                                                        </td>
-                                                    </tr>
+                                                    <span className="fm-sec__pick">
+                                                        <span className={`fm-sec__avatar fm-sec__avatar--${user.id % 6}`} aria-hidden>
+                                                            {personInitials(name, user.initials)}
+                                                        </span>
+                                                        <span className="fm-sec__pick-text">
+                                                            <strong>{name}</strong>
+                                                            {(user.position ?? '').trim() ? <small>{user.position}</small> : null}
+                                                        </span>
+                                                    </span>
                                                 );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                            }}
+                                            renderOption={(user) => {
+                                                const name = cleanPersonName(userName(user), tr('security.userFallback', { id: String(user.id) }));
+                                                return (
+                                                    <span className="fm-sec__pick">
+                                                        <span className={`fm-sec__avatar fm-sec__avatar--${user.id % 6}`} aria-hidden>
+                                                            {personInitials(name, user.initials)}
+                                                        </span>
+                                                        <span className="fm-sec__pick-text">
+                                                            <strong>{name}</strong>
+                                                            <small>{(user.position ?? '').trim() || user.email}</small>
+                                                        </span>
+                                                    </span>
+                                                );
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="fm-field">
+                                        <span>{tr('security.addLevel')}</span>
+                                        <FmSelect
+                                            value={addLevel}
+                                            options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
+                                            onChange={(level) => setAddLevel(level as AclLevel)}
+                                            placeholder={tr('security.addLevel')}
+                                        />
+                                    </div>
+                                    <label className="fm-field fm-field--grow">
+                                        <span>{tr('security.note')}</span>
+                                        <input
+                                            value={note}
+                                            maxLength={500}
+                                            placeholder={tr('security.notePh')}
+                                            onChange={(event) => setNote(event.target.value)}
+                                        />
+                                    </label>
+                                    <button type="submit" className="fm-btn fm-btn--primary fm-sec__grant-btn" disabled={!addUser}>
+                                        <Icon name="plus" />{tr('security.add')}
+                                    </button>
                                 </div>
+                            </form>
+
+                            <div className="fm-sec__list-head">
+                                <div className="fm-sec__list-title">
+                                    <h3>{tr('security.effective')}</h3>
+                                    <span>{tr('security.peopleCount', { n: String(counts.all) })}</span>
+                                </div>
+                                <div className="fm-sec__tools">
+                                    <div className="fm-seg fm-sec__filters" role="radiogroup" aria-label={tr('security.effective')}>
+                                        {filters.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={filter === item.id}
+                                                className={filter === item.id ? 'is-on' : ''}
+                                                onClick={() => setFilter(item.id)}
+                                            >
+                                                {item.label}
+                                                <em>{item.count}</em>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <label className="fm-search fm-sec__search">
+                                        <Icon name="search" />
+                                        <input
+                                            value={peopleQuery}
+                                            onChange={(event) => setPeopleQuery(event.target.value)}
+                                            placeholder={tr('security.searchPeople')}
+                                            aria-label={tr('security.searchPeople')}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
+                            {data.effective.length === 0 ? (
+                                <div className="fm-state">{tr('security.empty')}</div>
+                            ) : people.length === 0 ? (
+                                <div className="fm-state">{tr('security.emptyFilter')}</div>
+                            ) : (
+                                <ul className="fm-sec__people">
+                                    {people.map((member) => {
+                                        const rule = aclByUser.get(member.userId);
+                                        const sourceLabel = member.level === 'deny'
+                                            ? tr('security.wallShort')
+                                            : tr(member.source === 'timeTracking'
+                                                ? 'security.inherited'
+                                                : member.source === 'acl'
+                                                    ? 'security.explicit'
+                                                    : 'security.both');
+                                        return (
+                                            <li key={member.userId} className={member.level === 'deny' ? 'is-denied' : undefined}>
+                                                <div className="fm-sec__person">
+                                                    <span className={`fm-sec__avatar fm-sec__avatar--${member.userId % 6}`} aria-hidden>
+                                                        {member.initials}
+                                                    </span>
+                                                    <div className="fm-sec__person-text">
+                                                        <strong>{member.name}</strong>
+                                                        <span>{member.position || tr('security.noPosition')}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="fm-sec__meta">
+                                                    <span className={`fm-sec__source fm-sec__source--${member.level === 'deny' ? 'deny' : member.source}`}>
+                                                        {sourceLabel}
+                                                    </span>
+                                                    {rule?.note ? <span className="fm-sec__note" title={rule.note}>{rule.note}</span> : null}
+                                                    {rule?.grantedBy ? (
+                                                        <span className="fm-sec__granted">
+                                                            {tr('security.grantedBy', { name: rule.grantedBy })}
+                                                            {rule.grantedAt ? ` · ${formatDateTime(rule.grantedAt, locale)}` : ''}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                                <div className="fm-sec__controls">
+                                                    <FmSelect
+                                                        value={member.level}
+                                                        className={`fm-filter-select--level fm-level--${member.level}`}
+                                                        buttonClassName={`fm-level-select fm-level--${member.level}`}
+                                                        options={ACL_LEVELS.map((level) => ({ value: level, label: tr(`levels.${level}`) }))}
+                                                        onChange={(level) => void setLevel(member.userId, member.name, level as AclLevel, rule?.note ?? '')}
+                                                        placeholder={tr('security.addLevel')}
+                                                    />
+                                                    {rule ? (
+                                                        <button
+                                                            type="button"
+                                                            className="fm-btn fm-sec__remove"
+                                                            onClick={async () => {
+                                                                const ok = await act(() => filesApi.removeAcl(data.matter.id, member.userId), tr('security.changed'));
+                                                                if (ok)
+                                                                    security.reload();
+                                                            }}
+                                                        >
+                                                            {tr('security.remove')}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="fm-sec__remove-slot" aria-hidden />
+                                                    )}
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
                             )}
                         </>
                     ) : null}
