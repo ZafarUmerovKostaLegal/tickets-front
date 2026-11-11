@@ -13,7 +13,7 @@ import { flattenAttendanceByCamera } from './lib/transform';
 import { parseAttendanceJson } from './lib/parseResponse';
 import { createQueryCache } from '@shared/lib/queryCache';
 const FETCH_TIMEOUT_MS = 30000;
-const PERIOD_FETCH_TIMEOUT_MS = 90_000;
+const PERIOD_FETCH_TIMEOUT_MS = 180_000;
 const workdaySettingsCache = createQueryCache<WorkdaySettingsDto>({ ttlMs: 5 * 60_000 });
 const WORKDAY_SETTINGS_CACHE_KEY = 'attendance-workday-settings';
 function attendanceFetch(path: string, init?: Parameters<typeof apiFetch>[1]): Promise<Response> {

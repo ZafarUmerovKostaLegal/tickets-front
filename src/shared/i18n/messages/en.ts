@@ -797,6 +797,13 @@ export const enMessages = {
         searchLegacy: 'Enter name…',
         periodFrom: 'From',
         periodTo: 'to',
+        quickPeriod: 'Quick period',
+        quick: {
+            today: 'Today',
+            week: 'This week',
+            month: 'This month',
+            prevMonth: 'Last month',
+        },
         type: 'Type',
         reset: 'Reset',
         excel: 'Excel',

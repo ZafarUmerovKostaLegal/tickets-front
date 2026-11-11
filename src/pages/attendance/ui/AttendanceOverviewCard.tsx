@@ -493,11 +493,12 @@ export function AttendanceOverviewCard() {
                     ));
                 }
 
-                // If period rows exist but have no punch times, rebuild from daily reports.
+                // Short-range fallback only: N daily live calls for a month break past-period viewing.
+                const daysInRange = iterYmdInclusive(periodFrom, periodTo);
                 const missingTimes = periodItems.length > 0
                     && !periodItems.some((item) => Boolean(item.first_event_time));
-                if (missingTimes || (selectedEmployeeKey !== ALL_EMPLOYEE_KEY && periodItems.length === 0)) {
-                    const daysInRange = iterYmdInclusive(periodFrom, periodTo);
+                const emptyEmployeePeriod = selectedEmployeeKey !== ALL_EMPLOYEE_KEY && periodItems.length === 0;
+                if ((missingTimes || emptyEmployeePeriod) && daysInRange.length <= 7) {
                     const dailyReports = await Promise.all(
                         daysInRange.map((day) => fetchDailyAttendanceReport(day, signal)),
                     );
@@ -667,6 +668,36 @@ export function AttendanceOverviewCard() {
         }
     };
 
+    const applyPeriod = (from: string, to: string) => {
+        setPeriodFrom(from);
+        setPeriodTo(to);
+        setSelectedDate(to);
+    };
+
+    const setQuickPeriod = (kind: 'today' | 'week' | 'month' | 'prevMonth') => {
+        const now = parseYmd(today);
+        if (kind === 'today') {
+            applyPeriod(today, today);
+            return;
+        }
+        if (kind === 'week') {
+            const monday = startOfWeekMonday(now);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            applyPeriod(toYmd(monday), toYmd(sunday));
+            return;
+        }
+        if (kind === 'month') {
+            const from = new Date(now.getFullYear(), now.getMonth(), 1);
+            const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            applyPeriod(toYmd(from), toYmd(to));
+            return;
+        }
+        const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const to = new Date(now.getFullYear(), now.getMonth(), 0);
+        applyPeriod(toYmd(from), toYmd(to));
+    };
+
     const onPeriodFromChange = (value: string) => {
         if (!value)
             return;
@@ -771,6 +802,26 @@ export function AttendanceOverviewCard() {
                     ))}
                 </div>
             </header>
+
+            <div className="att-overview__presets" role="group" aria-label={t('attendancePage.quickPeriod')}>
+                {(
+                    [
+                        { id: 'today' as const, label: t('attendancePage.quick.today') },
+                        { id: 'week' as const, label: t('attendancePage.quick.week') },
+                        { id: 'month' as const, label: t('attendancePage.quick.month') },
+                        { id: 'prevMonth' as const, label: t('attendancePage.quick.prevMonth') },
+                    ]
+                ).map((p) => (
+                    <button
+                        key={p.id}
+                        type="button"
+                        className="att-overview__preset"
+                        onClick={() => setQuickPeriod(p.id)}
+                    >
+                        {p.label}
+                    </button>
+                ))}
+            </div>
 
             <div className="att-overview__controls">
                 <div className="att-overview__field">

@@ -797,6 +797,13 @@ export const ruMessages: Messages = {
         searchLegacy: 'Введите ФИО или имя…',
         periodFrom: 'Период с',
         periodTo: 'по',
+        quickPeriod: 'Быстрый период',
+        quick: {
+            today: 'Сегодня',
+            week: 'Неделя',
+            month: 'Этот месяц',
+            prevMonth: 'Прошлый месяц',
+        },
         type: 'Тип',
         reset: 'Сброс',
         excel: 'Excel',
@@ -1856,6 +1863,8 @@ export type Messages = {
         searchLegacy: string;
         periodFrom: string;
         periodTo: string;
+        quickPeriod: string;
+        quick: Record<'today' | 'week' | 'month' | 'prevMonth', string>;
         type: string;
         reset: string;
         excel: string;

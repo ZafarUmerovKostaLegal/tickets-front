@@ -126,6 +126,32 @@
   color: #fff;
 }
 
+.att-overview__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.att-overview__preset {
+  appearance: none;
+  height: 1.9rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface, #fff);
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.att-overview__preset:hover {
+  border-color: color-mix(in srgb, var(--app-accent, #6366f1) 55%, var(--app-border));
+  color: var(--app-accent, #4338ca);
+}
+
 .att-overview__controls {
   display: flex;
   flex-wrap: wrap;

@@ -1,1 +1,0 @@
-export { LazyInvoicesPanel } from './lazyInvoicesPanel';
