@@ -105,6 +105,7 @@ export async function createLegalHubTask(input: {
     assigneeUserId: number;
     assigneeName: string;
     assigneeCode: string;
+    reviewerUserId?: number | null;
     status: string;
     priority: string;
     dueOn: string;
@@ -124,6 +125,7 @@ export async function createLegalHubTask(input: {
                 assigneeUserId: input.assigneeUserId,
                 assigneeName: input.assigneeName,
                 assigneeCode: input.assigneeCode,
+                reviewerUserId: input.reviewerUserId ?? null,
                 projectId: input.projectId,
                 projectLabel: input.projectLabel,
                 priority: input.priority,

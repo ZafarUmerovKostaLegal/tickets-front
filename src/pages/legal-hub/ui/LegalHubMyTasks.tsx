@@ -6,7 +6,7 @@ import { DatePicker, SearchableSelect } from '@shared/ui';
 import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
-import { canAssignLegalHubTask } from './legalHubRank';
+import { canAssignLegalHubTask, canSelectLegalHubReviewer } from './legalHubRank';
 import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
 import { createLegalHubTask, patchLegalHubTask } from './legalHubTaskApi';
 import { useLegalHubView } from './legalHubView';
@@ -1520,6 +1520,14 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
             return [];
         return staff.filter((person) => canAssignLegalHubTask(me, person));
     }, [me, staff]);
+    const reviewers = useMemo(() => {
+        if (me == null)
+            return [];
+        return staff
+            .filter((person) => canSelectLegalHubReviewer(me, person))
+            .slice()
+            .sort((left, right) => left.rank - right.rank || left.name.localeCompare(right.name, 'ru'));
+    }, [me, staff]);
     const showOwner = assignees.some((person) => person.id !== me?.id);
     const [title, setTitle] = useState('');
     const [projectId, setProjectId] = useState(() => {
@@ -1535,6 +1543,7 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
             return boardOwnerId;
         return assignees[0]?.id ?? me?.id ?? 0;
     });
+    const [reviewerId, setReviewerId] = useState<number | null>(null);
     const [approval, setApproval] = useState(false);
     const [instructions, setInstructions] = useState('');
     const [error, setError] = useState('');
@@ -1599,6 +1608,7 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
             assigneeUserId: owner.id,
             assigneeName: owner.name,
             assigneeCode: owner.code,
+            reviewerUserId: reviewerId,
             status: column && isBuiltin(column) ? statusOf(column) : 'todo',
             priority,
             dueOn: clientOn,
@@ -1699,6 +1709,24 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
                             />
                         </label>
                     ) : null}
+                    <label className="lh-drawer__field">
+                        <span>{t('legalHub.taskFieldReviewer')}</span>
+                        <SearchableSelect
+                            portalDropdown
+                            portalZIndex={6000}
+                            buttonClassName="lh-drawer__pick"
+                            aria-label={t('legalHub.taskFieldReviewer')}
+                            placeholder={`+ ${t('legalHub.taskAssign')}`}
+                            emptyListText={t('legalHub.taskFilterAll')}
+                            noMatchText={t('legalHub.teamNoMatch')}
+                            value={reviewerId == null ? '' : String(reviewerId)}
+                            items={reviewers}
+                            getOptionValue={(item) => String(item.id)}
+                            getOptionLabel={(item) => item.position ? `${item.name} · ${item.position}` : item.name}
+                            getSearchText={(item) => `${item.name} ${item.position}`}
+                            onSelect={(item) => setReviewerId(item.id)}
+                        />
+                    </label>
                 </div>
                 <button
                     type="button"

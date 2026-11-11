@@ -73,6 +73,11 @@ function collectStaff(
                 ids.add(id);
         }
     }
+    // Partners/counsel firm-wide so juniors can always send work upward for review.
+    for (const row of users) {
+        if (legalHubPositionRank(row.position, row.role) <= 1)
+            ids.add(row.id);
+    }
     const people: LegalHubPerson[] = [];
     for (const id of ids) {
         const row = usersById.get(id);

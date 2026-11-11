@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
+import { canSelectLegalHubReviewer } from './legalHubRank';
 import { useLegalHubView } from './legalHubView';
 import {
     addLegalHubCheck,
@@ -147,11 +148,12 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     onReviewed?: (patch: { status?: TaskStatusId; boardColumn: string; reviewerId?: number; done?: boolean; approval?: boolean }) => void;
 }) {
     const { t, locale } = useI18n();
-    const { userId, staff } = useLegalHubView();
+    const { userId, staff, me } = useLegalHubView();
     const formId = useId();
     const seed = taskDrawerDetail(task);
     const stored = task as HubTask & { instructions?: string; internalOn?: string };
     const [tab, setTab] = useState<TabId>('details');
+    const [closing, setClosing] = useState(false);
     const [status, setStatus] = useState<TaskStatusId>(task.status);
     const [priority, setPriority] = useState<TaskPriorityId>(task.priority);
     const [minutes, setMinutes] = useState(String(task.minutes));
@@ -168,6 +170,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     const fileModeRef = useRef<'item' | 'task'>('item');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [files, setFiles] = useState<TaskFile[]>(seed.files);
+    const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [history, setHistory] = useState(seed.history);
     const [commentDraft, setCommentDraft] = useState('');
@@ -183,10 +186,24 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         : PERSON_LABEL[task.owner]);
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
+    const actor = me ?? (userId != null ? { id: userId, rank: 5000 } : null);
     const reviewers = staff
-        .filter((person) => person.rank === 0 || (person.rank >= 2 && person.rank <= 7))
+        .filter((person) => (
+            person.id === reviewerId
+            || (actor != null && canSelectLegalHubReviewer(actor, person))
+        ))
         .slice()
         .sort((left, right) => left.rank - right.rank || left.name.localeCompare(right.name, locale));
+    const requestClose = useCallback(() => {
+        setClosing((already) => {
+            if (already)
+                return already;
+            if (closeTimer.current)
+                clearTimeout(closeTimer.current);
+            closeTimer.current = setTimeout(() => onClose(), 220);
+            return true;
+        });
+    }, [onClose]);
     const clientLate = clientOn !== '' && dayDelta(clientOn) < 0;
     const dateLabel = (iso: string, late = false) => {
         if (!iso)
@@ -301,11 +318,16 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                 return;
             if (document.querySelector('.ttp-pop, .tsp-srch--open'))
                 return;
-            onClose();
+            requestClose();
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [onClose]);
+    }, [requestClose]);
+
+    useEffect(() => () => {
+        if (closeTimer.current)
+            clearTimeout(closeTimer.current);
+    }, []);
 
     const addCheck = () => {
         const label = checkDraft.trim();
@@ -401,9 +423,9 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     return (
         <>
             {createPortal(
-        <div className="lh-drawer" role="presentation" onMouseDown={onClose}>
+        <div className={`lh-drawer${closing ? ' is-closing' : ''}`} role="presentation" onMouseDown={requestClose}>
             <div
-                className="lh-drawer__panel"
+                className={`lh-drawer__panel${closing ? ' is-closing' : ''}`}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={`${formId}-title`}
@@ -414,7 +436,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                         <IconFolder />
                         <span>{task.projectName?.trim() || PROJECT_LABEL[task.project]}{task.workstream && task.workstream !== '—' ? ` / ${task.workstream}` : ''}</span>
                     </span>
-                    <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={onClose}>
+                    <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={requestClose}>
                         <IconClose />
                     </button>
                 </header>

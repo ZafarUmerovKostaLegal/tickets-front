@@ -57,3 +57,21 @@ export function canAssignLegalHubTask(
         return target.rank > actor.rank;
     return false;
 }
+
+/**
+ * Juniors/associates send work upward for review.
+ * Target must be more senior than the actor (or any partner/counsel).
+ * Juniors and trainees are never valid reviewers.
+ */
+export function canSelectLegalHubReviewer(
+    actor: { id: number; rank: number },
+    target: { id: number; rank: number },
+): boolean {
+    if (actor.id === target.id)
+        return false;
+    if (target.rank > LEGAL_HUB_ASSOCIATE_RANK)
+        return false;
+    if (target.rank <= 1)
+        return true;
+    return target.rank < actor.rank;
+}

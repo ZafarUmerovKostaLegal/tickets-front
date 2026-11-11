@@ -577,7 +577,7 @@
     cursor: grab;
     touch-action: none;
     transform: translateY(-50%);
-    transition: left 0.18s ease;
+    transition: left 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .lh-side-pin.is-dragging {
@@ -619,6 +619,7 @@
     z-index: 45;
     overflow: hidden;
     pointer-events: none;
+    transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .lh-side-dock::before {
@@ -643,7 +644,7 @@
 
   .lh-page--side-open .lh-page__main {
     margin-left: 248px;
-    transition: margin-left 0.18s ease;
+    transition: margin-left 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .lh-page--side-open.lh-page--side-collapsed .lh-page__main {
@@ -651,7 +652,10 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .lh-page--side-open .lh-page__main {
+    .lh-side-dock,
+    .lh-side-dock .lh-side,
+    .lh-page--side-open .lh-page__main,
+    .lh-side-pin {
       transition: none;
     }
   }
@@ -662,7 +666,9 @@
     top: 0;
     height: 100%;
     transform: translateX(-105%);
-    transition: transform 0.18s ease;
+    transition:
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+      width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow: none;
   }
 
@@ -3110,6 +3116,11 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   animation: lh-fade 0.2s ease both;
 }
 
+.lh-drawer.is-closing {
+  animation: lh-fade-out 0.2s ease both;
+  pointer-events: none;
+}
+
 .lh-drawer__panel {
   display: flex;
   flex-direction: column;
@@ -3121,9 +3132,32 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   animation: lh-drawer-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.lh-drawer__panel.is-closing {
+  animation: lh-drawer-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
 @keyframes lh-drawer-in {
   from { transform: translateX(100%); }
   to { transform: none; }
+}
+
+@keyframes lh-drawer-out {
+  from { transform: none; }
+  to { transform: translateX(100%); }
+}
+
+@keyframes lh-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-drawer,
+  .lh-drawer.is-closing,
+  .lh-drawer__panel,
+  .lh-drawer__panel.is-closing {
+    animation-duration: 0.01ms;
+  }
 }
 
 .lh-drawer__head,

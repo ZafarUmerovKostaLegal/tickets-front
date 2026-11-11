@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canAssignLegalHubTask, legalHubPositionRank } from './legalHubRank';
+import { canAssignLegalHubTask, canSelectLegalHubReviewer, legalHubPositionRank } from './legalHubRank';
 
 describe('legalHubPositionRank', () => {
     it('ставит партнёра выше Associate, а Associate выше младших', () => {
@@ -38,5 +38,27 @@ describe('canAssignLegalHubTask', () => {
     it('младший сотрудник оставляет задачу себе', () => {
         expect(canAssignLegalHubTask(junior, junior)).toBe(true);
         expect(canAssignLegalHubTask(junior, associate)).toBe(false);
+    });
+});
+
+describe('canSelectLegalHubReviewer', () => {
+    const partner = { id: 1, rank: 0 };
+    const senior = { id: 2, rank: 2 };
+    const associate = { id: 3, rank: 5 };
+    const junior = { id: 5, rank: 7 };
+    const otherJunior = { id: 6, rank: 7 };
+
+    it('junior выбирает партнёра и старших на проверку', () => {
+        expect(canSelectLegalHubReviewer(junior, partner)).toBe(true);
+        expect(canSelectLegalHubReviewer(junior, senior)).toBe(true);
+        expect(canSelectLegalHubReviewer(junior, associate)).toBe(true);
+        expect(canSelectLegalHubReviewer(junior, otherJunior)).toBe(false);
+        expect(canSelectLegalHubReviewer(junior, junior)).toBe(false);
+    });
+
+    it('associate отправляет только выше себя', () => {
+        expect(canSelectLegalHubReviewer(associate, partner)).toBe(true);
+        expect(canSelectLegalHubReviewer(associate, senior)).toBe(true);
+        expect(canSelectLegalHubReviewer(associate, junior)).toBe(false);
     });
 });
