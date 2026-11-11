@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!-- Outlook: Classic Windows, New Outlook, OWA, Mac, Mobile -->
+<!-- Pinning (📌): once pinned, task pane stays open when switching / clearing selection. -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -8,11 +9,11 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a1e-6b4d-4e9a-9c71-a1b2c3d4e5f6</Id>
-  <Version>0.3.0.0</Version>
+  <Version>0.4.0.0</Version>
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="Kosta File" />
-  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Работает в Outlook Classic, New Outlook и Outlook в браузере." />
+  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Закрепите панель (📌), чтобы она оставалась открытой как MacroView." />
   <IconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/assets/icon-80.png" />
   <SupportUrl DefaultValue="https://tickets.kostalegal.com/outlook-addin/" />
@@ -24,7 +25,6 @@
   <Hosts>
     <Host Name="Mailbox" />
   </Hosts>
-  <!-- 1.5: Classic desktop + pinning; on-prem Classic stops at ~1.6 -->
   <Requirements>
     <Sets>
       <Set Name="Mailbox" MinVersion="1.5" />
@@ -44,10 +44,17 @@
         <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
       </PhoneSettings>
     </Form>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://tickets.kostalegal.com/outlook-addin/index.html" />
+        <RequestedHeight>450</RequestedHeight>
+      </DesktopSettings>
+    </Form>
   </FormSettings>
   <Permissions>ReadWriteMailbox</Permissions>
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit" />
   </Rule>
   <DisableEntityHighlighting>true</DisableEntityHighlighting>
 
@@ -77,6 +84,30 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />
+                    <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="kostaFileComposeGroup">
+                <Label resid="groupLabel" />
+                <Control xsi:type="Button" id="kostaFileComposeOpen">
+                  <Label resid="openLabel" />
+                  <Supertip>
+                    <Title resid="openLabel" />
+                    <Description resid="openTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16" />
+                    <bt:Image size="32" resid="icon32" />
+                    <bt:Image size="80" resid="icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="taskpaneUrl" />
+                    <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
                   </Action>
                 </Control>
               </Group>
@@ -96,10 +127,10 @@
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="Kosta File" />
-        <bt:String id="openLabel" DefaultValue="В matter" />
+        <bt:String id="openLabel" DefaultValue="Kosta File" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="openTip" DefaultValue="Загрузить письмо в matter по правилу отправителя/домена" />
+        <bt:String id="openTip" DefaultValue="Открыть Kosta File. Закрепите панель булавкой, чтобы она не закрывалась." />
       </bt:LongStrings>
     </Resources>
 
@@ -129,6 +160,31 @@
                     </Icon>
                     <Action xsi:type="ShowTaskpane">
                       <SourceLocation resid="taskpaneUrl" />
+                      <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="kostaFileComposeGroupV11">
+                  <Label resid="groupLabel" />
+                  <Control xsi:type="Button" id="kostaFileComposeOpenV11">
+                    <Label resid="openLabel" />
+                    <Supertip>
+                      <Title resid="openLabel" />
+                      <Description resid="openTipPin" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16" />
+                      <bt:Image size="32" resid="icon32" />
+                      <bt:Image size="80" resid="icon80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="taskpaneUrl" />
+                      <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
                       <SupportsPinning>true</SupportsPinning>
                     </Action>
                   </Control>
@@ -167,11 +223,11 @@
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="Kosta File" />
-          <bt:String id="openLabel" DefaultValue="В matter" />
+          <bt:String id="openLabel" DefaultValue="Kosta File" />
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="openTip" DefaultValue="Загрузить письмо в matter по правилу отправителя/домена" />
-          <bt:String id="openTipPin" DefaultValue="Загрузить письмо в matter. В Classic/New Outlook закрепите панель (булавка), чтобы не закрывалась при смене письма." />
+          <bt:String id="openTip" DefaultValue="Открыть Kosta File" />
+          <bt:String id="openTipPin" DefaultValue="Открыть Kosta File. Нажмите 📌 в шапке панели один раз — панель останется при смене и закрытии письма (как MacroView)." />
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>

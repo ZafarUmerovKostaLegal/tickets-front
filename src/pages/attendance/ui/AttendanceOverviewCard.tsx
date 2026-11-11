@@ -952,10 +952,10 @@ export function AttendanceOverviewCard() {
                                         <tr
                                             key={row.key}
                                             className={`att-overview__list-row att-overview__list-row--${row.status === 'late'
-                                                    ? 'late'
-                                                    : row.status === 'absent'
-                                                        ? 'absent'
-                                                        : 'onTime'
+                                                ? 'late'
+                                                : row.status === 'absent'
+                                                    ? 'absent'
+                                                    : 'onTime'
                                                 }`}
                                         >
                                             {isPeriodMode ? (

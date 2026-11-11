@@ -11,18 +11,29 @@
 | `KostaFile.manifest.xml` | **Outlook Classic** (Windows), New Outlook, Outlook в браузере, Mac, Mobile |
 | `KostaFile.Office.manifest.xml` | **Word**, **Excel**, **PowerPoint** (Desktop) |
 
-Версия манифестов: `0.3.0.0` · Mailbox **1.5+** (шире Classic, включая pinning где поддерживается).
+Версия Outlook-манифеста: `0.4.0.0` · Mailbox **1.5+** · **SupportsPinning** + `TaskpaneId`.
+
+## Панель «всегда как MacroView»
+
+Web add-in не может сам открыться при старте Outlook (это умеет только VSTO/COM вроде MacroView). Ближайший эквивалент:
+
+1. Установить манифест (лучше централизованно на тенант).
+2. Открыть **Kosta File** один раз.
+3. Нажать **📌** в шапке панели (New Outlook → Apps / Classic → task pane).
+
+После закрепления панель **остаётся** при смене и закрытии письма; UI обновляется через `ItemChanged`.
 
 ## Установка Outlook (Classic / New)
 
 1. **Get Add-ins** → **My add-ins** → **Add a custom add-in** → **Add from File…**
-2. Выберите `KostaFile.manifest.xml`
-3. Откройте письмо → лента **Kosta File** → **В matter**
-4. **Настройки** → **Войти в Kosta Hub** (если сессии ещё нет в WebView)
+2. Выберите `KostaFile.manifest.xml` (**переустановите**, если уже стояла старая версия — нужен `0.4.0.0`)
+3. Откройте письмо → **Kosta File**
+4. Закрепите панель **📌**
+5. **Настройки** → **Войти в Kosta Hub** (если сессии ещё нет)
 
-**Classic Windows:** после sideload перезапустите Outlook. Кнопка на вкладке сообщения (Message). Закрепите task pane булавкой, если доступна.
+**Classic Windows:** после sideload перезапустите Outlook.
 
-**Централизованное развёртывание (рекомендуется для фирмы):** Microsoft 365 Admin → Integrated apps → Upload custom apps → тот же XML.
+**Для всей фирмы (рекомендуется):** Microsoft 365 Admin → Integrated apps → Upload custom apps → тот же XML. Тогда кнопка появляется у всех без ручной установки.
 
 ## Установка Word / Excel / PowerPoint
 

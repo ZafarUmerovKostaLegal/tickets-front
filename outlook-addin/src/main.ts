@@ -49,6 +49,8 @@ let threadMatterId = '';
 /** Matter for Word/Excel/PowerPoint upload. */
 let documentMatterId = '';
 let draft: { match: string; matterId: string; autoFile: boolean } = { match: '', matterId: '', autoFile: true };
+/** True after user pins the task pane (New/Classic Outlook). */
+let panePinned = false;
 
 function isOutlookHost(): boolean {
   return officeHost === Office.HostType.Outlook;
@@ -404,6 +406,23 @@ function renderDocumentFile(): string {
   `;
 }
 
+function renderPinBanner(): string {
+  if (!isOutlookHost() || getSettings().pinTipDismissed || panePinned)
+    return '';
+  return `
+    <section class="card pin-banner" role="status">
+      <h2>Закрепите панель один раз</h2>
+      <p class="hint">
+        Как MacroView: нажмите <strong>📌</strong> в шапке этой панели (New Outlook → Apps / Classic → task pane).
+        После этого панель <strong>не закроется</strong> при смене или закрытии письма.
+      </p>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="primary" id="pinTipDone">Уже закрепил</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderMailFile(): string {
   const s = getSettings();
   const rule = mail ? matchRule(mail.fromEmail, s.rules) : null;
@@ -411,7 +430,11 @@ function renderMailFile(): string {
   const threadTarget = resolveThreadTarget();
   const matterOptions = matterSelectOptions(rule?.matterId || threadMatterId);
   let autoHint = 'Автозагрузка срабатывает при открытии письма, пока открыта эта панель.';
-  if (mail && rule?.autoFile && !filed)
+  if (!mail)
+    autoHint = panePinned || s.pinTipDismissed
+      ? 'Панель активна. Выберите письмо в списке — данные появятся здесь.'
+      : 'Сначала закрепите панель (📌), затем выбирайте письма без повторного открытия add-in.';
+  else if (mail && rule?.autoFile && !filed)
     autoHint = `Авто: при открытии/смене письма загрузим в «${rule.matterName}».`;
   else if (mail && rule?.autoFile && filed)
     autoHint = 'Это письмо уже загружали по автоправилу.';
@@ -421,6 +444,7 @@ function renderMailFile(): string {
     autoHint = 'Нет правила для отправителя — выберите matter ниже для переписки.';
   const graphOk = Boolean(readAzureAccessToken());
   return `
+    ${renderPinBanner()}
     <section class="card">
       <h2>Текущее письмо</h2>
       ${mail ? `
@@ -435,7 +459,7 @@ function renderMailFile(): string {
             ? `<span class="chip chip-saved">${escape(SAVED_CATEGORY)}</span>`
             : ''}
         </div>
-      ` : `<p class="hint">Откройте письмо в Outlook (Classic или New).</p>`}
+      ` : `<p class="hint">Письмо не выбрано — панель остаётся открытой${panePinned ? ' (закреплена)' : ''}. Выберите сообщение в Outlook.</p>`}
       <p class="hint">${escape(autoHint)}</p>
       <div class="row" style="margin-top:10px">
         <button type="button" id="refreshMail">Обновить / авто</button>
@@ -472,7 +496,9 @@ function renderFile(): string {
 function render(): void {
   const fileTabLabel = isDocumentHost() ? 'Документ' : 'Письмо';
   const sub = isOutlookHost()
-    ? 'Outlook Classic / New · закрепите панель (📌)'
+    ? (panePinned || getSettings().pinTipDismissed
+      ? 'Outlook · панель закреплена — остаётся при смене писем'
+      : 'Outlook · нажмите 📌 в шапке панели один раз')
     : isDocumentHost()
       ? `${hostLabel(officeHost ?? undefined)} · сессия Hub`
       : 'Сессия Hub';
@@ -511,6 +537,16 @@ function bind(): void {
       }
     };
   });
+
+  const pinTipDone = app!.querySelector<HTMLButtonElement>('#pinTipDone');
+  if (pinTipDone) {
+    pinTipDone.onclick = () => {
+      panePinned = true;
+      saveSettings({ pinTipDismissed: true });
+      setStatus('Готово. Панель должна оставаться при смене писем.', 'ok');
+      render();
+    };
+  }
 
   const loginBtn = app!.querySelector<HTMLButtonElement>('#loginBtn');
   if (loginBtn) {
@@ -704,6 +740,46 @@ function bind(): void {
     ruleAuto.onchange = () => { draft.autoFile = ruleAuto.checked; };
 }
 
+function wirePinTracking(): void {
+  const addin = (Office as unknown as {
+    addin?: {
+      getState?: () => Promise<{ visibilityMode?: string }>;
+      onVisibilityModeChanged?: {
+        add: (cb: (args: { visibilityMode?: string }) => void) => void;
+      };
+    };
+    VisibilityMode?: { Taskpane?: string };
+  }).addin;
+  if (!addin)
+    return;
+  const markPinned = (mode?: string) => {
+    if (!mode)
+      return;
+    // Once the pane is shown and stays through item changes, treat as pinned UX.
+    if (mode.toLowerCase().includes('taskpane')) {
+      panePinned = true;
+      render();
+    }
+  };
+  try {
+    void addin.getState?.().then((state) => markPinned(state?.visibilityMode)).catch(() => undefined);
+  } catch {
+    /* optional API */
+  }
+  try {
+    addin.onVisibilityModeChanged?.add((args) => {
+      markPinned(args?.visibilityMode);
+      if (getSettings().pinTipDismissed)
+        return;
+      // Surviving a hide→show cycle usually means the user pinned.
+      if (args?.visibilityMode && String(args.visibilityMode).toLowerCase().includes('taskpane'))
+        saveSettings({ pinTipDismissed: true });
+    });
+  } catch {
+    /* optional API */
+  }
+}
+
 function wireOffice(): void {
   Office.onReady(async (info) => {
     officeHost = info.host ?? null;
@@ -729,6 +805,7 @@ function wireOffice(): void {
     render();
     if (!isOutlookHost())
       return;
+    wirePinTracking();
     try {
       await refreshMail({ autoFile: true });
       render();
@@ -738,6 +815,10 @@ function wireOffice(): void {
     try {
       Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, async () => {
         try {
+          // Surviving ItemChanged without unload is the pinned-pane signal.
+          panePinned = true;
+          if (!getSettings().pinTipDismissed)
+            saveSettings({ pinTipDismissed: true });
           if (!Office.context.mailbox.item) {
             mail = null;
             outlookSavedCategory = false;

@@ -1026,6 +1026,7 @@ export function InvoiceRegistryPanel({
     const [partners, setPartners] = useState<Set<string>>(() => new Set());
     const [clients, setClients] = useState<Set<string>>(() => new Set());
     const [currencies, setCurrencies] = useState<Set<string>>(() => new Set());
+    const [statuses, setStatuses] = useState<Set<string>>(() => new Set());
     const [numberQuery, setNumberQuery] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
@@ -1164,6 +1165,8 @@ export function InvoiceRegistryPanel({
         setSearch('');
         setPartners(new Set());
         setClients(new Set());
+        setCurrencies(new Set());
+        setStatuses(new Set());
         setNumberQuery('');
         setDateFrom('');
         setDateTo('');
@@ -1343,18 +1346,26 @@ export function InvoiceRegistryPanel({
             return raw.charAt(0).toUpperCase() + raw.slice(1);
         });
     }, [locale]);
-    const filtersActive = partners.size > 0 || clients.size > 0 || currencies.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
+    const filtersActive = partners.size > 0
+        || clients.size > 0
+        || currencies.size > 0
+        || statuses.size > 0
+        || numberQuery.trim() !== ''
+        || dateFrom !== ''
+        || dateTo !== ''
+        || months.size > 0;
     const filteredRows = useMemo(() => filterInvoiceRegistryRows(rows, {
         search,
         searchKeys: columnKeys,
         partners,
         clients,
         currencies,
+        statuses,
         numberQuery,
         dateFrom,
         dateTo,
         months,
-    }), [rows, search, columnKeys, partners, clients, currencies, numberQuery, dateFrom, dateTo, months]);
+    }), [rows, search, columnKeys, partners, clients, currencies, statuses, numberQuery, dateFrom, dateTo, months]);
 
     const yearExportLabel = year === 'checklist'
         ? t('timeTrackingPage.invoices.registry.checklistTab')
@@ -1438,10 +1449,21 @@ export function InvoiceRegistryPanel({
             return next;
         });
     };
+    const toggleStatus = (label: string) => {
+        setStatuses((prev) => {
+            const next = new Set(prev);
+            if (next.has(label))
+                next.delete(label);
+            else
+                next.add(label);
+            return next;
+        });
+    };
     const clearFilters = () => {
         setPartners(new Set());
         setClients(new Set());
         setCurrencies(new Set());
+        setStatuses(new Set());
         setNumberQuery('');
         setDateFrom('');
         setDateTo('');
@@ -1746,6 +1768,16 @@ export function InvoiceRegistryPanel({
                     onToggle={toggleCurrency}
                     menuWidth={180}
                 />
+                <RegistryChoiceMenu
+                    options={statusChoices}
+                    selected={statuses}
+                    allLabel={t('timeTrackingPage.invoices.registry.filterStatusAll')}
+                    ariaLabel={t('timeTrackingPage.invoices.registry.filterStatus')}
+                    searchPlaceholder={t('timeTrackingPage.invoices.registry.filterSearch')}
+                    emptyLabel={t('timeTrackingPage.invoices.registry.filterEmpty')}
+                    onToggle={toggleStatus}
+                    menuWidth={280}
+                />
                 <input
                     type="search"
                     className="tt-settings__search tt-inv-reg__filter tt-inv-reg__filter--number"
@@ -1794,7 +1826,7 @@ export function InvoiceRegistryPanel({
                         {t('timeTrackingPage.invoices.registry.filterClear')}
                     </button>
                 )}
-                {(partners.size > 0 || clients.size > 0 || currencies.size > 0 || months.size > 0) && (
+                {(partners.size > 0 || clients.size > 0 || currencies.size > 0 || statuses.size > 0 || months.size > 0) && (
                     <div className="tt-inv-reg__chips">
                         {[...partners].map((code) => (
                             <button key={code} type="button" className="tt-inv-reg__chip" onClick={() => togglePartner(code)}>
@@ -1811,6 +1843,12 @@ export function InvoiceRegistryPanel({
                         {[...currencies].map((code) => (
                             <button key={code} type="button" className="tt-inv-reg__chip" onClick={() => toggleCurrency(code)}>
                                 {code}
+                                <span aria-hidden>×</span>
+                            </button>
+                        ))}
+                        {[...statuses].map((label) => (
+                            <button key={label} type="button" className="tt-inv-reg__chip" onClick={() => toggleStatus(label)}>
+                                {label}
                                 <span aria-hidden>×</span>
                             </button>
                         ))}

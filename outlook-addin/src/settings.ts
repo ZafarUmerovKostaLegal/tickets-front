@@ -23,6 +23,8 @@ export type AddinSettings = {
   filedMessageIds: string[];
   /** conversationStorageKey → FM document (single thread file) */
   conversationDocs: Record<string, ConversationDocRef>;
+  /** User dismissed the “pin the pane” tip after pinning once. */
+  pinTipDismissed: boolean;
 };
 
 const KEY = 'kosta.file.addin.settings';
@@ -33,6 +35,7 @@ const defaults: AddinSettings = {
   rules: [],
   filedMessageIds: [],
   conversationDocs: {},
+  pinTipDismissed: false,
 };
 
 function normalizeApiBase(value: string): string {
@@ -57,6 +60,7 @@ function fromStorage(): AddinSettings {
       conversationDocs: parsed.conversationDocs && typeof parsed.conversationDocs === 'object'
         ? parsed.conversationDocs as Record<string, ConversationDocRef>
         : {},
+      pinTipDismissed: Boolean(parsed.pinTipDismissed),
     };
   } catch {
     return { ...defaults, rules: [], filedMessageIds: [] };
@@ -77,6 +81,7 @@ export function saveSettings(patch: Partial<AddinSettings>): AddinSettings {
     rules: patch.rules ?? cache.rules,
     filedMessageIds: patch.filedMessageIds ?? cache.filedMessageIds,
     conversationDocs: patch.conversationDocs ?? cache.conversationDocs,
+    pinTipDismissed: patch.pinTipDismissed ?? cache.pinTipDismissed,
   };
   localStorage.setItem(KEY, JSON.stringify(cache));
   try {
@@ -111,6 +116,9 @@ export function loadRoamingSettings(): Promise<AddinSettings> {
           conversationDocs: parsed.conversationDocs && typeof parsed.conversationDocs === 'object'
             ? parsed.conversationDocs as Record<string, ConversationDocRef>
             : cache.conversationDocs,
+          pinTipDismissed: typeof parsed.pinTipDismissed === 'boolean'
+            ? parsed.pinTipDismissed
+            : cache.pinTipDismissed,
         };
         localStorage.setItem(KEY, JSON.stringify(cache));
       }

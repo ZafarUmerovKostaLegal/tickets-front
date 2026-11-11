@@ -1340,6 +1340,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             filterEmpty: 'Nothing found',
             filterCurrency: 'Currency',
             filterCurrencyAll: 'All currencies',
+            filterStatus: 'Status',
+            filterStatusAll: 'All statuses',
             filterNumber: 'Number',
             filterDateFrom: 'Issued from',
             filterDateTo: 'Issued to',

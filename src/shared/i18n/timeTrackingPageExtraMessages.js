@@ -1335,6 +1335,8 @@ export const timeTrackingPageExtraMessages = {
             filterEmpty: 'Ничего не найдено',
             filterCurrency: 'Валюта',
             filterCurrencyAll: 'Все валюты',
+            filterStatus: 'Статус',
+            filterStatusAll: 'Все статусы',
             filterNumber: 'Номер',
             filterDateFrom: 'Выставлен с',
             filterDateTo: 'Выставлен по',

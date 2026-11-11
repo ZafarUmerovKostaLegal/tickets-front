@@ -1,3 +1,4 @@
+import { normalizeRegistryStatusLabel } from './statuses';
 import type { InvoiceRegistryRow } from './types';
 
 export type RegistryDay = { year: number; month: number; day: number };
@@ -32,6 +33,7 @@ export type InvoiceRegistryFilter = {
     partners?: ReadonlySet<string>;
     clients?: ReadonlySet<string>;
     currencies?: ReadonlySet<string>;
+    statuses?: ReadonlySet<string>;
     numberQuery?: string;
     dateFrom?: string;
     dateTo?: string;
@@ -47,6 +49,7 @@ export function filterInvoiceRegistryRows(
     const partners = filter.partners ?? new Set<string>();
     const clients = filter.clients ?? new Set<string>();
     const currencies = filter.currencies ?? new Set<string>();
+    const statuses = filter.statuses ?? new Set<string>();
     const numberQuery = (filter.numberQuery ?? '').trim().toLowerCase();
     const from = parseRegistryDay(filter.dateFrom ?? '');
     const to = parseRegistryDay(filter.dateTo ?? '');
@@ -54,6 +57,9 @@ export function filterInvoiceRegistryRows(
     const partnerNeedles = new Set([...partners].map((code) => code.trim().toUpperCase()).filter(Boolean));
     const clientNeedles = new Set([...clients].map((name) => name.trim().toLocaleLowerCase('ru')).filter(Boolean));
     const currencyNeedles = new Set([...currencies].map((code) => code.trim().toUpperCase()).filter(Boolean));
+    const statusNeedles = new Set(
+        [...statuses].map((label) => normalizeRegistryStatusLabel(label)).filter(Boolean),
+    );
 
     return rows.filter((row) => {
         if (search && !searchKeys.some((key) => String(row[key] ?? '').toLowerCase().includes(search)))
@@ -71,6 +77,11 @@ export function filterInvoiceRegistryRows(
         if (currencyNeedles.size > 0) {
             const code = String(row.currency ?? '').trim().toUpperCase();
             if (!currencyNeedles.has(code))
+                return false;
+        }
+        if (statusNeedles.size > 0) {
+            const label = normalizeRegistryStatusLabel(String(row.statusNote ?? ''));
+            if (!label || !statusNeedles.has(label))
                 return false;
         }
         if (numberQuery) {
