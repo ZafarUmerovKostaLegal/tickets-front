@@ -32,7 +32,9 @@ export function useAdminAttendance() {
         setLateError(null);
         try {
             const today = new Date();
-            const date = today.toISOString().slice(0, 10);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            // Local calendar day (office), not UTC — toISOString() shifts the date after midnight.
+            const date = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
             const [records, daily] = await Promise.all([
                 fetchAttendance({
                     dateFrom: date,

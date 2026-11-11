@@ -113,6 +113,110 @@ function isEmployeeItem(item: DailyAttendanceItem): boolean {
     return !isPartnerOrgRole(item.role, item.position ?? item.department);
 }
 
+function normalizePersonKey(value: string | null | undefined): string {
+    return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function idKeyVariants(raw: string | null | undefined): string[] {
+    const emp = (raw ?? '').trim();
+    if (!emp)
+        return [];
+    const keys = [emp];
+    if (/^\d+$/.test(emp)) {
+        const stripped = emp.replace(/^0+/, '') || '0';
+        if (!keys.includes(stripped))
+            keys.push(stripped);
+        for (const width of [2, 3, 4, 5, 6]) {
+            const padded = stripped.padStart(width, '0');
+            if (!keys.includes(padded))
+                keys.push(padded);
+        }
+    }
+    return keys;
+}
+
+function applyLivePunchesToDayItems(
+    items: DailyAttendanceItem[],
+    records: Awaited<ReturnType<typeof fetchAttendance>>,
+    dayYmd: string,
+    workdayStart: string | null,
+    lateThresholdMinutes: number,
+): DailyAttendanceItem[] {
+    type Punch = { first: number; last: number; count: number };
+    const byKey = new Map<string, Punch>();
+    const touch = (key: string, ms: number) => {
+        if (!key)
+            return;
+        const prev = byKey.get(key);
+        if (!prev) {
+            byKey.set(key, { first: ms, last: ms, count: 1 });
+            return;
+        }
+        prev.count += 1;
+        if (ms < prev.first)
+            prev.first = ms;
+        if (ms > prev.last)
+            prev.last = ms;
+    };
+    for (const rec of records) {
+        const ms = parseEventMs(rec.time);
+        if (ms == null)
+            continue;
+        const localDay = toYmd(new Date(ms));
+        if (localDay !== dayYmd)
+            continue;
+        for (const id of idKeyVariants(rec.person_id))
+            touch(`id:${id}`, ms);
+        const name = normalizePersonKey(rec.name);
+        if (name && name !== '-')
+            touch(`name:${name}`, ms);
+    }
+    if (byKey.size === 0)
+        return items;
+
+    const startParts = (workdayStart || '10:00:00').split(':').map(Number);
+    const startH = startParts[0] ?? 10;
+    const startM = startParts[1] ?? 0;
+    const border = parseYmd(dayYmd);
+    border.setHours(startH, startM, 0, 0);
+    border.setMinutes(border.getMinutes() + (Number.isFinite(lateThresholdMinutes) ? lateThresholdMinutes : 0));
+    const borderMs = border.getTime();
+
+    return items.map((item) => {
+        if (item.first_event_time)
+            return item;
+        let punch: Punch | undefined;
+        for (const id of idKeyVariants(item.camera_employee_no)) {
+            punch = byKey.get(`id:${id}`);
+            if (punch)
+                break;
+        }
+        if (!punch) {
+            for (const raw of [item.camera_name, item.display_name, item.email]) {
+                const name = normalizePersonKey(raw);
+                if (!name)
+                    continue;
+                punch = byKey.get(`name:${name}`);
+                if (punch)
+                    break;
+            }
+        }
+        if (!punch)
+            return item;
+        const firstIso = new Date(punch.first).toISOString();
+        const lastIso = punch.last > punch.first ? new Date(punch.last).toISOString() : null;
+        const status: AttendanceStatus = punch.first > borderMs ? 'late' : 'present_on_time';
+        return {
+            ...item,
+            status,
+            first_event_time: firstIso,
+            last_event_time: lastIso,
+            event_count: punch.count,
+            unique_event_count: punch.count,
+        };
+    });
+}
+
 function matchesFilter(item: DailyAttendanceItem, filter: AttendanceStatusFilter): boolean {
     if (filter === 'all')
         return true;
@@ -339,10 +443,37 @@ export function AttendanceOverviewCard() {
                 const report = await fetchDailyAttendanceReport(periodFrom, signal);
                 if (signal?.aborted)
                     return;
-                const dayItems = report.items.filter(isEmployeeItem);
-                nextItems = dayItems.map((item) => ({ ...item, date: periodFrom }));
+                let dayItems = report.items.filter(isEmployeeItem);
                 nextWorkdayStart = report.workday?.workday_start ?? null;
                 nextWorkdayEnd = report.workday?.workday_end ?? null;
+                // Backend sometimes returns roster without punches — rebuild from live camera events.
+                const missingPunches = dayItems.length > 0
+                    && !dayItems.some((item) => Boolean(item.first_event_time));
+                if (missingPunches) {
+                    try {
+                        const records = await fetchAttendance({
+                            dateFrom: periodFrom,
+                            dateTo: periodFrom,
+                            maxRecordsPerDevice: 5000,
+                            signal,
+                        });
+                        if (signal?.aborted)
+                            return;
+                        if (records.length > 0) {
+                            dayItems = applyLivePunchesToDayItems(
+                                dayItems,
+                                records,
+                                periodFrom,
+                                nextWorkdayStart,
+                                report.workday?.late_threshold_minutes ?? 0,
+                            );
+                        }
+                    }
+                    catch {
+                        /* keep daily report as-is */
+                    }
+                }
+                nextItems = dayItems.map((item) => ({ ...item, date: periodFrom }));
                 setEmployeeOptions((prev) => mergeEmployeeOptions(prev, dayItems));
             }
             else {
