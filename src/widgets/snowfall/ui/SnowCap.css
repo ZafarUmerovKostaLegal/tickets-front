@@ -1,0 +1,110 @@
+.snow-cap {
+  --snow-cap-top: #ffffff;
+  --snow-cap-mid: #f1f6fc;
+  --snow-cap-base: #d3e0ef;
+  --snow-cap-edge: rgba(62, 88, 125, 0.32);
+  --snow-cap-rim: rgba(120, 148, 186, 0.55);
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  /* 34-unit viewBox, tile edge at y=20 → 20/34 of the height sits above the tile */
+  top: -17px;
+  height: 29px;
+  z-index: 5;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: snow-cap-settle 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: translate 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Follow the tile's hover lift (-2px) */
+.home-nav-tiles__item:hover > .snow-cap {
+  translate: 0 -2px;
+}
+
+body[data-theme='dark'] .snow-cap {
+  --snow-cap-top: #ffffff;
+  --snow-cap-mid: #eef3fa;
+  --snow-cap-base: #c3d2e6;
+  --snow-cap-edge: rgba(0, 0, 0, 0.5);
+  --snow-cap-rim: rgba(255, 255, 255, 0.35);
+}
+
+.snow-cap__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.snow-cap__body {
+  filter:
+    drop-shadow(0 1.5px 1px var(--snow-cap-edge))
+    drop-shadow(0 3px 5px color-mix(in srgb, var(--snow-cap-edge) 45%, transparent));
+}
+
+.snow-cap__rim {
+  fill: none;
+  stroke: var(--snow-cap-rim);
+  stroke-width: 1;
+}
+
+.snow-cap__shine {
+  animation: snow-cap-shine 7s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+.snow-cap__sparkle {
+  fill: #fff;
+  opacity: 0;
+  animation: snow-cap-sparkle 4.5s ease-in-out infinite;
+}
+
+body:not([data-theme='dark']) .snow-cap__sparkle {
+  fill: #b9cde6;
+}
+
+/* Gentle "breathing" as if the drift is settling under the wind */
+.home-nav-tiles__item:hover .snow-cap {
+  animation: snow-cap-wobble 1.4s ease-in-out;
+}
+
+@keyframes snow-cap-settle {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes snow-cap-shine {
+  0%, 55% { transform: translateX(0); }
+  100% { transform: translateX(320px); }
+}
+
+@keyframes snow-cap-sparkle {
+  0%, 70%, 100% { opacity: 0; }
+  80% { opacity: 1; }
+}
+
+@keyframes snow-cap-wobble {
+  0%, 100% { transform: scaleY(1); }
+  35% { transform: scaleY(0.9) scaleX(1.01); }
+  65% { transform: scaleY(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snow-cap,
+  .snow-cap__shine,
+  .snow-cap__sparkle,
+  .home-nav-tiles__item:hover .snow-cap {
+    animation: none;
+  }
+}

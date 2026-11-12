@@ -40,43 +40,6 @@ body[data-theme='dark'] .app-snowfall__flake {
   }
 }
 
-/* Soft snowdrifts on hub tiles (top edge) */
-body[data-snowfall='1'] .home-nav-tiles--hub .home-nav-tiles__link {
-  overflow: visible;
-}
-
-body[data-snowfall='1'] .home-nav-tiles--hub .home-nav-tiles__link::before {
-  content: '';
-  position: absolute;
-  left: 6%;
-  right: 10%;
-  top: -7px;
-  height: 14px;
-  z-index: 2;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 42% 110% at 12% 100%, #f7fbff 55%, transparent 72%),
-    radial-gradient(ellipse 48% 120% at 38% 100%, #ffffff 58%, transparent 74%),
-    radial-gradient(ellipse 40% 105% at 62% 100%, #f4f8fd 56%, transparent 73%),
-    radial-gradient(ellipse 46% 115% at 88% 100%, #ffffff 57%, transparent 74%);
-  filter:
-    drop-shadow(0 1px 0 color-mix(in srgb, #8aa0bc 35%, transparent))
-    drop-shadow(0 2px 3px color-mix(in srgb, #647994 12%, transparent));
-  opacity: 0.95;
-}
-
-body[data-theme='dark'][data-snowfall='1'] .home-nav-tiles--hub .home-nav-tiles__link::before {
-  background:
-    radial-gradient(ellipse 42% 110% at 12% 100%, #eef4fb 55%, transparent 72%),
-    radial-gradient(ellipse 48% 120% at 38% 100%, #ffffff 58%, transparent 74%),
-    radial-gradient(ellipse 40% 105% at 62% 100%, #e8f0fa 56%, transparent 73%),
-    radial-gradient(ellipse 46% 115% at 88% 100%, #f8fbff 57%, transparent 74%);
-  filter:
-    drop-shadow(0 1px 0 color-mix(in srgb, #ffffff 18%, transparent))
-    drop-shadow(0 2px 4px color-mix(in srgb, #000000 35%, transparent));
-  opacity: 0.88;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .app-snowfall {
     display: none;

@@ -15,6 +15,9 @@ import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence
 import { useVacationLeavePendingBadge, formatVacationLeavePendingBadge } from '@entities/vacation';
 import { useTodoInvitesBadge } from '@entities/todo';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
+import { isSnowfallUser } from '@widgets/snowfall/lib/isSnowfallUser';
+import { useHubGridColumns } from '@widgets/snowfall/lib/useHubGridColumns';
+import { SnowCap } from '@widgets/snowfall/ui/SnowCap';
 import {
     getHubSectionForTile,
     HUB_SECTIONS,
@@ -319,6 +322,8 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
     }, [draggingId, handleDragEnd, persistOrder]);
 
     const query = normalizeSearch(searchQuery);
+    const snowy = !loading && isSnowfallUser(user);
+    const gridColumns = useHubGridColumns(snowy);
 
     const sectionedTiles = useMemo(() => {
         const sectionTileIds = new Map(
@@ -350,7 +355,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                 <p className="home-nav-tiles__empty">{t('homeHub.searchEmpty')}</p>
             ) : null}
 
-            {sectionedTiles.map(({ section, tiles }) => (
+            {sectionedTiles.map(({ section, tiles }, sectionIndex) => (
                 <section
                     key={section.id}
                     className="home-nav-tiles__section-block"
@@ -372,8 +377,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                     </div>
 
                     <ul className="home-nav-tiles__grid" role="list">
-                        {tiles.map((tile) => {
+                        {tiles.map((tile, tileInSection) => {
                             const index = tileIndex++;
+                            const hasSnowCap = snowy && sectionIndex === 0 && tileInSection < gridColumns;
                             const isDragging = draggingId === tile.id;
                             const isDropTarget = dropTargetId === tile.id && draggingId != null && draggingId !== tile.id;
                             return (
@@ -398,6 +404,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                     onDragEnter={(e) => handleDragOver(e, tile.id)}
                                     onDrop={(e) => handleDrop(e, tile.id)}
                                 >
+                                    {hasSnowCap ? <SnowCap seed={tileInSection + 3} index={tileInSection} /> : null}
                                     {!query ? (
                                         <button
                                             type="button"
