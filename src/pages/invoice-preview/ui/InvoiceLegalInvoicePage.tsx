@@ -22,7 +22,7 @@ import {
   resolveLegalExtraExpensesAmount,
   resolveLegalOverrideText,
   resolveLegalPaymentDisclaimer,
-  resolveLegalServiceDescriptionLine,
+  resolveLegalServiceLines,
   resolveLegalThanksLine,
   type InvoiceLegalBankingFieldKey,
   type InvoiceLegalPageOverrides,
@@ -137,7 +137,8 @@ export function InvoiceLegalInvoicePage({
 
   const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
   const cur = packCurrencyCode(model);
-  const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
+  const serviceLines = resolveLegalServiceLines(model, legalOverrides);
+  const showItemNo = serviceLines.length > 1;
   const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
   const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
   const addr2 = model.recipientAddressLines[1];
@@ -281,36 +282,64 @@ export function InvoiceLegalInvoicePage({
       </div>
     </div>
 
-    <table className="tt-inv-li__svc-table" role="presentation">
+    <table className={`tt-inv-li__svc-table${showItemNo ? ' tt-inv-li__svc-table--numbered' : ''}`} role="presentation">
       <thead>
         <tr>
+          {showItemNo ? <th scope="col" className="tt-inv-li__th-no">{labels.itemNo}</th> : null}
           <th scope="col">{labels.description}</th>
           <th scope="col" className="tt-inv-li__th-total">{labels.total(cur)}</th>
         </tr>
       </thead>
       <tbody>
-        <tr className="tt-inv-li__svc-row-main">
-          <td>
-            <LiField
-              editable={editable}
-              value={editable ? (legalOverrides?.serviceDescriptionLine ?? svcLine) : svcLine}
-              ariaLabel={labels.description}
-              multiline={editable}
-              onChange={(serviceDescriptionLine) => onChangeLegalOverrides?.({ serviceDescriptionLine })}
-            />
-          </td>
-          <td className="tt-inv-li__svc-amt">
-            <LiField
-              editable={editable}
-              className="tt-inv-li__field--amt"
-              value={servicesAmount}
-              ariaLabel={labels.total(cur)}
-              onChange={(next) => onChangeModel?.(model.servicesAmountFormatted
-                ? { servicesAmountFormatted: next }
-                : { totalFormatted: next })}
-            />
-          </td>
-        </tr>
+        {serviceLines.map((row, idx) => (
+          <tr key={`svc-${idx}`} className="tt-inv-li__svc-row-main">
+            {showItemNo ? <td className="tt-inv-li__svc-no">{idx + 1}</td> : null}
+            <td>
+              <LiField
+                editable={editable}
+                value={row.description}
+                ariaLabel={`${labels.description} ${idx + 1}`}
+                multiline={editable}
+                onChange={(next) => {
+                  if (serviceLines.length <= 1) {
+                    onChangeLegalOverrides?.({ serviceDescriptionLine: next, serviceLines: [{ description: next, amountFormatted: row.amountFormatted }] });
+                    return;
+                  }
+                  const nextLines = serviceLines.map((ln, i) => (
+                    i === idx ? { description: next, amountFormatted: ln.amountFormatted } : ln
+                  ));
+                  onChangeLegalOverrides?.({
+                    serviceLines: nextLines,
+                    serviceDescriptionLine: nextLines[0]?.description ?? next,
+                  });
+                }}
+              />
+            </td>
+            <td className="tt-inv-li__svc-amt">
+              <LiField
+                editable={editable}
+                className="tt-inv-li__field--amt"
+                value={row.amountFormatted || (serviceLines.length === 1 ? servicesAmount : '')}
+                ariaLabel={`${labels.total(cur)} ${idx + 1}`}
+                onChange={(next) => {
+                  if (serviceLines.length <= 1) {
+                    onChangeModel?.(model.servicesAmountFormatted
+                      ? { servicesAmountFormatted: next }
+                      : { totalFormatted: next });
+                    onChangeLegalOverrides?.({
+                      serviceLines: [{ description: row.description, amountFormatted: next }],
+                    });
+                    return;
+                  }
+                  const nextLines = serviceLines.map((ln, i) => (
+                    i === idx ? { description: ln.description, amountFormatted: next } : ln
+                  ));
+                  onChangeLegalOverrides?.({ serviceLines: nextLines });
+                }}
+              />
+            </td>
+          </tr>
+        ))}
       </tbody>
     </table>
 

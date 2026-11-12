@@ -20,9 +20,16 @@ export type InvoiceLegalBankingFieldKey =
     | 'billToBankName'
     | 'billToSwift';
 
+export type InvoiceLegalServiceLineOverride = {
+    description?: string | null;
+    amountFormatted?: string | null;
+};
+
 export type InvoiceLegalPageOverrides = {
     caseDetailLine?: string | null;
     serviceDescriptionLine?: string | null;
+    /** Multiple legal-page service rows (custom billed amount). */
+    serviceLines?: InvoiceLegalServiceLineOverride[] | null;
     paymentDisclaimer?: string | null;
     /** Closing line under the totals, e.g. «Благодарим за сотрудничество!». */
     thanksLine?: string | null;
@@ -169,6 +176,33 @@ export function resolveLegalServiceDescriptionLine(
     overrides?: InvoiceLegalPageOverrides | null,
 ): string {
     return resolveLocalizedLegalServiceDescription(model, overrides?.serviceDescriptionLine);
+}
+
+export type LegalServiceLineResolved = {
+    description: string;
+    amountFormatted: string;
+};
+
+/** Prefer multi-line overrides; fall back to the single description + services amount. */
+export function resolveLegalServiceLines(
+    model: InvoiceCoverLetterModel,
+    overrides?: InvoiceLegalPageOverrides | null,
+): LegalServiceLineResolved[] {
+    const raw = overrides?.serviceLines;
+    if (Array.isArray(raw) && raw.length > 0) {
+        const rows = raw
+            .map((ln) => ({
+                description: String(ln?.description ?? '').trim(),
+                amountFormatted: String(ln?.amountFormatted ?? '').trim(),
+            }))
+            .filter((ln) => ln.description || ln.amountFormatted);
+        if (rows.length > 0)
+            return rows;
+    }
+    return [{
+        description: resolveLegalServiceDescriptionLine(model, overrides),
+        amountFormatted: model.servicesAmountFormatted?.trim() || model.totalFormatted,
+    }];
 }
 
 export function resolveLegalPaymentDisclaimer(

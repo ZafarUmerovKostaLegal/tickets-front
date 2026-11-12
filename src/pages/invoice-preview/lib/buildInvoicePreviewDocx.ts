@@ -55,7 +55,7 @@ import {
     resolveLegalFirmBankingLines,
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
-    resolveLegalServiceDescriptionLine,
+    resolveLegalServiceLines,
     resolveLegalThanksLine,
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
@@ -689,7 +689,8 @@ function legalInvoiceDocxBlocks(
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
-    const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
+    const serviceLines = resolveLegalServiceLines(model, legalOverrides);
+    const showItemNo = serviceLines.length > 1;
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
 
@@ -806,16 +807,31 @@ function legalInvoiceDocxBlocks(
         ],
     });
 
+    const svcHeadBorders = {
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+    };
+    const descWidth = showItemNo ? 64 : 72;
+    const noWidth = showItemNo ? 8 : 0;
     const svcHead = new TableRow({
         children: [
+            ...(showItemNo
+                ? [new TableCell({
+                    borders: svcHeadBorders,
+                    width: { size: noWidth, type: WidthType.PERCENTAGE },
+                    shading: { type: ShadingType.SOLID, fill: '1A1A1A', color: '1A1A1A' },
+                    verticalAlign: VerticalAlignTable.CENTER,
+                    children: [new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [new TextRun({ text: labels.itemNo, bold: true, color: 'FFFFFF', size: DOC_SIZE, font: DOC_FONT })],
+                    })],
+                })]
+                : []),
             new TableCell({
-                borders: {
-                    top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                },
-                width: { size: 72, type: WidthType.PERCENTAGE },
+                borders: svcHeadBorders,
+                width: { size: descWidth, type: WidthType.PERCENTAGE },
                 shading: { type: ShadingType.SOLID, fill: '1A1A1A', color: '1A1A1A' },
                 verticalAlign: VerticalAlignTable.CENTER,
                 children: [new Paragraph({
@@ -823,12 +839,7 @@ function legalInvoiceDocxBlocks(
                 })],
             }),
             new TableCell({
-                borders: {
-                    top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                },
+                borders: svcHeadBorders,
                 width: { size: 28, type: WidthType.PERCENTAGE },
                 shading: { type: ShadingType.SOLID, fill: '1A1A1A', color: '1A1A1A' },
                 verticalAlign: VerticalAlignTable.CENTER,
@@ -845,14 +856,25 @@ function legalInvoiceDocxBlocks(
         left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
         right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
     };
-    const svcBody = new TableRow({
+    const svcBodyRows = serviceLines.map((row, idx) => new TableRow({
         children: [
+            ...(showItemNo
+                ? [new TableCell({
+                    borders: svcBodyBorders,
+                    width: { size: noWidth, type: WidthType.PERCENTAGE },
+                    verticalAlign: VerticalAlignTable.BOTTOM,
+                    children: [new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [new TextRun({ text: String(idx + 1), size: DOC_SIZE, font: DOC_FONT, color: '334155' })],
+                    })],
+                })]
+                : []),
             new TableCell({
                 borders: svcBodyBorders,
-                width: { size: 72, type: WidthType.PERCENTAGE },
+                width: { size: descWidth, type: WidthType.PERCENTAGE },
                 verticalAlign: VerticalAlignTable.BOTTOM,
                 children: [new Paragraph({
-                    children: [new TextRun({ text: svcLine, size: DOC_SIZE, font: DOC_FONT, color: '334155' })],
+                    children: [new TextRun({ text: row.description, size: DOC_SIZE, font: DOC_FONT, color: '334155' })],
                 })],
             }),
             new TableCell({
@@ -861,15 +883,21 @@ function legalInvoiceDocxBlocks(
                 verticalAlign: VerticalAlignTable.BOTTOM,
                 children: [new Paragraph({
                     alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: servicesAmount, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({
+                        text: row.amountFormatted || (serviceLines.length === 1 ? servicesAmount : ''),
+                        bold: true,
+                        color: '1E293B',
+                        size: DOC_SIZE,
+                        font: DOC_FONT,
+                    })],
                 })],
             }),
         ],
-    });
+    }));
     const svcTbl = new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         layout: TableLayoutType.FIXED,
-        rows: [svcHead, svcBody],
+        rows: [svcHead, ...svcBodyRows],
     });
 
     type TotalsBorders = {

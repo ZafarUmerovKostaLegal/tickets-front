@@ -12,6 +12,7 @@ export type LegalInvoiceLabels = {
     bankName: string;
     swift: string;
     caseDetails: string;
+    itemNo: string;
     description: string;
     total: (currency: string) => string;
     subtotal: string;
@@ -40,6 +41,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         bankName: 'Bank name',
         swift: 'SWIFT',
         caseDetails: 'Case details',
+        itemNo: 'NO.',
         description: 'DESCRIPTION',
         total: () => 'TOTAL',
         subtotal: 'SUBTOTAL',
@@ -70,6 +72,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         bankName: 'Банк',
         swift: 'SWIFT',
         caseDetails: 'Детали дела',
+        itemNo: '№',
         description: 'ОПИСАНИЕ',
         total: () => 'ИТОГО',
         subtotal: 'ПРОМЕЖУТОЧНЫЙ ИТОГ',

@@ -18,6 +18,8 @@ export type InvoicePreviewFormDraftV1 = {
     customBilledAmount?: string;
     customBilledCurrency?: string;
     customBilledDescription?: string;
+    /** Multiple legal-page items (description + amount). Sum should equal customBilledAmount. */
+    customBilledLines?: Array<{ amount: string; description: string }>;
 };
 
 export type InvoicePreviewMeta = {
@@ -72,7 +74,16 @@ function isFormDraft(o: unknown): o is InvoicePreviewFormDraftV1 {
         && (r.customBilledEnabled === undefined || typeof r.customBilledEnabled === 'boolean')
         && (r.customBilledAmount === undefined || typeof r.customBilledAmount === 'string')
         && (r.customBilledCurrency === undefined || typeof r.customBilledCurrency === 'string')
-        && (r.customBilledDescription === undefined || typeof r.customBilledDescription === 'string');
+        && (r.customBilledDescription === undefined || typeof r.customBilledDescription === 'string')
+        && (r.customBilledLines === undefined || (
+            Array.isArray(r.customBilledLines)
+            && r.customBilledLines.every((ln) => (
+                ln
+                && typeof ln === 'object'
+                && typeof (ln as { amount?: unknown }).amount === 'string'
+                && typeof (ln as { description?: unknown }).description === 'string'
+            ))
+        ));
 }
 
 function parseMeta(raw: unknown): InvoicePreviewMeta {

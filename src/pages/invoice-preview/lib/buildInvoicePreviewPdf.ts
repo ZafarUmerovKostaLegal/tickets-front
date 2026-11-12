@@ -24,7 +24,7 @@ import {
     resolveLegalFirmBankingLines,
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
-    resolveLegalServiceDescriptionLine,
+    resolveLegalServiceLines,
     resolveLegalThanksLine,
     invoicePreviewPageCount,
     type InvoiceLegalPageOverrides,
@@ -1438,7 +1438,8 @@ function drawLegalInvoicePdfPage(
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
-    const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
+    const serviceLines = resolveLegalServiceLines(model, legalOverrides);
+    const showItemNo = serviceLines.length > 1;
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
     const totalText = model.totalFormatted;
@@ -1575,7 +1576,9 @@ function drawLegalInvoicePdfPage(
 
     y = Math.min(yLeft, yRight) - LEGAL_PANELS_PT;
 
-    const descColW = contentW * 0.72;
+    const noColW = showItemNo ? DOC_FS * 2.4 : 0;
+    const amtColW = contentW * 0.28;
+    const descColW = contentW - noColW - amtColW;
     const headH = DOC_FS + 10;
     const yHeadTop = y;
     const yHeadBot = yHeadTop - headH;
@@ -1586,8 +1589,17 @@ function drawLegalInvoicePdfPage(
         height: headH,
         color: rgb(0.1, 0.1, 0.1),
     });
+    if (showItemNo) {
+        page.drawText(labels.itemNo, {
+            x: ML + 6,
+            y: yHeadBot + 5,
+            size: DOC_FS,
+            font: fontBold,
+            color: rgb(1, 1, 1),
+        });
+    }
     page.drawText(labels.description, {
-        x: ML + 6,
+        x: ML + noColW + 6,
         y: yHeadBot + 5,
         size: DOC_FS,
         font: fontBold,
@@ -1603,32 +1615,55 @@ function drawLegalInvoicePdfPage(
         color: rgb(1, 1, 1),
     });
 
-    const svcLines = splitTextLines(svcLine, descColW - 10, DOC_FS, font);
     const rowPad = 8;
-    const rowH = Math.max(DOC_LH, svcLines.length * DOC_LH) + rowPad;
-    const yRowTop = yHeadBot;
-    const yRowBot = yRowTop - rowH;
-    page.drawLine({
-        start: { x: ML, y: yRowBot },
-        end: { x: ML + contentW, y: yRowBot },
-        thickness: 0.6,
-        color: CORAL,
-    });
-    let svcY = yRowTop - rowPad - DOC_FS;
-    for (const ln of svcLines) {
-        page.drawText(ln, { x: ML + 5, y: svcY, size: DOC_FS, font, color: BODY });
-        svcY -= DOC_LH;
+    let yRowTop = yHeadBot;
+    for (let i = 0; i < serviceLines.length; i += 1) {
+        const row = serviceLines[i]!;
+        const wrapped = splitTextLines(row.description, descColW - 10, DOC_FS, font);
+        const rowH = Math.max(DOC_LH, wrapped.length * DOC_LH) + rowPad;
+        const yRowBot = yRowTop - rowH;
+        page.drawLine({
+            start: { x: ML, y: yRowBot },
+            end: { x: ML + contentW, y: yRowBot },
+            thickness: 0.6,
+            color: CORAL,
+        });
+        const textTop = yRowTop - rowPad - DOC_FS;
+        if (showItemNo) {
+            const noText = String(i + 1);
+            const noW = font.widthOfTextAtSize(noText, DOC_FS);
+            page.drawText(noText, {
+                x: ML + (noColW - noW) / 2,
+                y: textTop,
+                size: DOC_FS,
+                font,
+                color: BODY,
+            });
+        }
+        let svcY = textTop;
+        for (const ln of wrapped) {
+            page.drawText(ln, {
+                x: ML + noColW + 5,
+                y: svcY,
+                size: DOC_FS,
+                font,
+                color: BODY,
+            });
+            svcY -= DOC_LH;
+        }
+        const amtText = row.amountFormatted || (serviceLines.length === 1 ? servicesText : '');
+        const totW = fontBold.widthOfTextAtSize(amtText, DOC_FS);
+        page.drawText(amtText, {
+            x: ML + contentW - 6 - totW,
+            y: textTop,
+            size: DOC_FS,
+            font: fontBold,
+            color: BODY,
+        });
+        yRowTop = yRowBot;
     }
-    const totW = fontBold.widthOfTextAtSize(servicesText, DOC_FS);
-    page.drawText(servicesText, {
-        x: ML + contentW - 6 - totW,
-        y: yRowTop - rowPad - DOC_FS,
-        size: DOC_FS,
-        font: fontBold,
-        color: BODY,
-    });
 
-    y = yRowBot - DOC_LH;
+    y = yRowTop - DOC_LH;
 
     const rightX = ML + contentW;
     const valueGap = 12;

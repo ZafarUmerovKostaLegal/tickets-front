@@ -363,6 +363,28 @@ export function InvoicePreviewPage() {
                         }
                     }
                     docFromApi = parseInvoiceDocumentOverrides(inv.documentOverrides);
+                    if (
+                        billedOverride.isBilledOverride
+                        && billedOverride.visibleLines.length > 0
+                        && !(docFromApi?.legal?.serviceLines && docFromApi.legal.serviceLines.length > 0)
+                    ) {
+                        const ccy = invoiceCurrency || billedOverride.workedCurrency || 'USD';
+                        const serviceLines = billedOverride.visibleLines.map((ln) => ({
+                            description: String(ln.description ?? '').trim() || 'Legal services',
+                            amountFormatted: formatTimeReportAmount(Number(ln.lineTotal) || 0, ccy),
+                        }));
+                        docFromApi = {
+                            ...(docFromApi ?? { v: 1 }),
+                            v: 1,
+                            legal: {
+                                ...(docFromApi?.legal ?? {}),
+                                serviceLines,
+                                serviceDescriptionLine: serviceLines[0]?.description
+                                    ?? docFromApi?.legal?.serviceDescriptionLine
+                                    ?? null,
+                            },
+                        };
+                    }
                     if (!docFromApi?.legal?.invoiceNumber && inv.invoiceNumber?.trim()) {
                         docFromApi = {
                             ...(docFromApi ?? { v: 1 }),
@@ -581,14 +603,22 @@ export function InvoicePreviewPage() {
     );
     const customBilledOverride = useMemo(() => {
         if (session?.mode === 'create' && session.form.customBilledEnabled) {
-            const raw = String(session.form.customBilledAmount ?? '').trim().replace(/\s/g, '').replace(',', '.');
-            const amount = Number(raw);
-            if (!Number.isFinite(amount) || amount <= 0)
-                return null;
             const currency = String(session.form.customBilledCurrency ?? '').trim().toUpperCase()
                 || reportBill?.currency
                 || packCurrencyCode(displayModel);
-            return { amount: Math.round(amount * 100) / 100, currency };
+            const fromLines = (session.form.customBilledLines ?? [])
+                .map((ln) => Number(String(ln.amount ?? '').trim().replace(/\s/g, '').replace(',', '.')))
+                .filter((n) => Number.isFinite(n) && n > 0);
+            const amount = fromLines.length > 0
+                ? Math.round(fromLines.reduce((s, n) => s + n, 0) * 100) / 100
+                : (() => {
+                    const raw = String(session.form.customBilledAmount ?? '').trim().replace(/\s/g, '').replace(',', '.');
+                    const n = Number(raw);
+                    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : NaN;
+                })();
+            if (!Number.isFinite(amount) || amount <= 0)
+                return null;
+            return { amount, currency };
         }
         if (existingBilledServices && existingBilledServices.amount > 0)
             return existingBilledServices;
@@ -617,12 +647,42 @@ export function InvoicePreviewPage() {
     }, [coverModel, reportBill, legalOverrides.vatAmount, customBilledOverride]);
     const pricedLegal = useMemo(() => {
         if (customBilledOverride) {
+            const formLines = session?.mode === 'create' ? (session.form.customBilledLines ?? []) : [];
+            const serviceLinesFromForm = formLines
+                .map((ln) => {
+                    const amount = Number(String(ln.amount ?? '').trim().replace(/\s/g, '').replace(',', '.'));
+                    const description = String(ln.description ?? '').trim();
+                    if (!description || !Number.isFinite(amount) || amount <= 0)
+                        return null;
+                    return {
+                        description,
+                        amountFormatted: formatTimeReportAmount(amount, customBilledOverride.currency),
+                    };
+                })
+                .filter((ln): ln is { description: string; amountFormatted: string } => ln != null);
+            const fallbackDesc = session?.mode === 'create'
+                ? session.form.customBilledDescription?.trim()
+                : '';
             return {
                 ...legalOverrides,
                 extraExpensesAmount: formatTimeReportAmount(0, customBilledOverride.currency),
-                ...(session?.mode === 'create' && session.form.customBilledDescription?.trim()
-                    ? { serviceDescriptionLine: session.form.customBilledDescription.trim() }
-                    : {}),
+                ...(serviceLinesFromForm.length > 0
+                    ? {
+                        serviceLines: serviceLinesFromForm,
+                        serviceDescriptionLine: serviceLinesFromForm[0]?.description ?? fallbackDesc ?? null,
+                    }
+                    : (fallbackDesc
+                        ? {
+                            serviceDescriptionLine: fallbackDesc,
+                            serviceLines: [{
+                                description: fallbackDesc,
+                                amountFormatted: formatTimeReportAmount(
+                                    customBilledOverride.amount,
+                                    customBilledOverride.currency,
+                                ),
+                            }],
+                        }
+                        : {})),
             };
         }
         if (!reportBill)

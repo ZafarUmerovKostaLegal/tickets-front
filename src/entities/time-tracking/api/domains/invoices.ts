@@ -215,6 +215,8 @@ export type InvoiceCreateInput = {
     billedAmount?: number | null;
     /** Service line on the legal invoice page (with billedAmount). */
     serviceDescription?: string | null;
+    /** Multiple legal-page rows; amounts must sum to billedAmount. */
+    billedServiceLines?: Array<{ description: string; amount: number }> | null;
     /** Amount added on top of hours, in the invoice currency. 0 skips the project default. */
     extraFixedFeeAmount?: number | null;
     extraFixedFeeDescription?: string | null;

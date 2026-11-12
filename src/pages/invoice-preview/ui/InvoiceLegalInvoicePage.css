@@ -242,6 +242,28 @@
   text-align: right;
 }
 
+.tt-inv-li__svc-table .tt-inv-li__th-no,
+.tt-inv-li__svc-no {
+  width: 2.5rem;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-inv-li__svc-table--numbered {
+  table-layout: fixed;
+}
+
+.tt-inv-li__svc-table--numbered th:nth-child(2),
+.tt-inv-li__svc-table--numbered td:nth-child(2) {
+  width: auto;
+}
+
+.tt-inv-li__svc-table--numbered .tt-inv-li__th-total,
+.tt-inv-li__svc-table--numbered .tt-inv-li__svc-amt {
+  width: 28%;
+}
+
 .tt-inv-li__svc-table td {
   padding: 0.55rem 0.55rem 0.45rem;
   font-size: inherit;
