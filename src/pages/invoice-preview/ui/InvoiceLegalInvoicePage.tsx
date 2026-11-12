@@ -15,9 +15,8 @@ import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from '../lib/invoice
 import {
   legalBankingInputValue,
   legalFirmBankingRows,
+  legalBillToBankingRows,
   isBankingPlaceholderValue,
-  resolveLegalBillToBankName,
-  resolveLegalBillToSwift,
   resolveLegalCaseDetailLine,
   resolveLegalExtraExpensesAmount,
   resolveLegalOverrideText,
@@ -143,8 +142,12 @@ export function InvoiceLegalInvoicePage({
   const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
   const addr2 = model.recipientAddressLines[1];
   const firmBankingRows = legalFirmBankingRows(cur, legalOverrides, model.coverLanguage);
-  const billToBankName = resolveLegalBillToBankName(legalOverrides);
-  const billToSwift = resolveLegalBillToSwift(legalOverrides);
+  const billToBankingRows = legalBillToBankingRows(legalOverrides, model.coverLanguage);
+  const extendedFirmRequisites = firmBankingRows.some((row) => (
+    (row.field === 'recipientName' || row.field === 'oked' || row.field === 'correspondentBik')
+    && !isBankingPlaceholderValue(row.value)
+  ));
+  const showFirmAddressLine = editable || !extendedFirmRequisites;
 
   const patchBanking = (field: InvoiceLegalBankingFieldKey, next: string) => {
     onChangeLegalOverrides?.({ [field]: next });
@@ -153,16 +156,20 @@ export function InvoiceLegalInvoicePage({
   return (<div className={`tt-inv-li${editable ? ' tt-inv-li--editable' : ''}`}>
     <header className="tt-inv-li__masthead">
       <div className="tt-inv-li__firm-blurb">
-        <p className="tt-inv-li__firm-name">{KOSTA_LEGAL_FIRM.brandName} LF</p>
-        <p className="tt-inv-li__firm-line">
-          <LiField
-            editable={editable}
-            className="tt-inv-li__field--firm-addr"
-            value={editable ? (legalOverrides?.firmAddress ?? firmAddress) : firmAddress}
-            ariaLabel={labels.address}
-            onChange={(next) => onChangeLegalOverrides?.({ firmAddress: next })}
-          />
-        </p>
+        {!extendedFirmRequisites || editable ? (
+          <p className="tt-inv-li__firm-name">{KOSTA_LEGAL_FIRM.brandName} LF</p>
+        ) : null}
+        {showFirmAddressLine ? (
+          <p className="tt-inv-li__firm-line">
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--firm-addr"
+              value={editable ? (legalOverrides?.firmAddress ?? firmAddress) : firmAddress}
+              ariaLabel={labels.address}
+              onChange={(next) => onChangeLegalOverrides?.({ firmAddress: next })}
+            />
+          </p>
+        ) : null}
         {firmBankingRows
           .filter((row) => editable || !isBankingPlaceholderValue(row.value))
           .map((row) => (
@@ -246,28 +253,21 @@ export function InvoiceLegalInvoicePage({
             />
           </p>
         ) : null}
-        <p className="tt-inv-li__firm-line tt-inv-li__bank-line">
-          <span className="tt-inv-li__panel-label tt-inv-li__bank-label">{labels.bankName}:</span>
-          <LiField
-            editable={editable}
-            className="tt-inv-li__field--bank"
-            value={editable ? legalBankingInputValue(legalOverrides?.billToBankName) : billToBankName}
-            placeholder="—"
-            ariaLabel={`${labels.billTo} ${labels.bankName}`}
-            onChange={(billToBankName) => patchBanking('billToBankName', billToBankName)}
-          />
-        </p>
-        <p className="tt-inv-li__firm-line tt-inv-li__bank-line">
-          <span className="tt-inv-li__panel-label tt-inv-li__bank-label">{labels.swift}:</span>
-          <LiField
-            editable={editable}
-            className="tt-inv-li__field--bank"
-            value={editable ? legalBankingInputValue(legalOverrides?.billToSwift) : billToSwift}
-            placeholder="—"
-            ariaLabel={`${labels.billTo} ${labels.swift}`}
-            onChange={(billToSwift) => patchBanking('billToSwift', billToSwift)}
-          />
-        </p>
+        {billToBankingRows
+          .filter((row) => editable || !isBankingPlaceholderValue(row.value))
+          .map((row) => (
+            <p key={row.field} className="tt-inv-li__firm-line tt-inv-li__bank-line">
+              <span className="tt-inv-li__panel-label tt-inv-li__bank-label">{row.label}:</span>
+              <LiField
+                editable={editable}
+                className="tt-inv-li__field--bank"
+                value={editable ? legalBankingInputValue(legalOverrides?.[row.field]) : row.value}
+                placeholder="—"
+                ariaLabel={`${labels.billTo} ${row.label}`}
+                onChange={(next) => patchBanking(row.field, next)}
+              />
+            </p>
+          ))}
       </div>
       <div className="tt-inv-li__panel tt-inv-li__panel--right">
         <p className="tt-inv-li__panel-text">

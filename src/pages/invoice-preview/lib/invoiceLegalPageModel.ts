@@ -22,6 +22,9 @@ export type InvoiceLegalBankingFieldKey =
     | 'correspondentAccount'
     | 'correspondentBik'
     | 'billToBankName'
+    | 'billToAccountNumber'
+    | 'billToCorrespondentAccount'
+    | 'billToBik'
     | 'billToSwift';
 
 export type InvoiceLegalServiceLineOverride = {
@@ -58,6 +61,12 @@ export type InvoiceLegalPageOverrides = {
     correspondentAccount?: string | null;
     correspondentBik?: string | null;
     billToBankName?: string | null;
+    /** Payer settlement account (р/с) under Bill to. */
+    billToAccountNumber?: string | null;
+    /** Payer correspondent account under Bill to. */
+    billToCorrespondentAccount?: string | null;
+    /** Payer BIC under Bill to. */
+    billToBik?: string | null;
     billToSwift?: string | null;
 };
 
@@ -134,12 +143,48 @@ export function resolveLegalFirmBankingLines(
         .map((row) => `${row.label}: ${row.value}`);
 }
 
+export type LegalBillToBankingRow = {
+    field: Extract<
+        InvoiceLegalBankingFieldKey,
+        'billToBankName' | 'billToAccountNumber' | 'billToCorrespondentAccount' | 'billToBik' | 'billToSwift'
+    >;
+    label: string;
+    value: string;
+};
+
 export function resolveLegalBillToBankName(overrides?: InvoiceLegalPageOverrides | null): string {
     return resolveBankingValue(overrides?.billToBankName);
 }
 
 export function resolveLegalBillToSwift(overrides?: InvoiceLegalPageOverrides | null): string {
     return resolveBankingValue(overrides?.billToSwift);
+}
+
+/** Bill-to bank block as on RUB invoices: bank, settlement account, correspondent account, BIC (+ optional SWIFT). */
+export function legalBillToBankingRows(
+    overrides?: InvoiceLegalPageOverrides | null,
+    lang?: InvoiceCoverLanguage | null,
+    options?: { omitPlaceholders?: boolean },
+): LegalBillToBankingRow[] {
+    const labels = getLegalInvoiceLabels(lang);
+    const rows: LegalBillToBankingRow[] = [
+        { field: 'billToBankName', label: labels.billToBankName, value: resolveBankingValue(overrides?.billToBankName) },
+        {
+            field: 'billToAccountNumber',
+            label: labels.billToAccountNumber,
+            value: resolveBankingValue(overrides?.billToAccountNumber),
+        },
+        {
+            field: 'billToCorrespondentAccount',
+            label: labels.billToCorrespondentAccount,
+            value: resolveBankingValue(overrides?.billToCorrespondentAccount),
+        },
+        { field: 'billToBik', label: labels.billToBik, value: resolveBankingValue(overrides?.billToBik) },
+        { field: 'billToSwift', label: labels.swift, value: resolveBankingValue(overrides?.billToSwift) },
+    ];
+    if (!options?.omitPlaceholders)
+        return rows;
+    return rows.filter((row) => !isBankingPlaceholderValue(row.value));
 }
 
 export function resolveLegalOverrideText(

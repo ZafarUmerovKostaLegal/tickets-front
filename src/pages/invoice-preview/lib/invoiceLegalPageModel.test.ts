@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    legalBillToBankingRows,
     legalFirmBankingRows,
     resolveLegalAccountCurrencyCode,
     resolveLegalExtraExpensesAmount,
@@ -80,5 +81,27 @@ describe('legalFirmBankingRows', () => {
         expect(rows.find((r) => r.field === 'correspondentAccount')?.label).toBe('Счёт (Лоро)');
         expect(rows.find((r) => r.field === 'correspondentBik')?.label).toBe('БИК');
         expect(rows.find((r) => r.field === 'bankCode')?.label).toBe('МФО');
+        expect(rows.find((r) => r.field === 'bankName')?.label).toBe('Основной банк получателя');
+    });
+});
+
+describe('legalBillToBankingRows', () => {
+    it('renders payer bank block like RUB invoice bill-to', () => {
+        const rows = legalBillToBankingRows({
+            billToBankName: 'АО "РАЙФФАЙЗЕНБАНК"',
+            billToAccountNumber: '40702-810-6-0000-0-218822',
+            billToCorrespondentAccount: '30101810200000000700',
+            billToBik: '044525700',
+        }, 'RU', { omitPlaceholders: true });
+        expect(rows.map((r) => r.field)).toEqual([
+            'billToBankName',
+            'billToAccountNumber',
+            'billToCorrespondentAccount',
+            'billToBik',
+        ]);
+        expect(rows[0]?.label).toBe('Банк получателя');
+        expect(rows[1]?.label).toBe('Р/с');
+        expect(rows[2]?.label).toBe('Корреспондентский счет');
+        expect(rows[3]?.label).toBe('БИК');
     });
 });

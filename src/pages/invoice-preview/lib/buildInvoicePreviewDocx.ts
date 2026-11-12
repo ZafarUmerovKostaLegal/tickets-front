@@ -48,8 +48,8 @@ import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
     invoicePreviewPageCount,
-    resolveLegalBillToBankName,
-    resolveLegalBillToSwift,
+    legalBillToBankingRows,
+    isBankingPlaceholderValue,
     resolveLegalCaseDetailLine,
     resolveLegalExtraExpensesAmount,
     resolveLegalFirmBankingLines,
@@ -694,12 +694,22 @@ function legalInvoiceDocxBlocks(
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
 
+    const firmBankLines = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
+    const extendedFirmRequisites = Boolean(
+        legalOverrides?.recipientName?.trim()
+        || legalOverrides?.oked?.trim()
+        || legalOverrides?.correspondentBik?.trim(),
+    );
     const firmParas = [
-        new Paragraph({
-            spacing: { after: 40 },
-            children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
-        }),
-        ...[firmAddress, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)].map((txt) =>
+        ...(extendedFirmRequisites
+            ? []
+            : [
+                new Paragraph({
+                    spacing: { after: 40 },
+                    children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                }),
+            ]),
+        ...(extendedFirmRequisites ? firmBankLines : [firmAddress, ...firmBankLines]).map((txt) =>
             new Paragraph({
                 spacing: { after: 35 },
                 children: [new TextRun({ text: txt, color: '100814', size: DOC_SIZE, font: DOC_FONT })],
@@ -758,21 +768,17 @@ function legalInvoiceDocxBlocks(
             children: [new TextRun({ text: line, size: DOC_SIZE, font: DOC_FONT })],
         }));
     });
-    billChildren.push(
-        new Paragraph({
-            spacing: { after: 30 },
+    const billBankRows = legalBillToBankingRows(legalOverrides, model.coverLanguage, { omitPlaceholders: true })
+        .filter((row) => !isBankingPlaceholderValue(row.value));
+    billBankRows.forEach((row, i) => {
+        billChildren.push(new Paragraph({
+            spacing: { after: i === billBankRows.length - 1 ? 0 : 30 },
             children: [
-                new TextRun({ text: `${labels.bankName}: `, color: '707784', size: DOC_SIZE, font: DOC_FONT }),
-                new TextRun({ text: resolveLegalBillToBankName(legalOverrides), color: '707784', size: DOC_SIZE, font: DOC_FONT }),
+                new TextRun({ text: `${row.label}: `, color: '707784', size: DOC_SIZE, font: DOC_FONT }),
+                new TextRun({ text: row.value, color: '707784', size: DOC_SIZE, font: DOC_FONT }),
             ],
-        }),
-        new Paragraph({
-            children: [
-                new TextRun({ text: `${labels.swift}: `, color: '707784', size: DOC_SIZE, font: DOC_FONT }),
-                new TextRun({ text: resolveLegalBillToSwift(legalOverrides), color: '707784', size: DOC_SIZE, font: DOC_FONT }),
-            ],
-        }),
-    );
+        }));
+    });
 
     const caseChildren: Paragraph[] = [
         new Paragraph({

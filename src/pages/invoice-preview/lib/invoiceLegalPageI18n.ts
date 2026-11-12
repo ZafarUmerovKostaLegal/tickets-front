@@ -31,6 +31,10 @@ export type LegalInvoiceLabels = {
     correspondentBank: string;
     correspondentAccount: (currency: string) => string;
     correspondentBik: string;
+    billToBankName: string;
+    billToAccountNumber: string;
+    billToCorrespondentAccount: string;
+    billToBik: string;
     serviceDescription: (servicesMonthYear: string) => string;
     paymentDisclaimer: string;
     legalServicesFallback: string;
@@ -64,6 +68,10 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         correspondentBank: 'Correspondent bank',
         correspondentAccount: (cur) => (cur === 'RUB' ? 'Loro account' : `Corr. ACC (${cur})`),
         correspondentBik: 'BIC',
+        billToBankName: 'Beneficiary bank',
+        billToAccountNumber: 'Settlement account',
+        billToCorrespondentAccount: 'Correspondent account',
+        billToBik: 'BIC',
         serviceDescription: (period) => `Legal services rendered in ${period}`,
         paymentDisclaimer: (
             'The payment under this invoice shall constitute the due acceptance of the Services by '
@@ -77,7 +85,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         invoiceNoPrefix: 'СЧЁТ №',
         billTo: 'Плательщик',
         address: 'Адрес',
-        bankName: 'Банк получателя',
+        bankName: 'Основной банк получателя',
         swift: 'SWIFT',
         caseDetails: 'Детали дела',
         itemNo: '№',
@@ -99,6 +107,10 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         correspondentBank: 'Банк корреспондент',
         correspondentAccount: (cur) => (cur === 'RUB' ? 'Счёт (Лоро)' : `Корр. счёт (${cur})`),
         correspondentBik: 'БИК',
+        billToBankName: 'Банк получателя',
+        billToAccountNumber: 'Р/с',
+        billToCorrespondentAccount: 'Корреспондентский счет',
+        billToBik: 'БИК',
         serviceDescription: (period) => `Юридические услуги, оказанные в ${period}`,
         paymentDisclaimer: (
             'Оплата по настоящему счёту означает надлежащее принятие Услуг Клиентом. '

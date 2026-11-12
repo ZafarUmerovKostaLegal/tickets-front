@@ -17,8 +17,8 @@ import { ensureMehnatSeparatedPack, fixedFeeScopeText, mergeTimeReportPackPrefer
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
-    resolveLegalBillToBankName,
-    resolveLegalBillToSwift,
+    legalBillToBankingRows,
+    isBankingPlaceholderValue,
     resolveLegalCaseDetailLine,
     resolveLegalExtraExpensesAmount,
     resolveLegalFirmBankingLines,
@@ -1461,18 +1461,24 @@ function drawLegalInvoicePdfPage(
     }
 
     const blurbW = contentW * 0.62;
-    const firmName = `${KOSTA_LEGAL_FIRM.brandName} LF`;
-    page.drawText(firmName, {
-        x: ML,
-        y,
-        size: DOC_FS,
-        font: fontBold,
-        color: FIRM_NAME,
-    });
-    let yBlurb = y - DOC_LH * 1.15;
-
-    yBlurb = wrapTextBlockPreservingNewlines(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
+    const extendedFirmRequisites = Boolean(
+        legalOverrides?.recipientName?.trim()
+        || legalOverrides?.oked?.trim()
+        || legalOverrides?.correspondentBik?.trim(),
+    );
+    let yBlurb = y;
+    if (!extendedFirmRequisites) {
+        page.drawText(`${KOSTA_LEGAL_FIRM.brandName} LF`, {
+            x: ML,
+            y,
+            size: DOC_FS,
+            font: fontBold,
+            color: FIRM_NAME,
+        });
+        yBlurb = y - DOC_LH * 1.15;
+        yBlurb = wrapTextBlockPreservingNewlines(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
+    }
     for (const ln of leftBlurb) {
         yBlurb = wrapTextBlock(page, ln, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     }
@@ -1547,30 +1553,22 @@ function drawLegalInvoicePdfPage(
         MUTED_TEXT,
         billLineGap,
     );
-    yLeft = drawPdfLabelAndValue(
-        page,
-        labels.bankName,
-        resolveLegalBillToBankName(legalOverrides),
-        ML,
-        yLeft,
-        leftColW,
-        font,
-        fontBold,
-        MUTED_TEXT,
-        billLineGap,
-    );
-    yLeft = drawPdfLabelAndValue(
-        page,
-        labels.swift,
-        resolveLegalBillToSwift(legalOverrides),
-        ML,
-        yLeft,
-        leftColW,
-        font,
-        fontBold,
-        MUTED_TEXT,
-        billLineGap,
-    );
+    for (const row of legalBillToBankingRows(legalOverrides, model.coverLanguage, { omitPlaceholders: true })) {
+        if (isBankingPlaceholderValue(row.value))
+            continue;
+        yLeft = drawPdfLabelAndValue(
+            page,
+            row.label,
+            row.value,
+            ML,
+            yLeft,
+            leftColW,
+            font,
+            fontBold,
+            MUTED_TEXT,
+            billLineGap,
+        );
+    }
 
     const yRight = wrapTextBlock(page, caseLine, splitX, headsRuleY - DOC_LH * 0.95, rightColW, DOC_FS, font, BODY, DOC_LH);
 
