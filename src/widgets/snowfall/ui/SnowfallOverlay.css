@@ -1,0 +1,35 @@
+.app-snowfall {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+
+.app-snowfall__flake {
+  position: absolute;
+  top: -8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #ffffff 88%, #c7d7ef);
+  box-shadow: 0 0 0.5px color-mix(in srgb, #ffffff 40%, transparent);
+  will-change: transform;
+  animation-name: app-snowfall-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes app-snowfall-fall {
+  0% {
+    transform: translate3d(0, -4vh, 0);
+  }
+  100% {
+    transform: translate3d(var(--flake-drift, 0px), 108vh, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-snowfall {
+    display: none;
+  }
+}

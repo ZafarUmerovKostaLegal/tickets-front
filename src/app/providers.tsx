@@ -8,6 +8,7 @@ const BirthdayPostcardHost = lazy(() => import('@widgets/birthday-postcard').the
 const CalendarReminder = lazy(() => import('@widgets/calendar-reminder').then((m) => ({ default: m.CalendarReminder })));
 const ChatNotificationHost = lazy(() => import('@widgets/chat-notification').then((m) => ({ default: m.ChatNotificationHost })));
 const GlobalTimerWidget = lazy(() => import('@widgets/global-timer').then((m) => ({ default: m.GlobalTimerWidget })));
+const SnowfallHost = lazy(() => import('@widgets/snowfall').then((m) => ({ default: m.SnowfallHost })));
 
 type ProvidersProps = {
     children?: ReactNode;
@@ -56,6 +57,7 @@ function DeferredBackgroundWidgets() {
             <Suspense fallback={null}><CalendarReminder /></Suspense>
             <Suspense fallback={null}><ChatNotificationHost /></Suspense>
             <Suspense fallback={null}><GlobalTimerWidget /></Suspense>
+            <Suspense fallback={null}><SnowfallHost /></Suspense>
         </>
     );
 }
