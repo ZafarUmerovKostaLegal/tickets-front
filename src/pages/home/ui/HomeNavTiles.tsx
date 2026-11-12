@@ -404,7 +404,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                     onDragEnter={(e) => handleDragOver(e, tile.id)}
                                     onDrop={(e) => handleDrop(e, tile.id)}
                                 >
-                                    {hasSnowCap ? <SnowCap seed={tileInSection + 3} index={tileInSection} /> : null}
+                                    {hasSnowCap ? <SnowCap seed={tileInSection + 3} /> : null}
                                     {!query ? (
                                         <button
                                             type="button"
