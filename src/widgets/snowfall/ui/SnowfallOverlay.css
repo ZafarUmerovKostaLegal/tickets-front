@@ -9,14 +9,26 @@
 
 .app-snowfall__flake {
   position: absolute;
-  top: -8px;
+  top: -10px;
   border-radius: 50%;
-  background: color-mix(in srgb, #ffffff 88%, #c7d7ef);
-  box-shadow: 0 0 0.5px color-mix(in srgb, #ffffff 40%, transparent);
+  /* Light theme: cool slate rim so flakes read on white cards */
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff 0%, #d7e3f2 55%, #9eb4cf 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #6b87a8 28%, transparent),
+    0 1px 2px color-mix(in srgb, #4b6280 18%, transparent);
   will-change: transform;
   animation-name: app-snowfall-fall;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+}
+
+body[data-theme='dark'] .app-snowfall__flake {
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff 0%, #e8eef8 60%, #c5d4ea 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #ffffff 22%, transparent),
+    0 0 6px color-mix(in srgb, #c7d7ef 35%, transparent);
 }
 
 @keyframes app-snowfall-fall {
@@ -26,6 +38,43 @@
   100% {
     transform: translate3d(var(--flake-drift, 0px), 108vh, 0);
   }
+}
+
+/* Soft snowdrifts on hub tiles (top edge) */
+body[data-snowfall='1'] .home-nav-tiles--hub .home-nav-tiles__link {
+  overflow: visible;
+}
+
+body[data-snowfall='1'] .home-nav-tiles--hub .home-nav-tiles__link::before {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 10%;
+  top: -7px;
+  height: 14px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42% 110% at 12% 100%, #f7fbff 55%, transparent 72%),
+    radial-gradient(ellipse 48% 120% at 38% 100%, #ffffff 58%, transparent 74%),
+    radial-gradient(ellipse 40% 105% at 62% 100%, #f4f8fd 56%, transparent 73%),
+    radial-gradient(ellipse 46% 115% at 88% 100%, #ffffff 57%, transparent 74%);
+  filter:
+    drop-shadow(0 1px 0 color-mix(in srgb, #8aa0bc 35%, transparent))
+    drop-shadow(0 2px 3px color-mix(in srgb, #647994 12%, transparent));
+  opacity: 0.95;
+}
+
+body[data-theme='dark'][data-snowfall='1'] .home-nav-tiles--hub .home-nav-tiles__link::before {
+  background:
+    radial-gradient(ellipse 42% 110% at 12% 100%, #eef4fb 55%, transparent 72%),
+    radial-gradient(ellipse 48% 120% at 38% 100%, #ffffff 58%, transparent 74%),
+    radial-gradient(ellipse 40% 105% at 62% 100%, #e8f0fa 56%, transparent 73%),
+    radial-gradient(ellipse 46% 115% at 88% 100%, #f8fbff 57%, transparent 74%);
+  filter:
+    drop-shadow(0 1px 0 color-mix(in srgb, #ffffff 18%, transparent))
+    drop-shadow(0 2px 4px color-mix(in srgb, #000000 35%, transparent));
+  opacity: 0.88;
 }
 
 @media (prefers-reduced-motion: reduce) {

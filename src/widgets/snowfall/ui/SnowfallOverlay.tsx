@@ -11,7 +11,7 @@ type Flake = {
     opacity: number;
 };
 
-const FLAKE_COUNT = 42;
+const FLAKE_COUNT = 56;
 
 function buildFlakes(count: number): Flake[] {
     // Deterministic so remounts don't jump.
@@ -25,11 +25,11 @@ function buildFlakes(count: number): Flake[] {
         flakes.push({
             id: i,
             left: t * 100,
-            size: 2 + frac * 4.5,
-            duration: 14 + frac2 * 18,
-            delay: -frac * 22,
-            drift: (frac - 0.5) * 48,
-            opacity: 0.22 + frac2 * 0.38,
+            size: 3.2 + frac * 5.5,
+            duration: 12 + frac2 * 16,
+            delay: -frac * 20,
+            drift: (frac - 0.5) * 56,
+            opacity: 0.55 + frac2 * 0.35,
         });
     }
     return flakes;
