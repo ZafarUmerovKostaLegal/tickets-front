@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { useCurrentUser } from '@shared/hooks';
-import { isSnowfallUser } from '../lib/isSnowfallUser';
+import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { SnowfallOverlay } from './SnowfallOverlay';
 
 export function SnowfallHost() {
     const { user, loading } = useCurrentUser();
-    const enabled = !loading
+    const [preferenceOn] = useSnowfallPreference();
+    const enabled = preferenceOn
+        && !loading
         && Boolean(user)
         && !user?.is_blocked
         && !user?.is_archived

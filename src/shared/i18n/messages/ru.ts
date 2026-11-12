@@ -629,6 +629,7 @@ export const ruMessages: Messages = {
         language: 'Язык интерфейса',
         languageRu: 'Русский',
         languageEn: 'English',
+        snowfall: 'Снегопад',
         userMenu: 'Меню пользователя',
         logout: 'Выйти',
         logoutTitle: 'Выйти из аккаунта?',
@@ -1748,6 +1749,7 @@ export type Messages = {
         | 'language'
         | 'languageRu'
         | 'languageEn'
+        | 'snowfall'
         | 'userMenu'
         | 'logout'
         | 'logoutTitle'

@@ -629,6 +629,7 @@ export const enMessages = {
         language: 'Interface language',
         languageRu: 'Russian',
         languageEn: 'English',
+        snowfall: 'Snowfall',
         userMenu: 'User menu',
         logout: 'Log out',
         logoutTitle: 'Log out?',

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { useI18n } from '@shared/i18n';
 import { useCurrentUser } from '@shared/hooks';
 import { logout } from '@shared/lib/auth';
+import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { LogoutConfirmDialog } from './LogoutConfirmDialog';
 
@@ -49,6 +50,8 @@ export function HeaderUserMenu({ variant = 'default' }: HeaderUserMenuProps) {
     const triggerId = useId();
     const [open, setOpen] = useState(false);
     const [logoutConfirm, setLogoutConfirm] = useState(false);
+    const [snowfallOn, setSnowfallOn] = useSnowfallPreference();
+    const canToggleSnowfall = !loading && isSnowfallUser(user);
     const rootRef = useRef<HTMLDivElement>(null);
     const onToggle = useCallback(() => setOpen((v) => !v), []);
     const close = useCallback(() => setOpen(false), []);
@@ -101,6 +104,19 @@ export function HeaderUserMenu({ variant = 'default' }: HeaderUserMenuProps) {
         <div className="header-user-menu__dropdown" role="menu" aria-labelledby={triggerId}>
           <LanguageSwitcher />
           <div className="header-user-menu__dropdown-sep" role="separator" />
+          {canToggleSnowfall ? (<>
+            <button
+              type="button"
+              className="header-user-menu__item header-user-menu__toggle"
+              role="menuitemcheckbox"
+              aria-checked={snowfallOn}
+              onClick={() => setSnowfallOn(!snowfallOn)}
+            >
+              <span>{t('header.snowfall')}</span>
+              <span className={`header-user-menu__switch${snowfallOn ? ' header-user-menu__switch--on' : ''}`} aria-hidden />
+            </button>
+            <div className="header-user-menu__dropdown-sep" role="separator" />
+          </>) : null}
           <button
             type="button"
             className="header-user-menu__item"

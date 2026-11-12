@@ -15,7 +15,7 @@ import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence
 import { useVacationLeavePendingBadge, formatVacationLeavePendingBadge } from '@entities/vacation';
 import { useTodoInvitesBadge } from '@entities/todo';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
-import { isSnowfallUser } from '@widgets/snowfall/lib/isSnowfallUser';
+import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { useHubGridColumns } from '@widgets/snowfall/lib/useHubGridColumns';
 import { SnowCap } from '@widgets/snowfall/ui/SnowCap';
 import {
@@ -322,7 +322,8 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
     }, [draggingId, handleDragEnd, persistOrder]);
 
     const query = normalizeSearch(searchQuery);
-    const snowy = !loading && isSnowfallUser(user);
+    const [snowPreferenceOn] = useSnowfallPreference();
+    const snowy = snowPreferenceOn && !loading && isSnowfallUser(user);
     const gridColumns = useHubGridColumns(snowy);
 
     const sectionedTiles = useMemo(() => {

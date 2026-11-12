@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSnowfallUser } from './isSnowfallUser';
+import { isSnowfallUser } from './snowfall';
 
 describe('isSnowfallUser', () => {
     it('allows only zumerov', () => {
