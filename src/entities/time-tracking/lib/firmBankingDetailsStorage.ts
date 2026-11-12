@@ -4,7 +4,13 @@ const STORAGE_KEY_V1 = 'tt_firm_banking_details_v1';
 const STORAGE_KEY = 'tt_firm_banking_profiles_v2';
 
 export type FirmBankingDetails = {
+    /** Beneficiary / Получатель */
+    recipientName: string;
+    /** Legal address / Юридический адрес */
+    legalAddress: string;
     tin: string;
+    /** OKED / ОКЭД */
+    oked: string;
     bankName: string;
     bankAddress: string;
     accountCurrency: string;
@@ -13,6 +19,8 @@ export type FirmBankingDetails = {
     swift: string;
     correspondentBank: string;
     correspondentAccount: string;
+    /** Correspondent BIC / БИК */
+    correspondentBik: string;
 };
 
 export type FirmBankingProfile = FirmBankingDetails & {
@@ -22,7 +30,10 @@ export type FirmBankingProfile = FirmBankingDetails & {
 };
 
 export const EMPTY_FIRM_BANKING_DETAILS: FirmBankingDetails = {
+    recipientName: '',
+    legalAddress: '',
     tin: '',
+    oked: '',
     bankName: '',
     bankAddress: '',
     accountCurrency: 'EUR',
@@ -31,6 +42,7 @@ export const EMPTY_FIRM_BANKING_DETAILS: FirmBankingDetails = {
     swift: '',
     correspondentBank: '',
     correspondentAccount: '',
+    correspondentBik: '',
 };
 
 function clean(v: unknown): string {
@@ -46,7 +58,10 @@ function newId(): string {
 function normalizeDetails(raw: Partial<FirmBankingDetails> | null | undefined): FirmBankingDetails {
     const currency = clean(raw?.accountCurrency).toUpperCase() || EMPTY_FIRM_BANKING_DETAILS.accountCurrency;
     return {
+        recipientName: clean(raw?.recipientName),
+        legalAddress: clean(raw?.legalAddress),
         tin: clean(raw?.tin),
+        oked: clean(raw?.oked),
         bankName: clean(raw?.bankName),
         bankAddress: clean(raw?.bankAddress),
         accountCurrency: currency,
@@ -55,6 +70,7 @@ function normalizeDetails(raw: Partial<FirmBankingDetails> | null | undefined): 
         swift: clean(raw?.swift),
         correspondentBank: clean(raw?.correspondentBank),
         correspondentAccount: clean(raw?.correspondentAccount),
+        correspondentBik: clean(raw?.correspondentBik),
     };
 }
 
@@ -223,8 +239,14 @@ export function firmBankingToLegalOverrides(
     if (!details)
         return {};
     const orNull = (v: string) => (v.trim() ? v.trim() : null);
+    const legalAddress = orNull(details.legalAddress);
     return {
+        recipientName: orNull(details.recipientName),
+        legalAddress,
+        // Masthead address follows the profile legal address when set.
+        firmAddress: legalAddress,
         tin: orNull(details.tin),
+        oked: orNull(details.oked),
         bankName: orNull(details.bankName),
         bankAddress: orNull(details.bankAddress),
         accountCurrency: orNull(details.accountCurrency),
@@ -233,6 +255,7 @@ export function firmBankingToLegalOverrides(
         swift: orNull(details.swift),
         correspondentBank: orNull(details.correspondentBank),
         correspondentAccount: orNull(details.correspondentAccount),
+        correspondentBik: orNull(details.correspondentBik),
     };
 }
 
@@ -259,7 +282,11 @@ export function applyFirmBankingProfileToLegalOverrides(
     const bank = firmBankingToLegalOverrides(profile);
     return {
         ...prev,
+        recipientName: bank.recipientName ?? null,
+        legalAddress: bank.legalAddress ?? null,
+        firmAddress: bank.firmAddress ?? prev.firmAddress ?? null,
         tin: bank.tin ?? null,
+        oked: bank.oked ?? null,
         bankName: bank.bankName ?? null,
         bankAddress: bank.bankAddress ?? null,
         accountCurrency: bank.accountCurrency ?? null,
@@ -268,5 +295,6 @@ export function applyFirmBankingProfileToLegalOverrides(
         swift: bank.swift ?? null,
         correspondentBank: bank.correspondentBank ?? null,
         correspondentAccount: bank.correspondentAccount ?? null,
+        correspondentBik: bank.correspondentBik ?? null,
     };
 }

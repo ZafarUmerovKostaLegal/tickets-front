@@ -29,7 +29,10 @@ function normalizeProfile(raw: unknown): FirmBankingProfile | null {
         id,
         title: clean(o.title),
         isDefault: Boolean(o.isDefault ?? o.is_default),
+        recipientName: clean(o.recipientName ?? o.recipient_name),
+        legalAddress: clean(o.legalAddress ?? o.legal_address),
         tin: clean(o.tin),
+        oked: clean(o.oked),
         bankName: clean(o.bankName ?? o.bank_name),
         bankAddress: clean(o.bankAddress ?? o.bank_address),
         accountCurrency: currency,
@@ -38,6 +41,29 @@ function normalizeProfile(raw: unknown): FirmBankingProfile | null {
         swift: clean(o.swift),
         correspondentBank: clean(o.correspondentBank ?? o.correspondent_bank),
         correspondentAccount: clean(o.correspondentAccount ?? o.correspondent_account),
+        correspondentBik: clean(o.correspondentBik ?? o.correspondent_bik),
+    };
+}
+
+function profilePayload(profile: FirmBankingProfile, extras?: { sortOrder?: number; isDefault?: boolean }) {
+    return {
+        id: profile.id,
+        title: profile.title,
+        isDefault: extras?.isDefault ?? profile.isDefault,
+        recipientName: profile.recipientName,
+        legalAddress: profile.legalAddress,
+        tin: profile.tin,
+        oked: profile.oked,
+        bankName: profile.bankName,
+        bankAddress: profile.bankAddress,
+        accountCurrency: profile.accountCurrency,
+        accountNumber: profile.accountNumber,
+        bankCode: profile.bankCode,
+        swift: profile.swift,
+        correspondentBank: profile.correspondentBank,
+        correspondentAccount: profile.correspondentAccount,
+        correspondentBik: profile.correspondentBik,
+        ...(extras?.sortOrder !== undefined ? { sortOrder: extras.sortOrder } : {}),
     };
 }
 
@@ -75,20 +101,7 @@ export async function createFirmBankProfile(
     const res = await apiFetch(BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            id: profile.id,
-            title: profile.title,
-            isDefault: makeDefault,
-            tin: profile.tin,
-            bankName: profile.bankName,
-            bankAddress: profile.bankAddress,
-            accountCurrency: profile.accountCurrency,
-            accountNumber: profile.accountNumber,
-            bankCode: profile.bankCode,
-            swift: profile.swift,
-            correspondentBank: profile.correspondentBank,
-            correspondentAccount: profile.correspondentAccount,
-        }),
+        body: JSON.stringify(profilePayload(profile, { isDefault: makeDefault })),
     });
     await throwIfNotOk(res);
     const row = normalizeProfile(await res.json());
@@ -104,8 +117,14 @@ export async function patchFirmBankProfile(
     const body: Record<string, unknown> = {};
     if (patch.title !== undefined)
         body.title = patch.title;
+    if (patch.recipientName !== undefined)
+        body.recipientName = patch.recipientName;
+    if (patch.legalAddress !== undefined)
+        body.legalAddress = patch.legalAddress;
     if (patch.tin !== undefined)
         body.tin = patch.tin;
+    if (patch.oked !== undefined)
+        body.oked = patch.oked;
     if (patch.bankName !== undefined)
         body.bankName = patch.bankName;
     if (patch.bankAddress !== undefined)
@@ -122,6 +141,8 @@ export async function patchFirmBankProfile(
         body.correspondentBank = patch.correspondentBank;
     if (patch.correspondentAccount !== undefined)
         body.correspondentAccount = patch.correspondentAccount;
+    if (patch.correspondentBik !== undefined)
+        body.correspondentBik = patch.correspondentBik;
     if (patch.isDefault !== undefined)
         body.isDefault = patch.isDefault;
     const res = await apiFetch(`${BASE}/${encodeURIComponent(profileId)}`, {
@@ -159,21 +180,7 @@ export async function replaceFirmBankProfiles(items: FirmBankingProfile[]): Prom
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            items: items.map((p, idx) => ({
-                id: p.id,
-                title: p.title,
-                isDefault: p.isDefault,
-                tin: p.tin,
-                bankName: p.bankName,
-                bankAddress: p.bankAddress,
-                accountCurrency: p.accountCurrency,
-                accountNumber: p.accountNumber,
-                bankCode: p.bankCode,
-                swift: p.swift,
-                correspondentBank: p.correspondentBank,
-                correspondentAccount: p.correspondentAccount,
-                sortOrder: idx,
-            })),
+            items: items.map((p, idx) => profilePayload(p, { sortOrder: idx })),
         }),
     });
     await throwIfNotOk(res);

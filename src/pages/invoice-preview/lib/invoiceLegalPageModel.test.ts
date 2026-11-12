@@ -45,4 +45,40 @@ describe('legalFirmBankingRows', () => {
         const rows = legalFirmBankingRows('USD', { accountNumber: '1' }, 'ENG');
         expect(rows.find((r) => r.field === 'accountNumber')?.label).toBe('AC (USD)');
     });
+
+    it('uses extended RUB labels and order', () => {
+        const rows = legalFirmBankingRows('RUB', {
+            accountCurrency: 'RUB',
+            recipientName: 'Адвокатская фирма "Kosta Legal"',
+            legalAddress: 'Узбекистан, г.Ташкент',
+            tin: '207 230 749',
+            oked: '69 101',
+            correspondentBank: 'АКБ "Азия Инвест Банк"',
+            correspondentAccount: '30111810500000002535',
+            correspondentBik: '044525234',
+            bankName: 'ORIENT FINANS BANK',
+            bankAddress: 'Yunusabad branch',
+            bankCode: '01071',
+            accountNumber: '2020 8643 4004 9661 4001',
+            swift: 'ORFBUZ22',
+        }, 'RU', { omitPlaceholders: true });
+        expect(rows.map((r) => r.field)).toEqual([
+            'recipientName',
+            'legalAddress',
+            'tin',
+            'oked',
+            'correspondentBank',
+            'correspondentAccount',
+            'correspondentBik',
+            'bankName',
+            'bankAddress',
+            'bankCode',
+            'accountNumber',
+            'swift',
+        ]);
+        expect(rows.find((r) => r.field === 'accountNumber')?.label).toBe('Р/с (руб.)');
+        expect(rows.find((r) => r.field === 'correspondentAccount')?.label).toBe('Счёт (Лоро)');
+        expect(rows.find((r) => r.field === 'correspondentBik')?.label).toBe('БИК');
+        expect(rows.find((r) => r.field === 'bankCode')?.label).toBe('МФО');
+    });
 });

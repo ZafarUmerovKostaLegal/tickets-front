@@ -61,7 +61,10 @@ function profileToForm(row: FirmBankingProfile): FormState {
     return {
         title: row.title,
         isDefault: row.isDefault,
+        recipientName: row.recipientName,
+        legalAddress: row.legalAddress,
         tin: row.tin,
+        oked: row.oked,
         bankName: row.bankName,
         bankAddress: row.bankAddress,
         accountCurrency: row.accountCurrency,
@@ -70,6 +73,7 @@ function profileToForm(row: FirmBankingProfile): FormState {
         swift: row.swift,
         correspondentBank: row.correspondentBank,
         correspondentAccount: row.correspondentAccount,
+        correspondentBik: row.correspondentBik,
     };
 }
 
@@ -117,7 +121,10 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
             const next: FirmBankingProfile = {
                 ...base,
                 title: form.title.trim(),
+                recipientName: form.recipientName.trim(),
+                legalAddress: form.legalAddress.trim(),
                 tin: form.tin.trim(),
+                oked: form.oked.trim(),
                 bankName: form.bankName.trim(),
                 bankAddress: form.bankAddress.trim(),
                 accountCurrency: form.accountCurrency.trim().toUpperCase() || 'EUR',
@@ -126,6 +133,7 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                 swift: form.swift.trim(),
                 correspondentBank: form.correspondentBank.trim(),
                 correspondentAccount: form.correspondentAccount.trim(),
+                correspondentBik: form.correspondentBik.trim(),
                 isDefault: form.isDefault || profilesCount === 0,
             };
             if (mode === 'create' || !initial) {
@@ -134,7 +142,10 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
             else {
                 await patchFirmBankProfile(initial.id, {
                     title: next.title,
+                    recipientName: next.recipientName,
+                    legalAddress: next.legalAddress,
                     tin: next.tin,
+                    oked: next.oked,
                     bankName: next.bankName,
                     bankAddress: next.bankAddress,
                     accountCurrency: next.accountCurrency,
@@ -143,6 +154,7 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                     swift: next.swift,
                     correspondentBank: next.correspondentBank,
                     correspondentAccount: next.correspondentAccount,
+                    correspondentBik: next.correspondentBik,
                     isDefault: next.isDefault,
                 });
             }
@@ -202,6 +214,20 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                     </div>
 
                     <div className="tt-bank-modal__grid">
+                        <div className="tt-tm-field tt-bank-modal__wide">
+                            <label className="tt-tm-label" htmlFor={`${uid}-recipient`}>
+                                {t('timeTrackingPage.bankDetails.fields.recipientName')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-recipient`} className="tt-tm-input" value={form.recipientName} onChange={(e) => patch({ recipientName: e.target.value })} disabled={saving} autoComplete="organization" />
+                        </div>
+                        <div className="tt-tm-field tt-bank-modal__wide">
+                            <label className="tt-tm-label" htmlFor={`${uid}-legal`}>
+                                {t('timeTrackingPage.bankDetails.fields.legalAddress')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-legal`} className="tt-tm-input" value={form.legalAddress} onChange={(e) => patch({ legalAddress: e.target.value })} disabled={saving} autoComplete="street-address" />
+                        </div>
                         <div className="tt-tm-field">
                             <label className="tt-tm-label" htmlFor={`${uid}-tin`}>
                                 {t('timeTrackingPage.bankDetails.fields.tin')}
@@ -210,18 +236,11 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                             <input id={`${uid}-tin`} className="tt-tm-input" value={form.tin} onChange={(e) => patch({ tin: e.target.value })} disabled={saving} autoComplete="off" />
                         </div>
                         <div className="tt-tm-field">
-                            <label className="tt-tm-label" htmlFor={`${uid}-bank`}>
-                                {t('timeTrackingPage.bankDetails.fields.bankName')}
+                            <label className="tt-tm-label" htmlFor={`${uid}-oked`}>
+                                {t('timeTrackingPage.bankDetails.fields.oked')}
                                 <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
                             </label>
-                            <input id={`${uid}-bank`} className="tt-tm-input" value={form.bankName} onChange={(e) => patch({ bankName: e.target.value })} disabled={saving} autoComplete="organization" />
-                        </div>
-                        <div className="tt-tm-field tt-bank-modal__wide">
-                            <label className="tt-tm-label" htmlFor={`${uid}-addr`}>
-                                {t('timeTrackingPage.bankDetails.fields.bankAddress')}
-                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
-                            </label>
-                            <input id={`${uid}-addr`} className="tt-tm-input" value={form.bankAddress} onChange={(e) => patch({ bankAddress: e.target.value })} disabled={saving} autoComplete="street-address" />
+                            <input id={`${uid}-oked`} className="tt-tm-input" value={form.oked} onChange={(e) => patch({ oked: e.target.value })} disabled={saving} autoComplete="off" />
                         </div>
                         <div className="tt-tm-field">
                             <span className="tt-tm-label" id={`${uid}-cur-lbl`}>
@@ -255,6 +274,42 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                             </label>
                             <input id={`${uid}-acc`} className="tt-tm-input" value={form.accountNumber} onChange={(e) => patch({ accountNumber: e.target.value })} disabled={saving} autoComplete="off" />
                         </div>
+                        <p className="tt-bank-modal__section tt-bank-modal__wide">{t('timeTrackingPage.bankDetails.fields.extendedSection')}</p>
+                        <div className="tt-tm-field tt-bank-modal__wide">
+                            <label className="tt-tm-label" htmlFor={`${uid}-cb`}>
+                                {t('timeTrackingPage.bankDetails.fields.correspondentBank')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-cb`} className="tt-tm-input" value={form.correspondentBank} onChange={(e) => patch({ correspondentBank: e.target.value })} disabled={saving} autoComplete="off" />
+                        </div>
+                        <div className="tt-tm-field">
+                            <label className="tt-tm-label" htmlFor={`${uid}-ca`}>
+                                {t('timeTrackingPage.bankDetails.fields.correspondentAccount')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-ca`} className="tt-tm-input" value={form.correspondentAccount} onChange={(e) => patch({ correspondentAccount: e.target.value })} disabled={saving} autoComplete="off" />
+                        </div>
+                        <div className="tt-tm-field">
+                            <label className="tt-tm-label" htmlFor={`${uid}-bik`}>
+                                {t('timeTrackingPage.bankDetails.fields.correspondentBik')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-bik`} className="tt-tm-input" value={form.correspondentBik} onChange={(e) => patch({ correspondentBik: e.target.value })} disabled={saving} autoComplete="off" />
+                        </div>
+                        <div className="tt-tm-field">
+                            <label className="tt-tm-label" htmlFor={`${uid}-bank`}>
+                                {t('timeTrackingPage.bankDetails.fields.bankName')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-bank`} className="tt-tm-input" value={form.bankName} onChange={(e) => patch({ bankName: e.target.value })} disabled={saving} autoComplete="organization" />
+                        </div>
+                        <div className="tt-tm-field tt-bank-modal__wide">
+                            <label className="tt-tm-label" htmlFor={`${uid}-addr`}>
+                                {t('timeTrackingPage.bankDetails.fields.bankAddress')}
+                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
+                            </label>
+                            <input id={`${uid}-addr`} className="tt-tm-input" value={form.bankAddress} onChange={(e) => patch({ bankAddress: e.target.value })} disabled={saving} autoComplete="street-address" />
+                        </div>
                         <div className="tt-tm-field">
                             <label className="tt-tm-label" htmlFor={`${uid}-code`}>
                                 {t('timeTrackingPage.bankDetails.fields.bankCode')}
@@ -268,20 +323,6 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                                 <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
                             </label>
                             <input id={`${uid}-swift`} className="tt-tm-input" value={form.swift} onChange={(e) => patch({ swift: e.target.value })} disabled={saving} autoComplete="off" />
-                        </div>
-                        <div className="tt-tm-field tt-bank-modal__wide">
-                            <label className="tt-tm-label" htmlFor={`${uid}-cb`}>
-                                {t('timeTrackingPage.bankDetails.fields.correspondentBank')}
-                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
-                            </label>
-                            <input id={`${uid}-cb`} className="tt-tm-input" value={form.correspondentBank} onChange={(e) => patch({ correspondentBank: e.target.value })} disabled={saving} autoComplete="off" />
-                        </div>
-                        <div className="tt-tm-field tt-bank-modal__wide">
-                            <label className="tt-tm-label" htmlFor={`${uid}-ca`}>
-                                {t('timeTrackingPage.bankDetails.fields.correspondentAccount')}
-                                <span className="tt-bank-optional">{t('timeTrackingPage.bankDetails.optional')}</span>
-                            </label>
-                            <input id={`${uid}-ca`} className="tt-tm-input" value={form.correspondentAccount} onChange={(e) => patch({ correspondentAccount: e.target.value })} disabled={saving} autoComplete="off" />
                         </div>
                     </div>
 

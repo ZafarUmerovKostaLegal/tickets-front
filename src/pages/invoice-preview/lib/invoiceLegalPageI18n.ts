@@ -21,12 +21,16 @@ export type LegalInvoiceLabels = {
     totalDueBy: (dueBanner: string) => string;
     totalDueByPrefix: string;
     thanks: string;
+    recipientName: string;
+    legalAddress: string;
     tin: string;
+    oked: string;
     bankAddress: string;
     accountNumber: (currency: string) => string;
     bankCode: string;
     correspondentBank: string;
     correspondentAccount: (currency: string) => string;
+    correspondentBik: string;
     serviceDescription: (servicesMonthYear: string) => string;
     paymentDisclaimer: string;
     legalServicesFallback: string;
@@ -38,7 +42,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         invoiceNoPrefix: 'INVOICE No.',
         billTo: 'Bill to',
         address: 'Address',
-        bankName: 'Bank name',
+        bankName: 'Beneficiary bank',
         swift: 'SWIFT',
         caseDetails: 'Case details',
         itemNo: 'NO.',
@@ -50,12 +54,16 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         totalDueBy: (due) => `TOTAL DUE BY ${due}`,
         totalDueByPrefix: 'TOTAL DUE BY',
         thanks: 'Thank you for your business!',
+        recipientName: 'Beneficiary',
+        legalAddress: 'Legal address',
         tin: 'TIN',
+        oked: 'OKED',
         bankAddress: 'Bank address',
-        accountNumber: (cur) => `AC (${cur})`,
-        bankCode: 'Bank code',
+        accountNumber: (cur) => (cur === 'RUB' ? 'Settlement account (RUB)' : `AC (${cur})`),
+        bankCode: 'MFO',
         correspondentBank: 'Correspondent bank',
-        correspondentAccount: (cur) => `Corr. ACC (${cur})`,
+        correspondentAccount: (cur) => (cur === 'RUB' ? 'Loro account' : `Corr. ACC (${cur})`),
+        correspondentBik: 'BIC',
         serviceDescription: (period) => `Legal services rendered in ${period}`,
         paymentDisclaimer: (
             'The payment under this invoice shall constitute the due acceptance of the Services by '
@@ -69,7 +77,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         invoiceNoPrefix: 'СЧЁТ №',
         billTo: 'Плательщик',
         address: 'Адрес',
-        bankName: 'Банк',
+        bankName: 'Банк получателя',
         swift: 'SWIFT',
         caseDetails: 'Детали дела',
         itemNo: '№',
@@ -81,12 +89,16 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         totalDueBy: (due) => `ИТОГО К ОПЛАТЕ ДО ${due}`,
         totalDueByPrefix: 'ИТОГО К ОПЛАТЕ ДО',
         thanks: 'Благодарим за сотрудничество!',
+        recipientName: 'Получатель',
+        legalAddress: 'Юридический адрес',
         tin: 'ИНН',
+        oked: 'ОКЭД',
         bankAddress: 'Адрес банка',
-        accountNumber: (cur) => `Счёт (${cur})`,
-        bankCode: 'Код банка',
-        correspondentBank: 'Банк-корреспондент',
-        correspondentAccount: (cur) => `Корр. счёт (${cur})`,
+        accountNumber: (cur) => (cur === 'RUB' ? 'Р/с (руб.)' : `Счёт (${cur})`),
+        bankCode: 'МФО',
+        correspondentBank: 'Банк корреспондент',
+        correspondentAccount: (cur) => (cur === 'RUB' ? 'Счёт (Лоро)' : `Корр. счёт (${cur})`),
+        correspondentBik: 'БИК',
         serviceDescription: (period) => `Юридические услуги, оказанные в ${period}`,
         paymentDisclaimer: (
             'Оплата по настоящему счёту означает надлежащее принятие Услуг Клиентом. '

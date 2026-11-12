@@ -9,7 +9,10 @@ import {
 import { parseCoverLetterMoneyAmount, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
 
 export type InvoiceLegalBankingFieldKey =
+    | 'recipientName'
+    | 'legalAddress'
     | 'tin'
+    | 'oked'
     | 'bankName'
     | 'bankAddress'
     | 'accountNumber'
@@ -17,6 +20,7 @@ export type InvoiceLegalBankingFieldKey =
     | 'swift'
     | 'correspondentBank'
     | 'correspondentAccount'
+    | 'correspondentBik'
     | 'billToBankName'
     | 'billToSwift';
 
@@ -39,7 +43,10 @@ export type InvoiceLegalPageOverrides = {
     vatAmount?: string | null;
     extraExpensesAmount?: string | null;
     firmAddress?: string | null;
+    recipientName?: string | null;
+    legalAddress?: string | null;
     tin?: string | null;
+    oked?: string | null;
     bankName?: string | null;
     bankAddress?: string | null;
     /** Currency shown in AC / Corr. ACC labels; usually from the selected firm banking profile. */
@@ -49,6 +56,7 @@ export type InvoiceLegalPageOverrides = {
     swift?: string | null;
     correspondentBank?: string | null;
     correspondentAccount?: string | null;
+    correspondentBik?: string | null;
     billToBankName?: string | null;
     billToSwift?: string | null;
 };
@@ -96,15 +104,21 @@ export function legalFirmBankingRows(
 ): LegalBankingRow[] {
     const cur = resolveLegalAccountCurrencyCode(currencyCode, overrides);
     const labels = getLegalInvoiceLabels(lang);
+    // Order matches extended RUB requisites: beneficiary → legal address → TIN/OKED →
+    // correspondent block → beneficiary bank → account/SWIFT.
     const rows: LegalBankingRow[] = [
+        { field: 'recipientName', label: labels.recipientName, value: resolveBankingValue(overrides?.recipientName) },
+        { field: 'legalAddress', label: labels.legalAddress, value: resolveBankingValue(overrides?.legalAddress) },
         { field: 'tin', label: labels.tin, value: resolveBankingValue(overrides?.tin) },
-        { field: 'bankName', label: labels.bankName, value: resolveBankingValue(overrides?.bankName) },
-        { field: 'bankAddress', label: labels.bankAddress, value: resolveBankingValue(overrides?.bankAddress) },
-        { field: 'accountNumber', label: labels.accountNumber(cur), value: resolveBankingValue(overrides?.accountNumber) },
-        { field: 'bankCode', label: labels.bankCode, value: resolveBankingValue(overrides?.bankCode) },
-        { field: 'swift', label: labels.swift, value: resolveBankingValue(overrides?.swift) },
+        { field: 'oked', label: labels.oked, value: resolveBankingValue(overrides?.oked) },
         { field: 'correspondentBank', label: labels.correspondentBank, value: resolveBankingValue(overrides?.correspondentBank) },
         { field: 'correspondentAccount', label: labels.correspondentAccount(cur), value: resolveBankingValue(overrides?.correspondentAccount) },
+        { field: 'correspondentBik', label: labels.correspondentBik, value: resolveBankingValue(overrides?.correspondentBik) },
+        { field: 'bankName', label: labels.bankName, value: resolveBankingValue(overrides?.bankName) },
+        { field: 'bankAddress', label: labels.bankAddress, value: resolveBankingValue(overrides?.bankAddress) },
+        { field: 'bankCode', label: labels.bankCode, value: resolveBankingValue(overrides?.bankCode) },
+        { field: 'accountNumber', label: labels.accountNumber(cur), value: resolveBankingValue(overrides?.accountNumber) },
+        { field: 'swift', label: labels.swift, value: resolveBankingValue(overrides?.swift) },
     ];
     if (!options?.omitPlaceholders)
         return rows;
