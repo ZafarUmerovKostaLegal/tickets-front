@@ -6,26 +6,22 @@
   overflow: visible;
 }
 
-/* Mini festoon across the top of the tile */
+/* Built to the tile's real pixel width — no stretching, hangs from the top edge */
 .tile-festive__garland {
   position: absolute;
-  left: 6%;
-  right: 14%; /* leave room for the drag handle */
-  top: -10px;
-  width: auto;
-  height: 34px;
+  left: 0;
+  top: -4px;
+  display: block;
   overflow: visible;
-  transform-origin: 50% 0;
-  animation: tile-festive-sway var(--tf-sway, 5s) ease-in-out infinite;
-  animation-delay: var(--tf-delay, 0s);
-  filter: drop-shadow(0 2px 3px rgba(20, 30, 50, 0.12));
+  pointer-events: none;
 }
 
 .tile-festive__wire {
   fill: none;
   stroke: #2f3854;
-  stroke-width: 1.8;
+  stroke-width: 1.7;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 body[data-theme='dark'] .tile-festive__wire {
@@ -37,114 +33,70 @@ body[data-theme='dark'] .tile-festive__wire {
 }
 
 .tile-festive__halo {
-  opacity: 0.35;
+  opacity: 0.32;
   transform-box: fill-box;
   transform-origin: center;
   animation: tile-festive-halo ease-in-out infinite;
 }
 
-/* Soft warm wash in the bottom-right corner behind holly */
 .tile-festive__corner-glow {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 72px;
-  height: 56px;
+  width: 64px;
+  height: 48px;
   border-radius: 14px 0 14px 0;
   background: radial-gradient(
     120% 100% at 100% 100%,
-    rgba(226, 75, 75, 0.14) 0%,
-    rgba(47, 143, 91, 0.1) 42%,
+    rgba(226, 75, 75, 0.12) 0%,
+    rgba(47, 143, 91, 0.08) 42%,
     transparent 72%
   );
-  opacity: 0.9;
 }
 
 body[data-theme='dark'] .tile-festive__corner-glow {
   background: radial-gradient(
     120% 100% at 100% 100%,
-    rgba(226, 75, 75, 0.22) 0%,
-    rgba(47, 143, 91, 0.16) 42%,
+    rgba(226, 75, 75, 0.2) 0%,
+    rgba(47, 143, 91, 0.14) 42%,
     transparent 72%
   );
 }
 
 .tile-festive__holly {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
-  opacity: 0.95;
-  filter: drop-shadow(0 2px 3px rgba(20, 40, 30, 0.22));
+  right: -3px;
+  bottom: -3px;
+  opacity: 0.94;
+  filter: drop-shadow(0 2px 3px rgba(20, 40, 30, 0.2));
   animation: tile-festive-holly-in 0.85s ease-out both;
   animation-delay: calc(var(--tf-delay, 0s) * 0.15);
 }
 
-.tile-festive__sparkle {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, #ffe9a8 40%, transparent 70%);
-  opacity: 0;
-  animation: tile-festive-sparkle 3.6s ease-in-out infinite;
-}
-
-.tile-festive__sparkle--a {
-  top: 28%;
-  right: 22%;
-  animation-delay: calc(var(--tf-delay, 0s) + 0.4s);
-}
-
-.tile-festive__sparkle--b {
-  top: 58%;
-  left: 18%;
-  width: 4px;
-  height: 4px;
-  animation-delay: calc(var(--tf-delay, 0s) + 1.6s);
-}
-
-.tile-festive--compact .tile-festive__sparkle--a {
-  top: 36%;
-}
-
-@keyframes tile-festive-sway {
-  0%, 100% { transform: rotate(-0.8deg) translateY(0); }
-  50% { transform: rotate(0.9deg) translateY(1px); }
-}
-
 @keyframes tile-festive-twinkle {
-  0%, 100% { opacity: 0.7; }
+  0%, 100% { opacity: 0.72; }
   45% { opacity: 1; }
-  70% { opacity: 0.82; }
+  70% { opacity: 0.85; }
 }
 
 @keyframes tile-festive-halo {
-  0%, 100% { opacity: 0.18; transform: scale(0.85); }
-  45% { opacity: 0.5; transform: scale(1.15); }
-  70% { opacity: 0.28; transform: scale(0.95); }
-}
-
-@keyframes tile-festive-sparkle {
-  0%, 70%, 100% { opacity: 0; transform: scale(0.4); }
-  80% { opacity: 1; transform: scale(1); }
-  90% { opacity: 0.5; transform: scale(0.7); }
+  0%, 100% { opacity: 0.16; transform: scale(0.88); }
+  45% { opacity: 0.48; transform: scale(1.12); }
+  70% { opacity: 0.26; transform: scale(0.96); }
 }
 
 @keyframes tile-festive-holly-in {
-  from { opacity: 0; transform: translate(5px, 5px) scale(0.8) rotate(8deg); }
-  to { opacity: 0.95; transform: none; }
+  from { opacity: 0; transform: translate(4px, 4px) scale(0.85); }
+  to { opacity: 0.94; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile-festive__garland,
   .tile-festive__bulb,
   .tile-festive__halo,
-  .tile-festive__sparkle,
   .tile-festive__holly {
     animation: none;
   }
 
   .tile-festive__bulb { opacity: 0.95; }
-  .tile-festive__halo { opacity: 0.35; }
-  .tile-festive__sparkle { opacity: 0.55; }
+  .tile-festive__halo { opacity: 0.32; }
 }
