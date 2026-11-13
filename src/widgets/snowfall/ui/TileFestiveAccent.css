@@ -6,39 +6,6 @@
   overflow: visible;
 }
 
-/* Built to the tile's real pixel width — no stretching, hangs from the top edge */
-.tile-festive__garland {
-  position: absolute;
-  left: 0;
-  top: -4px;
-  display: block;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.tile-festive__wire {
-  fill: none;
-  stroke: #2f3854;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-body[data-theme='dark'] .tile-festive__wire {
-  stroke: #7a86a8;
-}
-
-.tile-festive__bulb {
-  animation: tile-festive-twinkle ease-in-out infinite;
-}
-
-.tile-festive__halo {
-  opacity: 0.32;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: tile-festive-halo ease-in-out infinite;
-}
-
 .tile-festive__corner-glow {
   position: absolute;
   right: 0;
@@ -73,30 +40,13 @@ body[data-theme='dark'] .tile-festive__corner-glow {
   animation-delay: calc(var(--tf-delay, 0s) * 0.15);
 }
 
-@keyframes tile-festive-twinkle {
-  0%, 100% { opacity: 0.72; }
-  45% { opacity: 1; }
-  70% { opacity: 0.85; }
-}
-
-@keyframes tile-festive-halo {
-  0%, 100% { opacity: 0.16; transform: scale(0.88); }
-  45% { opacity: 0.48; transform: scale(1.12); }
-  70% { opacity: 0.26; transform: scale(0.96); }
-}
-
 @keyframes tile-festive-holly-in {
   from { opacity: 0; transform: translate(4px, 4px) scale(0.85); }
   to { opacity: 0.94; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile-festive__bulb,
-  .tile-festive__halo,
   .tile-festive__holly {
     animation: none;
   }
-
-  .tile-festive__bulb { opacity: 0.95; }
-  .tile-festive__halo { opacity: 0.32; }
 }

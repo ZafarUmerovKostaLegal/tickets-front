@@ -1,44 +1,81 @@
 import { useEffect, useRef, useState } from 'react';
 import './GarlandString.css';
 
+/** Animation modes from the winter design mockup. */
+type GlowMode = 'wave' | 'twinkle' | 'chase' | 'steady';
+
 type Bulb = {
     x: number;
+    y: number;
+    tilt: number;
     color: 0 | 1 | 2 | 3;
-    delay: number;
-    dur: number;
-    flash: boolean;
+    sway: string;
+    glow: string;
+    glass: string;
 };
-type Model = { d: string; bulbs: Bulb[] };
 
-const PIN_Y = 8;
-const SAG = 36;
-/** Keep end pins slightly inset so the last bulb/glow isn't clipped by the viewport edge. */
-const EDGE_INSET = 8;
+type Model = { d: string; bulbs: Bulb[]; h: number };
 
-/** A festoon wire across `width` px with a bulb hanging at each sag. */
-function buildGarland(width: number): Model {
-    const usable = Math.max(120, width - EDGE_INSET * 2);
-    const pins = Math.min(22, Math.max(5, Math.round(usable / 140)));
-    const step = usable / (pins - 1);
-    const segs: string[] = [`M ${EDGE_INSET} ${PIN_Y}`];
-    const bulbs: Bulb[] = [];
-    for (let i = 0; i < pins - 1; i += 1) {
-        const x1 = EDGE_INSET + i * step;
-        const x2 = EDGE_INSET + (i + 1) * step;
-        const mid = (x1 + x2) / 2;
-        segs.push(`Q ${mid.toFixed(1)} ${PIN_Y + SAG} ${x2.toFixed(1)} ${PIN_Y}`);
-        bulbs.push({
-            x: mid,
-            color: (i % 4) as 0 | 1 | 2 | 3,
-            delay: Number(((i * 0.53) % 3.1).toFixed(2)),
-            dur: Number((2.2 + (i % 5) * 0.35).toFixed(2)),
-            flash: i % 3 === 1,
-        });
-    }
-    return { d: segs.join(' '), bulbs };
+const Y0 = 4;
+const PER_SEG = 4;
+const STAGE_H = 110;
+const MODE: GlowMode = 'wave';
+
+function rnd(i: number, s: number): number {
+    const v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
+    return v - Math.floor(v);
 }
 
-/** A string of warm, softly twinkling lights hung across the hub header. */
+function timingFor(mode: GlowMode, i: number, total: number): { key: string; timing: string } | null {
+    if (mode === 'steady')
+        return null;
+    if (mode === 'wave')
+        return { key: 'wave', timing: `3.6s ease-in-out ${(-(total - i) * 0.16).toFixed(2)}s infinite` };
+    if (mode === 'chase')
+        return { key: 'chase', timing: `2.4s ease-in-out ${(-(4 - (i % 4)) * 0.6).toFixed(2)}s infinite` };
+    return {
+        key: 'twinkle',
+        timing: `${(2.4 + rnd(i, 1) * 3.2).toFixed(2)}s ease-in-out ${(-rnd(i, 2) * 5).toFixed(2)}s infinite`,
+    };
+}
+
+/**
+ * Festoon geometry + bulb placement from the winter design mockup:
+ * quadratic wire, 4 bulbs per span, tilt follows the local slope.
+ */
+function buildGarland(width: number, mode: GlowMode): Model {
+    const n = Math.max(2, Math.round(width / 250));
+    const seg = width / n;
+    let wire = `M0 ${Y0}`;
+    const bulbs: Bulb[] = [];
+    const total = n * PER_SEG;
+
+    for (let s = 0; s < n; s += 1) {
+        const sag = 30 + (s % 2 ? 9 : 0) + rnd(s, 3) * 6;
+        const x0 = s * seg;
+        wire += ` Q${(x0 + seg / 2).toFixed(1)} ${(Y0 + 2 * sag).toFixed(1)} ${(x0 + seg).toFixed(1)} ${Y0}`;
+
+        for (let k = 0; k < PER_SEG; k += 1) {
+            const i = s * PER_SEG + k;
+            const tt = (k + 0.5) / PER_SEG;
+            const slope = (4 * sag * (1 - 2 * tt)) / seg;
+            const anim = timingFor(mode, i, total);
+            bulbs.push({
+                x: Number((x0 + tt * seg).toFixed(1)),
+                y: Number((Y0 + 4 * sag * tt * (1 - tt)).toFixed(1)),
+                tilt: Number((-Math.atan(slope) * (180 / Math.PI)).toFixed(1)),
+                color: (i % 4) as 0 | 1 | 2 | 3,
+                sway: `hub-garland-sway ${(2.6 + rnd(i, 5) * 1.8).toFixed(2)}s ease-in-out ${(-rnd(i, 6) * 4).toFixed(2)}s infinite alternate`,
+                glow: anim ? `hub-garland-glow-${anim.key} ${anim.timing}` : 'none',
+                glass: anim ? `hub-garland-glass-${anim.key} ${anim.timing}` : 'none',
+            });
+        }
+    }
+
+    return { d: wire, bulbs, h: STAGE_H };
+}
+
+/** Header festoon of lights — geometry and motion from the winter design mockup. */
 export function GarlandString() {
     const ref = useRef<HTMLDivElement | null>(null);
     const [width, setWidth] = useState(0);
@@ -65,36 +102,40 @@ export function GarlandString() {
         return () => document.removeEventListener('visibilitychange', onVisibility);
     }, []);
 
-    const model = width > 0 ? buildGarland(width) : null;
+    const model = width > 0 ? buildGarland(width, MODE) : null;
 
     return (
         <div className="hub-garland" aria-hidden ref={ref}>
             {model ? (
-                <div className="hub-garland__stage">
+                <div className="hub-garland__stage" style={{ height: model.h }}>
                     <svg
                         className="hub-garland__wire"
                         width={width}
-                        height={68}
-                        viewBox={`0 0 ${width} 68`}
-                        preserveAspectRatio="none"
+                        height={model.h}
+                        viewBox={`0 0 ${width} ${model.h}`}
+                        preserveAspectRatio="xMinYMin meet"
                         fill="none"
                     >
                         <path d={model.d} />
                     </svg>
                     {model.bulbs.map((b, i) => (
-                        <span
+                        <div
                             key={i}
-                            className={[
-                                'hub-garland__bulb',
-                                `hub-garland__bulb--c${b.color}`,
-                                b.flash ? 'hub-garland__bulb--flash' : '',
-                            ].filter(Boolean).join(' ')}
-                            style={{
-                                left: b.x,
-                                ['--tw-delay' as string]: `-${b.delay}s`,
-                                ['--tw-dur' as string]: `${b.dur}s`,
-                            }}
-                        />
+                            className="hub-garland__pivot"
+                            style={{ left: b.x, top: b.y, transform: `rotate(${b.tilt}deg)` }}
+                        >
+                            <div className="hub-garland__sway kl-move" style={{ animation: b.sway }}>
+                                <span className="hub-garland__socket" />
+                                <span
+                                    className={`hub-garland__halo hub-garland__halo--c${b.color} kl-move`}
+                                    style={{ animation: b.glow }}
+                                />
+                                <span
+                                    className={`hub-garland__glass hub-garland__glass--c${b.color} kl-move`}
+                                    style={{ animation: b.glass }}
+                                />
+                            </div>
+                        </div>
                     ))}
                 </div>
             ) : null}
