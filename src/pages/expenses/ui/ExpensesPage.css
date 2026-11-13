@@ -5609,3 +5609,751 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==========================================================================
+   Расходы — адаптив (телефоны, планшеты, узкие ноутбуки)
+   Блок стоит последним в файле и перекрывает накопившиеся выше правила.
+   ========================================================================== */
+
+/* --- Никакого горизонтального скролла страницы ------------------------- */
+.expenses-page,
+.expenses-page .expenses-page__main,
+.expenses-page .expenses-page__content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.expenses-page .expenses-page__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Узкий ноутбук / планшет в альбоме: таблица без прокрутки вбок ------ */
+@media (min-width: 769px) and (max-width: 1180px) {
+  .expenses-page .exp-table {
+    padding: 0 1rem 1.5rem;
+    overflow-x: visible;
+  }
+
+  .expenses-page .exp-table__row {
+    min-width: 0;
+    column-gap: 0.25rem;
+    grid-template-columns:
+      104px
+      minmax(0, 1fr)
+      minmax(84px, 0.4fr)
+      88px
+      minmax(84px, 0.4fr)
+      minmax(132px, 150px)
+      minmax(88px, 104px)
+      48px;
+  }
+
+  .expenses-page .exp-table__th--approvedby,
+  .expenses-page .exp-table__td--approvedby,
+  .expenses-page .exp-table__th--reimb,
+  .expenses-page .exp-table__td--reimb,
+  .expenses-page .exp-table__th--usd,
+  .expenses-page .exp-table__td--usd {
+    display: none;
+  }
+
+  .expenses-page .exp-table__th--type,
+  .expenses-page .exp-table__td--type {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .expenses-page .exp-table__num {
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1180px) {
+  /* Шапка: разделы переносятся под заголовок и не обрезаются */
+  .expenses-page .expenses-page__header {
+    height: auto;
+    padding-block: 0.5rem;
+  }
+
+  .expenses-page .expenses-page__header-titles {
+    gap: 0.375rem 0.75rem;
+  }
+
+  .expenses-page .exp-header-queue-wrap {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .expenses-page .exp-header-queue-wrap .exp-queue-nav {
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1000px) {
+  /* Фильтры в несколько рядов — подписи читаются целиком */
+  .expenses-page .exp-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 920px) {
+  .expenses-page .exp-table__row {
+    grid-template-columns:
+      104px
+      minmax(0, 1fr)
+      minmax(76px, 0.4fr)
+      84px
+      minmax(128px, 144px)
+      minmax(84px, 100px)
+      44px;
+  }
+
+  .expenses-page .exp-table__th--type,
+  .expenses-page .exp-table__td--type {
+    display: none;
+  }
+}
+
+/* --- Телефоны и планшеты в портрете ------------------------------------ */
+@media (max-width: 768px) {
+  .expenses-page {
+    --exp-pad-x: 1rem;
+  }
+
+  .expenses-page .expenses-page__main {
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  /* Шапка: «назад» · заголовок · тема, ниже — разделы */
+  .expenses-page .expenses-page__header {
+    gap: 0;
+    padding: calc(0.5rem + var(--mob-safe-top, 0px))
+      max(var(--exp-pad-x), var(--mob-safe-right, 0px))
+      0.625rem
+      max(var(--exp-pad-x), var(--mob-safe-left, 0px));
+  }
+
+  .expenses-page .expenses-page__header-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem 0.625rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .expenses-page .expenses-page__header-start,
+  .expenses-page .expenses-page__header-titles {
+    display: contents;
+  }
+
+  .expenses-page .expenses-page__header .app-home-logo,
+  .expenses-page .expenses-page__header .app-home-logo__sep {
+    display: none;
+  }
+
+  .expenses-page .expenses-page__header .app-back-btn {
+    grid-column: 1;
+    grid-row: 1;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .expenses-page .expenses-page__header .app-back-btn__label {
+    display: none;
+  }
+
+  .expenses-page .expenses-page__title {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    font-size: 1.0625rem;
+    line-height: 1.25;
+  }
+
+  .expenses-page .expenses-page__header-inner > .app-page-header-end,
+  .expenses-page .expenses-page__header-inner > .app-page-settings {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .expenses-page .expenses-page__header .app-header-action--icon {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .expenses-page .exp-header-queue-wrap {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .expenses-page .exp-header-queue-wrap:empty {
+    display: none;
+  }
+
+  .expenses-page .exp-header-queue-wrap .exp-queue-nav {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0.375rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  /* Панель действий */
+  .expenses-page .exp-tt-toolbar {
+    gap: 0.5rem;
+  }
+
+  .expenses-page .exp-tt-toolbar .tt-settings__toolbar-left {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .expenses-page .exp-tt-toolbar .tt-settings__toolbar-left .tt-settings__btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Список заявок — карточки вместо таблицы */
+  .expenses-page .exp-table {
+    padding: 0 max(var(--exp-pad-x), var(--mob-safe-right, 0px))
+      calc(1.25rem + var(--mob-safe-bottom, 0px))
+      max(var(--exp-pad-x), var(--mob-safe-left, 0px));
+    overflow: visible;
+  }
+
+  .expenses-page .exp-table__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.625rem;
+    overflow: visible;
+    border-radius: 0;
+  }
+
+  .expenses-page .exp-table__row--head {
+    display: none;
+  }
+
+  .expenses-page .exp-table__row:not(.exp-table__row--head) {
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'num num action'
+      'desc desc desc'
+      'status status status'
+      'author author uzs'
+      'expdate type usd';
+    align-items: center;
+    gap: 0.25rem 0.625rem;
+    padding: 0.625rem 0.5rem 0.75rem 0.875rem;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .expenses-page .exp-table__row:not(.exp-table__row--head):last-child {
+    border-radius: 12px;
+  }
+
+  .expenses-page .exp-table__td {
+    min-width: 0;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    overflow: visible;
+    text-align: left;
+  }
+
+  .expenses-page .exp-table__td--approvedby,
+  .expenses-page .exp-table__td--reimb {
+    display: none;
+  }
+
+  .expenses-page .exp-table__td--num {
+    grid-area: num;
+  }
+
+  .expenses-page .exp-table__num {
+    font-size: 0.8125rem;
+  }
+
+  .expenses-page .exp-table__td--status {
+    grid-area: status;
+    padding: 0.25rem 0.375rem 0 0;
+  }
+
+  .expenses-page .exp-table__status-tags {
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .expenses-page .exp-table__status-reason {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .expenses-page .exp-table__td--action {
+    grid-area: action;
+    justify-self: end;
+  }
+
+  .expenses-page .exp-table__actions-trigger {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .expenses-page .exp-table__td--desc {
+    grid-area: desc;
+    padding-right: 0.375rem;
+  }
+
+  .expenses-page .exp-table__desc {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .expenses-page .exp-table__td--author {
+    grid-area: author;
+    align-self: end;
+    padding-top: 0.375rem;
+  }
+
+  .expenses-page .exp-table__author {
+    color: var(--app-muted, #64748b);
+  }
+
+  .expenses-page .exp-table__td--expdate {
+    grid-area: expdate;
+    font-size: 0.75rem;
+    color: var(--app-muted, #64748b);
+    white-space: nowrap;
+  }
+
+  .expenses-page .exp-table__td--type {
+    grid-area: type;
+    display: block;
+    overflow: hidden;
+    font-size: 0.75rem;
+    color: var(--app-muted, #64748b);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .expenses-page .exp-table__td--type::before {
+    content: '· ';
+  }
+
+  .expenses-page .exp-table__td--uzs {
+    grid-area: uzs;
+    align-self: end;
+    justify-self: end;
+    padding: 0.375rem 0.375rem 0 0;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+  }
+
+  .expenses-page .exp-table__td--uzs .exp-table__money-uzs::after {
+    content: ' UZS';
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--app-muted, #64748b);
+  }
+
+  .expenses-page .exp-table__td--usd {
+    grid-area: usd;
+    justify-self: end;
+    padding-right: 0.375rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Планшет в портрете: карточки в две колонки */
+@media (min-width: 640px) and (max-width: 768px) {
+  .expenses-page .exp-table__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .expenses-page .exp-table__row:not(.exp-table__row--head) {
+    grid-template-rows: auto 1fr auto auto auto;
+  }
+
+  .expenses-page .exp-table__td--desc {
+    align-self: start;
+  }
+}
+
+@media (max-width: 380px) {
+  .expenses-page {
+    --exp-pad-x: 0.75rem;
+  }
+}
+
+/* --- Панель заявки (создание / просмотр) -------------------------------- */
+.exp-panel,
+.exp-panel__body,
+.exp-panel__hd-left,
+.exp-form-block,
+.exp-form-field,
+.exp-form-file-item {
+  min-width: 0;
+}
+
+.exp-panel__title,
+.exp-form-static,
+.exp-form-id__value,
+.exp-form-file-item__name,
+.exp-rejection-reason__text {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .exp-panel {
+    width: 100vw;
+    border-left: none;
+  }
+
+  .exp-panel .exp-panel__hd {
+    padding-top: calc(0.625rem + var(--mob-safe-top, 0px));
+  }
+
+  .exp-panel .exp-panel__close {
+    flex-shrink: 0;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .exp-panel .exp-panel__ft {
+    gap: 0.5rem;
+    padding: 0.75rem max(1rem, var(--mob-safe-right, 0px))
+      calc(0.75rem + var(--mob-safe-bottom, 0px))
+      max(1rem, var(--mob-safe-left, 0px));
+  }
+
+  .exp-panel .exp-panel__ft-hint {
+    margin: 0;
+  }
+
+  /* Кнопки действий — ровной сеткой, а не лесенкой */
+  .exp-panel .exp-panel__ft {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .exp-panel .exp-panel__ft > .exp-panel__ft-hint,
+  .exp-panel .exp-panel__ft > .exp-panel__ft-error,
+  .exp-panel .exp-panel__ft > .exp-panel__ft-actions,
+  .exp-panel .exp-panel__ft > .exp-panel__ft-moderate:first-of-type,
+  .exp-panel .exp-panel__ft > :only-child,
+  .exp-panel .exp-panel__ft-actions > .exp-panel-btn:last-child:nth-child(odd),
+  .exp-panel .exp-panel__ft-moderate-btns > .exp-panel-btn:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .exp-panel .exp-panel__ft-moderate {
+    flex: none;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .exp-panel .exp-panel__ft-actions,
+  .exp-panel .exp-panel__ft-moderate-btns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .exp-panel .exp-panel__ft .exp-panel-btn {
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .exp-panel .exp-form-copy-btn,
+  .exp-panel .exp-form-file-item__del {
+    flex-shrink: 0;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .exp-panel .exp-form-id__value {
+    font-size: clamp(1.125rem, 5.4vw, 1.5rem);
+  }
+}
+
+/* --- Диалоги и модалка отчёта Excel ------------------------------------ */
+.exp-mod-dialog,
+.rep-modal,
+.rep-modal__body {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .exp-mod-dialog__ft .exp-panel-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .rep-modal .rep-modal__close {
+    flex-shrink: 0;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .rep-modal {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    max-height: calc(100dvh - var(--mob-safe-top, 0px) - 1rem);
+    border-width: 1px 0 0;
+    border-radius: 18px 18px 0 0;
+    padding-bottom: var(--mob-safe-bottom, 0px);
+    transform: none;
+  }
+}
+
+/* --- Аналитика ---------------------------------------------------------- */
+.exp-report-page,
+.exp-report-page .exp-report-panel,
+.exp-report-page .exp-report-section,
+.exp-report-page .exp-report-chart-card,
+.exp-report-page .exp-report-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.exp-report-page .exp-report-stat-card__value {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .exp-report-page .exp-report-nav {
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+    padding: 0;
+  }
+
+  .exp-report-page .exp-report-nav__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-surface);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .exp-report-page .exp-report-stats--kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
+  .exp-report-page .exp-report-analytics__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .exp-report-page .exp-report-chart-card--span2 {
+    grid-column: auto;
+  }
+
+  .exp-report-page .exp-report-excel-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .exp-report-page .exp-report-excel-actions > * {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+/* --- Касса -------------------------------------------------------------- */
+.exp-cash,
+.exp-cash__hero,
+.exp-cash__event-body {
+  min-width: 0;
+}
+
+.exp-cash__event-note,
+.exp-cash__balance {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .exp-cash .exp-cash__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .exp-cash .exp-cash__stat {
+    min-width: 0;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .exp-cash .exp-cash__stat-value {
+    font-size: 0.9375rem;
+    overflow-wrap: anywhere;
+  }
+
+  .exp-cash .exp-cash__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .exp-cash .exp-cash__actions > * {
+    min-width: 0;
+  }
+
+  .exp-cash .exp-cash__event-tool {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 380px) {
+  .exp-cash .exp-cash__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exp-panel,
+  .rep-modal {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Превью отчёта: на телефоне строки таблицы становятся карточками «поле — значение» */
+@media (max-width: 768px) {
+  .exp-report-page .exp-report-table-scroll {
+    overflow-x: hidden;
+    max-height: min(560px, 70dvh);
+  }
+
+  .exp-report-page .exp-report-table,
+  .exp-report-page .exp-report-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .exp-report-page .exp-report-table thead {
+    display: none;
+  }
+
+  .exp-report-page .exp-report-table tr {
+    display: block;
+    margin-bottom: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    background: var(--app-surface);
+  }
+
+  .exp-report-page .exp-report-table tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .exp-report-page .exp-report-table td {
+    display: grid;
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.3125rem 0;
+    border: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--app-border) 60%, transparent);
+    background: none;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .exp-report-page .exp-report-table td:last-child {
+    border-bottom: none;
+  }
+
+  .exp-report-page .exp-report-table td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--app-muted, #64748b);
+    text-align: left;
+  }
+
+  .exp-report-page .exp-report-table tbody tr:hover td {
+    background: none;
+  }
+}
+
+.exp-mod-dialog {
+  overflow-x: hidden;
+}
+
+.exp-mod-dialog input,
+.exp-mod-dialog textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+}

@@ -719,7 +719,7 @@ export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company
                   </thead>
                   <tbody>
                     {filteredItems.map(r => (<tr key={r.id}>
-                        {visibleColumns.map(c => (<td key={c.id}>{c.value(r)}</td>))}
+                        {visibleColumns.map(c => (<td key={c.id} data-label={c.label}>{c.value(r)}</td>))}
                       </tr>))}
                   </tbody>
                 </table>
