@@ -2626,14 +2626,14 @@ body[data-theme='dark'] .home-page--hub {
   background: transparent;
 }
 
-/* Extra top room so the absolute garland doesn't cover the greeting */
+/* Clear the fixed garland hanging under the topbar */
 .home-page__main--hub-festive .home-page__main-inner--hub {
-  padding-top: 4.5rem;
+  padding-top: 5.5rem;
 }
 
 @media (min-width: 768px) {
   .home-page__main--hub-festive .home-page__main-inner--hub {
-    padding-top: 5.25rem;
+    padding-top: 6.25rem;
   }
 }
 

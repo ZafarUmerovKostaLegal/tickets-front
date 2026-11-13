@@ -13,16 +13,16 @@
   --g3-rgb: 255, 184, 74;
   --g3-mid: #ffb84a;
   --g3-deep: #c4780a;
-  position: absolute;
+  /* Stays under the sticky topbar while the page scrolls */
+  position: fixed;
   left: 0;
   right: 0;
-  top: 0;
   width: 100%;
   height: 0;
   margin: 0;
   overflow: visible;
   pointer-events: none;
-  z-index: 6;
+  z-index: 80; /* below .home-hub-topbar (90), above hub content */
 }
 
 body[data-theme='dark'] .hub-garland {
@@ -64,6 +64,7 @@ body[data-theme='dark'] .hub-garland {
   width: 18px;
   height: 30px;
   transform-origin: 50% 0;
+  will-change: transform;
 }
 
 .hub-garland__socket {
@@ -126,9 +127,10 @@ body[data-theme='dark'] .hub-garland {
   box-shadow: 0 0 9px rgba(var(--g3-rgb), 0.7);
 }
 
+/* Soft pendulum — each bulb gets its own duration/delay via inline style */
 @keyframes hub-garland-sway {
-  0% { transform: rotate(-2.6deg); }
-  100% { transform: rotate(2.6deg); }
+  0% { transform: rotate(-9deg) translateX(-1px); }
+  100% { transform: rotate(9deg) translateX(1px); }
 }
 
 @keyframes hub-garland-glow-wave {

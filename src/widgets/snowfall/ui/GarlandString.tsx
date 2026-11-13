@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './GarlandString.css';
 
 /** Animation modes from the winter design mockup. */
@@ -16,9 +16,9 @@ type Bulb = {
 
 type Model = { d: string; bulbs: Bulb[]; h: number };
 
-const Y0 = 4;
+const Y0 = 2;
 const PER_SEG = 4;
-const STAGE_H = 110;
+const STAGE_H = 96;
 const MODE: GlowMode = 'wave';
 
 function rnd(i: number, s: number): number {
@@ -51,7 +51,7 @@ function buildGarland(width: number, mode: GlowMode): Model {
     const total = n * PER_SEG;
 
     for (let s = 0; s < n; s += 1) {
-        const sag = 30 + (s % 2 ? 9 : 0) + rnd(s, 3) * 6;
+        const sag = 26 + (s % 2 ? 8 : 0) + rnd(s, 3) * 5;
         const x0 = s * seg;
         wire += ` Q${(x0 + seg / 2).toFixed(1)} ${(Y0 + 2 * sag).toFixed(1)} ${(x0 + seg).toFixed(1)} ${Y0}`;
 
@@ -60,12 +60,14 @@ function buildGarland(width: number, mode: GlowMode): Model {
             const tt = (k + 0.5) / PER_SEG;
             const slope = (4 * sag * (1 - 2 * tt)) / seg;
             const anim = timingFor(mode, i, total);
+            const swayDur = (2.8 + rnd(i, 5) * 2.4).toFixed(2);
+            const swayDelay = (-rnd(i, 6) * 5).toFixed(2);
             bulbs.push({
                 x: Number((x0 + tt * seg).toFixed(1)),
                 y: Number((Y0 + 4 * sag * tt * (1 - tt)).toFixed(1)),
                 tilt: Number((-Math.atan(slope) * (180 / Math.PI)).toFixed(1)),
                 color: (i % 4) as 0 | 1 | 2 | 3,
-                sway: `hub-garland-sway ${(2.6 + rnd(i, 5) * 1.8).toFixed(2)}s ease-in-out ${(-rnd(i, 6) * 4).toFixed(2)}s infinite alternate`,
+                sway: `hub-garland-sway ${swayDur}s cubic-bezier(0.45, 0.05, 0.55, 0.95) ${swayDelay}s infinite alternate`,
                 glow: anim ? `hub-garland-glow-${anim.key} ${anim.timing}` : 'none',
                 glass: anim ? `hub-garland-glass-${anim.key} ${anim.timing}` : 'none',
             });
@@ -75,22 +77,34 @@ function buildGarland(width: number, mode: GlowMode): Model {
     return { d: wire, bulbs, h: STAGE_H };
 }
 
-/** Header festoon of lights — geometry and motion from the winter design mockup. */
+function readTopbarBottom(): number {
+    const bar = document.querySelector<HTMLElement>('.home-hub-topbar');
+    if (!bar)
+        return 64;
+    return Math.round(bar.getBoundingClientRect().bottom);
+}
+
+/** Header festoon — fixed under the topbar so it stays visible while scrolling. */
 export function GarlandString() {
     const ref = useRef<HTMLDivElement | null>(null);
     const [width, setWidth] = useState(0);
+    const [top, setTop] = useState(64);
 
-    useEffect(() => {
-        const el = ref.current;
-        if (!el)
-            return;
-        const measure = () => setWidth(el.clientWidth);
+    useLayoutEffect(() => {
+        const measure = () => {
+            setWidth(window.innerWidth);
+            setTop(readTopbarBottom());
+        };
         measure();
-        if (typeof ResizeObserver === 'undefined')
-            return;
-        const ro = new ResizeObserver(measure);
-        ro.observe(el);
-        return () => ro.disconnect();
+        const bar = document.querySelector('.home-hub-topbar');
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+        if (bar && ro)
+            ro.observe(bar);
+        window.addEventListener('resize', measure);
+        return () => {
+            ro?.disconnect();
+            window.removeEventListener('resize', measure);
+        };
     }, []);
 
     useEffect(() => {
@@ -105,7 +119,12 @@ export function GarlandString() {
     const model = width > 0 ? buildGarland(width, MODE) : null;
 
     return (
-        <div className="hub-garland" aria-hidden ref={ref}>
+        <div
+            className="hub-garland"
+            aria-hidden
+            ref={ref}
+            style={{ top, ['--hub-garland-h' as string]: `${STAGE_H}px` }}
+        >
             {model ? (
                 <div className="hub-garland__stage" style={{ height: model.h }}>
                     <svg

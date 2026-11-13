@@ -44,8 +44,8 @@ export function HomePageHub() {
     return (
         <div className="home-page home-page--tile-nav home-page--hub">
             <HomeHubTopBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+            {snowy ? <GarlandString /> : null}
             <main className={`home-page__main home-page__main--hub${snowy ? ' home-page__main--hub-festive' : ''}`}>
-                {snowy ? <GarlandString /> : null}
                 <div className="home-page__main-inner home-page__main-inner--hub">
                     <HomeHubGreeting />
                     <HomeNavTiles searchQuery={searchQuery} />
