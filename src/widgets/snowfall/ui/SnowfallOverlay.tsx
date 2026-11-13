@@ -14,15 +14,15 @@ type Flake = {
 
 type Tier = 'phone' | 'tablet' | 'desktop';
 
-/** Particle budget per device — keeps the effect light on weaker hardware. */
-const TIER_TOTAL: Record<Tier, number> = { desktop: 112, tablet: 70, phone: 36 };
+/** Particle budget — kept modest so flakes stay ambient, not distracting. */
+const TIER_TOTAL: Record<Tier, number> = { desktop: 48, tablet: 32, phone: 18 };
 /** Share of the budget for the far / mid / near depth layers. */
-const LAYER_SPLIT = [0.42, 0.34, 0.24] as const;
+const LAYER_SPLIT = [0.5, 0.32, 0.18] as const;
 
 const LAYERS = [
-    { size: [3, 5], dur: [18, 24], opacity: [0.35, 0.6], drift: 30 },
-    { size: [5.5, 8], dur: [12, 16], opacity: [0.6, 0.85], drift: 48 },
-    { size: [9, 13], dur: [7, 11], opacity: [0.85, 1], drift: 64 },
+    { size: [2, 3.5], dur: [22, 30], opacity: [0.12, 0.22], drift: 22 },
+    { size: [3, 4.5], dur: [16, 22], opacity: [0.18, 0.3], drift: 32 },
+    { size: [4, 6], dur: [11, 16], opacity: [0.22, 0.36], drift: 40 },
 ] as const;
 
 function currentTier(): Tier {
