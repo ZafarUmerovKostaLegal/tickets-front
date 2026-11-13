@@ -1,0 +1,17 @@
+.snow-ground-plow {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 56px;
+  z-index: 8995; /* under snowfall flakes (9000), above hub content */
+  pointer-events: none;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snow-ground-plow {
+    display: none;
+  }
+}
