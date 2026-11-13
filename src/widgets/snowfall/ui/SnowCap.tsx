@@ -56,8 +56,8 @@ const BOX_H = 42;
 const EDGE = 22;
 /** Matches `--hn-tile-radius` in HomeNavTiles.css. */
 const RADIUS = 14;
-const MAX_DEPTH = 17;
-const FROST = 1.4;
+const MAX_DEPTH = 20;
+const FROST = 2.2;
 const ICICLES = 3;
 const TOP_STEPS = 12;
 

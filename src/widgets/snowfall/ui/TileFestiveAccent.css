@@ -6,115 +6,145 @@
   overflow: visible;
 }
 
-/* Soft frost along the top edge of the tile */
-.tile-festive__frost {
+/* Mini festoon across the top of the tile */
+.tile-festive__garland {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  top: 0;
-  height: 10px;
-  border-radius: 0 0 8px 8px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(230, 240, 250, 0.55) 45%,
-    transparent 100%
-  );
-  opacity: 0.85;
-  mask-image: radial-gradient(120% 100% at 50% 0%, #000 40%, transparent 100%);
-}
-
-body[data-theme='dark'] .tile-festive__frost {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.28) 0%,
-    rgba(180, 205, 235, 0.12) 50%,
-    transparent 100%
-  );
-}
-
-/* Hanging bauble — top-right, outside the card a little */
-.tile-festive__bauble {
-  --tf-bauble: #e24b4b;
-  position: absolute;
-  top: -2px;
-  right: 18px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0%, transparent 42%),
-    radial-gradient(circle at 50% 55%, var(--tf-bauble) 0%, color-mix(in srgb, var(--tf-bauble) 65%, #4a1010) 100%);
-  box-shadow:
-    0 0 6px 1px color-mix(in srgb, var(--tf-bauble) 55%, transparent),
-    0 0 14px 3px color-mix(in srgb, var(--tf-bauble) 28%, transparent);
-  transform-origin: 50% -10px;
-  animation: tile-festive-sway var(--tf-sway, 4s) ease-in-out infinite;
+  left: 6%;
+  right: 14%; /* leave room for the drag handle */
+  top: -10px;
+  width: auto;
+  height: 34px;
+  overflow: visible;
+  transform-origin: 50% 0;
+  animation: tile-festive-sway var(--tf-sway, 5s) ease-in-out infinite;
   animation-delay: var(--tf-delay, 0s);
+  filter: drop-shadow(0 2px 3px rgba(20, 30, 50, 0.12));
 }
 
-.tile-festive__bauble-cord {
-  position: absolute;
-  left: 50%;
-  top: -9px;
-  width: 1.5px;
-  height: 9px;
-  margin-left: -0.75px;
-  background: #5a6478;
-  border-radius: 1px;
+.tile-festive__wire {
+  fill: none;
+  stroke: #2f3854;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 
-.tile-festive__bauble-cap {
-  position: absolute;
-  left: 50%;
-  top: -3px;
-  width: 7px;
-  height: 4px;
-  margin-left: -3.5px;
-  border-radius: 1px;
-  background: linear-gradient(180deg, #c9a227, #8a6d1a);
+body[data-theme='dark'] .tile-festive__wire {
+  stroke: #7a86a8;
 }
 
-.tile-festive__bauble-glow {
+.tile-festive__bulb {
+  animation: tile-festive-twinkle ease-in-out infinite;
+}
+
+.tile-festive__halo {
+  opacity: 0.35;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tile-festive-halo ease-in-out infinite;
+}
+
+/* Soft warm wash in the bottom-right corner behind holly */
+.tile-festive__corner-glow {
   position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--tf-bauble) 50%, transparent), transparent 70%);
-  opacity: 0.7;
-  animation: tile-festive-glow 2.8s ease-in-out infinite;
-  animation-delay: var(--tf-delay, 0s);
-  z-index: -1;
+  right: 0;
+  bottom: 0;
+  width: 72px;
+  height: 56px;
+  border-radius: 14px 0 14px 0;
+  background: radial-gradient(
+    120% 100% at 100% 100%,
+    rgba(226, 75, 75, 0.14) 0%,
+    rgba(47, 143, 91, 0.1) 42%,
+    transparent 72%
+  );
+  opacity: 0.9;
+}
+
+body[data-theme='dark'] .tile-festive__corner-glow {
+  background: radial-gradient(
+    120% 100% at 100% 100%,
+    rgba(226, 75, 75, 0.22) 0%,
+    rgba(47, 143, 91, 0.16) 42%,
+    transparent 72%
+  );
 }
 
 .tile-festive__holly {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
-  opacity: 0.92;
-  filter: drop-shadow(0 1px 2px rgba(20, 40, 30, 0.18));
-  animation: tile-festive-holly-in 0.9s ease-out both;
-  animation-delay: calc(var(--tf-delay, 0s) * 0.2);
+  right: -4px;
+  bottom: -4px;
+  opacity: 0.95;
+  filter: drop-shadow(0 2px 3px rgba(20, 40, 30, 0.22));
+  animation: tile-festive-holly-in 0.85s ease-out both;
+  animation-delay: calc(var(--tf-delay, 0s) * 0.15);
+}
+
+.tile-festive__sparkle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #ffe9a8 40%, transparent 70%);
+  opacity: 0;
+  animation: tile-festive-sparkle 3.6s ease-in-out infinite;
+}
+
+.tile-festive__sparkle--a {
+  top: 28%;
+  right: 22%;
+  animation-delay: calc(var(--tf-delay, 0s) + 0.4s);
+}
+
+.tile-festive__sparkle--b {
+  top: 58%;
+  left: 18%;
+  width: 4px;
+  height: 4px;
+  animation-delay: calc(var(--tf-delay, 0s) + 1.6s);
+}
+
+.tile-festive--compact .tile-festive__sparkle--a {
+  top: 36%;
 }
 
 @keyframes tile-festive-sway {
-  0%, 100% { transform: rotate(-6deg); }
-  50% { transform: rotate(7deg); }
+  0%, 100% { transform: rotate(-0.8deg) translateY(0); }
+  50% { transform: rotate(0.9deg) translateY(1px); }
 }
 
-@keyframes tile-festive-glow {
-  0%, 100% { opacity: 0.4; transform: scale(0.9); }
-  50% { opacity: 0.85; transform: scale(1.08); }
+@keyframes tile-festive-twinkle {
+  0%, 100% { opacity: 0.7; }
+  45% { opacity: 1; }
+  70% { opacity: 0.82; }
+}
+
+@keyframes tile-festive-halo {
+  0%, 100% { opacity: 0.18; transform: scale(0.85); }
+  45% { opacity: 0.5; transform: scale(1.15); }
+  70% { opacity: 0.28; transform: scale(0.95); }
+}
+
+@keyframes tile-festive-sparkle {
+  0%, 70%, 100% { opacity: 0; transform: scale(0.4); }
+  80% { opacity: 1; transform: scale(1); }
+  90% { opacity: 0.5; transform: scale(0.7); }
 }
 
 @keyframes tile-festive-holly-in {
-  from { opacity: 0; transform: translate(4px, 4px) scale(0.85); }
-  to { opacity: 0.92; transform: none; }
+  from { opacity: 0; transform: translate(5px, 5px) scale(0.8) rotate(8deg); }
+  to { opacity: 0.95; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile-festive__bauble,
-  .tile-festive__bauble-glow,
+  .tile-festive__garland,
+  .tile-festive__bulb,
+  .tile-festive__halo,
+  .tile-festive__sparkle,
   .tile-festive__holly {
     animation: none;
   }
+
+  .tile-festive__bulb { opacity: 0.95; }
+  .tile-festive__halo { opacity: 0.35; }
+  .tile-festive__sparkle { opacity: 0.55; }
 }

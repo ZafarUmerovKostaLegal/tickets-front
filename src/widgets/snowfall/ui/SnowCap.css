@@ -1,10 +1,10 @@
 .snow-cap {
   --snow-cap-top: #ffffff;
-  --snow-cap-mid: #f1f6fc;
-  --snow-cap-base: #d3e0ef;
-  --snow-cap-edge: rgba(62, 88, 125, 0.32);
-  --snow-cap-rim: rgba(120, 148, 186, 0.55);
-  --snow-cap-drop: rgba(120, 160, 210, 0.85);
+  --snow-cap-mid: #eef5fc;
+  --snow-cap-base: #c5d6ea;
+  --snow-cap-edge: rgba(50, 78, 118, 0.42);
+  --snow-cap-rim: rgba(100, 132, 175, 0.65);
+  --snow-cap-drop: rgba(110, 155, 210, 0.9);
   position: absolute;
   left: 0;
   right: 0;
@@ -41,7 +41,8 @@ body[data-theme='dark'] .snow-cap {
 .snow-cap__body {
   filter:
     drop-shadow(0 1.5px 1px var(--snow-cap-edge))
-    drop-shadow(0 3px 5px color-mix(in srgb, var(--snow-cap-edge) 45%, transparent));
+    drop-shadow(0 4px 8px color-mix(in srgb, var(--snow-cap-edge) 55%, transparent));
+  opacity: 1;
 }
 
 .snow-cap__rim {
