@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
+import { useCurrentUser } from '@shared/hooks';
+import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { HomeNavTiles } from './HomeNavTiles';
 import { HomeHubTopBar } from './HomeHubTopBar';
 import { HomeHubGreeting } from './HomeHubGreeting';
+import { GarlandString } from '@widgets/snowfall/ui/GarlandString';
 import './HomePage.css';
 
 export function HomePageHub() {
     const [searchQuery, setSearchQuery] = useState('');
+    const { user, loading } = useCurrentUser();
+    const [snowPreferenceOn] = useSnowfallPreference();
+    const snowy = snowPreferenceOn && !loading && isSnowfallUser(user);
 
     useEffect(() => {
         // Modals elsewhere may leave body overflow locked; hub must always scroll.
@@ -40,6 +46,7 @@ export function HomePageHub() {
             <HomeHubTopBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
             <main className="home-page__main home-page__main--hub">
                 <div className="home-page__main-inner home-page__main-inner--hub">
+                    {snowy ? <GarlandString /> : null}
                     <HomeHubGreeting />
                     <HomeNavTiles searchQuery={searchQuery} />
                 </div>

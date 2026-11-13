@@ -1,0 +1,97 @@
+.hub-garland {
+  --garland-cord: #2b3350;
+  --garland-b1: #fff2cf;
+  --garland-b2: #ffc24d;
+  --garland-b3: #ff5b52;
+  --garland-b4: #53c7a6;
+  position: relative;
+  width: 100%;
+  margin: -6px 0 10px;
+  pointer-events: none;
+}
+
+body[data-theme='dark'] .hub-garland {
+  --garland-cord: #49547c;
+}
+
+.hub-garland__wire {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hub-garland__wire path {
+  stroke: var(--garland-cord);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.hub-garland__bulb {
+  position: absolute;
+  top: 36px;
+  width: 13px;
+  height: 17px;
+  margin-left: -6px;
+  border-radius: 50% 50% 50% 50% / 58% 58% 42% 42%;
+  background: radial-gradient(circle at 38% 28%, #ffffff 0%, var(--c) 58%, var(--c) 100%);
+  box-shadow: 0 0 7px 1px var(--c);
+  opacity: 0.85;
+  /* Twinkle is opacity-only (compositor-friendly); no filter animation. */
+  animation: hub-garland-tw 2.8s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.hub-garland__bulb::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: -5px;
+  width: 7px;
+  height: 5px;
+  border-radius: 3px 3px 0 0;
+  background: var(--garland-cord);
+}
+
+.hub-garland__bulb::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c), transparent 68%);
+  opacity: 0.5;
+  animation: hub-garland-glow 2.8s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.hub-garland__bulb--c0 { --c: var(--garland-b1); }
+.hub-garland__bulb--c1 { --c: var(--garland-b2); }
+.hub-garland__bulb--c2 { --c: var(--garland-b3); }
+.hub-garland__bulb--c3 { --c: var(--garland-b4); }
+
+@keyframes hub-garland-tw {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes hub-garland-glow {
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 0.62; }
+}
+
+.hub-garland--paused .hub-garland__bulb,
+.hub-garland--paused .hub-garland__bulb::after {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-garland__bulb,
+  .hub-garland__bulb::after {
+    animation: none;
+    opacity: 0.92;
+  }
+}

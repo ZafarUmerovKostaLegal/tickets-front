@@ -23,12 +23,24 @@
   animation-iteration-count: infinite;
 }
 
+/* Depth: far layer is softened and recedes, near layer stays crisp. */
+.app-snowfall__flake--l0 {
+  filter: blur(0.6px);
+  box-shadow: none;
+}
+.app-snowfall__flake--l2 {
+  filter: blur(0.15px);
+}
+
 body[data-theme='dark'] .app-snowfall__flake {
   background:
     radial-gradient(circle at 35% 30%, #ffffff 0%, #e8eef8 60%, #c5d4ea 100%);
   box-shadow:
     0 0 0 1px color-mix(in srgb, #ffffff 22%, transparent),
     0 0 6px color-mix(in srgb, #c7d7ef 35%, transparent);
+}
+body[data-theme='dark'] .app-snowfall__flake--l0 {
+  box-shadow: none;
 }
 
 @keyframes app-snowfall-fall {
@@ -38,6 +50,11 @@ body[data-theme='dark'] .app-snowfall__flake {
   100% {
     transform: translate3d(var(--flake-drift, 0px), 108vh, 0);
   }
+}
+
+/* Hidden tab: stop the compositor work entirely. */
+.app-snowfall--paused .app-snowfall__flake {
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {

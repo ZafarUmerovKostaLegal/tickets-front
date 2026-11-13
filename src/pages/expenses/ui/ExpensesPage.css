@@ -5610,7 +5610,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-
 /* ==========================================================================
    Расходы — адаптив (телефоны, планшеты, узкие ноутбуки)
    Блок стоит последним в файле и перекрывает накопившиеся выше правила.
@@ -5727,8 +5726,26 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
     --exp-pad-x: 1rem;
   }
 
+  /* Скролл всей страницы — через документ, без вложенного auto-контейнера.
+     Оригинальные мобильные правила делали .expenses-page__main overflow-y:auto
+     с min-height:100dvh — на телефоне это вложенный скролл, который «съедал»
+     прокрутку. Здесь возвращаем естественную прокрутку документа. */
+  .expenses-page,
+  .expenses-page .expenses-route-view {
+    overflow: visible;
+    overflow-x: clip;
+  }
+
   .expenses-page .expenses-page__main {
-    overflow-x: hidden;
+    max-height: none;
+    min-height: 100dvh;
+    overflow: visible;
+    overflow-x: clip;
+  }
+
+  .expenses-page .expenses-page__content {
+    min-height: 0;
+    overflow: visible;
     overflow-x: clip;
   }
 
