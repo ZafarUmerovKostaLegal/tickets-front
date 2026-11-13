@@ -5,10 +5,17 @@
   --garland-b3: #ff5a55;
   --garland-b4: #3fd0b0;
   --garland-glow-boost: 1;
-  position: relative;
+  /* Overlay: never pushes greeting / tiles */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
   width: 100%;
-  margin: -6px 0 10px;
+  height: 0;
+  margin: 0;
+  overflow: visible;
   pointer-events: none;
+  z-index: 6;
   isolation: isolate;
 }
 
@@ -17,11 +24,21 @@ body[data-theme='dark'] .hub-garland {
   --garland-glow-boost: 1.35;
 }
 
+.hub-garland__stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 68px;
+  overflow: visible;
+}
+
 .hub-garland__wire {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  overflow: visible;
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
 
@@ -68,7 +85,6 @@ body[data-theme='dark'] .hub-garland {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
-/* Soft bloom behind the bulb */
 .hub-garland__bulb::after {
   content: "";
   position: absolute;
@@ -97,7 +113,6 @@ body[data-theme='dark'] .hub-garland {
 .hub-garland__bulb--c2 { --c: var(--garland-b3); }
 .hub-garland__bulb--c3 { --c: var(--garland-b4); }
 
-/* Occasional brighter flash on every 3rd bulb */
 .hub-garland__bulb--flash {
   animation:
     hub-garland-tw var(--tw-dur, 2.6s) ease-in-out infinite,
@@ -147,18 +162,10 @@ body[data-theme='dark'] .hub-garland {
 }
 
 @keyframes hub-garland-flash {
-  0%, 72%, 100% {
-    filter: brightness(1);
-  }
-  78% {
-    filter: brightness(1.55);
-  }
-  84% {
-    filter: brightness(0.9);
-  }
-  90% {
-    filter: brightness(1.35);
-  }
+  0%, 72%, 100% { filter: brightness(1); }
+  78% { filter: brightness(1.55); }
+  84% { filter: brightness(0.9); }
+  90% { filter: brightness(1.35); }
 }
 
 @keyframes hub-garland-sway {

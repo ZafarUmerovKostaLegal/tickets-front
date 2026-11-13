@@ -150,6 +150,15 @@ body[data-theme='dark'] .home-nav-tiles--hub .home-nav-tiles__drag-handle {
   padding: 0;
   min-width: 0;
   display: flex;
+  overflow: visible;
+}
+
+.home-nav-tiles--hub .home-nav-tiles__item--festive {
+  overflow: visible;
+}
+
+.home-nav-tiles--hub .home-nav-tiles__item--festive .home-nav-tiles__link {
+  overflow: visible;
 }
 
 .home-nav-tiles--hub .home-nav-tiles__link {

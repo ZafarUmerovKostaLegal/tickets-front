@@ -2617,12 +2617,24 @@ body[data-theme='dark'] .home-page--hub {
 
 .home-page__main--hub {
   /* Grow with tiles; do not use min-height:0 — that clips content without a scrollport */
+  position: relative;
   flex: 1 0 auto;
   min-height: auto;
   width: 100%;
   max-width: none;
   overflow: visible;
   background: transparent;
+}
+
+/* Extra top room so the absolute garland doesn't cover the greeting */
+.home-page__main--hub-festive .home-page__main-inner--hub {
+  padding-top: 3.25rem;
+}
+
+@media (min-width: 768px) {
+  .home-page__main--hub-festive .home-page__main-inner--hub {
+    padding-top: 3.75rem;
+  }
 }
 
 body[data-theme='dark'] .home-page__main--hub {

@@ -18,6 +18,7 @@ import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { useHubGridColumns } from '@widgets/snowfall/lib/useHubGridColumns';
 import { SnowCap } from '@widgets/snowfall/ui/SnowCap';
+import { TileFestiveAccent } from '@widgets/snowfall/ui/TileFestiveAccent';
 import {
     getHubSectionForTile,
     HUB_SECTIONS,
@@ -396,6 +397,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                         'home-nav-tiles__item',
                                         isDragging && 'home-nav-tiles__item--dragging',
                                         isDropTarget && 'home-nav-tiles__item--drop-target',
+                                        snowy && 'home-nav-tiles__item--festive',
                                     ].filter(Boolean).join(' ')}
                                     role="listitem"
                                     data-nav-id={tile.id}
@@ -406,6 +408,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                     onDrop={(e) => handleDrop(e, tile.id)}
                                 >
                                     {hasSnowCap ? <SnowCap seed={tileInSection + 3} /> : null}
+                                    {snowy ? <TileFestiveAccent seed={index + 11} compact={hasSnowCap} /> : null}
                                     {!query ? (
                                         <button
                                             type="button"
