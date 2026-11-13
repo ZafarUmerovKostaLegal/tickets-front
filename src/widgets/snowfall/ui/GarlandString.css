@@ -1,17 +1,20 @@
 .hub-garland {
-  --garland-cord: #2b3350;
-  --garland-b1: #fff2cf;
-  --garland-b2: #ffc24d;
-  --garland-b3: #ff5b52;
-  --garland-b4: #53c7a6;
+  --garland-cord: #2a3148;
+  --garland-b1: #ffe9a8;
+  --garland-b2: #ffb84d;
+  --garland-b3: #ff5a55;
+  --garland-b4: #3fd0b0;
+  --garland-glow-boost: 1;
   position: relative;
   width: 100%;
   margin: -6px 0 10px;
   pointer-events: none;
+  isolation: isolate;
 }
 
 body[data-theme='dark'] .hub-garland {
-  --garland-cord: #49547c;
+  --garland-cord: #6b779c;
+  --garland-glow-boost: 1.35;
 }
 
 .hub-garland__wire {
@@ -19,53 +22,74 @@ body[data-theme='dark'] .hub-garland {
   inset: 0;
   width: 100%;
   height: 100%;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
 
 .hub-garland__wire path {
   stroke: var(--garland-cord);
-  stroke-width: 2.2;
+  stroke-width: 2.4;
   stroke-linecap: round;
+  fill: none;
 }
 
 .hub-garland__bulb {
   position: absolute;
-  top: 36px;
-  width: 13px;
-  height: 17px;
+  top: 38px;
+  width: 12px;
+  height: 16px;
   margin-left: -6px;
-  border-radius: 50% 50% 50% 50% / 58% 58% 42% 42%;
-  background: radial-gradient(circle at 38% 28%, #ffffff 0%, var(--c) 58%, var(--c) 100%);
-  box-shadow: 0 0 7px 1px var(--c);
-  opacity: 0.85;
-  /* Twinkle is opacity-only (compositor-friendly); no filter animation. */
-  animation: hub-garland-tw 2.8s ease-in-out infinite;
-  will-change: opacity;
+  border-radius: 50% 50% 48% 48% / 56% 56% 44% 44%;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.95) 0%, transparent 42%),
+    radial-gradient(circle at 50% 58%, var(--c) 0%, color-mix(in srgb, var(--c) 72%, #7a3a00) 100%);
+  box-shadow:
+    0 0 4px 1px color-mix(in srgb, var(--c) 90%, white),
+    0 0 12px 3px color-mix(in srgb, var(--c) 70%, transparent),
+    0 0 28px 8px color-mix(in srgb, var(--c) 38%, transparent),
+    0 0 48px 14px color-mix(in srgb, var(--c) 18%, transparent);
+  opacity: 0.92;
+  transform-origin: 50% 0%;
+  animation:
+    hub-garland-tw var(--tw-dur, 2.6s) ease-in-out infinite,
+    hub-garland-sway 5.4s ease-in-out infinite;
+  animation-delay: var(--tw-delay, 0s), calc(var(--tw-delay, 0s) * 0.35);
+  will-change: opacity, filter, box-shadow, transform;
 }
 
 .hub-garland__bulb::before {
   content: "";
   position: absolute;
-  left: 3px;
-  top: -5px;
+  left: 2.5px;
+  top: -4.5px;
   width: 7px;
   height: 5px;
-  border-radius: 3px 3px 0 0;
-  background: var(--garland-cord);
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(180deg, #4a5578 0%, var(--garland-cord) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
+/* Soft bloom behind the bulb */
 .hub-garland__bulb::after {
   content: "";
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 42px;
-  height: 42px;
-  transform: translate(-50%, -50%);
+  top: 55%;
+  width: 56px;
+  height: 56px;
+  transform: translate(-50%, -50%) scale(0.85);
   border-radius: 50%;
-  background: radial-gradient(circle, var(--c), transparent 68%);
-  opacity: 0.5;
-  animation: hub-garland-glow 2.8s ease-in-out infinite;
-  will-change: opacity;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--c) 85%, white) 0%,
+    color-mix(in srgb, var(--c) 45%, transparent) 38%,
+    transparent 72%
+  );
+  opacity: calc(0.55 * var(--garland-glow-boost));
+  z-index: -1;
+  pointer-events: none;
+  animation: hub-garland-glow var(--tw-dur, 2.6s) ease-in-out infinite;
+  animation-delay: var(--tw-delay, 0s);
+  will-change: opacity, transform;
 }
 
 .hub-garland__bulb--c0 { --c: var(--garland-b1); }
@@ -73,14 +97,73 @@ body[data-theme='dark'] .hub-garland {
 .hub-garland__bulb--c2 { --c: var(--garland-b3); }
 .hub-garland__bulb--c3 { --c: var(--garland-b4); }
 
+/* Occasional brighter flash on every 3rd bulb */
+.hub-garland__bulb--flash {
+  animation:
+    hub-garland-tw var(--tw-dur, 2.6s) ease-in-out infinite,
+    hub-garland-flash 4.8s ease-in-out infinite,
+    hub-garland-sway 5.4s ease-in-out infinite;
+  animation-delay: var(--tw-delay, 0s), calc(var(--tw-delay, 0s) + 1.1s), calc(var(--tw-delay, 0s) * 0.35);
+}
+
 @keyframes hub-garland-tw {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
+  0%, 100% {
+    opacity: 0.62;
+    filter: brightness(0.88);
+    box-shadow:
+      0 0 3px 0 color-mix(in srgb, var(--c) 70%, white),
+      0 0 8px 2px color-mix(in srgb, var(--c) 45%, transparent),
+      0 0 18px 5px color-mix(in srgb, var(--c) 22%, transparent),
+      0 0 32px 10px color-mix(in srgb, var(--c) 10%, transparent);
+  }
+  40% {
+    opacity: 1;
+    filter: brightness(1.18);
+    box-shadow:
+      0 0 5px 2px color-mix(in srgb, var(--c) 95%, white),
+      0 0 16px 5px color-mix(in srgb, var(--c) 75%, transparent),
+      0 0 36px 12px color-mix(in srgb, var(--c) 42%, transparent),
+      0 0 60px 18px color-mix(in srgb, var(--c) 22%, transparent);
+  }
+  70% {
+    opacity: 0.78;
+    filter: brightness(0.95);
+  }
 }
 
 @keyframes hub-garland-glow {
-  0%, 100% { opacity: 0.32; }
-  50% { opacity: 0.62; }
+  0%, 100% {
+    opacity: calc(0.28 * var(--garland-glow-boost));
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+  40% {
+    opacity: calc(0.78 * var(--garland-glow-boost));
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  70% {
+    opacity: calc(0.42 * var(--garland-glow-boost));
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes hub-garland-flash {
+  0%, 72%, 100% {
+    filter: brightness(1);
+  }
+  78% {
+    filter: brightness(1.55);
+  }
+  84% {
+    filter: brightness(0.9);
+  }
+  90% {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes hub-garland-sway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
 }
 
 .hub-garland--paused .hub-garland__bulb,
@@ -90,8 +173,16 @@ body[data-theme='dark'] .hub-garland {
 
 @media (prefers-reduced-motion: reduce) {
   .hub-garland__bulb,
+  .hub-garland__bulb--flash,
   .hub-garland__bulb::after {
     animation: none;
-    opacity: 0.92;
+    opacity: 0.95;
+    filter: none;
+    transform: none;
+  }
+
+  .hub-garland__bulb::after {
+    opacity: calc(0.55 * var(--garland-glow-boost));
+    transform: translate(-50%, -50%) scale(1);
   }
 }

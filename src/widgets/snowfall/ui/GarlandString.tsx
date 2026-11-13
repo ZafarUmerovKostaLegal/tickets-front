@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import './GarlandString.css';
 
-type Bulb = { x: number; color: 0 | 1 | 2 | 3; delay: number };
+type Bulb = {
+    x: number;
+    color: 0 | 1 | 2 | 3;
+    delay: number;
+    dur: number;
+    flash: boolean;
+};
 type Model = { d: string; bulbs: Bulb[]; h: number };
 
-const BOX_H = 64;
+const BOX_H = 68;
 const PIN_Y = 8;
-const SAG = 34;
+const SAG = 36;
 
 /** A festoon wire across `width` px with a bulb hanging at each sag. */
 function buildGarland(width: number): Model {
-    const pins = Math.min(22, Math.max(4, Math.round(width / 150)));
+    const pins = Math.min(20, Math.max(4, Math.round(width / 160)));
     const step = width / (pins - 1);
     const segs: string[] = [`M 0 ${PIN_Y}`];
     const bulbs: Bulb[] = [];
@@ -19,7 +25,13 @@ function buildGarland(width: number): Model {
         const x2 = (i + 1) * step;
         const mid = (x1 + x2) / 2;
         segs.push(`Q ${mid.toFixed(1)} ${PIN_Y + SAG} ${x2.toFixed(1)} ${PIN_Y}`);
-        bulbs.push({ x: mid, color: (i % 4) as 0 | 1 | 2 | 3, delay: Number(((i * 0.41) % 2.6).toFixed(2)) });
+        bulbs.push({
+            x: mid,
+            color: (i % 4) as 0 | 1 | 2 | 3,
+            delay: Number(((i * 0.53) % 3.1).toFixed(2)),
+            dur: Number((2.2 + (i % 5) * 0.35).toFixed(2)),
+            flash: i % 3 === 1,
+        });
     }
     return { d: segs.join(' '), bulbs, h: BOX_H };
 }
@@ -70,8 +82,16 @@ export function GarlandString() {
                     {model.bulbs.map((b, i) => (
                         <span
                             key={i}
-                            className={`hub-garland__bulb hub-garland__bulb--c${b.color}`}
-                            style={{ left: b.x, animationDelay: `-${b.delay}s` }}
+                            className={[
+                                'hub-garland__bulb',
+                                `hub-garland__bulb--c${b.color}`,
+                                b.flash ? 'hub-garland__bulb--flash' : '',
+                            ].filter(Boolean).join(' ')}
+                            style={{
+                                left: b.x,
+                                ['--tw-delay' as string]: `-${b.delay}s`,
+                                ['--tw-dur' as string]: `${b.dur}s`,
+                            }}
                         />
                     ))}
                 </>
