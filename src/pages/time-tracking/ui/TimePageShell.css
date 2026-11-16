@@ -661,3 +661,12 @@
 .tt-reports__btn--accent:hover {
   background: #4338ca;
 }
+
+/* Тач-зона логотипа в шапке — минимум 44x44 */
+@media (max-width: 768px) {
+  .time-page__navbar-logo-btn {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 8px;
+  }
+}

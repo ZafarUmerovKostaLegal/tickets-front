@@ -1595,7 +1595,7 @@ export function TimeTrackingClientsPanel() {
                                             {ttProjectTypeLabel(mapped.type, t)}
                                           </span>
                                         </span>
-                                        <span className="pp__td pp__td--budget">
+                                        <span className="pp__td pp__td--budget" data-label={t('timeTrackingPage.projects.table.budget')}>
                                           {!hasBudgetConfigured
                                                 ? (<span className="pp__dash">{(mapped.budgetType ?? '').toLowerCase().replace(/-/g, '_') === 'hourly_rate' ? t('timeTrackingPage.projects.table.hourlyRate') : t('timeTrackingPage.projects.table.noBudget')}</span>)
                                                 : hasBudget
@@ -1603,7 +1603,7 @@ export function TimeTrackingClientsPanel() {
                                                     : fmtAmt(0, mapped.currency)}
                                         </span>
                                         <span
-                                          className="pp__td pp__td--spent pp__metric-cell"
+                                          className="pp__td pp__td--spent pp__metric-cell" data-label={t('timeTrackingPage.projects.table.spent')}
                                           title={mapped.loggedHours != null
                                             ? `${fmtAmt(spentVal, mapped.currency)} · ${t('timeTrackingPage.projects.table.hoursLogged').replace('{hours}', mapped.loggedHours.toLocaleString(localeTag(locale)))}`
                                             : fmtAmt(spentVal, mapped.currency)}
@@ -1618,7 +1618,7 @@ export function TimeTrackingClientsPanel() {
                                         <span className="pp__td pp__td--bar">
                                           <BudgetBar progressPercent={mapped.progressPercent} budget={mapped.budget} spent={spentVal} t={t}/>
                                         </span>
-                                        <span className={`pp__td pp__td--remaining pp__metric-cell${over ? ' pp__td--over' : ''}`}>
+                                        <span className={`pp__td pp__td--remaining pp__metric-cell${over ? ' pp__td--over' : ''}`} data-label={t('timeTrackingPage.projects.table.remaining')}>
                                           {rem != null ? (<>
                                               <span className="pp__metric-primary pp__rem-val">
                                                 {over ? '−' : ''}
@@ -1632,7 +1632,7 @@ export function TimeTrackingClientsPanel() {
                                               )}
                                             </>) : (<span className="pp__metric-primary pp__dash">{fmtAmt(0, mapped.currency)}</span>)}
                                         </span>
-                                        <span className="pp__td pp__td--costs">
+                                        <span className="pp__td pp__td--costs" data-label={t('timeTrackingPage.projects.table.costs')}>
                                           {mapped.costs > 0 ? (<span className="pp__costs-val">{fmtAmt(mapped.costs, mapped.currency)}</span>) : (<span className="pp__zero">0,00 {mapped.currency}</span>)}
                                         </span>
                                         <span className="pp__td pp__td--actions" onClick={(e) => e.stopPropagation()}>

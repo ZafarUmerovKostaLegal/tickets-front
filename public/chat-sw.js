@@ -1,4 +1,3 @@
-/* Kosta Daily browser push. Served from /chat-sw.js so the scope is the whole site. */
 
 self.addEventListener('install', (event) => {
     event.waitUntil(self.skipWaiting());
@@ -45,7 +44,6 @@ async function showChatNotification(data) {
     const url = typeof data.url === 'string' ? data.url : '/kosta-daily';
     const ios = /iPhone|iPad|iPod/i.test(self.navigator.userAgent || '');
     const roomTag = Number.isFinite(roomId) && roomId > 0 ? `chat-room-${roomId}` : 'chat-room';
-    // iOS replaces a notification with the same tag and does not banner again.
     const tag = ios ? `${roomTag}-${Date.now()}` : roomTag;
     const payload = { url, roomId };
     const full = {

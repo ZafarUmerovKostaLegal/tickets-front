@@ -6321,6 +6321,161 @@ a.pp__proj-name--link:hover {
   isolation: isolate;
 }
 
+/* ==========================================================================
+   Учёт времени — адаптив админ-панелей (телефоны)
+   Блок последний в файле, перекрывает ранние мобильные правила.
+   ========================================================================== */
 
+/* --- Чип-ряды переключателей: перенос вместо горизонтального скролла ----- */
+@media (max-width: 768px) {
+  .tt-reports__type-nav,
+  .tt-reports__group-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .tt-reports__group-nav {
+    gap: 0 0.25rem;
+  }
+  .ttp__btn {
+    min-height: 40px;
+  }
+}
 
+/* --- Клиенты и Проекты: строки таблицы -> карточки ---------------------- */
+@media (max-width: 768px) {
+  /* контейнер перестаёт быть горизонтальным скроллером и рамкой-таблицей */
+  .pp .pp__table-wrap {
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .pp .pp__table {
+    min-width: 0;
+  }
+  .pp .pp__thead {
+    display: none;
+  }
 
+  .pp .pp__row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'name name'
+      'bar bar'
+      'budget spent'
+      'remaining costs'
+      'actions actions';
+    gap: 0.5rem 0.75rem;
+    align-items: start;
+    margin: 0 0.625rem 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--app-border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--app-surface, #fff);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .pp .pp__row:last-child {
+    border-bottom: 1px solid var(--app-border, #e5e7eb);
+  }
+
+  .pp .pp__td {
+    min-width: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .pp .pp__td--name {
+    grid-area: name;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-right: 2rem; /* место под чекбокс */
+    font-size: 0.9375rem;
+  }
+  .pp .pp__td--bar { grid-area: bar; }
+  .pp .pp__td--budget { grid-area: budget; }
+  .pp .pp__td--spent { grid-area: spent; }
+  .pp .pp__td--remaining { grid-area: remaining; }
+  .pp .pp__td--costs { grid-area: costs; }
+  .pp .pp__td--actions { grid-area: actions; }
+
+  /* чекбокс выбора — в правый верхний угол карточки */
+  .pp .pp__td--check {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* метрики: подпись (data-label) над значением, 2 колонки */
+  .pp .pp__td--budget,
+  .pp .pp__td--spent,
+  .pp .pp__td--remaining,
+  .pp .pp__td--costs {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    font-size: 0.875rem;
+  }
+  .pp .pp__td--budget::before,
+  .pp .pp__td--spent::before,
+  .pp .pp__td--remaining::before,
+  .pp .pp__td--costs::before {
+    content: attr(data-label);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--app-muted, #6b7280);
+  }
+
+  .pp .pp__td--actions {
+    margin-top: 0.125rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid color-mix(in srgb, var(--app-border, #e5e7eb) 70%, transparent);
+  }
+  .pp .pp__actions-wrap { width: 100%; }
+  .pp .pp__actions-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  /* заголовок группы клиента — название сверху, кнопки ниже, без наложения */
+  .pp .pp__client-row {
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+    padding: 0.5rem 0.625rem;
+  }
+  .pp .pp__client-row-main {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+  .pp .pp__client-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .pp .pp__client-total {
+    margin-left: auto;
+    padding-right: 0;
+  }
+  .pp .pp__client-add-contact {
+    min-height: 36px;
+  }
+
+  /* пустое состояние и подсказки не вылезают */
+  .pp .pp__empty {
+    width: auto;
+    max-width: 100%;
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+  .pp .pp__client-panel-hint {
+    padding: 0.75rem 0.875rem;
+  }
+}

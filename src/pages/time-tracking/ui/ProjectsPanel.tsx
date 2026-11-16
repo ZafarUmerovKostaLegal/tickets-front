@@ -649,7 +649,7 @@ export function ProjectsPanel() {
                             {ttProjectTypeLabel(p.type, t)}
                           </span>
                         </span>
-                        <span className="pp__td pp__td--budget">
+                        <span className="pp__td pp__td--budget" data-label={t('timeTrackingPage.projects.table.budget')}>
                           {!hasBudgetConfigured
                                 ? (<span className="pp__dash">{(p.budgetType ?? '').toLowerCase().replace(/-/g, '_') === 'hourly_rate' ? t('timeTrackingPage.projects.table.hourlyRate') : t('timeTrackingPage.projects.table.noBudget')}</span>)
                                 : hasBudget
@@ -657,7 +657,7 @@ export function ProjectsPanel() {
                                     : fmtAmt(0, p.currency)}
                         </span>
                         <span
-                          className="pp__td pp__td--spent pp__metric-cell"
+                          className="pp__td pp__td--spent pp__metric-cell" data-label={t('timeTrackingPage.projects.table.spent')}
                           title={p.loggedHours != null
                             ? `${fmtAmt(spentVal, p.currency)} · ${t('timeTrackingPage.projects.table.hoursLogged').replace('{hours}', p.loggedHours.toLocaleString(localeTag(locale)))}`
                             : fmtAmt(spentVal, p.currency)}
@@ -672,7 +672,7 @@ export function ProjectsPanel() {
                         <span className="pp__td pp__td--bar">
                           <BudgetBar progressPercent={p.progressPercent} budget={p.budget} spent={spentVal} t={t}/>
                         </span>
-                        <span className={`pp__td pp__td--remaining pp__metric-cell${over ? ' pp__td--over' : ''}`}>
+                        <span className={`pp__td pp__td--remaining pp__metric-cell${over ? ' pp__td--over' : ''}`} data-label={t('timeTrackingPage.projects.table.remaining')}>
                           {rem != null ? (<>
                               <span className="pp__metric-primary pp__rem-val">
                                 {over ? '−' : ''}
@@ -686,7 +686,7 @@ export function ProjectsPanel() {
                               )}
                             </>) : (<span className="pp__metric-primary pp__dash">{fmtAmt(0, p.currency)}</span>)}
                         </span>
-                        <span className="pp__td pp__td--costs">
+                        <span className="pp__td pp__td--costs" data-label={t('timeTrackingPage.projects.table.costs')}>
                           {p.costs > 0 ? (<span className="pp__costs-val">{fmtAmt(p.costs, p.currency)}</span>) : (<span className="pp__zero">0,00 {p.currency}</span>)}
                         </span>
                         <span className="pp__td pp__td--actions" onClick={(e) => e.stopPropagation()}>
