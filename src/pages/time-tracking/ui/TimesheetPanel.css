@@ -5999,3 +5999,54 @@
     padding-left: 1.4rem !important;
   }
 }
+
+/* ==========================================================================
+   Таймшит — тач-адаптив (телефоны). Блок последний в файле.
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* Итог недели переносится ПОД 7 дней — дни получают полную ширину */
+  .tsp__strip:not(.tsp__strip--calendar) {
+    flex-wrap: wrap;
+  }
+  .tsp__strip:not(.tsp__strip--calendar) > .tsp__day {
+    flex: 1 0 0;
+    min-width: 0;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  .tsp__strip:not(.tsp__strip--calendar) > .tsp__wtotal {
+    flex: 1 0 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 0.2rem 0.6rem;
+    min-width: 0;
+    padding: 0.55rem 0.875rem 0.7rem;
+    border-left: none;
+    border-top: 1.5px solid var(--app-border, #e5e7eb);
+  }
+  .tsp__wtotal-lbl { text-align: left; }
+  .tsp__wtotal-cap { margin-left: auto; }
+  .tsp__wtotal-bar-wrap { order: 9; flex: 1 1 100%; }
+
+  /* «+» быстрой записи: всегда видно, компактная явная зона (не 44px-невидимка) */
+  .tsp__day .tsp__day-quick {
+    opacity: 1;
+    min-height: 0;
+    width: 24px;
+    height: 24px;
+    bottom: 5px;
+    right: 5px;
+    border-radius: 6px;
+  }
+  .tsp__day .tsp__day-quick svg { width: 13px; height: 13px; }
+
+  /* Тач-зоны навигации и переключателей — 44x44 */
+  .tsp__arr { width: 44px; height: 44px; }
+  .tsp__arr svg { width: 16px; height: 16px; }
+  .tsp-side__toggle { width: 44px; height: 44px; }
+  .tsp-side__toggle svg { width: 18px; height: 18px; }
+  .tsp-mini__nav { width: 44px; height: 44px; font-size: 1.25rem; }
+  .tsp__date-jump-btn.ttp__btn { min-height: 44px; }
+}
