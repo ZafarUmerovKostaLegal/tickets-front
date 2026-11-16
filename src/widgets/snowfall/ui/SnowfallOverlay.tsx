@@ -20,9 +20,9 @@ const TIER_TOTAL: Record<Tier, number> = { desktop: 48, tablet: 32, phone: 18 };
 const LAYER_SPLIT = [0.5, 0.32, 0.18] as const;
 
 const LAYERS = [
-    { size: [2, 3.5], dur: [22, 30], opacity: [0.12, 0.22], drift: 22 },
-    { size: [3, 4.5], dur: [16, 22], opacity: [0.18, 0.3], drift: 32 },
-    { size: [4, 6], dur: [11, 16], opacity: [0.22, 0.36], drift: 40 },
+    { size: [2.5, 4], dur: [22, 30], opacity: [0.35, 0.5], drift: 22 },
+    { size: [3.5, 5.5], dur: [16, 22], opacity: [0.42, 0.58], drift: 32 },
+    { size: [5, 7], dur: [11, 16], opacity: [0.48, 0.65], drift: 40 },
 ] as const;
 
 function currentTier(): Tier {
