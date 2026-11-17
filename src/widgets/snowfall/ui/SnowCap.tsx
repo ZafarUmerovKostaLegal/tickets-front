@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, RefObject } from 'react';
 import './SnowCap.css';
 
@@ -155,37 +155,10 @@ function buildSnowPath(seed: number, width: number, level: number, melt: number)
     return `M ${top[0][0].toFixed(2)} ${top[0][1].toFixed(2)}${smoothThrough(top)}${smoothThrough(under)} Z`;
 }
 
-/** One cycle: frost → accumulates → full → melts with drips → frost. */
-const CYCLE: Array<{ at: number; level: number; melt: number; drips: number }> = [
-    { at: 0, level: 0.06, melt: 0, drips: 0 },
-    { at: 0.13, level: 0.35, melt: 0, drips: 0 },
-    { at: 0.26, level: 0.7, melt: 0, drips: 0 },
-    { at: 0.38, level: 1, melt: 0, drips: 0 },
-    { at: 0.55, level: 1, melt: 0.1, drips: 0 },
-    { at: 0.68, level: 0.75, melt: 0.6, drips: 0.7 },
-    { at: 0.8, level: 0.4, melt: 1, drips: 1 },
-    { at: 0.9, level: 0.15, melt: 0.6, drips: 0.5 },
-    { at: 1, level: 0.06, melt: 0, drips: 0 },
-];
 
-const KEY_TIMES = CYCLE.map((k) => k.at).join(';');
-const KEY_SPLINES = CYCLE.slice(1).map(() => '0.45 0 0.55 1').join(';');
-
-function usePrefersReducedMotion(): boolean {
-    const query = '(prefers-reduced-motion: reduce)';
-    const [reduced, setReduced] = useState(
-        () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(query).matches,
-    );
-    useEffect(() => {
-        if (typeof window === 'undefined' || !window.matchMedia)
-            return;
-        const mql = window.matchMedia(query);
-        const update = () => setReduced(mql.matches);
-        mql.addEventListener('change', update);
-        return () => mql.removeEventListener('change', update);
-    }, []);
-    return reduced;
-}
+/** Resting shape: a full drift with short icicles. */
+const LEVEL = 1;
+const MELT = 0.4;
 
 function useElementWidth<T extends HTMLElement>(): [RefObject<T | null>, number] {
     const ref = useRef<T | null>(null);
@@ -206,49 +179,35 @@ function useElementWidth<T extends HTMLElement>(): [RefObject<T | null>, number]
     return [ref, width];
 }
 
+/**
+ * Snow drift on top of a tile. The silhouette is static (no per-frame path
+ * morphing): it settles in once, then only cheap CSS effects run —
+ * a shine sweep, sparkles and drops falling from the icicles.
+ */
 export function SnowCap({ seed }: SnowCapProps) {
     const uid = useId().replace(/:/g, '');
-    const reducedMotion = usePrefersReducedMotion();
     const [ref, width] = useElementWidth<HTMLSpanElement>();
 
     const model = useMemo(() => {
         if (width < RADIUS * 4)
             return null;
-        const duration = 70 + rand(seed, 80) * 25;
-        // Start mid-cycle (accumulating or full) so the page never opens on bare tiles.
-        const begin = -(duration * (0.2 + rand(seed, 81) * 0.3));
-        const dropLip = lipOf(0.4, 1);
+        const lip = lipOf(LEVEL, MELT);
         return {
-            duration,
-            begin,
-            staticPath: buildSnowPath(seed, width, 1, 0),
-            values: CYCLE.map((k) => buildSnowPath(seed, width, k.level, k.melt)).join(';'),
-            dripValues: CYCLE.map((k) => k.drips).join(';'),
+            path: buildSnowPath(seed, width, LEVEL, MELT),
             drops: icicleLayout(seed, width).map((ic, k) => ({
                 x: ic.x,
-                y: EDGE + dropLip + ic.len + 0.8,
-                dur: 1.6 + rand(seed, 90 + k) * 1.4,
-                delay: rand(seed, 95 + k) * 2,
+                y: EDGE + lip + MELT * ic.len + LEVEL * 0.8 + 0.6,
+                dur: 5 + rand(seed, 90 + k) * 4,
+                delay: -rand(seed, 95 + k) * 8,
             })),
-            sparkles: Array.from({ length: 4 }, (_, i) => ({
+            sparkles: Array.from({ length: 5 }, (_, i) => ({
                 x: RADIUS + 8 + rand(seed, 50 + i) * (width - 2 * RADIUS - 16),
-                y: EDGE - 3 - rand(seed, 60 + i) * 6,
-                delay: rand(seed, 70 + i) * 4.5,
+                y: EDGE - 3 - rand(seed, 60 + i) * 9,
+                delay: rand(seed, 70 + i) * 5,
             })),
+            shineDelay: rand(seed, 82) * 6,
         };
     }, [seed, width]);
-
-    const animateProps = model && !reducedMotion
-        ? {
-            dur: `${model.duration}s`,
-            begin: `${model.begin}s`,
-            repeatCount: 'indefinite',
-            calcMode: 'spline',
-            keyTimes: KEY_TIMES,
-            keySplines: KEY_SPLINES,
-        }
-        : null;
-    const morph = model && animateProps ? <animate attributeName="d" values={model.values} {...animateProps} /> : null;
 
     return (
         <span
@@ -259,8 +218,6 @@ export function SnowCap({ seed }: SnowCapProps) {
         >
             {model ? (
                 <svg
-                    // Re-mount on resize so SMIL restarts with the new geometry.
-                    key={width}
                     viewBox={`0 0 ${width} ${BOX_H}`}
                     width={width}
                     height={BOX_H}
@@ -274,44 +231,49 @@ export function SnowCap({ seed }: SnowCapProps) {
                         </linearGradient>
                         <linearGradient id={`sc-shine-${uid}`} x1="0" y1="0" x2="1" y2="0">
                             <stop offset="0%" stopColor="#fff" stopOpacity="0" />
-                            <stop offset="50%" stopColor="#fff" stopOpacity="0.85" />
+                            <stop offset="50%" stopColor="#fff" stopOpacity="0.9" />
                             <stop offset="100%" stopColor="#fff" stopOpacity="0" />
                         </linearGradient>
                         <clipPath id={`sc-clip-${uid}`}>
-                            <path d={model.staticPath}>{morph}</path>
+                            <path d={model.path} />
                         </clipPath>
                     </defs>
-                    <path d={model.staticPath} fill={`url(#sc-fill-${uid})`} className="snow-cap__body">{morph}</path>
-                    <g clipPath={`url(#sc-clip-${uid})`}>
-                        <rect className="snow-cap__shine" x="-70" y="0" width="70" height={BOX_H} fill={`url(#sc-shine-${uid})`} />
-                        {model.sparkles.map((s, i) => (
-                            <circle
-                                key={i}
-                                className="snow-cap__sparkle"
-                                cx={s.x}
-                                cy={s.y}
-                                r="1"
-                                style={{ animationDelay: `${s.delay}s` }}
+                    <g className="snow-cap__drift">
+                        <path d={model.path} fill={`url(#sc-fill-${uid})`} className="snow-cap__body" />
+                        <g clipPath={`url(#sc-clip-${uid})`}>
+                            <rect
+                                className="snow-cap__shine"
+                                x="-70"
+                                y="0"
+                                width="70"
+                                height={BOX_H}
+                                fill={`url(#sc-shine-${uid})`}
+                                style={{ animationDelay: `${model.shineDelay}s` }}
                             />
-                        ))}
-                    </g>
-                    <path d={model.staticPath} className="snow-cap__rim">{morph}</path>
-                    {animateProps ? (
-                        <g opacity="0">
-                            <animate attributeName="opacity" values={model.dripValues} {...animateProps} />
-                            {model.drops.map((d, i) => (
-                                <ellipse
+                            {model.sparkles.map((s, i) => (
+                                <circle
                                     key={i}
-                                    className="snow-cap__drop"
-                                    cx={d.x}
-                                    cy={d.y}
-                                    rx="1.1"
-                                    ry="1.6"
-                                    style={{ animationDuration: `${d.dur}s`, animationDelay: `${d.delay}s` }}
+                                    className="snow-cap__sparkle"
+                                    cx={s.x}
+                                    cy={s.y}
+                                    r="1.1"
+                                    style={{ animationDelay: `${s.delay}s` }}
                                 />
                             ))}
                         </g>
-                    ) : null}
+                        <path d={model.path} className="snow-cap__rim" />
+                    </g>
+                    {model.drops.map((d, i) => (
+                        <ellipse
+                            key={i}
+                            className="snow-cap__drop"
+                            cx={d.x}
+                            cy={d.y}
+                            rx="1.1"
+                            ry="1.6"
+                            style={{ animationDuration: `${d.dur}s`, animationDelay: `${d.delay}s` }}
+                        />
+                    ))}
                 </svg>
             ) : null}
         </span>

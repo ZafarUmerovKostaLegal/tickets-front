@@ -1,69 +1,20 @@
 .app-snowfall {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
   z-index: 9000;
   pointer-events: none;
-  overflow: hidden;
-  contain: strict;
-}
-
-.app-snowfall__flake {
-  position: absolute;
-  top: -10px;
-  border-radius: 50%;
-  /* Cool slate rim — readable on white theme without harsh contrast */
-  background:
-    radial-gradient(circle at 35% 30%, #ffffff 0%, #c5d4e6 52%, #8fa8c4 100%);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, #6b87a8 22%, transparent),
-    0 1px 2px color-mix(in srgb, #4b6280 12%, transparent);
-  will-change: transform;
-  animation-name: app-snowfall-fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-.app-snowfall__flake--l0 {
-  filter: blur(0.7px);
-  box-shadow: none;
-  opacity: 0.75;
-}
-
-.app-snowfall__flake--l1 {
-  filter: blur(0.3px);
-}
-
-.app-snowfall__flake--l2 {
-  filter: none;
+  animation: app-snowfall-in 2.4s ease-out both;
 }
 
 body[data-theme='dark'] .app-snowfall {
-  opacity: 0.55;
+  opacity: 0.8;
 }
 
-body[data-theme='dark'] .app-snowfall__flake {
-  background:
-    radial-gradient(circle at 35% 30%, #ffffff 0%, #e4ecf6 55%, #b8c9df 100%);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, #ffffff 18%, transparent),
-    0 0 5px color-mix(in srgb, #c7d7ef 22%, transparent);
-}
-
-body[data-theme='dark'] .app-snowfall__flake--l0 {
-  box-shadow: none;
-}
-
-@keyframes app-snowfall-fall {
-  0% {
-    transform: translate3d(0, -4vh, 0);
-  }
-  100% {
-    transform: translate3d(var(--flake-drift, 0px), 108vh, 0);
-  }
-}
-
-.app-snowfall--paused .app-snowfall__flake {
-  animation-play-state: paused;
+@keyframes app-snowfall-in {
+  from { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

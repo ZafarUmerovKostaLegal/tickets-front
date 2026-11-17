@@ -11,7 +11,7 @@ type Bulb = {
     color: 0 | 1 | 2 | 3;
     sway: string;
     glow: string;
-    glass: string;
+    lit: string;
 };
 
 type Model = { d: string; bulbs: Bulb[]; h: number };
@@ -69,7 +69,7 @@ function buildGarland(width: number, mode: GlowMode): Model {
                 color: (i % 4) as 0 | 1 | 2 | 3,
                 sway: `hub-garland-sway ${swayDur}s cubic-bezier(0.45, 0.05, 0.55, 0.95) ${swayDelay}s infinite alternate`,
                 glow: anim ? `hub-garland-glow-${anim.key} ${anim.timing}` : 'none',
-                glass: anim ? `hub-garland-glass-${anim.key} ${anim.timing}` : 'none',
+                lit: anim ? `hub-garland-lit-${anim.key} ${anim.timing}` : 'none',
             });
         }
     }
@@ -149,9 +149,10 @@ export function GarlandString() {
                                     className={`hub-garland__halo hub-garland__halo--c${b.color} kl-move`}
                                     style={{ animation: b.glow }}
                                 />
+                                <span className={`hub-garland__glass hub-garland__glass--c${b.color}`} />
                                 <span
-                                    className={`hub-garland__glass hub-garland__glass--c${b.color} kl-move`}
-                                    style={{ animation: b.glass }}
+                                    className={`hub-garland__lit hub-garland__glass--c${b.color} kl-move`}
+                                    style={{ animation: b.lit }}
                                 />
                             </div>
                         </div>

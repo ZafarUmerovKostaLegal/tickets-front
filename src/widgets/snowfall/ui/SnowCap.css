@@ -13,7 +13,6 @@
   height: 42px;
   z-index: 5;
   pointer-events: none;
-  animation: snow-cap-fade-in 1.2s ease-out both;
   transition: translate 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -23,7 +22,6 @@
 }
 
 body[data-theme='dark'] .snow-cap {
-  --snow-cap-top: #ffffff;
   --snow-cap-mid: #eef3fa;
   --snow-cap-base: #c3d2e6;
   --snow-cap-edge: rgba(0, 0, 0, 0.5);
@@ -38,11 +36,17 @@ body[data-theme='dark'] .snow-cap {
   overflow: visible;
 }
 
+/* Snow settles onto the tile once: grows up from the tile's top edge (EDGE = 22px). */
+.snow-cap__drift {
+  transform-box: view-box;
+  transform-origin: 50% 22px;
+  animation: snow-cap-settle 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
 .snow-cap__body {
   filter:
     drop-shadow(0 1.5px 1px var(--snow-cap-edge))
     drop-shadow(0 4px 8px color-mix(in srgb, var(--snow-cap-edge) 55%, transparent));
-  opacity: 1;
 }
 
 .snow-cap__rim {
@@ -52,18 +56,19 @@ body[data-theme='dark'] .snow-cap {
 }
 
 .snow-cap__shine {
-  animation: snow-cap-shine 7s ease-in-out infinite;
-  mix-blend-mode: screen;
+  animation: snow-cap-shine 9s ease-in-out infinite;
 }
 
 .snow-cap__sparkle {
   fill: #fff;
   opacity: 0;
-  animation: snow-cap-sparkle 4.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: snow-cap-sparkle 5s ease-in-out infinite;
 }
 
 body:not([data-theme='dark']) .snow-cap__sparkle {
-  fill: #b9cde6;
+  fill: #a9c1e0;
 }
 
 .snow-cap__drop {
@@ -71,36 +76,39 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
   opacity: 0;
   transform-box: fill-box;
   transform-origin: 50% 0;
-  animation: snow-cap-drip 2s cubic-bezier(0.55, 0, 0.9, 0.4) infinite;
+  animation: snow-cap-drip 7s cubic-bezier(0.55, 0, 0.9, 0.4) infinite;
 }
 
-@keyframes snow-cap-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes snow-cap-settle {
+  from { opacity: 0; transform: scaleY(0.15); }
+  40% { opacity: 1; }
+  to { opacity: 1; transform: scaleY(1); }
 }
 
 @keyframes snow-cap-shine {
-  0%, 55% { transform: translateX(0); }
+  0%, 60% { transform: translateX(0); }
   100% { transform: translateX(calc(var(--snow-cap-w, 320px) + 140px)); }
 }
 
 @keyframes snow-cap-sparkle {
-  0%, 70%, 100% { opacity: 0; }
-  80% { opacity: 1; }
+  0%, 70%, 100% { opacity: 0; transform: scale(0.4); }
+  80% { opacity: 1; transform: scale(1.2); }
 }
 
-/* A drop swells at the icicle tip, then falls and fades */
+/* Once per cycle a drop swells at the icicle tip, then falls and fades */
 @keyframes snow-cap-drip {
   0% { opacity: 0; transform: translateY(0) scale(0.4); }
-  35% { opacity: 1; transform: translateY(0) scale(1); }
-  50% { opacity: 1; transform: translateY(1px) scale(1, 1.15); }
-  100% { opacity: 0; transform: translateY(14px) scale(0.8, 1.3); }
+  14% { opacity: 1; transform: translateY(0) scale(1); }
+  20% { opacity: 1; transform: translateY(1px) scale(1, 1.15); }
+  30% { opacity: 0; transform: translateY(16px) scale(0.8, 1.3); }
+  100% { opacity: 0; transform: translateY(16px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .snow-cap,
+  .snow-cap__drift,
   .snow-cap__shine,
-  .snow-cap__sparkle {
+  .snow-cap__sparkle,
+  .snow-cap__drop {
     animation: none;
   }
 }

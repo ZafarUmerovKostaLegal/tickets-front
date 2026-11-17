@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { SnowfallOverlay } from './SnowfallOverlay';
-import { SnowGroundPlow } from './SnowGroundPlow';
 
 export function SnowfallHost() {
     const { user, loading } = useCurrentUser();
@@ -27,10 +26,5 @@ export function SnowfallHost() {
 
     if (!enabled)
         return null;
-    return (
-        <>
-            <SnowfallOverlay />
-            <SnowGroundPlow />
-        </>
-    );
+    return <SnowfallOverlay />;
 }

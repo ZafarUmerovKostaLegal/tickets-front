@@ -29,10 +29,13 @@ body[data-theme='dark'] .tile-festive {
   transform-origin: 50% 0;
   animation: tile-festive-swing var(--tf-swing-dur, 5s) ease-in-out var(--tf-swing-delay, 0s) infinite;
   filter: drop-shadow(0 3px 3px rgba(30, 20, 10, 0.22));
+  /* Own layer: the swing is a compositor-only rotate, the SVG is painted once */
+  will-change: transform;
 }
 
 .tile-festive__bauble > svg {
-  animation: tile-festive-drop-in 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* Baubles drop in one after another, following the tile order */
+  animation: tile-festive-drop-in 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.3s + var(--hn-tile-i, 0) * 60ms) both;
 }
 
 .tile-festive__thread {
@@ -71,7 +74,7 @@ body[data-theme='dark'] .tile-festive {
   bottom: 4px;
   filter: drop-shadow(0 2px 2px rgba(15, 40, 25, 0.22));
   transform-origin: 100% 100%;
-  animation: tile-festive-sprig-in 0.8s ease-out both;
+  animation: tile-festive-sprig-in 0.8s ease-out calc(0.45s + var(--hn-tile-i, 0) * 60ms) both;
   transition: rotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
