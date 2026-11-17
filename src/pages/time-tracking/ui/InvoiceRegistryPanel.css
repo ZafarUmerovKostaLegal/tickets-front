@@ -925,3 +925,39 @@ body[data-theme='dark'] .tt-inv-reg__tr:hover .tt-inv-reg__td:not(.tt-inv-reg__t
   background: #243044;
   color: #e2e8f0;
 }
+
+/* Uploaded (manually replaced) invoice PDF */
+.tt-inv-reg__pdf--uploaded {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-color: color-mix(in srgb, #16a34a 45%, var(--app-border, #e2e8f0));
+  background: color-mix(in srgb, #16a34a 8%, var(--app-surface, #fff));
+}
+
+.tt-inv-reg__pdf-badge {
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+
+.tt-inv-reg-pdf__source {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-inv-reg-pdf__source--uploaded {
+  color: #15803d;
+}
+
+body[data-theme='dark'] .tt-inv-reg-pdf__source--uploaded {
+  color: #4ade80;
+}

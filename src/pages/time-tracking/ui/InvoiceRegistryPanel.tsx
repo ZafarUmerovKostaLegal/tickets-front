@@ -24,9 +24,13 @@ import {
     type InvoiceRegistryYearId,
 } from '@entities/time-tracking/model/invoiceRegistry';
 import {
+    fetchInvoiceUploadedPdfBlob,
+    getInvoiceUploadedPdf,
     listInvoices,
     patchInvoice,
+    replaceInvoicePdf,
     setInvoiceRegistryStatus,
+    type InvoiceUploadedPdfMeta,
 } from '@entities/time-tracking/api/domains/invoices';
 import { INVOICE_STATUS_LABELS } from '@entities/time-tracking/invoiceUi';
 import {
@@ -42,7 +46,7 @@ import {
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { fetchCbuParsedForDate, peekCachedCbuParsedForDate, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import { exportInvoiceRegistryExcel } from '@entities/time-tracking/lib/exportInvoiceRegistryExcel';
-import { buildExistingInvoicePdfFile, downloadExistingInvoicePdf } from '../lib/invoicePageShared';
+import { buildExistingInvoicePdfFile } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
 import { useAppDialog } from '@shared/ui';
 import { DatePicker } from '@shared/ui/DatePicker';
@@ -256,27 +260,64 @@ async function partnerNotesByInvoiceId(): Promise<Map<string, string>> {
     return notes;
 }
 
+const REGISTRY_PDF_MAX_MB = 25;
+
+type RegistryPdfDoc = { blob: Blob; url: string; fileName: string; uploaded: InvoiceUploadedPdfMeta | null };
+
+function formatPdfUploadedAt(iso: string | null | undefined): string {
+    if (!iso)
+        return '';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+        ? ''
+        : d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/** Uploaded PDF if present, otherwise the PDF generated from invoice data. */
+async function loadRegistryPdf(invoiceId: string): Promise<Omit<RegistryPdfDoc, 'url'>> {
+    let uploaded: InvoiceUploadedPdfMeta | null = null;
+    try {
+        uploaded = await getInvoiceUploadedPdf(invoiceId);
+    }
+    catch {
+        uploaded = null;
+    }
+    if (uploaded)
+        return { blob: await fetchInvoiceUploadedPdfBlob(invoiceId), fileName: uploaded.fileName, uploaded };
+    const file = await buildExistingInvoicePdfFile(invoiceId);
+    return { blob: file.blob, fileName: `${file.fileBase}.pdf`, uploaded: null };
+}
+
 function RegistryPdfPreview({
     invoiceId,
+    canReplace,
     onClose,
+    onReplaced,
 }: {
     invoiceId: string;
+    canReplace: boolean;
     onClose: () => void;
+    onReplaced?: (meta: InvoiceUploadedPdfMeta) => void;
 }) {
     const { t } = useI18n();
-    const [url, setUrl] = useState<string | null>(null);
-    const [fileName, setFileName] = useState('invoice.pdf');
+    const { showConfirm } = useAppDialog();
+    const [doc, setDoc] = useState<RegistryPdfDoc | null>(null);
     const [failed, setFailed] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
     useEffect(() => {
         let objectUrl = '';
         let cancelled = false;
-        void buildExistingInvoicePdfFile(invoiceId)
-            .then((file) => {
+        setDoc(null);
+        setFailed(false);
+        void loadRegistryPdf(invoiceId)
+            .then((loaded) => {
                 if (cancelled)
                     return;
-                objectUrl = URL.createObjectURL(file.blob);
-                setUrl(objectUrl);
-                setFileName(`${file.fileBase}.pdf`);
+                objectUrl = URL.createObjectURL(loaded.blob);
+                setDoc({ ...loaded, url: objectUrl });
             })
             .catch(() => {
                 if (!cancelled)
@@ -287,47 +328,130 @@ function RegistryPdfPreview({
             if (objectUrl)
                 URL.revokeObjectURL(objectUrl);
         };
-    }, [invoiceId]);
+    }, [invoiceId, reloadKey]);
+
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape')
+            if (event.key === 'Escape' && !uploading)
                 onClose();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
+    }, [onClose, uploading]);
+
+    const download = () => {
+        if (!doc)
+            return;
+        const a = document.createElement('a');
+        a.href = doc.url;
+        a.download = doc.fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    };
+
+    const onFilePicked = async (file: File | undefined) => {
+        if (fileInputRef.current)
+            fileInputRef.current.value = '';
+        if (!file)
+            return;
+        const looksLikePdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (!looksLikePdf) {
+            showToast({ message: t('timeTrackingPage.invoices.registry.pdf.notPdf'), variant: 'error' });
+            return;
+        }
+        if (file.size > REGISTRY_PDF_MAX_MB * 1024 * 1024) {
+            showToast({
+                message: t('timeTrackingPage.invoices.registry.pdf.tooLarge').replace('{mb}', String(REGISTRY_PDF_MAX_MB)),
+                variant: 'error',
+            });
+            return;
+        }
+        const ok = await showConfirm({
+            title: t('timeTrackingPage.invoices.registry.pdf.replaceConfirmTitle'),
+            message: t('timeTrackingPage.invoices.registry.pdf.replaceConfirmMessage').replace('{name}', file.name),
+            confirmLabel: t('timeTrackingPage.invoices.registry.pdf.replaceConfirm'),
+            cancelLabel: t('timeTrackingPage.common.cancel'),
+        });
+        if (!ok)
+            return;
+        setUploading(true);
+        try {
+            const meta = await replaceInvoicePdf(invoiceId, file);
+            onReplaced?.(meta);
+            setReloadKey((k) => k + 1);
+            showToast({
+                message: t('timeTrackingPage.invoices.registry.pdf.replaced').replace('{name}', meta.fileName),
+                variant: 'success',
+            });
+        }
+        catch (error: unknown) {
+            showToast({
+                message: error instanceof Error && error.message
+                    ? error.message
+                    : t('timeTrackingPage.invoices.registry.pdf.replaceFailed'),
+                variant: 'error',
+            });
+        }
+        finally {
+            setUploading(false);
+        }
+    };
+
+    const sourceLabel = doc?.uploaded
+        ? `${t('timeTrackingPage.invoices.registry.pdf.uploaded')} · ${t('timeTrackingPage.invoices.registry.pdf.uploadedAt').replace('{date}', formatPdfUploadedAt(doc.uploaded.uploadedAt))}`
+        : doc
+            ? t('timeTrackingPage.invoices.registry.pdf.generated')
+            : '';
+
     return createPortal(
-        <div className="tt-inv-reg-pdf" role="presentation" onClick={onClose}>
+        <div className="tt-inv-reg-pdf" role="presentation" onClick={uploading ? undefined : onClose}>
             <div
                 className="tt-inv-reg-pdf__dialog"
                 role="dialog"
                 aria-modal="true"
-                aria-label={fileName}
+                aria-label={doc?.fileName ?? 'PDF'}
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="tt-inv-reg-pdf__bar">
-                    <span className="tt-inv-reg-pdf__name">{fileName}</span>
-                    <button
-                        type="button"
-                        className="tt-inv-reg__pdf"
-                        disabled={!url}
-                        onClick={() => {
-                            void downloadExistingInvoicePdf(invoiceId).catch(() => {
-                                showToast({
-                                    message: t('timeTrackingPage.invoices.errors.pdfFailed'),
-                                    variant: 'error',
-                                });
-                            });
-                        }}
-                    >
+                    <span className="tt-inv-reg-pdf__name">
+                        {doc?.fileName ?? 'invoice.pdf'}
+                        {sourceLabel ? (
+                            <span className={`tt-inv-reg-pdf__source${doc?.uploaded ? ' tt-inv-reg-pdf__source--uploaded' : ''}`}>
+                                {sourceLabel}
+                            </span>
+                        ) : null}
+                    </span>
+                    {canReplace ? (
+                        <>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                hidden
+                                onChange={(event) => void onFilePicked(event.target.files?.[0])}
+                            />
+                            <button
+                                type="button"
+                                className="tt-inv-reg__pdf"
+                                disabled={uploading}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {uploading
+                                    ? t('timeTrackingPage.invoices.registry.pdf.replacing')
+                                    : t('timeTrackingPage.invoices.registry.pdf.replace')}
+                            </button>
+                        </>
+                    ) : null}
+                    <button type="button" className="tt-inv-reg__pdf" disabled={!doc} onClick={download}>
                         {t('timeTrackingPage.invoices.detail.downloadPdf')}
                     </button>
-                    <button type="button" className="tt-inv-reg__pdf" onClick={onClose}>
+                    <button type="button" className="tt-inv-reg__pdf" disabled={uploading} onClick={onClose}>
                         {t('timeTrackingPage.common.close')}
                     </button>
                 </div>
-                {url ? (
-                    <iframe className="tt-inv-reg-pdf__frame" src={url} title={fileName} />
+                {doc ? (
+                    <iframe className="tt-inv-reg-pdf__frame" src={doc.url} title={doc.fileName} />
                 ) : (
                     <p className="tt-inv-reg-pdf__status" role="status">
                         {failed
@@ -341,24 +465,44 @@ function RegistryPdfPreview({
     );
 }
 
-function RegistryPdfButton({ invoiceId, ariaLabel }: { invoiceId: string; ariaLabel: string }) {
+function RegistryPdfButton({
+    invoiceId,
+    ariaLabel,
+    uploadedFileName,
+    canReplace,
+    onReplaced,
+}: {
+    invoiceId: string;
+    ariaLabel: string;
+    uploadedFileName?: string;
+    canReplace: boolean;
+    onReplaced?: (meta: InvoiceUploadedPdfMeta) => void;
+}) {
+    const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const close = useCallback(() => setOpen(false), []);
+    const hasUpload = Boolean(uploadedFileName);
     return (
         <>
             <button
                 type="button"
-                className="tt-inv-reg__pdf"
+                className={`tt-inv-reg__pdf${hasUpload ? ' tt-inv-reg__pdf--uploaded' : ''}`}
                 disabled={!invoiceId}
                 aria-label={ariaLabel}
+                title={hasUpload ? `${t('timeTrackingPage.invoices.registry.pdf.uploaded')}: ${uploadedFileName}` : undefined}
                 onClick={() => {
                     if (invoiceId)
                         setOpen(true);
                 }}
             >
                 PDF
+                {hasUpload ? (
+                    <span className="tt-inv-reg__pdf-badge">{t('timeTrackingPage.invoices.registry.pdf.uploadedBadge')}</span>
+                ) : null}
             </button>
-            {open && invoiceId ? <RegistryPdfPreview invoiceId={invoiceId} onClose={close} /> : null}
+            {open && invoiceId ? (
+                <RegistryPdfPreview invoiceId={invoiceId} canReplace={canReplace} onClose={close} onReplaced={onReplaced} />
+            ) : null}
         </>
     );
 }
@@ -559,6 +703,9 @@ function RegistryEditableCell({
     title,
     noteEditable = false,
     onSaveNote,
+    pdfFileName,
+    pdfCanReplace = false,
+    onPdfReplaced,
     onActivate,
     onChange,
     onBlurCommit,
@@ -577,6 +724,9 @@ function RegistryEditableCell({
     title?: string;
     noteEditable?: boolean;
     onSaveNote?: (next: string) => Promise<void>;
+    pdfFileName?: string;
+    pdfCanReplace?: boolean;
+    onPdfReplaced?: (meta: InvoiceUploadedPdfMeta) => void;
     onActivate: () => void;
     onChange: (next: string) => void;
     onBlurCommit: () => void;
@@ -606,7 +756,13 @@ function RegistryEditableCell({
     if (editor === 'pdf') {
         return (
             <td className="tt-inv-reg__td tt-inv-reg__td--pdf">
-                <RegistryPdfButton invoiceId={invoiceId} ariaLabel={ariaLabel} />
+                <RegistryPdfButton
+                    invoiceId={invoiceId}
+                    ariaLabel={ariaLabel}
+                    uploadedFileName={pdfFileName}
+                    canReplace={pdfCanReplace}
+                    onReplaced={onPdfReplaced}
+                />
             </td>
         );
     }
@@ -1958,6 +2114,15 @@ export function InvoiceRegistryPanel({
                                                 allowCustomStatus={!systemStatus}
                                                 title={usdHint || col.label}
                                                 noteEditable={col.editor === 'note' && !readOnly && Boolean(invoiceId)}
+                                                pdfFileName={String(row.pdfFileName ?? '')}
+                                                pdfCanReplace={col.editor === 'pdf' && year === '2026-system' && !readOnly && Boolean(invoiceId)}
+                                                onPdfReplaced={col.editor === 'pdf' ? (meta) => {
+                                                    setRows((prev) => prev.map((item) => (
+                                                        item.id === row.id
+                                                            ? { ...item, pdfFileName: meta.fileName, pdfUploadedAt: meta.uploadedAt ?? '' }
+                                                            : item
+                                                    )));
+                                                } : undefined}
                                                 onSaveNote={col.editor === 'note' ? async (next) => {
                                                     const previous = val;
                                                     if (!invoiceId || next === previous)
