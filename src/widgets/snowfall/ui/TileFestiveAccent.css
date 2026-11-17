@@ -121,3 +121,18 @@ body[data-theme='dark'] .tile-festive {
     opacity: 0.85;
   }
 }
+
+@media (max-width: 699px) {
+  .tile-festive__frost {
+    width: 100px;
+    height: 69px;
+    opacity: 0.7;
+  }
+}
+
+@media (max-width: 360px) {
+  .tile-festive__frost {
+    width: 84px;
+    height: 58px;
+  }
+}

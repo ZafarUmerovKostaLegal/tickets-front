@@ -3955,3 +3955,9 @@ body[data-theme='dark'] .home-page--tickets {
     animation: none;
   }
 }
+
+@media (max-width: 600px) {
+  .home-page__main--hub-festive .home-page__main-inner--hub {
+    padding-top: 4.25rem;
+  }
+}

@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 
 const BREAKPOINTS: Array<[query: string, columns: number]> = [
     ['(min-width: 1100px)', 4],
-    ['(min-width: 900px)', 3],
-    ['(min-width: 560px)', 2],
+    ['(min-width: 700px)', 3],
 ];
 
 function currentColumns(): number {
@@ -13,7 +12,7 @@ function currentColumns(): number {
         if (window.matchMedia(query).matches)
             return cols;
     }
-    return 1;
+    return 2;
 }
 
 export function useHubGridColumns(enabled: boolean): number {

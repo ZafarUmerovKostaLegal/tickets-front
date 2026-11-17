@@ -276,3 +276,48 @@ body[data-theme='dark'] .home-hub-topbar__search-input {
         height: 1.55rem;
     }
 }
+
+/* Tablets: logo, search and actions fit in one row; phones keep search on the second row. */
+@media (min-width: 601px) and (max-width: 900px) {
+    .home-hub-topbar__inner {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: 'brand search actions';
+        gap: 0.75rem;
+        min-height: 60px;
+        padding-bottom: 0;
+    }
+
+    .home-hub-topbar__search {
+        max-width: 32rem;
+        justify-self: center;
+        width: 100%;
+    }
+
+    .home-hub-topbar__actions .header-user-menu__text,
+    .home-hub-topbar__actions .header-user-menu__chevron {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .home-hub-topbar__search-input {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 360px) {
+    .home-hub-topbar__inner {
+        padding-left: max(0.6rem, var(--mob-safe-left, 0px));
+        padding-right: max(0.6rem, var(--mob-safe-right, 0px));
+    }
+
+    .home-hub-topbar__actions .app-header-actions {
+        gap: 0.25rem;
+    }
+}
+
+@media (max-width: 900px), (hover: none) {
+    .home-hub-topbar__search-kbd {
+        display: none;
+    }
+}

@@ -5,8 +5,13 @@ import { canModerateExpenseRequests } from './expenseModeration';
 import { isExpensePaymentConfirmer } from './expensePaymentConfirmer';
 import { awaitingEmployeeReimbursementQuery } from './expensesListParams';
 
+function safeCount(value: unknown): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
 function formatBadge(count: number): string {
-    if (count <= 0)
+    if (!Number.isFinite(count) || count <= 0)
         return '';
     return count > 99 ? '99+' : String(count);
 }
@@ -43,7 +48,7 @@ export function useExpenseAttentionBadge(enabled = true): {
                         skip: 0,
                         limit: 1,
                     })).then((response) => {
-                        setReimbursementCount(Math.max(0, response.total));
+                        setReimbursementCount(safeCount(response.total));
                     }),
                 );
             }
@@ -58,7 +63,7 @@ export function useExpenseAttentionBadge(enabled = true): {
                         skip: 0,
                         limit: 1,
                     }).then((response) => {
-                        setModerationCount(Math.max(0, response.total));
+                        setModerationCount(safeCount(response.total));
                     }),
                 );
             }
