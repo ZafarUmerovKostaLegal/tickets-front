@@ -5,9 +5,9 @@ import './SnowfallOverlay.css';
 type Tier = 'phone' | 'tablet' | 'desktop';
 
 const TIER: Record<Tier, { count: number; bankMax: number }> = {
-    desktop: { count: 70, bankMax: 20 },
-    tablet: { count: 46, bankMax: 16 },
-    phone: { count: 28, bankMax: 12 },
+    desktop: { count: 70, bankMax: 26 },
+    tablet: { count: 46, bankMax: 20 },
+    phone: { count: 28, bankMax: 14 },
 };
 
 const QUERIES = ['(min-width: 1024px)', '(min-width: 768px)'] as const;

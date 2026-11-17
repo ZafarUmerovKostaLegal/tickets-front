@@ -1,17 +1,9 @@
 .hub-garland {
-  --garland-cord: #3a4668;
-  --g0-rgb: 255, 98, 102;
-  --g0-mid: #ff6266;
-  --g0-deep: #b3262b;
-  --g1-rgb: 255, 236, 190;
-  --g1-mid: #ffecbe;
-  --g1-deep: #d9ae5c;
-  --g2-rgb: 70, 214, 182;
-  --g2-mid: #46d6b6;
-  --g2-deep: #138a72;
-  --g3-rgb: 255, 184, 74;
-  --g3-mid: #ffb84a;
-  --g3-deep: #c4780a;
+  --hg-wire: rgba(92, 74, 50, 0.55);
+  --hg-wire-back: rgba(74, 62, 46, 0.22);
+  --hg-core: #fffaf0;
+  --hg-warm: 255, 196, 112;
+  --hg-gold: 255, 170, 60;
   position: fixed;
   left: 0;
   right: 0;
@@ -21,10 +13,12 @@
   overflow: visible;
   pointer-events: none;
   z-index: 80;
+  animation: hub-garland-in 1.6s ease-out both;
 }
 
 body[data-theme='dark'] .hub-garland {
-  --garland-cord: #6b779c;
+  --hg-wire: rgba(214, 196, 160, 0.42);
+  --hg-wire-back: rgba(214, 196, 160, 0.18);
 }
 
 .hub-garland__stage {
@@ -42,140 +36,83 @@ body[data-theme='dark'] .hub-garland {
   overflow: visible;
 }
 
-.hub-garland__wire path {
-  stroke: var(--garland-cord);
-  stroke-width: 1.6;
-  stroke-linecap: round;
+.hub-garland__strand,
+.hub-garland__strand--back {
   fill: none;
+  stroke-linecap: round;
 }
 
-.hub-garland__pivot {
-  position: absolute;
-  width: 0;
-  height: 0;
+.hub-garland__strand {
+  stroke: var(--hg-wire);
+  stroke-width: 1;
 }
 
-.hub-garland__sway {
-  position: absolute;
-  left: -9px;
-  top: -1px;
-  width: 18px;
-  height: 30px;
-  transform-origin: 50% 0;
+.hub-garland__strand--back {
+  stroke: var(--hg-wire-back);
+  stroke-width: 0.8;
 }
 
-.hub-garland__socket {
+.hub-garland__light {
   position: absolute;
-  left: 5px;
-  top: 0;
-  width: 8px;
-  height: 7px;
-  border-radius: 2px 2px 1px 1px;
-  background: #2b3554;
-}
-
-.hub-garland__halo {
-  position: absolute;
-  left: -24px;
-  top: -16px;
-  width: 66px;
-  height: 66px;
+  width: 6.5px;
+  height: 6.5px;
+  margin: -3.25px 0 0 -3.25px;
   border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffffff 0%, var(--hg-core) 45%, rgb(var(--hg-warm)) 100%);
+  box-shadow:
+    0 0 5px 1px rgba(var(--hg-warm), 0.85),
+    0 0 14px 5px rgba(var(--hg-warm), 0.36),
+    0 0 32px 10px rgba(var(--hg-warm), 0.14);
+}
+
+.hub-garland__light--gold {
+  background: radial-gradient(circle at 40% 35%, #ffffff 0%, #ffe9b8 40%, rgb(var(--hg-gold)) 100%);
+  box-shadow:
+    0 0 4px 1px rgba(var(--hg-gold), 0.8),
+    0 0 12px 4px rgba(var(--hg-gold), 0.34),
+    0 0 26px 8px rgba(var(--hg-gold), 0.12);
+}
+
+.hub-garland__light--back {
+  width: 4.5px;
+  height: 4.5px;
+  margin: -2.25px 0 0 -2.25px;
   opacity: 0.6;
-  pointer-events: none;
-  will-change: opacity, transform;
+  box-shadow:
+    0 0 3px 1px rgba(var(--hg-warm), 0.6),
+    0 0 9px 3px rgba(var(--hg-warm), 0.18);
 }
 
-.hub-garland__glass,
-.hub-garland__lit {
-  position: absolute;
-  left: 2px;
-  top: 6px;
-  width: 14px;
-  height: 20px;
-  border-radius: 50% 50% 50% 50% / 38% 38% 62% 62%;
-}
-
-.hub-garland__glass {
-  filter: brightness(0.58) saturate(0.75);
-  box-shadow: none !important;
-}
-
-.hub-garland__lit {
-  opacity: 1;
-  filter: brightness(1.1);
+.hub-garland__light.kl-move {
   will-change: opacity;
+  animation: hub-garland-shimmer 5.2s ease-in-out infinite;
 }
 
-.hub-garland__halo--c0 {
-  background: radial-gradient(circle, rgba(var(--g0-rgb), 0.55) 0%, rgba(var(--g0-rgb), 0.16) 38%, rgba(var(--g0-rgb), 0) 68%);
-}
-.hub-garland__halo--c1 {
-  background: radial-gradient(circle, rgba(var(--g1-rgb), 0.55) 0%, rgba(var(--g1-rgb), 0.16) 38%, rgba(var(--g1-rgb), 0) 68%);
-}
-.hub-garland__halo--c2 {
-  background: radial-gradient(circle, rgba(var(--g2-rgb), 0.55) 0%, rgba(var(--g2-rgb), 0.16) 38%, rgba(var(--g2-rgb), 0) 68%);
-}
-.hub-garland__halo--c3 {
-  background: radial-gradient(circle, rgba(var(--g3-rgb), 0.55) 0%, rgba(var(--g3-rgb), 0.16) 38%, rgba(var(--g3-rgb), 0) 68%);
+.hub-garland__light--sparkle.kl-move {
+  will-change: opacity, transform;
+  animation:
+    hub-garland-shimmer 5.2s ease-in-out infinite,
+    hub-garland-sparkle var(--hg-sparkle-dur, 3.6s) ease-in-out infinite;
 }
 
-.hub-garland__glass--c0 {
-  background: radial-gradient(circle at 36% 28%, #ffffff 0%, var(--g0-mid) 42%, var(--g0-deep) 100%);
-  box-shadow: 0 0 9px rgba(var(--g0-rgb), 0.7);
-}
-.hub-garland__glass--c1 {
-  background: radial-gradient(circle at 36% 28%, #ffffff 0%, var(--g1-mid) 42%, var(--g1-deep) 100%);
-  box-shadow: 0 0 9px rgba(var(--g1-rgb), 0.7);
-}
-.hub-garland__glass--c2 {
-  background: radial-gradient(circle at 36% 28%, #ffffff 0%, var(--g2-mid) 42%, var(--g2-deep) 100%);
-  box-shadow: 0 0 9px rgba(var(--g2-rgb), 0.7);
-}
-.hub-garland__glass--c3 {
-  background: radial-gradient(circle at 36% 28%, #ffffff 0%, var(--g3-mid) 42%, var(--g3-deep) 100%);
-  box-shadow: 0 0 9px rgba(var(--g3-rgb), 0.7);
+body:not([data-theme='dark']) .hub-garland__light {
+  filter: saturate(1.1);
 }
 
-@keyframes hub-garland-sway {
-  0% { transform: rotate(-9deg) translateX(-1px); }
-  100% { transform: rotate(9deg) translateX(1px); }
+@keyframes hub-garland-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes hub-garland-glow-wave {
-  0%, 100% { opacity: 0.14; transform: scale(0.72); }
-  50% { opacity: 0.8; transform: scale(1.12); }
-}
-
-@keyframes hub-garland-lit-wave {
-  0%, 100% { opacity: 0; }
+@keyframes hub-garland-shimmer {
+  0%, 100% { opacity: 0.62; }
   50% { opacity: 1; }
 }
 
-@keyframes hub-garland-glow-twinkle {
-  0%, 38%, 100% { opacity: 0.6; transform: scale(1); }
-  44% { opacity: 0.12; transform: scale(0.7); }
-  50% { opacity: 0.85; transform: scale(1.14); }
-  56% { opacity: 0.25; transform: scale(0.8); }
-  64% { opacity: 0.7; transform: scale(1.04); }
-}
-
-@keyframes hub-garland-lit-twinkle {
-  0%, 38%, 100% { opacity: 0.8; }
-  44% { opacity: 0; }
-  50% { opacity: 1; }
-  56% { opacity: 0.2; }
-  64% { opacity: 0.88; }
-}
-
-@keyframes hub-garland-glow-chase {
-  0%, 34%, 100% { opacity: 0.1; transform: scale(0.7); }
-  6%, 24% { opacity: 0.82; transform: scale(1.12); }
-}
-
-@keyframes hub-garland-lit-chase {
-  0%, 34%, 100% { opacity: 0; }
-  6%, 24% { opacity: 1; }
+@keyframes hub-garland-sparkle {
+  0%, 82%, 100% { transform: scale(1); }
+  88% { transform: scale(1.7); }
+  94% { transform: scale(0.9); }
 }
 
 .hub-garland--paused .kl-move {
@@ -183,10 +120,8 @@ body[data-theme='dark'] .hub-garland {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hub-garland,
   .hub-garland .kl-move {
     animation: none !important;
   }
-
-  .hub-garland__halo { opacity: 0.55; transform: none; }
-  .hub-garland__lit { opacity: 1; }
 }

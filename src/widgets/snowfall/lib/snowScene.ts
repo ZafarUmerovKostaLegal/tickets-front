@@ -294,7 +294,7 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
             }
         }
         if (bank)
-            stepBank(bank, dt, groundY);
+            stepBank(bank, dt);
     };
 
     const drawLayer = (l: number) => {

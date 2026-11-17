@@ -1,75 +1,91 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import './GarlandString.css';
 
-type GlowMode = 'wave' | 'twinkle' | 'chase' | 'steady';
+type Pt = [number, number];
 
-type Bulb = {
+type Light = {
     x: number;
     y: number;
-    tilt: number;
-    color: 0 | 1 | 2 | 3;
-    sway: string;
-    glow: string;
-    lit: string;
+    back: boolean;
+    tone: 'warm' | 'gold';
+    sparkle: boolean;
+    delay: number;
+    dur: number;
 };
 
-type Model = { d: string; bulbs: Bulb[]; h: number };
+type Strand = { d: string; back: boolean };
 
-const Y0 = 2;
-const PER_SEG = 4;
+type Model = { strands: Strand[]; lights: Light[] };
+
 const STAGE_H = 96;
-const MODE: GlowMode = 'wave';
+const SHIMMER = 5.2;
 
 function rnd(i: number, s: number): number {
     const v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
     return v - Math.floor(v);
 }
 
-function timingFor(mode: GlowMode, i: number, total: number): { key: string; timing: string } | null {
-    if (mode === 'steady')
-        return null;
-    if (mode === 'wave')
-        return { key: 'wave', timing: `3.6s ease-in-out ${(-(total - i) * 0.16).toFixed(2)}s infinite` };
-    if (mode === 'chase')
-        return { key: 'chase', timing: `2.4s ease-in-out ${(-(4 - (i % 4)) * 0.6).toFixed(2)}s infinite` };
-    return {
-        key: 'twinkle',
-        timing: `${(2.4 + rnd(i, 1) * 3.2).toFixed(2)}s ease-in-out ${(-rnd(i, 2) * 5).toFixed(2)}s infinite`,
-    };
+function quad(a: Pt, c: Pt, b: Pt, t: number): Pt {
+    const u = 1 - t;
+    return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]];
 }
 
-function buildGarland(width: number, mode: GlowMode): Model {
-    const n = Math.max(2, Math.round(width / 250));
-    const seg = width / n;
-    let wire = `M0 ${Y0}`;
-    const bulbs: Bulb[] = [];
-    const total = n * PER_SEG;
+function buildStrand(
+    width: number,
+    opts: { seg: number; offset: number; y0: number; sag: number; sagAlt: number; spacing: number; back: boolean },
+    lights: Light[],
+): Strand {
+    const { seg, offset, y0, sag, sagAlt, spacing, back } = opts;
+    let d = '';
+    let carry = spacing / 2;
+    let s = 0;
+    for (let x0 = offset; x0 < width; x0 += seg, s += 1) {
+        const depth = sag + (s % 2 ? sagAlt : 0) + rnd(s, back ? 7 : 3) * 4;
+        const a: Pt = [x0, y0];
+        const c: Pt = [x0 + seg / 2, y0 + 2 * depth];
+        const b: Pt = [x0 + seg, y0];
+        d += `${d ? ' ' : ''}M${a[0].toFixed(1)} ${a[1]} Q${c[0].toFixed(1)} ${c[1].toFixed(1)} ${b[0].toFixed(1)} ${b[1]}`;
 
-    for (let s = 0; s < n; s += 1) {
-        const sag = 26 + (s % 2 ? 8 : 0) + rnd(s, 3) * 5;
-        const x0 = s * seg;
-        wire += ` Q${(x0 + seg / 2).toFixed(1)} ${(Y0 + 2 * sag).toFixed(1)} ${(x0 + seg).toFixed(1)} ${Y0}`;
-
-        for (let k = 0; k < PER_SEG; k += 1) {
-            const i = s * PER_SEG + k;
-            const tt = (k + 0.5) / PER_SEG;
-            const slope = (4 * sag * (1 - 2 * tt)) / seg;
-            const anim = timingFor(mode, i, total);
-            const swayDur = (2.8 + rnd(i, 5) * 2.4).toFixed(2);
-            const swayDelay = (-rnd(i, 6) * 5).toFixed(2);
-            bulbs.push({
-                x: Number((x0 + tt * seg).toFixed(1)),
-                y: Number((Y0 + 4 * sag * tt * (1 - tt)).toFixed(1)),
-                tilt: Number((-Math.atan(slope) * (180 / Math.PI)).toFixed(1)),
-                color: (i % 4) as 0 | 1 | 2 | 3,
-                sway: `hub-garland-sway ${swayDur}s cubic-bezier(0.45, 0.05, 0.55, 0.95) ${swayDelay}s infinite alternate`,
-                glow: anim ? `hub-garland-glow-${anim.key} ${anim.timing}` : 'none',
-                lit: anim ? `hub-garland-lit-${anim.key} ${anim.timing}` : 'none',
-            });
+        let prev = a;
+        const steps = 48;
+        for (let k = 1; k <= steps; k += 1) {
+            const p = quad(a, c, b, k / steps);
+            let len = Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+            while (carry <= len) {
+                const f = carry / len;
+                const x = prev[0] + (p[0] - prev[0]) * f;
+                const y = prev[1] + (p[1] - prev[1]) * f;
+                if (x > -6 && x < width + 6) {
+                    const i = lights.length;
+                    lights.push({
+                        x,
+                        y,
+                        back,
+                        tone: !back && rnd(i, 11) < 0.14 ? 'gold' : 'warm',
+                        sparkle: !back && rnd(i, 12) < 0.16,
+                        delay: -((x / width) * SHIMMER + rnd(i, 13) * 0.6),
+                        dur: 2.6 + rnd(i, 14) * 3.4,
+                    });
+                }
+                prev = [x, y];
+                len -= carry;
+                carry = spacing;
+            }
+            carry -= len;
+            prev = p;
         }
     }
+    return { d, back };
+}
 
-    return { d: wire, bulbs, h: STAGE_H };
+function buildGarland(width: number): Model {
+    const n = Math.max(2, Math.round(width / 340));
+    const seg = width / n;
+    const lights: Light[] = [];
+    const back = buildStrand(width, { seg, offset: -seg / 2, y0: -2, sag: 40, sagAlt: 6, spacing: 30, back: true }, lights);
+    const front = buildStrand(width, { seg, offset: 0, y0: -2, sag: 28, sagAlt: 6, spacing: 26, back: false }, lights);
+    return { strands: [back, front], lights };
 }
 
 function readTopbarBottom(): number {
@@ -110,47 +126,38 @@ export function GarlandString() {
         return () => document.removeEventListener('visibilitychange', onVisibility);
     }, []);
 
-    const model = width > 0 ? buildGarland(width, MODE) : null;
+    const model = useMemo(() => (width > 0 ? buildGarland(width) : null), [width]);
 
     return (
-        <div
-            className="hub-garland"
-            aria-hidden
-            ref={ref}
-            style={{ top, ['--hub-garland-h' as string]: `${STAGE_H}px` }}
-        >
+        <div className="hub-garland" aria-hidden ref={ref} style={{ top }}>
             {model ? (
-                <div className="hub-garland__stage" style={{ height: model.h }}>
+                <div className="hub-garland__stage" style={{ height: STAGE_H }}>
                     <svg
                         className="hub-garland__wire"
                         width={width}
-                        height={model.h}
-                        viewBox={`0 0 ${width} ${model.h}`}
-                        preserveAspectRatio="xMinYMin meet"
+                        height={STAGE_H}
+                        viewBox={`0 0 ${width} ${STAGE_H}`}
                         fill="none"
                     >
-                        <path d={model.d} />
+                        {model.strands.map((s, i) => (
+                            <path key={i} d={s.d} className={s.back ? 'hub-garland__strand--back' : 'hub-garland__strand'} />
+                        ))}
                     </svg>
-                    {model.bulbs.map((b, i) => (
-                        <div
-                            key={i}
-                            className="hub-garland__pivot"
-                            style={{ left: b.x, top: b.y, transform: `rotate(${b.tilt}deg)` }}
-                        >
-                            <div className="hub-garland__sway kl-move" style={{ animation: b.sway }}>
-                                <span className="hub-garland__socket" />
-                                <span
-                                    className={`hub-garland__halo hub-garland__halo--c${b.color} kl-move`}
-                                    style={{ animation: b.glow }}
-                                />
-                                <span className={`hub-garland__glass hub-garland__glass--c${b.color}`} />
-                                <span
-                                    className={`hub-garland__lit hub-garland__glass--c${b.color} kl-move`}
-                                    style={{ animation: b.lit }}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                    {model.lights.map((l, i) => {
+                        const cls = [
+                            'hub-garland__light',
+                            l.back ? 'hub-garland__light--back' : 'kl-move',
+                            l.tone === 'gold' && 'hub-garland__light--gold',
+                            l.sparkle && 'hub-garland__light--sparkle',
+                        ].filter(Boolean).join(' ');
+                        const style = {
+                            left: l.x,
+                            top: l.y,
+                            animationDelay: l.back ? undefined : `${l.delay.toFixed(2)}s, ${(l.delay * 1.7).toFixed(2)}s`,
+                            '--hg-sparkle-dur': `${l.dur.toFixed(2)}s`,
+                        } as CSSProperties;
+                        return <span key={i} className={cls} style={style} />;
+                    })}
                 </div>
             ) : null}
         </div>
