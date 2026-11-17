@@ -1,5 +1,5 @@
 .kd-tg {
-  --kd-col: 46rem;
+  --kd-col: 100%;
   --kd-tg-sidebar-w: 360px;
   --kd-tg-card: #ffffff;
   --kd-tg-paper-alt: #f1f2f4;
@@ -18,7 +18,7 @@
   --kd-tg-date-bg: rgba(84, 64, 52, 0.3);
   --kd-tg-head-glass: rgba(255, 255, 255, 0.86);
   --kd-tg-chat-pad-x: 1.25rem;
-  --kd-tg-bubble-max-w: min(82%, 30rem);
+  --kd-tg-bubble-max-w: min(72%, 44rem);
   --kd-tg-row-gap: 0.5rem;
   --kd-tg-row-gap-grouped: 0.125rem;
   --kd-tg-wallpaper-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23705444' stroke-opacity='.065' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='22' cy='24' r='6'/%3E%3Cpath d='M68 14l3.5 7 7.5 1-5.5 5 1.3 7.5L68 31l-6.8 3.5 1.3-7.5-5.5-5 7.5-1z'/%3E%3Cpath d='M112 26c5-7 14-7 19 0'/%3E%3Cpath d='M158 14v14M151 21h14'/%3E%3Crect x='14' y='70' width='18' height='13' rx='2.5'/%3E%3Cpath d='M14 73l9 6 9-6'/%3E%3Cpath d='M62 72c0 7 11 7 11 0s11-7 11 0'/%3E%3Ccircle cx='120' cy='74' r='2.2'/%3E%3Ccircle cx='131' cy='67' r='1.6'/%3E%3Cpath d='M154 66l10 10M164 66l-10 10'/%3E%3Cpath d='M24 122a9 9 0 1 0 9 9'/%3E%3Cpath d='M66 118h18v13H66zM71 118v-4h8v4'/%3E%3Cpath d='M110 128l7-9 7 9 7-9'/%3E%3Ccircle cx='160' cy='126' r='5'/%3E%3Cpath d='M20 166h14M27 159v14'/%3E%3Cpath d='M64 168c4-9 15-9 19 0'/%3E%3Cpath d='M112 162l5 5 9-9'/%3E%3Cpath d='M152 156l5 12 5-12'/%3E%3C/g%3E%3C/svg%3E");
@@ -797,7 +797,7 @@ body[data-theme='dark'] .kd-tg__composer-error {
 @media (min-width: 1800px) {
   .kd-tg {
     --kd-tg-sidebar-w: 420px;
-    --kd-col: 50rem;
+    --kd-tg-bubble-max-w: min(68%, 48rem);
   }
 }
 
