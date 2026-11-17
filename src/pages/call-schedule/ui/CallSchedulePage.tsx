@@ -31,6 +31,7 @@ import {
 import { joinLabelWithoutOpenPrefix, translateJoinLabel } from '../lib/callJoinLabels';
 import { CallScheduleCalendarSelect, CschedCalendarBlockSkeleton, isKostaCalendarName } from './CallScheduleCalendarSelect';
 import './CallSchedulePage.css';
+import './CallScheduleResponsive.css';
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -623,11 +624,14 @@ export function CallSchedulePage() {
     setSelected(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
   }, []);
   const miniWeeks = weeks;
+  const selectedIso = toIso(selected);
+  const selectedEvents = eventsByDate.get(selectedIso) ?? [];
+  const selectedFilesCount = fileCounts[selectedIso] ?? 0;
   return (<div className="csched-page">
     <main className="csched-page__main">
       <header className="csched-page__header">
         <div className="csched-page__header-start">
-          <AppBackButton className="app-back-btn" />
+          <AppBackButton className="app-back-btn" hideLabelOnMobile />
           <AppHomeLogo withSeparator />
           <div className="csched-page__header-text">
             <h1 className="csched-page__title">{t('callSchedulePage.title')}</h1>
@@ -752,6 +756,10 @@ export function CallSchedulePage() {
                     </span>) : null}
                     {!inMonth && (<span className="csched-cal__cell-month">{d.toLocaleDateString(localeTag(locale), { month: 'short' })}</span>)}
                   </div>
+                  {dayEvents.length > 0 || filesCount > 0 ? (<span className="csched-cal__dots" aria-hidden>
+                    {dayEvents.slice(0, 3).map((ev) => (<span key={ev.id} className="csched-cal__dot" />))}
+                    {filesCount > 0 ? <span className="csched-cal__dot csched-cal__dot--file" /> : null}
+                  </span>) : null}
                   <div className="csched-cal__events">
                     {visibleDayEvents.map((ev) => (<button key={ev.id} type="button" className="csched-cal__event" title={`${ev.time} · ${ev.title} — ${t('callSchedulePage.eventDetailsTitle')}`} onClick={(e) => {
                       e.stopPropagation();
@@ -771,6 +779,38 @@ export function CallSchedulePage() {
               }))}
             </div>
           </div>
+
+          <section className="csched-agenda" aria-label={formatDateLong(selectedIso, locale)}>
+            <div className="csched-agenda__head">
+              <div className="csched-agenda__titles">
+                <h3 className="csched-agenda__date">{formatDateLong(selectedIso, locale)}</h3>
+                <p className="csched-agenda__meta">
+                  {selectedEvents.length > 0 ? eventCountLabel(selectedEvents.length, locale, t) : t('callSchedulePage.dayFiles.noEvents')}
+                </p>
+              </div>
+              <button type="button" className="csched-agenda__files" onClick={() => setAgendaForDay({ dateIso: selectedIso, events: selectedEvents })}>
+                {t('callSchedulePage.dayFiles.title')}
+                {selectedFilesCount > 0 ? <span className="csched-agenda__files-count">{selectedFilesCount}</span> : null}
+              </button>
+            </div>
+            {selectedEvents.length > 0 ? (<ul className="csched-agenda__list" role="list">
+              {selectedEvents.map((ev) => (<li key={ev.id}>
+                <button type="button" className="csched-agenda__item" onClick={() => setDetailEvent(ev)}>
+                  <span className="csched-agenda__time">{ev.time}</span>
+                  <span className="csched-agenda__body">
+                    <span className="csched-agenda__title">{ev.title}</span>
+                    <span className="csched-agenda__sub">
+                      {fmtDuration(ev.durationMin, t)}
+                      {ev.client ? ` · ${ev.client}` : ''}
+                    </span>
+                  </span>
+                  <span className="csched-agenda__chev" aria-hidden>›</span>
+                </button>
+              </li>))}
+            </ul>) : (<button type="button" className="csched-agenda__empty" onClick={() => setCreateOpen(true)}>
+              + {t('callSchedulePage.newSlot')}
+            </button>)}
+          </section>
         </section>
       </div>
     </main>
