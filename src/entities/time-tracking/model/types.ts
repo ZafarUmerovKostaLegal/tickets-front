@@ -1,5 +1,5 @@
 export type TimeTabId = 'users' | 'projects' | 'expenses' | 'timesheet' | 'reports' | 'statistics' | 'invoices' | 'settings' | 'clients';
-export type ProjectType = 'Время и материалы' | 'Фиксированная ставка' | 'Без бюджета' | 'Пакет часов';
+export type ProjectType = 'Время и материалы' | 'Фиксированная ставка' | 'Без бюджета' | 'Не оплачиваемый' | 'Пакет часов';
 export type ProjectStatus = 'active' | 'paused' | 'archived';
 export type ProjectRow = {
     id: string;

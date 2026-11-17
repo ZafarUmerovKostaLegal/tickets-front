@@ -724,6 +724,7 @@ const TYPE_COLOR: Record<string, {
     'Время и материалы': { color: '#4f46e5', bg: 'rgba(37,99,235,0.08)' },
     'Фиксированная ставка': { color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
     'Без бюджета': { color: '#64748b', bg: 'rgba(100,116,139,0.08)' },
+    'Не оплачиваемый': { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
     'Пакет часов': { color: '#0d9488', bg: 'rgba(13,148,136,0.08)' },
 };
 function duplicateProjectCreatePayload(src: TimeManagerClientProjectRow): TimeManagerClientProjectCreatePayload {

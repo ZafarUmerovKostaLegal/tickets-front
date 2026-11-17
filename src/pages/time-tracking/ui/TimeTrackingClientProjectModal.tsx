@@ -68,6 +68,7 @@ function buildProjectTypeOptions(t: ReturnType<typeof useI18n>['t']): TmOpt[] {
     { id: 'time_and_materials', label: t('timeTrackingPage.projects.modal.projectTypes.timeAndMaterials'), search: 'time materials T&M tm предельное вознаграждение capped fee' },
     { id: 'fixed_fee', label: t('timeTrackingPage.projects.modal.projectTypes.fixedFee'), search: 'fixed fee' },
     { id: 'hour_package', label: t('timeTrackingPage.projects.modal.projectTypes.hourPackage'), search: 'hour package monthly hours пакет часов' },
+    { id: 'no_budget', label: t('timeTrackingPage.projects.modal.projectTypes.noBudget'), search: 'no budget без бюджета unlimited' },
     { id: 'non_billable', label: t('timeTrackingPage.projects.modal.projectTypes.nonBillable'), search: 'non billable' },
   ];
 }
@@ -222,7 +223,7 @@ type ProjectFormState = {
   endDate: string;
   notes: string;
   recordsLanguage: TimeManagerProjectRecordsLanguage;
-  projectType: 'time_and_materials' | 'fixed_fee' | 'non_billable' | 'hour_package';
+  projectType: 'time_and_materials' | 'fixed_fee' | 'non_billable' | 'hour_package' | 'no_budget';
   billableRateType: string;
   
   projectBillableRateAmount: string;
@@ -242,7 +243,7 @@ type ProjectFormState = {
 };
 
 function projectTypeUsesBillableRates(pt: ProjectFormState['projectType'] | string): boolean {
-  return pt === 'time_and_materials' || pt === 'fixed_fee' || pt === 'hour_package';
+  return pt === 'time_and_materials' || pt === 'fixed_fee' || pt === 'hour_package' || pt === 'no_budget';
 }
 
 function readOptionalNumericField(...values: Array<string | number | null | undefined>): string {
@@ -282,7 +283,7 @@ function emptyProjectForm(): ProjectFormState {
 }
 function rowToForm(row: TimeManagerClientProjectRow): ProjectFormState {
   const cur = (row.currency ?? 'USD').trim() || 'USD';
-  const pt = row.project_type === 'fixed_fee' || row.project_type === 'non_billable' || row.project_type === 'hour_package'
+  const pt = row.project_type === 'fixed_fee' || row.project_type === 'non_billable' || row.project_type === 'hour_package' || row.project_type === 'no_budget'
     ? row.project_type
     : 'time_and_materials';
   return {
@@ -358,6 +359,12 @@ function buildCreatePayload(
     budgetAmount = packageFeeAmount;
     progressBudgetAmount = null;
   }
+  else if (pt === 'no_budget') {
+    // "Без бюджета": billed hourly, no money / hours limit at all.
+    budgetAmount = null;
+    budgetHours = null;
+    progressBudgetAmount = null;
+  }
   else if (isSoftBudgetType(form.budgetType)) {
     budgetAmount = null;
     budgetHours = null;
@@ -379,11 +386,10 @@ function buildCreatePayload(
     budgetHours = parseOptionalDecimal(form.budgetHours);
   }
   const thresholdRaw = form.budgetAlertThresholdPercent.trim().replace(',', '.');
-  const budgetAlertThresholdPercent = form.sendBudgetAlerts && thresholdRaw
-    ? thresholdRaw
-    : form.sendBudgetAlerts
-      ? '70'
-      : null;
+  const noBudget = pt === 'no_budget';
+  let budgetAlertThresholdPercent: string | null = null;
+  if (!noBudget && form.sendBudgetAlerts)
+    budgetAlertThresholdPercent = thresholdRaw || '70';
   let projectBillableRateAmount: string | number | null = null;
   if (projectTypeUsesBillableRates(pt)) {
     if ((form.billableRateType || '').trim() === 'project_billable_rate')
@@ -412,16 +418,16 @@ function buildCreatePayload(
     projectType: pt,
     billableRateType,
     projectBillableRateAmount,
-    budgetType: isSoftBudgetType(form.budgetType) ? form.budgetType : undefined,
+    budgetType: noBudget ? 'no_budget' : isSoftBudgetType(form.budgetType) ? form.budgetType : undefined,
     budgetAmount,
     progressBudgetAmount,
     budgetHours,
     ...(pt === 'hour_package'
       ? { packageHoursPerMonth, packageFeeAmount }
       : {}),
-    budgetResetsEveryMonth: form.budgetResetsEveryMonth,
-    budgetIncludesExpenses: form.budgetIncludesExpenses,
-    sendBudgetAlerts: form.sendBudgetAlerts,
+    budgetResetsEveryMonth: noBudget ? false : form.budgetResetsEveryMonth,
+    budgetIncludesExpenses: noBudget ? false : form.budgetIncludesExpenses,
+    sendBudgetAlerts: noBudget ? false : form.sendBudgetAlerts,
     budgetAlertThresholdPercent,
     skipPartnerInvoiceConfirmation: form.skipPartnerInvoiceConfirmation,
     extraFixedFeeAmount: parseOptionalDecimal(form.extraFixedFeeAmount),
@@ -963,7 +969,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         return;
       }
     }
-    if (form.projectType !== 'hour_package' && form.budgetType === 'fees_and_hours') {
+    if (form.projectType !== 'hour_package' && form.projectType !== 'no_budget' && form.budgetType === 'fees_and_hours') {
       const ba = parseOptionalDecimal(form.budgetAmount);
       const pb = parseOptionalDecimal(form.progressBudgetAmount);
       const bh = parseOptionalDecimal(form.budgetHours);
@@ -1120,6 +1126,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const showBudgetFees = form.budgetType === 'total_project_fees' || form.budgetType === 'fees_and_hours';
   const showBudgetHours = form.budgetType === 'total_project_hours' || form.budgetType === 'fees_and_hours';
   const isHourPackage = form.projectType === 'hour_package';
+  const isNoBudget = form.projectType === 'no_budget';
   const showProgressBudgetNoHardLimit = !isHourPackage && isSoftBudgetType(form.budgetType) && (form.projectType === 'time_and_materials' || form.projectType === 'non_billable');
   const projectCurrencyCode = TIME_TRACKING_PROJECT_CURRENCIES.includes(form.currency as TimeManagerProjectCurrency) ? String(form.currency) : 'USD';
   const isPage = presentation === 'page' && mode === 'create';
@@ -1214,7 +1221,9 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       <p className="tt-tm-hint">{t('timeTrackingPage.projects.modal.recordsLanguageHint')}</p>
     </div>
 
-    {isHourPackage ? (<>
+    {isNoBudget ? (<div className="tt-tm-field">
+      <p className="tt-tm-hint">{t('timeTrackingPage.projects.modal.noBudgetTypeHint')}</p>
+    </div>) : isHourPackage ? (<>
       <div className="tt-tm-field">
         <label className="tt-tm-label" htmlFor={`${uid}-pkg-hrs`}>
           {t('timeTrackingPage.projects.modal.packageHours')} <span className="tt-tm-req">*</span>
@@ -1291,6 +1300,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     <fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
       <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">{t('timeTrackingPage.projects.modal.budgetParamsLegend')}</legend>
       <div className="tt-tm-fieldset--budget__grid">
+        {!isNoBudget && (<>
         <label className="tt-ios-toggle-row">
           <span className="tt-ios-toggle-row__text">{t('timeTrackingPage.projects.modal.budgetResetMonthly')}</span>
           <span className="tt-ios-toggle">
@@ -1312,6 +1322,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
             <span className="tt-ios-toggle__slider" aria-hidden />
           </span>
         </label>
+        </>)}
         <label className="tt-ios-toggle-row">
           <span className="tt-ios-toggle-row__text">{t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}</span>
           <span className="tt-ios-toggle">
@@ -1369,7 +1380,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
           ? t('timeTrackingPage.projects.modal.mehnatFlatFeeHint')
           : t('timeTrackingPage.projects.modal.mehnatHourlyHint')}
       </p>
-      {form.sendBudgetAlerts && (<div className="tt-tm-field tt-tm-fieldset--budget__extra">
+      {form.sendBudgetAlerts && !isNoBudget && (<div className="tt-tm-field tt-tm-fieldset--budget__extra">
         <label className="tt-tm-label" htmlFor={`${uid}-thr`}>
           {t('timeTrackingPage.projects.modal.budgetAlertThreshold')}
         </label>

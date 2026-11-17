@@ -53,6 +53,8 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
     if (p.project_type === 'fixed_fee')
         type = 'Фиксированная ставка';
     else if (p.project_type === 'non_billable')
+        type = 'Не оплачиваемый';
+    else if (p.project_type === 'no_budget')
         type = 'Без бюджета';
     else if (p.project_type === 'hour_package')
         type = 'Пакет часов';

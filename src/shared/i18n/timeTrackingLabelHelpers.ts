@@ -56,7 +56,7 @@ export function ttProjectTypeLabel(type: string, t: TimeTrackingT): string {
         'Время и материалы': 'timeTrackingPage.projects.modal.projectTypes.timeAndMaterials',
         'Фиксированная ставка': 'timeTrackingPage.projects.modal.projectTypes.fixedFee',
         'Фиксированный гонорар': 'timeTrackingPage.projects.modal.projectTypes.fixedFee',
-        'Без бюджета': 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
+        'Без бюджета': 'timeTrackingPage.projects.modal.projectTypes.noBudget',
         'Не оплачиваемый': 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
         'Пакет часов': 'timeTrackingPage.projects.modal.projectTypes.hourPackage',
         // API / legacy aliases (hourly / fixed / capped)
@@ -70,12 +70,13 @@ export function ttProjectTypeLabel(type: string, t: TimeTrackingT): string {
         hour_package: 'timeTrackingPage.projects.modal.projectTypes.hourPackage',
         non_billable: 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
         nonbillable: 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
+        no_budget: 'timeTrackingPage.projects.modal.projectTypes.noBudget',
     };
     const fallbackRu: Record<string, string> = {
         'Время и материалы': 'Предельное вознаграждение',
         'Фиксированная ставка': 'Фиксированный гонорар',
         'Фиксированный гонорар': 'Фиксированный гонорар',
-        'Без бюджета': 'Не оплачиваемый',
+        'Без бюджета': 'Без бюджета',
         'Не оплачиваемый': 'Не оплачиваемый',
         'Пакет часов': 'Пакет часов',
         hourly: 'Предельное вознаграждение',
@@ -88,6 +89,7 @@ export function ttProjectTypeLabel(type: string, t: TimeTrackingT): string {
         hour_package: 'Пакет часов',
         non_billable: 'Не оплачиваемый',
         nonbillable: 'Не оплачиваемый',
+        no_budget: 'Без бюджета',
     };
     const key = map[raw] ?? map[normalized];
     if (!key)

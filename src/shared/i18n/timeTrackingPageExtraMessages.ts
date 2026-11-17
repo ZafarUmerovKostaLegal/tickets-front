@@ -548,7 +548,9 @@ export const timeTrackingPageExtraMessages = {
                 fixedFee: 'Фиксированный гонорар',
                 nonBillable: 'Не оплачиваемый',
                 hourPackage: 'Пакет часов (N ч/мес за $X)',
+                noBudget: 'Без бюджета',
             },
+            noBudgetTypeHint: 'Часы выставляются клиенту по ставкам, без лимита по сумме и часам. Контроль бюджета и уведомления для проекта отключены.',
             billableRateTypes: {
                 person: 'Почасовая ставка сотрудника',
                 project: 'Ставка проекта',

@@ -550,7 +550,9 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
                 fixedFee: 'Fixed fee',
                 nonBillable: 'Non-billable',
                 hourPackage: 'Hour package (N hrs/mo for $X)',
+                noBudget: 'No budget',
             },
+            noBudgetTypeHint: 'Hours are billed to the client at the configured rates, with no money or hours limit. Budget tracking and alerts are off for this project.',
             billableRateTypes: {
                 person: 'Employee hourly rate',
                 project: 'Project rate',
