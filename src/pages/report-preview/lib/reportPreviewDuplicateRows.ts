@@ -161,7 +161,6 @@ export function deduplicateTimeExcelPreviewRows(rows: TimeExcelPreviewRow[]): Ti
         keptEntries.push(keeper);
     }
 
-    // Preserve entries that failed fingerprint (no parts) — already excluded from clusters.
     const keptKeys = new Set(keptEntries.map((r) => r.rowKey));
     for (const r of entries) {
         if (keptKeys.has(r.rowKey))

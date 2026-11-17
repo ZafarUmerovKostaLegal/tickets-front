@@ -1225,7 +1225,6 @@ body[data-theme='dark'] .inv__tab--active {
   font-weight: 500;
 }
 
-/* Оценка без даты покупки — приблизительная, показываем это пунктиром. */
 .inv__score-badge--approx {
   border: 1px dashed currentColor;
   padding: calc(0.15rem - 1px) calc(0.45rem - 1px);

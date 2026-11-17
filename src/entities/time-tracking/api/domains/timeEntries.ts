@@ -160,7 +160,6 @@ export type PatchTimeEntryBody = {
     description?: string | null;
     billableFxAsOf?: string | null;
     recordedAt?: string | null;
-    /** Report Scope highlight (#RRGGBB); null clears. */
     scopeColor?: string | null;
 };
 export async function patchTimeEntry(authUserId: number, entryId: string, patch: PatchTimeEntryBody): Promise<TimeEntryRow> {
@@ -184,7 +183,6 @@ export async function fetchTimeEntry(authUserId: number, entryId: string): Promi
     const res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}/time-entries/${encodeURIComponent(uid)}`, {
         method: 'GET',
     });
-    // Do not probe legacy `/api/v1/users/...` — that doubles console 404 noise on prod.
     if (res.status === 404)
         return null;
     await throwIfNotOk(res);

@@ -130,7 +130,6 @@ export function InvoiceDetailPage() {
     [detail?.lines, detail?.currency],
   );
 
-  /** KPI: expense lines at registry USD — keep total and balance on the same basis. */
   const displayMoney = useMemo(() => {
     if (!detail)
       return { totalAmount: 0, balanceDue: 0 };
@@ -258,7 +257,7 @@ export function InvoiceDetailPage() {
         setDraftFeeAmount((current) => current.trim() ? current : String(fee.amount));
         setDraftFeeDesc((current) => current.trim() ? current : fee.description);
       })
-      .catch(() => { /* project default is optional */ });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -1332,7 +1331,6 @@ export function InvoiceDetailPage() {
               if (cancelled())
                 return;
               if (!outlookSt.connected || outlookSt.mailReady === false) {
-                // Modal stays open with Connect Outlook — do not open another dialog under it.
                 return;
               }
 

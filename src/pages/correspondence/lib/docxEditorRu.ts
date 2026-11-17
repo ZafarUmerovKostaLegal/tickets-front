@@ -1,9 +1,5 @@
 import type { Translations } from '@docx-editor.dev/i18n';
 
-/**
- * Russian chrome strings for `@docx-editor.dev`.
- * Upstream has no `ru` locale yet — omitted keys fall back to English.
- */
 export const docxEditorRu: Translations = {
     _lang: 'ru',
     common: {

@@ -1,6 +1,5 @@
 import { combinedReportDetailLines, projectExpenseIndexes, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 
-/** Usable content height inside the A4 sheet, after page padding and the footer. */
 const USABLE_PX = 820;
 const THEAD_PX = 36;
 const ROW_PX = 34;
@@ -10,7 +9,6 @@ const TOTAL_PX = 36;
 const GAP_PX = 18;
 
 export type CombinedReportPreviewSlice = {
-    /** Project sheet. -1 is the merged report. */
     projectIndex: number;
     showMasthead: boolean;
     timeFrom: number;

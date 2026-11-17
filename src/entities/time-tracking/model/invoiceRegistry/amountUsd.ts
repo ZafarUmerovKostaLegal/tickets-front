@@ -12,7 +12,6 @@ export function registryIssueIso(raw: string): string | null {
     return `${day.year}-${month}-${date}`;
 }
 
-/** Convert an invoiced amount into USD using the Central Bank rate for that day. */
 export function registryAmountUsd(amount: number, currency: string, parsed: CbuParsed | null): number | null {
     if (!Number.isFinite(amount))
         return null;
@@ -154,7 +153,6 @@ function savedUnits(row: RegistryUsdRow, basis: string | null): number | null {
     return Number.isFinite(units) && units > 0 ? units : null;
 }
 
-/** Rate used for the dollar cell, for the hover tooltip. */
 export function registryUsdRateHint(
     row: RegistryUsdRow,
     rates: Readonly<Record<string, CbuParsed>>,

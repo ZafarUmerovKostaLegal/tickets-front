@@ -1,4 +1,3 @@
-/** Canonical currency code fixes for invoice registry typos. */
 const CURRENCY_CODE_MAP: Record<string, string> = {
     USZ: 'UZS',
     UZD: 'UZS',

@@ -111,7 +111,6 @@ export function saveVacationCalendarUi(state: VacationCalendarUiState): void {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
     catch {
-        // The page still works if the browser refuses to store the view.
     }
 }
 

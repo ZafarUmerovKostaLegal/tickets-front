@@ -109,7 +109,6 @@ export function inferReportPreviewPeriodState(dateFrom: string, dateTo: string):
     const allPreset = periodToDates(new Date(), 'all');
     const fromIso = dateFrom.slice(0, 10);
     const toIso = dateTo.slice(0, 10);
-    // Legacy "all time" used absolute floor 2000-01-01; also accept current clamped all-preset.
     if (
         (fromIso === REPORTS_ALL_TIME_DATE_FROM || fromIso === allPreset.dateFrom)
         && (toIso === allPreset.dateTo || fromIso === REPORTS_ALL_TIME_DATE_FROM)
@@ -220,7 +219,6 @@ function persistReportPreviewTransferToSession(payload: ReportPreviewTransferPay
     }
 }
 
-/** Store payload for a new browser tab (sessionStorage is not shared between tabs). */
 export function buildReportPreviewTransferUrl(payload: ReportPreviewTransferV2, previewPath: string): string {
     const id = `${REPORT_PREVIEW_TRANSFER_LOCAL_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     try {

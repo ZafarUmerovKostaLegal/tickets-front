@@ -310,7 +310,6 @@ function filenameFromContentDisposition(header: string | null, fallback: string)
     return fallback;
 }
 
-/** Скачать доску как JSON (kosta_todos). */
 export async function exportTodoBoard(boardId: number): Promise<{ blob: Blob; filename: string }> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/export`);
     if (!res.ok) {
@@ -325,7 +324,6 @@ export async function exportTodoBoard(boardId: number): Promise<{ blob: Blob; fi
     return { blob, filename };
 }
 
-/** Импорт JSON (наш экспорт или Trello) → новая доска. */
 export async function importTodoBoard(file: File, init?: Pick<RequestInit, 'signal'>): Promise<TodoBoard> {
     const fd = new FormData();
     fd.append('file', file, file.name || 'board.json');

@@ -6697,10 +6697,6 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   }
 }
 
-/* ==========================================================================
-   Legal Hub — UX refresh: shared tokens, header, nav badges, attention, chips
-   ========================================================================== */
-
 .lh-page {
   --lh-late: #be123c;
   --lh-late-bg: color-mix(in srgb, #e11d48 9%, var(--app-surface));
@@ -6720,8 +6716,6 @@ body[data-theme='dark'] .lh-page {
   --lh-review: #c4b5fd;
   --lh-ok: #86efac;
 }
-
-/* --- Page header: title, one-line explanation, primary action on the right --- */
 
 .lh-page__head {
   display: flex;
@@ -6780,7 +6774,6 @@ body[data-theme='dark'] .lh-page {
   line-height: 1;
 }
 
-/* Breadcrumbs: «Проекты / Project A — Solar», «Вся команда / Имя» */
 .lh-crumbs {
   display: inline-flex;
   align-items: baseline;
@@ -6811,8 +6804,6 @@ body[data-theme='dark'] .lh-page {
   outline-offset: 2px;
   border-radius: 6px;
 }
-
-/* --- "Viewing someone else's data" banner --- */
 
 .lh-viewas {
   display: flex;
@@ -6874,8 +6865,6 @@ body[data-theme='dark'] .lh-page {
   font-weight: 650;
 }
 
-/* --- Search: clear button instead of the "/" hint while typing --- */
-
 .lh-top__search-input::-webkit-search-cancel-button {
   display: none;
 }
@@ -6901,8 +6890,6 @@ body[data-theme='dark'] .lh-page {
 .lh-top__search-clear:hover {
   color: var(--app-text);
 }
-
-/* --- Sidebar counters --- */
 
 .lh-side__item-icon {
   position: relative;
@@ -6966,8 +6953,6 @@ body[data-theme='dark'] .lh-page {
   }
 }
 
-/* --- Relative deadline badge --- */
-
 .lh-due {
   display: inline-flex;
   align-items: center;
@@ -7006,8 +6991,6 @@ body[data-theme='dark'] .lh-page {
   margin-top: 0.25rem;
 }
 
-/* --- Kanban cards: overdue accent, locked hint --- */
-
 .lh-my__card.is-late {
   border-color: var(--lh-late-border);
   box-shadow: inset 3px 0 0 #e11d48, 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -7021,7 +7004,6 @@ body[data-theme='dark'] .lh-page {
   opacity: 0.6;
 }
 
-/* Docket board: same layout as the legal board, painted with the app palette. */
 .lh-my--docket {
   gap: 0.35rem;
   margin-top: 0;
@@ -7471,8 +7453,6 @@ body[data-theme='dark'] .lh-page {
   font-size: 0.75rem;
 }
 
-/* --- My tasks: «Требуют внимания» --- */
-
 .lh-my {
   margin-top: 0;
 }
@@ -7648,8 +7628,6 @@ body[data-theme='dark'] .lh-page {
   font-size: 0.72rem;
 }
 
-/* --- Results line under filters --- */
-
 .lh-my__summary {
   display: inline-flex;
   align-items: center;
@@ -7677,8 +7655,6 @@ body[data-theme='dark'] .lh-page {
 .lh-empty p {
   margin: 0;
 }
-
-/* --- Review queue: clickable stats, dates, overdue --- */
 
 .lh-queue__stats .lh-stat {
   width: 100%;
@@ -7732,8 +7708,6 @@ body[data-theme='dark'] .lh-page {
 .lh-queue__col--approved header strong {
   color: var(--lh-ok);
 }
-
-/* --- Projects: chips, legend, cards --- */
 
 .lh-projects__tools {
   display: flex;
@@ -7929,8 +7903,6 @@ body[data-theme='dark'] .lh-page {
   white-space: nowrap;
 }
 
-/* --- Team: member card affordance --- */
-
 .lh-member__open {
   display: inline-flex;
   align-items: center;
@@ -7955,8 +7927,6 @@ body[data-theme='dark'] .lh-page {
   outline: 2px solid var(--app-accent);
   outline-offset: 2px;
 }
-
-/* --- Member page header --- */
 
 .lh-member-page__head {
   display: flex;
@@ -7987,8 +7957,6 @@ body[data-theme='dark'] .lh-page {
   font-weight: 750;
 }
 
-/* --- Task drawer: finished state --- */
-
 .lh-drawer__send:disabled {
   background: color-mix(in srgb, var(--app-text) 18%, var(--app-surface));
   color: color-mix(in srgb, var(--app-text) 45%, var(--app-surface));
@@ -8001,8 +7969,6 @@ body[data-theme='dark'] .lh-page {
   color: var(--lh-ok);
   cursor: default;
 }
-
-/* --- Small screens --- */
 
 @media (max-width: 720px) {
   .lh-crumbs {
@@ -8671,10 +8637,6 @@ body[data-theme='dark'] .lh-page {
   .lh-map__deadline { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* ==========================================================================
-   Board toolbar, foldable columns, card facts with icons
-   ========================================================================== */
-
 .lh-bt {
   position: relative;
   z-index: 6;
@@ -9179,7 +9141,6 @@ body[data-theme='dark'] .lh-page {
   text-decoration: underline;
 }
 
-/* Columns: six expanded columns fit the board, the rest scroll */
 .lh-my--docket .lh-my__col {
   --lh-col-w: calc((100cqi - 2rem - 5 * 0.7rem - 20px) / 6);
   width: var(--lh-col-w);
@@ -9317,7 +9278,6 @@ body[data-theme='dark'] .lh-page {
   white-space: nowrap;
 }
 
-/* Cards */
 .lh-my--docket .lh-my__card {
   cursor: grab;
 }
@@ -9416,7 +9376,6 @@ body[data-theme='dark'] .lh-page {
   }
 }
 
-/* List view */
 .lh-my--list {
   width: 100%;
 }

@@ -2,7 +2,6 @@ import { fetchAllExpenses } from '@entities/expenses/lib/fetchAllExpenses';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import type { ExpenseRequest } from '@entities/expenses/model/types';
 
-/** Statuses that block client invoice create until paid. */
 export const INVOICE_BLOCKING_EXPENSE_STATUSES = new Set([
     'approved',
     'pending_approval',
@@ -18,10 +17,6 @@ function isBlockingUnpaidExpense(r: ExpenseRequest): boolean {
     return INVOICE_BLOCKING_EXPENSE_STATUSES.has(String(r.status ?? '').trim());
 }
 
-/**
- * Reimbursable company expenses on the project that are not yet paid.
- * Fail-closed: network/API errors propagate so invoice create cannot skip the gate.
- */
 export async function fetchApprovedUnpaidProjectExpenses(
     projectId: string,
     signal?: AbortSignal,

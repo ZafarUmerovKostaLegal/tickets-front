@@ -4,12 +4,9 @@ const STORAGE_KEY_V1 = 'tt_firm_banking_details_v1';
 const STORAGE_KEY = 'tt_firm_banking_profiles_v2';
 
 export type FirmBankingDetails = {
-    /** Beneficiary / Получатель */
     recipientName: string;
-    /** Legal address / Юридический адрес */
     legalAddress: string;
     tin: string;
-    /** OKED / ОКЭД */
     oked: string;
     bankName: string;
     bankAddress: string;
@@ -19,7 +16,6 @@ export type FirmBankingDetails = {
     swift: string;
     correspondentBank: string;
     correspondentAccount: string;
-    /** Correspondent BIC / БИК */
     correspondentBik: string;
 };
 
@@ -142,7 +138,6 @@ export function setFirmBankingProfiles(profiles: FirmBankingProfile[]): void {
         localStorage.removeItem(STORAGE_KEY_V1);
     }
     catch {
-        // ignore
     }
 }
 
@@ -154,7 +149,6 @@ export function getDefaultFirmBankingProfile(
     return profiles.find((p) => p.isDefault) ?? profiles[0] ?? null;
 }
 
-/** @deprecated Prefer listFirmBankingProfiles / getDefaultFirmBankingProfile. */
 export function getFirmBankingDetails(): FirmBankingDetails {
     const d = getDefaultFirmBankingProfile();
     if (!d)
@@ -163,7 +157,6 @@ export function getFirmBankingDetails(): FirmBankingDetails {
     return details;
 }
 
-/** @deprecated Prefer setFirmBankingProfiles. */
 export function setFirmBankingDetails(value: FirmBankingDetails): void {
     const existing = listFirmBankingProfiles();
     const def = getDefaultFirmBankingProfile(existing);
@@ -232,7 +225,6 @@ export function profileDisplayTitle(profile: FirmBankingProfile, untitledLabel: 
     return untitledLabel;
 }
 
-/** Defaults for invoice legal masthead — empty strings stay unset so placeholders show. */
 export function firmBankingToLegalOverrides(
     details: FirmBankingDetails | FirmBankingProfile | null = getDefaultFirmBankingProfile(),
 ): InvoiceLegalPageOverrides {
@@ -243,7 +235,6 @@ export function firmBankingToLegalOverrides(
     return {
         recipientName: orNull(details.recipientName),
         legalAddress,
-        // Masthead address follows the profile legal address when set.
         firmAddress: legalAddress,
         tin: orNull(details.tin),
         oked: orNull(details.oked),
@@ -274,7 +265,6 @@ export function pickFirmBankingProfileForCurrency(
     return getDefaultFirmBankingProfile(profiles);
 }
 
-/** Merge bank fields from a profile into legal overrides (keeps invoice-number / dates / etc.). */
 export function applyFirmBankingProfileToLegalOverrides(
     prev: InvoiceLegalPageOverrides,
     profile: FirmBankingProfile | null,

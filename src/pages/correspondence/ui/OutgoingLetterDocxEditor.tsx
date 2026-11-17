@@ -59,7 +59,6 @@ function bindLayoutSafeEditorHotkeys(
     onNewCommentRequest?: () => void,
 ): () => void {
     const onKeyDown = (event: KeyboardEvent) => {
-        // Word: Ctrl+Alt+M — new comment (works even when Alt is held).
         if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && event.code === 'KeyM') {
             if (event.defaultPrevented)
                 return;
@@ -86,7 +85,6 @@ function bindLayoutSafeEditorHotkeys(
         const inEditorRoot = root.contains(target as Node) || (active instanceof Node && root.contains(active));
         if (!inEditorRoot)
             return;
-        // Title/search fields inside packaged chrome — leave browser shortcuts alone.
         if (isFormFieldTarget(target) || isFormFieldTarget(active))
             return;
 
@@ -157,10 +155,6 @@ function bindLayoutSafeEditorHotkeys(
     return () => document.removeEventListener('keydown', onKeyDown, true);
 }
 
-/**
- * In-app WYSIWYG .docx surface (replaces Word Online for outgoing letters).
- * Must render client-side only — text measurement needs the DOM.
- */
 export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandle, Props>(
     function OutgoingLetterDocxEditor(
         { documentBytes, title, templateKey, disabled, onReady, onChange, onSaveRequest, onNewCommentRequest },

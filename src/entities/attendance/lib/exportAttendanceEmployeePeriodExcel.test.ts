@@ -42,7 +42,6 @@ describe('exportAttendanceEmployeePeriodExcel helpers', () => {
             }),
             item({ date: '2026-08-11' }),
         ]);
-        // Mon 10 .. Fri 14 = 5 weekdays
         expect(rows).toHaveLength(5);
         expect(rows[0]?.hasMarks).toBe(true);
         expect(rows[0]?.interval).toBe('6:30');

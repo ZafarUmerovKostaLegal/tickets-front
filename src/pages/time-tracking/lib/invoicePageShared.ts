@@ -18,7 +18,6 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
-/** Build PDF of the last invoice preview page (legal invoice) and email it to accounting. */
 export async function notifyAccountingLastInvoicePage(opts: {
   invoiceId: string;
   model: import('@pages/invoice-preview/lib/invoiceCoverLetterModel').InvoiceCoverLetterModel;
@@ -63,7 +62,6 @@ export function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** Outlook compose in a centered popup (not a new browser tab). */
 export function openOutlookComposePopup(url: string): Window | null {
   const href = String(url ?? '').trim();
   if (!href || typeof window === 'undefined')
@@ -89,7 +87,6 @@ export function openOutlookComposePopup(url: string): Window | null {
       popup.opener = null;
   }
   catch {
-    /* ignore cross-origin */
   }
   return popup;
 }
@@ -122,7 +119,6 @@ export function invoiceLineKindLabel(ln: InvoiceLineDto, t: TimeTrackingT): stri
   }
 }
 
-/** Detect billed-override invoices: money on manual line(s), zeroed time/expense linkage. */
 export function summarizeBilledOverrideLines(
   lines: readonly InvoiceLineDto[] | null | undefined,
   invoiceCurrency?: string | null,
@@ -131,7 +127,6 @@ export function summarizeBilledOverrideLines(
   visibleLines: InvoiceLineDto[];
   closedTimeCount: number;
   closedExpenseCount: number;
-  /** Worked/accrued total from closed linkage (invoice currency when available). */
   workedAmount: number;
   workedCurrency: string;
 } {
@@ -157,7 +152,6 @@ export function summarizeBilledOverrideLines(
       workedCurrency: invCcy,
     };
   }
-  // Zeroed non-manual lines carry worked totals in sourceAmount (invoice ccy after override).
   const zeroedNonManual = all.filter((ln) => {
     if (invoiceLineKindSlug(ln) === 'manual')
       return false;
@@ -196,7 +190,6 @@ export function fmtDisplayDate(iso: string, locale: AppLocale): string {
   return d.toLocaleDateString(localeTag(locale), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** First and last valid ISO dates from work/expense lines. */
 export function billingPeriodBoundsFromIsoDates(
   dates: readonly string[],
 ): { from: string; to: string } | null {
@@ -209,7 +202,6 @@ export function billingPeriodBoundsFromIsoDates(
   return { from: valid[0]!, to: valid[valid.length - 1]! };
 }
 
-/** Pick billing-period anchor ISO from work/expense dates (densest month, latest day). */
 export function inferBillingPeriodIsoFromDates(dates: readonly string[]): string | null {
   const valid = dates
     .map((d) => String(d ?? '').trim().slice(0, 10))
@@ -262,8 +254,6 @@ export async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel
   const inferred = inferBillingPeriodIsoFromDates(lineDates);
   if (inferred) {
     const storedAnchor = meta.billingPeriodTo || meta.billingPeriodFrom;
-    // Prefer actual work/expense dates when they point to a different month than the
-    // stored partner period (often left as the current calendar month by mistake).
     if (!storedAnchor || storedAnchor.slice(0, 7) !== inferred.slice(0, 7))
       meta.billingPeriodTo = inferred;
   }
@@ -339,21 +329,18 @@ export function lastOfMonthIso(): string {
   return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
 }
 
-/** Last calendar day of the month before `isoDate` (YYYY-MM-DD). Used for custom-billed FX. */
 export function lastDayOfPreviousMonthIso(isoDate: string): string | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate ?? '').trim().slice(0, 10));
   if (!m)
     return null;
   const y = Number(m[1]);
-  const month = Number(m[2]); // 1–12
+  const month = Number(m[2]);
   if (!Number.isFinite(y) || month < 1 || month > 12)
     return null;
-  // Day 0 of current month = last day of previous month (local calendar, no TZ shift).
   const last = new Date(y, month - 1, 0);
   return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
 }
 
-/** Full invoice PDF, the same file as «Скачать PDF» on the invoice card. */
 export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
   blob: Blob;
   fileBase: string;
@@ -449,7 +436,6 @@ export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
   };
 }
 
-/** Full invoice PDF, the same file as «Скачать PDF» on the invoice card. */
 export async function downloadExistingInvoicePdf(invoiceId: string): Promise<void> {
   const { triggerBrowserDownload } = await import('@pages/invoice-preview/lib/invoicePreviewDownload');
   const file = await buildExistingInvoicePdfFile(invoiceId);

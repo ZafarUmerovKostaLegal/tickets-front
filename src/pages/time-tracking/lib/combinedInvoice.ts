@@ -57,7 +57,6 @@ function roundMoney2(value: number): number {
     return Math.round(value * 100) / 100;
 }
 
-/** USD reports keep the dollar equivalent. A sums report uses the som amount of the expense. */
 export function combinedExpenseAmount(
     line: { equivalentAmount: number; amountUzs?: number | null },
     currency: string,
@@ -72,7 +71,6 @@ export function combinedExpenseAmount(
     return Number.isFinite(usd) ? usd : 0;
 }
 
-/** Fill amountUzs from the expense card when the unbilled row only has the dollar equivalent. */
 export async function withProjectCurrencyExpenseAmounts(
     lines: CombinedExpenseLine[],
     currency: string,
@@ -89,7 +87,6 @@ export async function withProjectCurrencyExpenseAmounts(
                 return { ...line, amountUzs: uzs, exchangeRate: asExpenseNumber(req.exchangeRate) };
         }
         catch {
-            /* leave the dollar equivalent */
         }
         return line;
     }));
@@ -152,7 +149,6 @@ function noteFromTimeDescription(raw: string | null | undefined): string {
     return (raw ?? '').trim() || taskLine.trim();
 }
 
-/** Task is the linked task name. The note stays in Description and is not copied into Task. */
 export function combinedTimeTaskAndNotes(
     raw: string | null | undefined,
     taskName?: string | null,
@@ -180,7 +176,6 @@ function normTaskNote(raw: string | null | undefined): string {
     return noteFromTimeDescription(raw).trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/** Replace only the Task column on a saved combined report. Hours, rates and amounts stay. */
 export function applyLinkedTaskNames(
     report: CombinedReportSnapshot,
     hints: readonly LinkedTimeTaskHint[],
@@ -240,7 +235,6 @@ export type CombinedProjectSummaryRow = {
 export type CombinedReportSnapshot = {
     feeTitle: string;
     currency: string;
-    /** perProject: each project is its own report page. Omitted means one merged table. */
     layout?: CombinedReportLayout;
     projects: Array<{ name: string; pageTitle?: string; lines: CombinedReportLine[]; summary?: CombinedProjectSummaryRow[] }>;
     people: Array<{
@@ -266,7 +260,6 @@ function nameKey(value: string): string {
     return value.trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
 }
 
-/** Replace generated initials with the codes stored on system users, matched by name. */
 export function applyStoredUserInitials(
     report: CombinedReportSnapshot,
     users: ReadonlyArray<{ display_name?: string | null; email?: string | null; initials?: string | null }>,
@@ -389,11 +382,6 @@ export function buildCombinedReportSnapshot(input: {
     };
 }
 
-/**
- * Expense rows that belong on one project's sheet.
- * New snapshots store projectName. Older ones have no name: a single-project
- * report keeps every row, a multi-project report keeps them on the last sheet.
- */
 export function projectExpenseIndexes(report: CombinedReportSnapshot, projectIndex: number): number[] {
     const expenses = report.expenses ?? [];
     const name = (report.projects[projectIndex]?.name ?? '').trim();
@@ -408,7 +396,6 @@ export function projectExpenseIndexes(report: CombinedReportSnapshot, projectInd
     return [];
 }
 
-/** Per-project summary. Saved rows win; otherwise the table is rolled up from time lines. */
 export function projectSummaryRows(report: CombinedReportSnapshot, projectIndex: number): CombinedProjectSummaryRow[] {
     const project = report.projects[projectIndex];
     if (!project)
@@ -465,10 +452,6 @@ export function combinedReportDetailLines(snapshot: CombinedReportSnapshot): Com
         .sort((a, b) => a.date.localeCompare(b.date) || (a.initials || a.user).localeCompare(b.initials || b.user));
 }
 
-/**
- * Saved sums reports stored the dollar equivalent under an UZS label.
- * Replace those lines when the invoice lines (or the expense cards) are in sums.
- */
 export function applyCombinedExpenseAmounts(
     report: CombinedReportSnapshot,
     amounts: readonly number[],
@@ -524,7 +507,6 @@ export async function alignCombinedReportToProjectCurrency(
                         return roundMoney2(uzs);
                 }
                 catch {
-                    /* use the invoice line */
                 }
             }
         }

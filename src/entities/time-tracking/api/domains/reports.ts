@@ -1462,7 +1462,6 @@ export async function resolveReportExportDownloadFilename(
             }
         }
         catch {
-            // keep partial labels
         }
     }
 

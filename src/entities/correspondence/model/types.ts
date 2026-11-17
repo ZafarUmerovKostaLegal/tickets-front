@@ -1,6 +1,5 @@
 export type CorrDirection = 'incoming' | 'outgoing';
 
-/** Active selectable types + legacy `note` for existing rows. */
 export type CorrDocType =
     | 'letter'
     | 'request'
@@ -20,7 +19,6 @@ export type CorrDocType =
     | 'other'
     | 'note';
 
-/** Types offered when registering / filtering (excludes legacy `note`). */
 export const CORR_DOC_TYPE_KEYS = [
     'letter',
     'request',
@@ -115,7 +113,6 @@ export type CorrespondenceStats = {
     approvalTotal: number;
     incomingNewTotal: number;
     pendingReviewTotal: number;
-    /** For partner: outgoing letters awaiting review. */
     partnerAttentionTotal: number;
     partnerOutgoingPending: number;
     partnerIncomingNew: number;

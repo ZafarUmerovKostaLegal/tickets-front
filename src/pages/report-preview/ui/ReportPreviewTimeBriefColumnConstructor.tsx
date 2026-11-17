@@ -14,7 +14,6 @@ export type BriefColumnPickerProps = {
     includeActionsColumn: boolean;
     activeOrderedIds: TimeBriefColumnId[];
     onChange: (next: TimeBriefColumnId[]) => void;
-    /** When set, shows «remember for next reports» and reports toggles. */
     rememberEnabled?: boolean;
     onRememberEnabledChange?: (enabled: boolean) => void;
 };

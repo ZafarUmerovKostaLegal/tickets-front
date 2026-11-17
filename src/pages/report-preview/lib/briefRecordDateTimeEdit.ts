@@ -107,7 +107,6 @@ function scopeColorSortKey(value: string | null | undefined): string {
     return /^#([0-9A-F]{6})$/.test(raw) ? raw : '';
 }
 
-/** Same Scope colors stay together; within a color group keep chronological order. Uncolored last. */
 export function sortTimePreviewRowsByScopeThenChrono(
     rows: TimeExcelPreviewRow[],
     order: 'asc' | 'desc' = 'asc',

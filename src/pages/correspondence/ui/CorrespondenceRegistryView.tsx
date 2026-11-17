@@ -1189,7 +1189,6 @@ export function CorrespondenceRegistryView({
       documentId={cardDocId}
       onClose={() => setCardDocId(null)}
       onChanged={() => {
-        // Refresh list after approve/reject/resubmit
         setReloadToken((n) => n + 1);
       }}
     />

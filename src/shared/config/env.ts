@@ -107,7 +107,6 @@ export function getAttendanceApiBase(): string {
     return upgradeUrlToPageSecurity(v.trim().replace(/\/+$/, ''));
 }
 export const AUTH_ERROR_AUTH_FAILED = 'auth_failed';
-/** Whether auth uses HTTP-only session cookie (not a React hook). */
 export function isSessionCookieOnly(): boolean {
     if (isTauriDesktopClient())
         return false;

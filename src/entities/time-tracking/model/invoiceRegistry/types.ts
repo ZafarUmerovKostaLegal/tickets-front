@@ -15,10 +15,8 @@ export type InvoiceRegistryRow = {
 
 export type InvoiceRegistryColumnDef = {
     key: string;
-    /** Excel header (RU) — shown 1:1 in the table */
     label: string;
     wide?: boolean;
-    /** Dropdown, a PDF download, or a partner note edited in a dialog. */
     editor?: 'text' | 'status' | 'pdf' | 'note';
 };
 

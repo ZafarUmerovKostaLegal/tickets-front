@@ -2616,7 +2616,6 @@ body[data-theme='dark'] .home-page--hub {
 }
 
 .home-page__main--hub {
-  /* Grow with tiles; do not use min-height:0 — that clips content without a scrollport */
   position: relative;
   flex: 1 0 auto;
   min-height: auto;
@@ -2626,7 +2625,6 @@ body[data-theme='dark'] .home-page--hub {
   background: transparent;
 }
 
-/* Clear the fixed garland hanging under the topbar */
 .home-page__main--hub-festive .home-page__main-inner--hub {
   padding-top: 5.5rem;
 }
@@ -3212,13 +3210,6 @@ body[data-theme='dark'] .home-page--tickets {
 }
 
 
-/* ==========================================================================
-   IT-заявки — адаптив (телефоны, планшеты, узкие ноутбуки)
-   Блок стоит последним и перекрывает как базовые мобильные правила,
-   так и тему .home-page--tickets, которая раньше «перебивала» их.
-   ========================================================================== */
-
-/* --- Общая защита от горизонтального скролла --------------------------- */
 .home-page--tickets,
 .home-page--tickets .home-page__main,
 .home-page--tickets .home-page__main-inner,
@@ -3284,7 +3275,6 @@ body[data-theme='dark'] .home-page--tickets {
   overflow-wrap: anywhere;
 }
 
-/* --- Таблица на десктопе и планшете в альбомной ориентации ------------- */
 @media (min-width: 769px) {
   .home-page--tickets .home-tickets__table-head,
   .home-page--tickets .home-tickets__row {
@@ -3354,13 +3344,11 @@ body[data-theme='dark'] .home-page--tickets {
   }
 }
 
-/* --- Телефоны и планшеты в портретной ориентации ----------------------- */
 @media (max-width: 768px) {
   .home-page--tickets {
     --hp-tk-pad-x: 1rem;
   }
 
-  /* Шапка */
   .home-page--tickets .home-page__header--tickets {
     gap: 0.5rem;
     min-height: 56px;
@@ -3416,7 +3404,6 @@ body[data-theme='dark'] .home-page--tickets {
     right: 7px;
   }
 
-  /* Контент */
   .home-page--tickets .home-page__main-inner {
     gap: 0.875rem;
     padding: 0.875rem
@@ -3425,7 +3412,6 @@ body[data-theme='dark'] .home-page--tickets {
       max(var(--hp-tk-pad-x), var(--mob-safe-left, 0px));
   }
 
-  /* Статистика */
   .home-page--tickets .home-stats {
     gap: 0.625rem;
   }
@@ -3462,7 +3448,6 @@ body[data-theme='dark'] .home-page--tickets {
     overflow-wrap: anywhere;
   }
 
-  /* Карточка списка: рамка остаётся только у самих заявок */
   .home-page--tickets .home-tickets__card {
     overflow: visible;
     background: transparent;
@@ -3537,7 +3522,6 @@ body[data-theme='dark'] .home-page--tickets {
     font-size: 0.875rem;
   }
 
-  /* 16px — иначе iOS увеличивает страницу при фокусе в поле */
   .home-page--tickets .home-tickets__search,
   .home-page--tickets .home-tickets__search:focus {
     width: 100%;
@@ -3568,7 +3552,6 @@ body[data-theme='dark'] .home-page--tickets {
     gap: 0.625rem;
   }
 
-  /* Заявка-карточка: тема → автор · дата → статус · приоритет */
   .home-page--tickets .home-tickets__row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: 1fr auto auto;
@@ -3669,7 +3652,6 @@ body[data-theme='dark'] .home-page--tickets {
     padding-left: 0.75rem;
   }
 
-  /* На тач-экранах нет hover: подпись приоритета показываем текстом */
   body .home-page--tickets .home-tickets__priority-wrap {
     width: auto;
     height: auto;
@@ -3722,7 +3704,6 @@ body[data-theme='dark'] .home-page--tickets {
   }
 }
 
-/* Планшеты в портрете и большие телефоны в альбоме: заявки в две колонки */
 @media (min-width: 600px) and (max-width: 768px) {
   .home-page--tickets .home-tickets__table {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3758,7 +3739,6 @@ body[data-theme='dark'] .home-page--tickets {
   }
 }
 
-/* Маленькие телефоны */
 @media (max-width: 400px) {
   .home-page--tickets {
     --hp-tk-pad-x: 0.75rem;
@@ -3797,7 +3777,6 @@ body[data-theme='dark'] .home-page--tickets {
   }
 }
 
-/* --- Модалка «Новая заявка» ------------------------------------------- */
 .tm__box,
 .tm__form,
 .tm__field,
@@ -3825,7 +3804,6 @@ body[data-theme='dark'] .home-page--tickets {
 }
 
 @media (max-width: 600px) {
-  /* Нижний лист на всю ширину экрана */
   .tm {
     align-items: stretch;
     justify-content: flex-end;
@@ -3896,7 +3874,6 @@ body[data-theme='dark'] .home-page--tickets {
   to { opacity: 1; transform: none; }
 }
 
-/* --- Панель уведомлений ----------------------------------------------- */
 .hnm__head-left,
 .hnm__item-main {
   min-width: 0;
@@ -3940,7 +3917,6 @@ body[data-theme='dark'] .home-page--tickets {
   }
 }
 
-/* Квадратные кнопки-иконки в модалках (глобальное min-height: 44px их вытягивало) */
 @media (max-width: 768px) {
   .tm .tm__close,
   .hnm .hnm__add-btn,

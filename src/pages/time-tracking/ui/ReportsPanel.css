@@ -7,7 +7,6 @@
   --rp2-muted: var(--app-muted, #64748b);
   --rp2-radius: 10px;
   --rp2-chev: 2rem;
-  /* Name capped; metrics share leftover width so no empty middle. */
   --rp2-name: minmax(12rem, 26rem);
   --rp2-h1: minmax(5.25rem, 1fr);
   --rp2-h2: minmax(6.25rem, 1.1fr);
@@ -2496,56 +2495,48 @@
   background: color-mix(in srgb, var(--app-surface-soft, #f8fafc) 88%, var(--app-surface, #fff));
 }
 
-/* client */
 .tt-partner-confirmed__table--for-review th:nth-child(1),
 .tt-partner-confirmed__table--for-review td:nth-child(1) {
   width: 17%;
   min-width: 12rem;
 }
 
-/* project */
 .tt-partner-confirmed__table--for-review th:nth-child(2),
 .tt-partner-confirmed__table--for-review td:nth-child(2) {
   width: 17%;
   min-width: 12rem;
 }
 
-/* period */
 .tt-partner-confirmed__table--for-review th:nth-child(3),
 .tt-partner-confirmed__table--for-review td:nth-child(3) {
   width: 14%;
   min-width: 14rem;
 }
 
-/* priority */
 .tt-partner-confirmed__table--for-review th:nth-child(4),
 .tt-partner-confirmed__table--for-review td:nth-child(4) {
   width: 11%;
   min-width: 10rem;
 }
 
-/* partners */
 .tt-partner-confirmed__table--for-review th:nth-child(5),
 .tt-partner-confirmed__table--for-review td:nth-child(5) {
   width: 11%;
   min-width: 8.5rem;
 }
 
-/* created at */
 .tt-partner-confirmed__table--for-review th:nth-child(6),
 .tt-partner-confirmed__table--for-review td:nth-child(6) {
   width: 10%;
   min-width: 8.75rem;
 }
 
-/* comments */
 .tt-partner-confirmed__table--for-review th:nth-child(7),
 .tt-partner-confirmed__table--for-review td:nth-child(7) {
   width: 12%;
   min-width: 11rem;
 }
 
-/* actions — up to 3 icon buttons */
 .tt-partner-confirmed__table--for-review th:nth-child(8),
 .tt-partner-confirmed__table--for-review td:nth-child(8),
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__th-actions,
@@ -3083,7 +3074,6 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     background: transparent;
   }
 
-  /* Kill desktop column % / fixed widths — they crush card rows */
   .tt-partner-confirmed__table--confirmed th,
   .tt-partner-confirmed__table--confirmed td,
   .tt-partner-confirmed__table--for-review th,

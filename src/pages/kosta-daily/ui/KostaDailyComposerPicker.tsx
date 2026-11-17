@@ -128,7 +128,6 @@ export function KostaDailyComposerPicker({
     return (
         <div className="kd-tg__picker" role="dialog" aria-label="Выбор эмодзи, стикеров и GIF">
 
-            {}
             <div className="kd-tg__picker-toolbar">
                 <label className="kd-tg__picker-search">
                     <span className="kd-tg__picker-search-icon" aria-hidden><IconSearch /></span>
@@ -143,11 +142,9 @@ export function KostaDailyComposerPicker({
                 </label>
             </div>
 
-            {}
             <div className="kd-tg__picker-body" role="tabpanel">
                 <div className="kd-tg__picker-scroll" ref={scrollRef}>
 
-                    {}
                     {tab === 'emoji' ? (
                         filteredEmojiGroups.length === 0
                             ? <p className="kd-tg__picker-empty">Ничего не найдено</p>
@@ -170,7 +167,6 @@ export function KostaDailyComposerPicker({
                             ))
                     ) : null}
 
-                    {}
                     {tab === 'sticker' ? (
                         filteredPackStickers ? (
 
@@ -193,7 +189,6 @@ export function KostaDailyComposerPicker({
                         ) : (
 
                             <>
-                                {}
                                 {recentStickers.length > 0 && (
                                     <section className="kd-tg__picker-section"
                                         ref={(node) => { packSectionRefs.current['recent'] = node; }}>
@@ -214,7 +209,6 @@ export function KostaDailyComposerPicker({
                                         </div>
                                     </section>
                                 )}
-                                {}
                                 {CHAT_STICKER_PACKS.map((pack) => (
                                     <section key={pack.id} className="kd-tg__picker-section"
                                         ref={(node) => { packSectionRefs.current[pack.id] = node; }}>
@@ -244,7 +238,6 @@ export function KostaDailyComposerPicker({
                         )
                     ) : null}
 
-                    {}
                     {tab === 'gif' ? (
                         filteredGifs.length === 0
                             ? <p className="kd-tg__picker-empty">GIF не найдены</p>
@@ -269,7 +262,6 @@ export function KostaDailyComposerPicker({
                 </div>
             </div>
 
-            {}
             <div className="kd-tg__picker-footer">
                 {tab === 'emoji' && !query.trim() ? (
 

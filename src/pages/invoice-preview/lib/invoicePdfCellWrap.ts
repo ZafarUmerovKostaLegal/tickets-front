@@ -1,7 +1,3 @@
-/**
- * Shared PDF cell wrap used by invoice time-report tables.
- * Prefer breaks at spaces; split long tokens so text cannot overflow the column.
- */
 export function wrapPdfCellLines(
     text: string,
     maxW: number,

@@ -124,7 +124,6 @@ export function formatCoverServicesPeriod(isoYmd: string, lang: InvoiceCoverLang
     return `${EN_MONTHS[d.getMonth()] ?? 'Month'} ${d.getFullYear()}`;
 }
 
-/** «July 2026» or «July and August 2026» when the billing period crosses months. */
 export function formatCoverServicesPeriodRange(
     fromIso: string | null | undefined,
     toIso: string | null | undefined,
@@ -185,7 +184,6 @@ function formatMonthPoints(
     return joinWithAnd(points.map((p) => `${EN_MONTHS[p.month] ?? 'Month'} ${p.year}`), 'and');
 }
 
-/** Months that actually appear in the given ISO dates — not the loaded from/to window. */
 export function formatCoverServicesPeriodFromIsoDates(
     dates: readonly string[],
     lang: InvoiceCoverLanguage,
@@ -205,7 +203,6 @@ export function formatCoverServicesPeriodFromIsoDates(
     return formatMonthPoints(points, lang);
 }
 
-/** Parse "USD 596.61" / "EUR 3,250.50" from cover letter money text. */
 export function parseCoverLetterMoneyAmount(raw: string): number | null {
     const s = String(raw ?? '').trim();
     if (!s)
@@ -215,10 +212,6 @@ export function parseCoverLetterMoneyAmount(raw: string): number | null {
     return Number.isFinite(n) ? n : null;
 }
 
-/**
- * Saved cover paragraphs often embed the invoice total at issue time.
- * When the live total only differs by FX/float cents, rewrite those amounts.
- */
 export function syncStaleCoverTotalInText(text: string, correctTotalFormatted: string): string {
     const correctRaw = String(correctTotalFormatted ?? '').trim();
     const correctAmt = parseCoverLetterMoneyAmount(correctRaw);

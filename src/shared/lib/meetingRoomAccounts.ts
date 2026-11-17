@@ -18,7 +18,6 @@ export function isMeetingRoomAccount(user: { email?: string | null } | null | un
     return isMeetingRoomAccountEmail(user?.email);
 }
 
-/** Paths meeting-room accounts may open (settings is UI chrome, not a route). */
 export function isMeetingRoomAllowedPath(pathname: string): boolean {
     const path = (pathname || '/').split('?')[0] || '/';
     if (path === '/home' || path.startsWith('/home/'))

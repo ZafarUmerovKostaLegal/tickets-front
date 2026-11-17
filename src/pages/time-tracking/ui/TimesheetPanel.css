@@ -6000,11 +6000,7 @@
   }
 }
 
-/* ==========================================================================
-   Таймшит — тач-адаптив (телефоны). Блок последний в файле.
-   ========================================================================== */
 @media (max-width: 640px) {
-  /* Итог недели переносится ПОД 7 дней — дни получают полную ширину */
   .tsp__strip:not(.tsp__strip--calendar) {
     flex-wrap: wrap;
   }
@@ -6030,7 +6026,6 @@
   .tsp__wtotal-cap { margin-left: auto; }
   .tsp__wtotal-bar-wrap { order: 9; flex: 1 1 100%; }
 
-  /* «+» быстрой записи: всегда видно, компактная явная зона (не 44px-невидимка) */
   .tsp__day .tsp__day-quick {
     opacity: 1;
     min-height: 0;
@@ -6042,7 +6037,6 @@
   }
   .tsp__day .tsp__day-quick svg { width: 13px; height: 13px; }
 
-  /* Тач-зоны навигации и переключателей — 44x44 */
   .tsp__arr { width: 44px; height: 44px; }
   .tsp__arr svg { width: 16px; height: 16px; }
   .tsp-side__toggle { width: 44px; height: 44px; }

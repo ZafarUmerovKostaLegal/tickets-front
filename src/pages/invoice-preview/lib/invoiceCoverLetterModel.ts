@@ -9,7 +9,6 @@ export const KOSTA_LEGAL_FIRM = {
     defaultSignatoryTitle: 'Partner',
 } as const;
 
-/** Right-hand letterhead on the combined fees sheet. */
 export const KOSTA_LEGAL_LETTERHEAD_LINES = [
     '18 Anhor Buyi Street',
     '100011, Tashkent, Uzbekistan',
@@ -28,39 +27,29 @@ export type InvoiceCoverLetterInput = {
     totalAmount: number | null;
     currency: string;
     coverLanguage?: InvoiceCoverLanguage;
-    /** Billing period end for «services rendered in …»; defaults to issueDateIso. */
     billingPeriodIso?: string | null;
-    /** Billing period start. When it falls in another month, the report title lists both. */
     billingPeriodFromIso?: string | null;
-    /** Optional services figure. The legal invoice uses the full total instead. */
     servicesAmount?: number | null;
-    /** Fixed amount added on top of hours, in the invoice currency. */
     extraFixedFeeAmount?: number | null;
 };
 
 export type InvoiceCoverLetterModel = {
     coverLanguage: InvoiceCoverLanguage;
     issueDateIso: string;
-    /** ISO date used for services month (billing period end). */
     billingPeriodIso: string;
-    /** Billing period start. Equals billingPeriodIso when the invoice covers one month. */
     billingPeriodFromIso: string;
     letterDateDisplay: string;
     recipientCompany: string;
     recipientAddressLines: [string, string];
     attentionName: string;
     attentionTitle: string;
-    /** Greeting before the name, e.g. «Уважаемый(ая)» or «Dear». */
     salutation: string;
     quotedCompanyName: string;
     servicesMonthYear: string;
     totalFormatted: string;
-    /** Unused on the legal invoice: that page prints `totalFormatted` on the services line. */
     servicesAmountFormatted?: string | null;
-    /** Fixed fee, kept so a saved EXTRA EXPENSES value equal to this fee can be ignored. */
     extraFixedFeeFormatted?: string | null;
     signatoryName: string;
-    /** Partner initials matching `public/signatures/{initials}.*` when known. */
     signatoryInitials: string;
     signatoryTitle: string;
 
@@ -93,7 +82,6 @@ const FIRM_ADDRESS_RU = [
     'улица Анхор буйи, 18',
 ] as const;
 
-/** Letterhead address. Russian uses the printed firm form; English stays one line. */
 export function coverFirmAddressLines(lang?: InvoiceCoverLanguage | null): readonly string[] {
     return normalizeCoverLanguage(lang) === 'RU' ? FIRM_ADDRESS_RU : [KOSTA_LEGAL_FIRM.addressLine];
 }

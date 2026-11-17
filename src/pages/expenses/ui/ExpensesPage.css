@@ -5610,12 +5610,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* ==========================================================================
-   Расходы — адаптив (телефоны, планшеты, узкие ноутбуки)
-   Блок стоит последним в файле и перекрывает накопившиеся выше правила.
-   ========================================================================== */
-
-/* --- Никакого горизонтального скролла страницы ------------------------- */
 .expenses-page,
 .expenses-page .expenses-page__main,
 .expenses-page .expenses-page__content {
@@ -5629,7 +5623,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   white-space: nowrap;
 }
 
-/* --- Узкий ноутбук / планшет в альбоме: таблица без прокрутки вбок ------ */
 @media (min-width: 769px) and (max-width: 1180px) {
   .expenses-page .exp-table {
     padding: 0 1rem 1.5rem;
@@ -5672,7 +5665,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
 }
 
 @media (min-width: 769px) and (max-width: 1180px) {
-  /* Шапка: разделы переносятся под заголовок и не обрезаются */
   .expenses-page .expenses-page__header {
     height: auto;
     padding-block: 0.5rem;
@@ -5694,7 +5686,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
 }
 
 @media (min-width: 769px) and (max-width: 1000px) {
-  /* Фильтры в несколько рядов — подписи читаются целиком */
   .expenses-page .exp-filters {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -5720,16 +5711,11 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* --- Телефоны и планшеты в портрете ------------------------------------ */
 @media (max-width: 768px) {
   .expenses-page {
     --exp-pad-x: 1rem;
   }
 
-  /* Скролл всей страницы — через документ, без вложенного auto-контейнера.
-     Оригинальные мобильные правила делали .expenses-page__main overflow-y:auto
-     с min-height:100dvh — на телефоне это вложенный скролл, который «съедал»
-     прокрутку. Здесь возвращаем естественную прокрутку документа. */
   .expenses-page,
   .expenses-page .expenses-route-view {
     overflow: visible;
@@ -5749,7 +5735,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
     overflow-x: clip;
   }
 
-  /* Шапка: «назад» · заголовок · тема, ниже — разделы */
   .expenses-page .expenses-page__header {
     gap: 0;
     padding: calc(0.5rem + var(--mob-safe-top, 0px))
@@ -5840,7 +5825,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
     white-space: nowrap;
   }
 
-  /* Панель действий */
   .expenses-page .exp-tt-toolbar {
     gap: 0.5rem;
   }
@@ -5864,7 +5848,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
     text-overflow: ellipsis;
   }
 
-  /* Список заявок — карточки вместо таблицы */
   .expenses-page .exp-table {
     padding: 0 max(var(--exp-pad-x), var(--mob-safe-right, 0px))
       calc(1.25rem + var(--mob-safe-bottom, 0px))
@@ -6022,7 +6005,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* Планшет в портрете: карточки в две колонки */
 @media (min-width: 640px) and (max-width: 768px) {
   .expenses-page .exp-table__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6044,7 +6026,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* --- Панель заявки (создание / просмотр) -------------------------------- */
 .exp-panel,
 .exp-panel__body,
 .exp-panel__hd-left,
@@ -6091,7 +6072,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
     margin: 0;
   }
 
-  /* Кнопки действий — ровной сеткой, а не лесенкой */
   .exp-panel .exp-panel__ft {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6147,7 +6127,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* --- Диалоги и модалка отчёта Excel ------------------------------------ */
 .exp-mod-dialog,
 .rep-modal,
 .rep-modal__body {
@@ -6184,7 +6163,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* --- Аналитика ---------------------------------------------------------- */
 .exp-report-page,
 .exp-report-page .exp-report-panel,
 .exp-report-page .exp-report-section,
@@ -6243,7 +6221,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* --- Касса -------------------------------------------------------------- */
 .exp-cash,
 .exp-cash__hero,
 .exp-cash__event-body {
@@ -6304,7 +6281,6 @@ body[data-theme='dark'] .exp-report-stat-card--kpi.exp-report-stat-card--emphasi
   }
 }
 
-/* Превью отчёта: на телефоне строки таблицы становятся карточками «поле — значение» */
 @media (max-width: 768px) {
   .exp-report-page .exp-report-table-scroll {
     overflow-x: hidden;

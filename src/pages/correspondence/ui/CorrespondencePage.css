@@ -4920,7 +4920,6 @@ body[data-theme='dark'] .corr-registry__comments-badge {
   color: var(--corr-slate);
 }
 
-/* Registry workspace must fill the viewport row below the header. */
 .corr-shell.corr-shell--full .corr-shell__main,
 .corr-shell.corr-shell--full .corr-shell__content--registry {
   height: 100%;
@@ -4970,7 +4969,6 @@ body[data-theme='dark'] .corr-registry__comments-badge {
   }
 }
 
-/* Keep the fullscreen registry below its own navigation bar. */
 .corr-shell.corr-shell--full {
   display: flex;
   flex-direction: column;

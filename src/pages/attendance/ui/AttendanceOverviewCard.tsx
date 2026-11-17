@@ -31,7 +31,6 @@ const ALL_EMPLOYEE_KEY = 'all';
 
 function employeeOptionKey(item: DailyAttendanceItem): string {
     const cameraNo = (item.camera_employee_no || '').trim();
-    // Prefer camera id — works even when app_user mappings are empty.
     if (cameraNo)
         return `c:${cameraNo}`;
     if (item.app_user_id != null)
@@ -446,7 +445,6 @@ export function AttendanceOverviewCard() {
                 let dayItems = report.items.filter(isEmployeeItem);
                 nextWorkdayStart = report.workday?.workday_start ?? null;
                 nextWorkdayEnd = report.workday?.workday_end ?? null;
-                // Backend sometimes returns roster without punches — rebuild from live camera events.
                 const missingPunches = dayItems.length > 0
                     && !dayItems.some((item) => Boolean(item.first_event_time));
                 if (missingPunches) {
@@ -470,7 +468,6 @@ export function AttendanceOverviewCard() {
                         }
                     }
                     catch {
-                        /* keep daily report as-is */
                     }
                 }
                 nextItems = dayItems.map((item) => ({ ...item, date: periodFrom }));
@@ -478,8 +475,6 @@ export function AttendanceOverviewCard() {
             }
             else {
                 const selected = employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null;
-                // Do not pass app_user_id while mappings may be empty — it returns an empty roster.
-                // Always load the period from DB, then filter on the client by camera / name.
                 const report = await fetchPeriodAttendanceReport(periodFrom, periodTo, {
                     appUserId: null,
                     signal,
@@ -493,7 +488,6 @@ export function AttendanceOverviewCard() {
                     ));
                 }
 
-                // Short-range fallback only: N daily live calls for a month break past-period viewing.
                 const daysInRange = iterYmdInclusive(periodFrom, periodTo);
                 const missingTimes = periodItems.length > 0
                     && !periodItems.some((item) => Boolean(item.first_event_time));

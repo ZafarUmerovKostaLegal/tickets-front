@@ -48,11 +48,9 @@ export function invoiceCanCancel(status: InvoiceUiStatus): boolean {
 export function invoiceCanRestore(status: InvoiceUiStatus): boolean {
     return status === 'canceled';
 }
-/** Снять отметку «отправлен клиенту» → снова черновик (без оплат). */
 export function invoiceCanUnsend(status: InvoiceUiStatus): boolean {
     return status === 'sent' || status === 'viewed' || status === 'overdue';
 }
-/** Черновик или отменённый счёт (платежи удаляются каскадом на API). */
 export function invoiceCanDeleteDraft(status: InvoiceUiStatus): boolean {
     return status === 'draft' || status === 'canceled';
 }

@@ -39,7 +39,6 @@ export type DailyAttendanceResponse = {
     unmapped_events: Array<Record<string, unknown>>;
 };
 
-/** One person-day row from GET /report/period */
 export type PeriodAttendanceItem = DailyAttendanceItem & {
     date: string;
 };

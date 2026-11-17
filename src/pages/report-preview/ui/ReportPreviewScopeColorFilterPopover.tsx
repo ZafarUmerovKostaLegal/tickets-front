@@ -8,7 +8,6 @@ export function ReportPreviewScopeColorFilterPopover({
     onChange,
 }: {
     usedColors: string[];
-    /** Hex colors and/or SCOPE_COLOR_NONE. Empty = no filter. */
     selected: string[];
     onChange: (next: string[]) => void;
 }) {

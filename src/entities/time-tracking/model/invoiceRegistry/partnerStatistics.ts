@@ -33,7 +33,6 @@ export type PartnerStatsRow = {
 
 const PARTNER_SPLIT_RE = /^([A-Za-zА-Яа-яЁё]{2,5})\s*:\s*([\d\s.,]+)\s*$/;
 
-/** Parse registry money cells that may use US (`5,881.50`) or EU (`5.881,50`) separators. */
 export function parseRegistryAmount(raw: string): number | null {
     let s = raw.trim();
     if (!s)
@@ -46,45 +45,36 @@ export function parseRegistryAmount(raw: string): number | null {
     const lastDot = s.lastIndexOf('.');
 
     if (lastComma >= 0 && lastDot >= 0) {
-        // Both separators: the rightmost is the decimal separator.
         if (lastComma > lastDot) {
-            // 5.881,50 → 5881.50
             s = s.replace(/\./g, '').replace(',', '.');
         }
         else {
-            // 5,881.50 → 5881.50
             s = s.replace(/,/g, '');
         }
     }
     else if (lastComma >= 0) {
         const frac = s.length - lastComma - 1;
         if (frac === 1 || frac === 2) {
-            // 5881,50 → decimal comma
             s = s.replace(',', '.');
         }
         else {
-            // 5,881,500 → thousand commas
             s = s.replace(/,/g, '');
         }
     }
     else if (lastDot >= 0) {
         const dotCount = (s.match(/\./g) ?? []).length;
         if (dotCount > 1) {
-            // 5.881.500 → thousand dots
             s = s.replace(/\./g, '');
         }
         else if (s.endsWith('.')) {
-            // trailing dot
             s = s.slice(0, -1);
         }
-        // else single decimal point — keep as-is (incl. float tails like 4576.224357896251)
     }
 
     const n = Number.parseFloat(s);
     return Number.isFinite(n) ? n : null;
 }
 
-/** Display/store format: `5,881.50` (en-US, always 2 fraction digits). */
 export function formatRegistryAmount(n: number): string {
     if (!Number.isFinite(n))
         return '';
@@ -94,10 +84,6 @@ export function formatRegistryAmount(n: number): string {
     });
 }
 
-/**
- * Format a registry amount cell for display.
- * Empty / non-numeric values are returned unchanged.
- */
 export function formatRegistryAmountCell(raw: string): string {
     const trimmed = raw.trim();
     if (!trimmed)
@@ -116,7 +102,6 @@ export type AdvanceFeeDisplayLine =
     | { partner: string; amounts: string[] }
     | { text: string };
 
-/** Visual lines for «Пред.вознаграждение»: partner code and one or more amounts. */
 export function formatAdvanceFeeLines(raw: string): AdvanceFeeDisplayLine[] {
     const out: AdvanceFeeDisplayLine[] = [];
     for (const line of raw.split(/\n/)) {
@@ -332,7 +317,6 @@ export type CurrencyInvoicedTotal = {
     invoiced: number;
 };
 
-/** Sum all positive registry `amount` values by currency (partner not required). */
 export function sumInvoicedByCurrency(rows: InvoiceRegistryRow[]): CurrencyInvoicedTotal[] {
     const totals: Record<string, number> = {};
     for (const row of rows) {
@@ -359,7 +343,6 @@ export type PartnerInvoicedMatrix = {
     partners: PartnerInvoicedMatrixRow[];
 };
 
-/** Pivot: partner × currency invoiced totals (only rows with a partner). */
 export function sumInvoicedByPartnerCurrency(rows: InvoiceRegistryRow[]): PartnerInvoicedMatrix {
     const byPartner: Record<string, Record<string, number>> = {};
     const currencyTotals: Record<string, number> = {};

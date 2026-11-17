@@ -11,7 +11,6 @@ export function isApplePlatform(): boolean {
     return /Mac|iPhone|iPad|iPod/i.test(platform) || /Mac OS X/i.test(ua);
 }
 
-/** Label for shortcuts in UI: ⌘Z / Ctrl+Z */
 export function primaryModLabel(): '⌘' | 'Ctrl' {
     return isApplePlatform() ? '⌘' : 'Ctrl';
 }

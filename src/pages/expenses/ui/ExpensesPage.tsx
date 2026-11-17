@@ -1164,7 +1164,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     }, []);
     const applyModerationToList = useCallback((r: ExpenseRequest) => {
         setRequests(prev => {
-            // Moderation queue only shows pending_approval — drop row after decision.
             if (isModerationQueue && r.status !== 'pending_approval') {
                 return prev.filter(x => x.id !== r.id);
             }
@@ -1465,9 +1464,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             setReceiptUploadPending(false);
         }
     }, [editingReq]);
-    // Show all rows returned by the API. Registry status set is only for the
-    // status filter dropdown — do not hide draft / pending_approval here
-    // (that caused «1 заявка» in stats with an empty table after create).
     const filtered = requestsForUi;
     const hasFilters = isModerationQueue
         ? !!(filterAuthorUserId || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)

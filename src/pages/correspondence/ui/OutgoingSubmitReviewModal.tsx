@@ -9,7 +9,6 @@ export type OutgoingSubmitReviewModalProps = {
     onClose: () => void;
     onSubmit: (partnerUserId: number, partnerName: string) => void;
     submitPending?: boolean;
-    /** Raise above another open corr-modal (e.g. document card). */
     nested?: boolean;
 };
 

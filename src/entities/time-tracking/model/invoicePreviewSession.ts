@@ -11,14 +11,11 @@ export type InvoicePreviewFormDraftV1 = {
     dueDate: string;
     selTime: string[];
     selExp: string[];
-    /** Опциональный ручной номер счёта; пусто = авто */
     invoiceNumber?: string;
-    /** Bill a custom total on the legal invoice (report lines still close as usual). */
     customBilledEnabled?: boolean;
     customBilledAmount?: string;
     customBilledCurrency?: string;
     customBilledDescription?: string;
-    /** Multiple legal-page items (description + amount). Sum should equal customBilledAmount. */
     customBilledLines?: Array<{ amount: string; description: string }>;
 };
 
@@ -31,7 +28,6 @@ export type InvoicePreviewMeta = {
 
     dueDateIso?: string;
 
-    /** Billing period for ribbon month / services period (not invoice issue date). */
     billingPeriodFrom?: string;
     billingPeriodTo?: string;
 };
@@ -41,7 +37,6 @@ export type InvoicePreviewSessionCreateV1 = {
     mode: 'create';
     form: InvoicePreviewFormDraftV1;
     meta: InvoicePreviewMeta;
-    /** Preview polish while creating (session-only until invoice exists). */
     documentOverrides?: Record<string, unknown>;
 };
 
@@ -50,7 +45,6 @@ export type InvoicePreviewSessionExistingV1 = {
     mode: 'existing';
     invoiceId: string;
     meta: InvoicePreviewMeta;
-    /** Cached preview polish; authoritative copy lives on the invoice API. */
     documentOverrides?: Record<string, unknown>;
 };
 

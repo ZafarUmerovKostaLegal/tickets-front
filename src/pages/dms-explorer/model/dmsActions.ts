@@ -47,7 +47,6 @@ export async function printDocument(doc: DocumentRow): Promise<void> {
             popup.focus();
             popup.print();
         } catch {
-            /* user prints manually */
         }
     });
 }

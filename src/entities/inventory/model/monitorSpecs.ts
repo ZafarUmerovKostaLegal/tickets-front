@@ -90,7 +90,6 @@ function normalizePanel(raw: string): MonitorPanel {
     return '';
 }
 
-/** Разбирает блок характеристик монитора из description. */
 export function parseMonitorDescription(description: string | null | undefined): ParsedMonitorDescription {
     const text = (description ?? '').replace(/\r\n/g, '\n').trim();
     if (!text) {
@@ -99,7 +98,6 @@ export function parseMonitorDescription(description: string | null | undefined):
 
     const startIdx = text.toLowerCase().indexOf(BLOCK_START);
     if (startIdx < 0) {
-        // Loose legacy lines without block markers.
         const specs = { ...EMPTY_MONITOR_SPECS };
         let loose = false;
         for (const line of text.split('\n')) {

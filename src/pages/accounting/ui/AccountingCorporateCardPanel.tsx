@@ -14,11 +14,9 @@ type CardRule = {
     owner: string;
     kind: string;
     note: string;
-    /** Кириллица и латиница: в заявке партнёр часто записан как Vazgen Grigoryan. */
     aliases: string[];
 };
 
-/** Карты и подписи видов расхода — как в согласованной таблице. */
 const CARD_RULES: CardRule[] = [
     { id: 'akhmadjonov', owner: 'Ахмаджонов А', kind: 'расход партнера', note: '', aliases: ['ахмадж', 'akhmad', 'ahmadjon', 'aakhmad'] },
     { id: 'khasanov', owner: 'Хасанов Н', kind: 'общий', note: '', aliases: ['хасанов', 'khasanov', 'hasanov', 'xasanov'] },

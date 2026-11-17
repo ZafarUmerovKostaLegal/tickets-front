@@ -112,7 +112,6 @@ export function isTimeTrackingHttpError(e: unknown, status?: number): e is TimeT
     return e instanceof TimeTrackingHttpError && (status === undefined || e.status === status);
 }
 
-/** Gateway returns 502/503 when the time-tracking upstream is down or not configured. */
 export const TIME_TRACKING_UNAVAILABLE_MESSAGE =
     'Сервис учёта времени временно недоступен. Обновите страницу через минуту.';
 

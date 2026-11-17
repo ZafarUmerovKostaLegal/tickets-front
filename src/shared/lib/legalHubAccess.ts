@@ -8,7 +8,6 @@ function emailLocalPart(email: string | null | undefined): string {
     return at === -1 ? normalized : normalized.slice(0, at);
 }
 
-/** Legal Hub is open to every signed-in employee. Meeting-room kiosks stay on home and the call schedule. */
 export function canAccessLegalHub(user: { email?: string | null } | null | undefined): boolean {
     if (user == null || isMeetingRoomAccount(user))
         return false;

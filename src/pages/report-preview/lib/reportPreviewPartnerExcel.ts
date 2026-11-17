@@ -23,7 +23,6 @@ export function computeTimePreviewRowAmountToPay(r: TimeExcelPreviewRow): number
         return 0;
     if (!r.isBillable)
         return 0;
-    // Prefer server package-aware amount (including 0 for package-covered hours).
     if (typeof r.amountToPay === 'number' && Number.isFinite(r.amountToPay))
         return Math.round(r.amountToPay * 100) / 100;
     const bh = Number.isFinite(r.billableHours) ? r.billableHours : 0;
@@ -33,7 +32,6 @@ export function computeTimePreviewRowAmountToPay(r: TimeExcelPreviewRow): number
     return Math.round(hours * rateR * 100) / 100;
 }
 
-/** Hours×rate recompute for in-preview edits (does not prefer stored amountToPay). */
 export function recomputeTimePreviewRowAmountToPay(r: TimeExcelPreviewRow): number {
     if (r.isVoided)
         return 0;
@@ -94,7 +92,6 @@ export async function buildReportPreviewPartnerExcel(
         projectName?: string;
         dateFrom?: string;
         dateTo?: string;
-        /** Prefer invoice-ready total (time + package + expenses in settlement currency). */
         totalForInvoiceAmount?: number;
     },
 ) {

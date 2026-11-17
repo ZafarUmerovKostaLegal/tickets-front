@@ -424,7 +424,6 @@ function continuousBlockCoversFortnight(from: string, to: string, marked: Readon
         if (!analyticsIsWeekend(cursor) && marked.has(cursor))
             working += 1;
     }
-    // Two work weeks are 14 calendar days. The closing weekend is not always stored as an absence day.
     return working >= 10;
 }
 

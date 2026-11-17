@@ -42,7 +42,6 @@ function rememberJournalUser(userId: string) {
         window.localStorage.setItem(JOURNAL_USER_KEY, userId || 'all');
     }
     catch {
-        /* браузер может запретить хранилище */
     }
 }
 

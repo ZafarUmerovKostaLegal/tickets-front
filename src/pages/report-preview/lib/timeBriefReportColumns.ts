@@ -52,7 +52,6 @@ function isBriefColumnId(x: unknown): x is TimeBriefColumnId {
     );
 }
 
-/** Expand legacy combined `datetime` column into date + time. */
 function expandLegacyBriefColumnIds(raw: unknown[]): unknown[] {
     const out: unknown[] = [];
     for (const x of raw) {
@@ -94,7 +93,6 @@ export function saveBriefColumnsRemember(enabled: boolean): void {
         localStorage.setItem(TIME_BRIEF_COLUMNS_REMEMBER_KEY, enabled ? '1' : '0');
     }
     catch {
-        /* ignore quota / private mode */
     }
 }
 
@@ -124,7 +122,6 @@ export function saveBriefColumnsToStorage(ids: TimeBriefColumnId[]): void {
         localStorage.setItem(TIME_BRIEF_COLUMNS_STORAGE_KEY, JSON.stringify(ids));
     }
     catch {
-        /* ignore */
     }
 }
 
@@ -144,7 +141,6 @@ export function normalizeBriefColumnsForUi(
 
 const BRIEF_FLEX_COLUMN_PRIORITY: TimeBriefColumnId[] = ['note', 'task', 'employee', 'recordDate'];
 
-/** Column that should absorb leftover table width among currently visible ones. */
 export function resolveBriefFlexColumnId(visibleIds: readonly TimeBriefColumnId[]): TimeBriefColumnId | null {
     for (const id of BRIEF_FLEX_COLUMN_PRIORITY) {
         if (visibleIds.includes(id))
@@ -153,7 +149,6 @@ export function resolveBriefFlexColumnId(visibleIds: readonly TimeBriefColumnId[
     return visibleIds[0] ?? null;
 }
 
-/** Fixed widths for brief `<colgroup>`; `undefined` = flex (takes remaining space). */
 export function briefColumnColWidth(
     colId: TimeBriefColumnId,
     flexColId: TimeBriefColumnId | null = 'note',

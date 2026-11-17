@@ -6,7 +6,6 @@ import type { InvoiceDto, InvoiceLineDto } from '@entities/time-tracking';
 
 const missingExpenseIds = new Set<string>();
 
-/** FX / float noise between server total and sum(lines); real tax/discount is larger. */
 const DISPLAY_TOTAL_RESIDUAL_EPS = 0.02;
 
 function lineKindSlug(ln: InvoiceLineDto): string {
@@ -32,10 +31,6 @@ async function mapWithLimit<T>(items: readonly T[], limit: number, run: (item: T
     await Promise.all(workers);
 }
 
-/**
- * Manual billed lines + zeroed time/expense linkage — registry must not re-add
- * expense USD onto intentionally zeroed expense rows.
- */
 export function invoiceHasBilledOverrideLines(lines: readonly InvoiceLineDto[] | null | undefined): boolean {
     const all = lines ?? [];
     const zeroTimeExpense = all.filter((ln) => {
@@ -50,10 +45,6 @@ export function invoiceHasBilledOverrideLines(lines: readonly InvoiceLineDto[] |
     return moneyManual.length > 0 && zeroTimeExpense.length > 0;
 }
 
-/**
- * Load registry USD for invoice expense lines (by expenseRequestId).
- * Used so «Строки счёта» match the expenses list, not invoice issue-date FX.
- */
 export async function loadInvoiceExpenseRegistryUsd(
     lines: readonly InvoiceLineDto[] | null | undefined,
 ): Promise<Map<string, number>> {
@@ -103,16 +94,11 @@ export function invoiceExpenseLineDisplayAmounts(
     if (locked == null || !(locked > 0))
         return { unitAmount: fallbackUnit, lineTotal: fallbackTotal };
 
-    // Expense lines are billed as qty 1 × USD; keep qty-scaled total if qty ≠ 1.
     const unitAmount = roundMoney2(locked);
     const lineTotal = roundMoney2(unitAmount * q);
     return { unitAmount, lineTotal };
 }
 
-/**
- * KPI totals: rebuild from displayed line amounts so «Сумма» and «Остаток» never drift.
- * Expense lines use registry USD when available; residual keeps real tax/discount only.
- */
 export function invoiceDisplayMoneyTotals(
     invoice: {
         totalAmount: number;
@@ -147,8 +133,6 @@ export function invoiceDisplayMoneyTotals(
 
     let totalAmount: number;
     if (Number.isFinite(base) && lines.length > 0) {
-        // Preserve tax/discount (total − sum of stored lines), apply display line amounts.
-        // Drop sub-cent / FX noise so server 596.61 with lines 596.60 becomes 596.60.
         const residual = roundMoney2(base - storedLinesSum);
         const residualSafe = Math.abs(residual) <= DISPLAY_TOTAL_RESIDUAL_EPS ? 0 : residual;
         totalAmount = roundMoney2(displayLinesSum + residualSafe);
@@ -170,7 +154,6 @@ export function invoiceDisplayMoneyTotals(
     return { totalAmount, balanceDue };
 }
 
-/** Apply registry-based display totals onto an invoice DTO (list / PDF / cover). */
 export function withInvoiceDisplayMoney(
     invoice: InvoiceDto,
     registryUsdByExpenseId: ReadonlyMap<string, number>,
@@ -196,10 +179,6 @@ export async function resolveInvoiceDisplayMoney(
     return invoiceDisplayMoneyTotals(invoice, registry);
 }
 
-/**
- * Correct list/detail money for USD invoices using lines + expense registry.
- * Fetches full invoice when the list row has no lines.
- */
 export async function enrichInvoiceWithDisplayMoney(invoice: InvoiceDto): Promise<InvoiceDto> {
     const cur = (invoice.currency || '').trim().toUpperCase();
     if (cur !== 'USD')

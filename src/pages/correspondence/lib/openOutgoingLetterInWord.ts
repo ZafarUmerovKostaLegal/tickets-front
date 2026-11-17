@@ -2,7 +2,6 @@ import { buildInvoiceCoverLetterModel, type InvoiceCoverLetterModel } from '@pag
 import { buildOutgoingLetterDocxBlob, outgoingLetterDocxFileName } from './buildOutgoingLetterDocx';
 import { triggerPdfDownload } from './correspondencePdfEditorModel';
 
-/** Word for the web (Microsoft 365). The downloaded template is opened via File → Open → Upload. */
 export const WORD_ONLINE_LAUNCH_URL = 'https://www.office.com/launch/word?auth=2';
 
 const WORD_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -46,7 +45,6 @@ export async function downloadOutgoingLetterTemplate(
     return new File([blob], name, { type: WORD_MIME });
 }
 
-/** Download letterhead .docx and open Word Online so the user can write, then File → Download a Copy. */
 export async function openOutgoingLetterInWordOnline(
     model?: InvoiceCoverLetterModel,
     opts?: { subject?: string; registryNumber?: string | null },

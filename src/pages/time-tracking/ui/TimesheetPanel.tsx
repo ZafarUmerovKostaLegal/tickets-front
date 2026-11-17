@@ -216,7 +216,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                 sessionStorage.setItem('tt-day-side-collapsed', next ? '1' : '0');
             }
             catch {
-                /* private mode */
             }
             return next;
         });

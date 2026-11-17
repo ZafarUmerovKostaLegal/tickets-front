@@ -14,7 +14,6 @@ export type ProjectOption = {
     clientId: string;
     currency: string;
     recordsLanguage: TimeManagerProjectRecordsLanguage;
-    /** Archived / paused / ended — keep for historical display, not for new entries. */
     isClosed?: boolean;
 };
 function hashToColor(seed: string): string {
@@ -57,8 +56,6 @@ export async function loadTimesheetProjectOptions(user: User, locale: AppLocale 
     }
     const today = todayYmdUtc();
     const includeClosed = Boolean(opts?.includeClosed);
-    // Archived/closed projects must stay in the catalog for historical rows;
-    // new-entry pickers call without includeClosed and stay active-only.
     const rows = await listProjectsForExpenses(
         includeClosed ? { includeArchived: true } : undefined,
     );
@@ -86,7 +83,6 @@ export async function loadTimesheetProjectCatalogForEntriesView(viewer: User, op
     items: ProjectOption[];
     error: string | null;
 }> {
-    // Include closed projects so historical timesheet rows keep project/client titles.
     const subject = opts?.subjectUser;
     if (subject && subject.id !== viewer.id) {
         const byId = new Map<string, ProjectOption>();

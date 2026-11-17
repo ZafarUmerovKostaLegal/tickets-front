@@ -30,7 +30,6 @@ export type InvoiceRegistryStatisticsDto = {
 
 export async function getInvoiceRegistryYears(): Promise<{
     years: InvoiceRegistryYearMeta[];
-    /** null — старый сервер без версии сида, автозамену листа не делаем. */
     seedRevision2026: string | null;
 }> {
     const res = await apiFetch('/api/v1/time-tracking/invoice-registry/years');

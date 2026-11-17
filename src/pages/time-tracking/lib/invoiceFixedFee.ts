@@ -23,7 +23,6 @@ export function invoiceFixedFeeTotal(
   return roundInvoiceMoney(sum);
 }
 
-/** Hours and expenses before the extra fixed amount. Null when there is no fee to split off. */
 export function invoiceServicesAmount(total: number | null, fee: number): number | null {
   if (total == null || !Number.isFinite(total) || !(fee > 0))
     return null;

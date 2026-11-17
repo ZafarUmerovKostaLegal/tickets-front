@@ -19,7 +19,6 @@ export function fmtAmtWithIso(n: number | undefined | null, cur: string | null |
     if (!code || !/^[A-Z]{3}$/.test(code))
         return fmtAmt(n, cur ?? '');
 
-    // UZS: amount first, ISO code after (ru-RU)
     if (code === 'UZS') {
         try {
             return new Intl.NumberFormat('ru-RU', {
@@ -34,7 +33,6 @@ export function fmtAmtWithIso(n: number | undefined | null, cur: string | null |
         }
     }
 
-    // Foreign currencies: symbol before amount
     return formatBillableMoney(n, code);
 }
 

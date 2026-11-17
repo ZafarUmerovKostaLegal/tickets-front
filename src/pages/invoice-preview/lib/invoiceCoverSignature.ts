@@ -1,7 +1,4 @@
-/** Cover-letter partner signatures in `public/signatures` (file stem = initials). */
-
 export type CoverSignatoryPartner = {
-    /** Signature file stem / partner code used on the letter. */
     initials: string;
     displayName: string;
     fileName: string;
@@ -14,7 +11,6 @@ export const COVER_SIGNATORY_PARTNERS: readonly CoverSignatoryPartner[] = [
     { initials: 'VBG', displayName: 'Vazgen Grigoryan', fileName: 'VBG.svg' },
 ] as const;
 
-/** Aliases from invoice registry / short codes → signature file stem. */
 const COVER_SIGNATURE_CODE_ALIASES: Record<string, string> = {
     AA: 'AAA',
     AAA: 'AAA',
@@ -88,7 +84,6 @@ export function findCoverSignatoryPartnerByName(
     }) ?? null;
 }
 
-/** Resolve partner from initials (preferred) or display name. */
 export function resolveCoverSignatoryPartner(input: {
     initials?: string | null;
     name?: string | null;
@@ -102,7 +97,6 @@ export type CoverSignatoryDirectoryRow = {
     displayName: string;
 };
 
-/** Letter dropdown: every partner from the directory, plus signature files when the name matches. */
 export function mergeCoverSignatoryOptions(
     directory: readonly CoverSignatoryDirectoryRow[],
 ): CoverSignatoryPartner[] {
@@ -137,7 +131,6 @@ export function coverSignaturePublicUrl(initialsOrPartner: string | CoverSignato
     return `/signatures/${partner.fileName}`;
 }
 
-/** @deprecated Prefer coverSignaturePublicUrl / resolveCoverSignatoryPartner. */
 export const COVER_SIGNATURE_PUBLIC_URL = coverSignaturePublicUrl('AAA') ?? '/signatures/AAA.svg';
 
 async function loadPngFromUrl(url: string): Promise<CoverSignaturePng | null> {
@@ -223,10 +216,6 @@ async function loadPngFromUrl(url: string): Promise<CoverSignaturePng | null> {
     }
 }
 
-/**
- * Load cover signature as PNG bytes for the given partner initials / name.
- * Extracts embedded PNG from SVG wrappers; supports `.png` files directly.
- */
 export async function loadCoverSignaturePng(
     initialsOrName?: string | null,
 ): Promise<CoverSignaturePng | null> {

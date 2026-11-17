@@ -1,4 +1,3 @@
-/** Designated users who confirm employee personal-card payouts after approval. */
 export const EXPENSE_PAYMENT_CONFIRMER_EMAIL = 'aakhmadjonov@kostalegal.com';
 export const EXPENSE_PAYMENT_CONFIRMER_EMAILS = [
     EXPENSE_PAYMENT_CONFIRMER_EMAIL,

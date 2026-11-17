@@ -35,10 +35,8 @@ export type InvoiceLegalServiceLineOverride = {
 export type InvoiceLegalPageOverrides = {
     caseDetailLine?: string | null;
     serviceDescriptionLine?: string | null;
-    /** Multiple legal-page service rows (custom billed amount). */
     serviceLines?: InvoiceLegalServiceLineOverride[] | null;
     paymentDisclaimer?: string | null;
-    /** Closing line under the totals, e.g. «Благодарим за сотрудничество!». */
     thanksLine?: string | null;
     invoiceNumber?: string | null;
     issueDateDisplay?: string | null;
@@ -52,7 +50,6 @@ export type InvoiceLegalPageOverrides = {
     oked?: string | null;
     bankName?: string | null;
     bankAddress?: string | null;
-    /** Currency shown in AC / Corr. ACC labels; usually from the selected firm banking profile. */
     accountCurrency?: string | null;
     accountNumber?: string | null;
     bankCode?: string | null;
@@ -61,11 +58,8 @@ export type InvoiceLegalPageOverrides = {
     correspondentAccount?: string | null;
     correspondentBik?: string | null;
     billToBankName?: string | null;
-    /** Payer settlement account (р/с) under Bill to. */
     billToAccountNumber?: string | null;
-    /** Payer correspondent account under Bill to. */
     billToCorrespondentAccount?: string | null;
-    /** Payer BIC under Bill to. */
     billToBik?: string | null;
     billToSwift?: string | null;
 };
@@ -113,8 +107,6 @@ export function legalFirmBankingRows(
 ): LegalBankingRow[] {
     const cur = resolveLegalAccountCurrencyCode(currencyCode, overrides);
     const labels = getLegalInvoiceLabels(lang);
-    // Order matches extended RUB requisites: beneficiary → legal address → TIN/OKED →
-    // correspondent block → beneficiary bank → account/SWIFT.
     const rows: LegalBankingRow[] = [
         { field: 'recipientName', label: labels.recipientName, value: resolveBankingValue(overrides?.recipientName) },
         { field: 'legalAddress', label: labels.legalAddress, value: resolveBankingValue(overrides?.legalAddress) },
@@ -160,7 +152,6 @@ export function resolveLegalBillToSwift(overrides?: InvoiceLegalPageOverrides | 
     return resolveBankingValue(overrides?.billToSwift);
 }
 
-/** Bill-to bank block as on RUB invoices: bank, settlement account, correspondent account, BIC (+ optional SWIFT). */
 export function legalBillToBankingRows(
     overrides?: InvoiceLegalPageOverrides | null,
     lang?: InvoiceCoverLanguage | null,
@@ -195,10 +186,6 @@ export function resolveLegalOverrideText(
     return t || fallback;
 }
 
-/**
- * EXTRA EXPENSES stays at zero unless the user typed a different amount.
- * A saved value that is only the fixed fee (written when the fee was applied) is ignored.
- */
 export function resolveLegalExtraExpensesAmount(
     override: string | null | undefined,
     fixedFeeFormatted: string | null | undefined,
@@ -242,7 +229,6 @@ export type LegalServiceLineResolved = {
     amountFormatted: string;
 };
 
-/** Prefer multi-line overrides; fall back to the single description + services amount. */
 export function resolveLegalServiceLines(
     model: InvoiceCoverLetterModel,
     overrides?: InvoiceLegalPageOverrides | null,

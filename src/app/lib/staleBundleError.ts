@@ -43,7 +43,6 @@ export function stripLegacyReloadQueryParams(): void {
         }
     }
     catch {
-        // ignore
     }
 }
 

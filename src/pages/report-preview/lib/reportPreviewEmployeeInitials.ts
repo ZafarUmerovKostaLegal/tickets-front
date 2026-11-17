@@ -96,7 +96,6 @@ function resolveRowExportFields(
     row: TimeExcelPreviewRow,
     profile: AuthUserExportProfile | undefined,
 ): Pick<TimeExcelPreviewRow, 'employeeInitials' | 'employeePosition'> {
-    // Prefer current backend user initials over snapshot values from report rows.
     const stored = (profile?.initials ?? '').trim() || (row.employeeInitials ?? '').trim();
     const employeeInitials = resolveReportEmployeeInitials({
         stored,

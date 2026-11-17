@@ -41,7 +41,6 @@ export type ReportPreviewFiltersBarProps = {
     disabled?: boolean;
     hidePeriodControls?: boolean;
     teamFilter?: Omit<ReportPreviewTeamFilterProps, 'disabled'>;
-    /** Status / confirm actions — same controls, placed in the toolbar. */
     actionsSlot?: ReactNode;
 };
 

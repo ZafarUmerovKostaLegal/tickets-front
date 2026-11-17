@@ -52,7 +52,6 @@ function encodeMediaPath(mediaPath: string): string {
         .join('/');
 }
 
-/** Safe download stem from inv. number + name. */
 export function inventoryItemExportStem(item: Pick<InventoryItem, 'inventory_number' | 'name'>): string {
     const raw = `${item.inventory_number}_${item.name}`
         .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_')
@@ -62,7 +61,6 @@ export function inventoryItemExportStem(item: Pick<InventoryItem, 'inventory_num
     return (raw || 'inventory_item').slice(0, 96);
 }
 
-/** Structured rows shared by PDF / Word / TXT. */
 export function buildInventoryItemExportFields(input: InventoryItemExportInput): {
     title: string;
     fields: InventoryExportField[];
@@ -134,7 +132,6 @@ export function buildInventoryItemExportFields(input: InventoryItemExportInput):
     };
 }
 
-/** Human-readable card for a .txt export (photo is not embedded). */
 export function buildInventoryItemExportText(input: InventoryItemExportInput): string {
     const { title, fields, monitorChips, monitorVesaNo, notes } = buildInventoryItemExportFields(input);
     const lines: string[] = [
@@ -179,7 +176,6 @@ async function fetchPhotoBlob(photoPath: string): Promise<Blob> {
     return res.blob();
 }
 
-/** Downscale + JPEG compress for a compact export photo. */
 export async function processInventoryPhotoForExport(
     source: Blob,
     maxSide = 1280,
@@ -334,7 +330,6 @@ export async function buildInventoryItemPdfBlob(input: InventoryItemExportInput)
             y -= ih + 14;
         }
         catch {
-            /* skip broken photo */
         }
     }
 
@@ -492,9 +487,6 @@ export async function buildInventoryItemDocxBlob(input: InventoryItemExportInput
     return Packer.toBlob(doc);
 }
 
-/**
- * Download inventory item card as PDF (with photo), Word (with photo), or TXT.
- */
 export async function downloadInventoryItemCard(
     input: InventoryItemExportInput,
     format: InventoryItemExportFormat = 'pdf',

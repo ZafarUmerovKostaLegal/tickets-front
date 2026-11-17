@@ -207,7 +207,6 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 }
             }
             catch {
-                /* keep the loaded unbilled window if selected dates cannot be resolved */
             }
         }
         if (!f.createClientId.trim()) {

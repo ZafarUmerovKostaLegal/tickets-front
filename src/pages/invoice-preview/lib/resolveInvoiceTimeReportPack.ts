@@ -54,7 +54,6 @@ import {
 } from './invoiceTimeReportModel';
 import { summarizeBilledOverrideLines } from '@pages/time-tracking/lib/invoicePageShared';
 
-/** Notes only. The task name stays in the Task column. */
 function timeReportDescriptionText(raw: string | null | undefined): string {
     const { notes } = parseTimeEntryDescription(raw);
     const text = (notes.trim() ? notes : (raw ?? ''))
@@ -79,7 +78,6 @@ function normalizeStoredInitials(raw: string | null | undefined): string {
     return (raw ?? '').trim().toUpperCase().replace(/Ё/g, 'Е');
 }
 
-/** Prefer auth `/users` initials (source of truth), then reports filter, then TT users. */
 function buildAuthInitialsLookup(
     authUsers: User[],
     filterUsers: { id: number; initials?: string | null; displayName?: string; email?: string }[],
@@ -140,8 +138,6 @@ function resolveDetailHourlyRate(opts: {
     hours: number;
     amount: number;
 }): number {
-    // Prefer explicit rate fields; amount÷hours is only a last resort (often FX drift).
-    // stampOfficialBillableRates + applyCardRatesWhereAmountMissing overwrite with the card when available.
     const src = Number(opts.rateSource);
     if (Number.isFinite(src) && src > 0)
         return Math.round(src * 100) / 100;
@@ -176,7 +172,6 @@ function workIsoFromRaw(raw: string | null | undefined): string | null {
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
 }
 
-/** Rate-card amount on the work date. Ignores FX drift on the invoice line. */
 async function stampOfficialBillableRates(
     details: BuildingDetail[],
     projectId: string,
@@ -228,7 +223,6 @@ function lineAmount(ln: InvoiceLineDto): number {
     return Number.isFinite(t) ? t : 0;
 }
 
-/** Worked/report amount when billedAmount zeroed lineTotal but left sourceAmount. */
 function reportLineAmount(ln: InvoiceLineDto, billedOverride: boolean): number {
     const billed = lineAmount(ln);
     if (!billedOverride || Math.abs(billed) > 1e-9)
@@ -239,7 +233,6 @@ function reportLineAmount(ln: InvoiceLineDto, billedOverride: boolean): number {
     return 0;
 }
 
-/** UZS invoices show the som amount entered on the expense, not the USD equivalent. */
 function expenseAmountForInvoiceCurrency(
     currency: string,
     req: { amountUzs?: number | null; exchangeRate?: number | null; equivalentAmount?: number | null } | null,
@@ -263,10 +256,8 @@ function expenseAmountForInvoiceCurrency(
 function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, lockedUsd: number | null): number {
     const cur = (currency || '').trim().toUpperCase();
     const line = lineAmount(ln);
-    // UZS invoices must not display a dollar equivalent under a UZS label.
     if (cur === 'UZS')
         return line;
-    // Registry USD wins when present and sane; never Math.max with UZS principals.
     if (lockedUsd != null && lockedUsd > 0 && lockedUsd < 1_000_000)
         return lockedUsd;
     if (cur !== 'USD')
@@ -296,10 +287,6 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     cardFrom?: string;
 };
 
-/**
- * Prefer the official rate card for the Rate column.
- * Do not leave amount÷hours (FX drift) as the displayed hourly rate when a card rate exists.
- */
 function applyCardRatesWhereAmountMissing(details: BuildingDetail[], currency: string): void {
     for (const detail of details) {
         if (detail.rowKind !== 'time')
@@ -319,7 +306,6 @@ function applyCardRatesWhereAmountMissing(details: BuildingDetail[], currency: s
     }
 }
 
-/** Task names as shown in the time report, keyed by time entry id. */
 async function reportTaskNameByEntryId(projectId: string, dateFrom: string, dateTo: string): Promise<Map<string, string>> {
     const pid = projectId.trim();
     const from = dateFrom.trim().slice(0, 10);
@@ -376,7 +362,6 @@ function toPublicRow(d: BuildingDetail): InvoiceTimeReportDetailRow {
     };
 }
 
-/** Prefer the actual billed rate from detail rows (hours-weighted mode), not amount÷hours. */
 function pickSummaryHourlyRate(rateByHours: Map<number, number>, totalHours: number, totalAmount: number): number {
     let bestRate = 0;
     let bestHours = -1;
@@ -420,7 +405,6 @@ function buildSummaryAndTotals(
             cur.amount += d.amtNum;
             cur.u = cur.u ?? userByAuthId(users, d.authId);
             if (d.rateNum > 0 && d.hoursNum > 0) {
-                // Round to cents so 149.999… and 150 group together
                 const key = Math.round(d.rateNum * 100) / 100;
                 cur.rateByHours.set(key, (cur.rateByHours.get(key) ?? 0) + d.hoursNum);
             }
@@ -523,10 +507,6 @@ function normalizeExpenseDesc(raw: string): string {
     return (raw ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/**
- * Final pass: bump expense row amounts up to the expenses-registry USD when a
- * description match is found. Covers missing expenseRequestId and stale overrides.
- */
 export async function overlayExpenseAmountsFromRegistry(
     pack: InvoiceTimeReportPack,
     projectId: string | null | undefined,
@@ -568,12 +548,10 @@ export async function overlayExpenseAmountsFromRegistry(
             return { ...slot, amount: formatTimeReportAmount(uzs, cur) };
         }
         const locked = lockedExpenseUsdAmount(match);
-        // Only replace when registry USD is sane and clearly a FX correction (not UZS-as-USD).
         if (locked == null || locked <= 0 || locked >= 1_000_000)
             return slot;
         const current = roundMoney2(parseTimeReportAmountDisplay(slot.amount));
         if (current > 0 && locked >= current && locked <= current * 2 + 0.05) {
-            // Small upward FX correction (e.g. 10.01 → 10.06)
             changed = true;
             return { ...slot, amount: formatTimeReportAmount(locked, cur) };
         }
@@ -767,8 +745,6 @@ export async function resolveInvoiceTimeReportPack(
                 return null;
             if (entryCache.has(k))
                 return entryCache.get(k) ?? null;
-            // Only fetch with the known author — do NOT probe every user
-            // (that caused dozens of 404s in Network for the same timeEntryId).
             const hint = preferredAuthUserId != null && Number.isFinite(preferredAuthUserId)
                 ? Math.trunc(preferredAuthUserId)
                 : null;
@@ -781,7 +757,6 @@ export async function resolveInvoiceTimeReportPack(
 
         type ExpenseLineSnap = {
             dateIso: string | null;
-            /** Amount in the invoice currency: UZS principal, otherwise locked USD. */
             amount: number | null;
         };
         const expenseSnapByRequestId = new Map<string, ExpenseLineSnap>();
@@ -801,7 +776,6 @@ export async function resolveInvoiceTimeReportPack(
                     map.set(item.id, item);
             }
             catch {
-                // ignore — fall back to per-id fetch only
             }
             projectExpenseById = map;
             return map;
@@ -811,7 +785,6 @@ export async function resolveInvoiceTimeReportPack(
             const embeddedOk = embedded && /^\d{4}-\d{2}-\d{2}$/.test(embedded) ? embedded : null;
             const rid = ln.expenseRequestId?.trim();
             if (!rid) {
-                // Invoice line may omit expenseRequestId — match registry by description/date.
                 const byProject = await loadProjectExpenses();
                 const desc = (ln.description ?? '').trim().toLowerCase();
                 const wantDate = embeddedOk;
@@ -880,7 +853,6 @@ export async function resolveInvoiceTimeReportPack(
         for (const ln of lines) {
             const kind = lineKind(ln);
             const desc = (ln.description ?? '').trim() || '—';
-            // Custom billed total stays on the legal invoice; time report shows worked amounts.
             if (billedOverride && kind !== 'time' && kind !== 'expense')
                 continue;
             const amt = reportLineAmount(ln, billedOverride);

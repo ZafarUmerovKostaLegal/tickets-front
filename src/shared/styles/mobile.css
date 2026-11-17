@@ -1007,7 +1007,6 @@
     word-break: normal;
   }
 
-  /* Shared label|value stack helpers */
   .app-kv {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);

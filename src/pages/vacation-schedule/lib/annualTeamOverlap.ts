@@ -97,7 +97,6 @@ export type AnnualOverlapSource = {
     leaveRequests: VacationLeaveRequestApi[];
 };
 
-/** Short warning when a teammate already has annual leave on the chosen dates. */
 export function summarizeAnnualTeamOverlap(source: AnnualOverlapSource): string | null {
     const dateFrom = isoDay(source.dateFrom);
     const dateTo = isoDay(source.dateTo);

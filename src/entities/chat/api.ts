@@ -16,7 +16,6 @@ import type {
     CreatePollInput,
 } from './types';
 
-/** REST goes to kosta_daily microservice; WS stays on gateway `/api/v1/chat/ws`. */
 const CHAT = '/api/v1/kosta-daily';
 const chatRoomsCache = createQueryCache<ChatRoom[]>({
     ttlMs: 15_000,

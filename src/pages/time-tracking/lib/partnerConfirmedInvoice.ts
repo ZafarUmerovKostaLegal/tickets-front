@@ -126,7 +126,6 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
     row: PartnerReportConfirmationRequest;
     clientId: string;
     currency?: string | null;
-    /** Create the invoice even if some required partners have not signed. */
     allowUnsignedPartners?: boolean;
 }): Promise<InvoiceDto> {
     const { row, clientId } = args;
@@ -139,14 +138,11 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
     await assertNoApprovedUnpaidProjectExpenses(projectId);
 
     const issueDate = todayIso();
-    // Prefetch CBU FX by billing period (expense/work dates) — never by invoice issue date alone.
     await ensureInvoiceFxRatesForBilling({
         dateFrom,
         dateTo,
         currency: args.currency?.trim() || undefined,
     });
-    // The backend builds partner-confirmed invoice lines strictly from the confirmed report
-    // snapshot; the preview is only used here to detect an empty period up-front.
     const preview = await fetchPartnerInvoicePreview({
         projectId,
         dateFrom,

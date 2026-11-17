@@ -76,11 +76,6 @@ export interface ExpenseFormValues {
     amountCurrency: ExpenseAmountCurrency;
     foreignPerUsd: string;
     amountUzs: string;
-    /**
-     * Exact UZS when the user entered (or last confirmed) a sum in UZS.
-     * Survives UZS→USD/EUR switches so save never rebuilds from rounded USD.
-     * Cleared when the user edits the amount while currency ≠ UZS.
-     */
     lockedAmountUzs: number | null;
     exchangeRate: string;
     paymentMethod: string;
@@ -130,9 +125,7 @@ export interface ListParams {
     partnerUserId?: number;
     isReimbursable?: boolean;
     paymentMethod?: string;
-    /** Exclude employee personal-card payouts from the vendor-payment queue. */
     awaitingPayment?: boolean;
-    /** Employee personal-card payout queue (cash, except partner_expense). */
     awaitingReimbursement?: boolean;
     dateFrom?: string;
     dateTo?: string;

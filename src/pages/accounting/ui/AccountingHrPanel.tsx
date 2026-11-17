@@ -448,7 +448,6 @@ export function AccountingHrPanel() {
             window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
         }
         catch {
-            /* ignore open failures */
         }
         finally {
             setDocBusyId(null);
@@ -464,7 +463,6 @@ export function AccountingHrPanel() {
             window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
         }
         catch {
-            /* ignore */
         }
         finally {
             setDocBusyId(null);

@@ -319,7 +319,6 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         setPanelExpense(expense);
         setPanelMode(mode);
         setPanelOpen(true);
-        // The list payload omits the card number; the edit form needs the full record.
         if (mode === 'edit' && expense.reimbursementCardNumber === undefined) {
             void fetchExpenseById(expense.id)
                 .then((full) => setPanelExpense(full))

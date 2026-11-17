@@ -5,15 +5,13 @@ import {
     type DefaultFontSource,
 } from '@docx-editor.dev/fonts';
 
-/** Firm letter body face — same as invoice cover letters. */
 export const OUTGOING_LETTER_DOC_FONT = 'Calibri Light';
 
-const DOC_SIZE_HALF_POINTS = 22; // 11 pt
+const DOC_SIZE_HALF_POINTS = 22;
 
 function calibriLightSourcesFromCarlito(sources: readonly DefaultFontSource[]): FontSource[] {
     const out: FontSource[] = [];
     for (const src of sources) {
-        // Carlito is the metric-compatible Calibri stand-in shipped by @docx-editor.dev/fonts.
         if (src.request.family !== 'Carlito')
             continue;
         const made = createFontSource(
@@ -32,11 +30,6 @@ function calibriLightSourcesFromCarlito(sources: readonly DefaultFontSource[]): 
     return out;
 }
 
-/**
- * Eager font catalog for the outgoing-letter DocxEditor picker:
- * Word defaults (Calibri, Arial, Times New Roman, …) plus Calibri Light.
- * Module-level promise so `useFonts` keeps a stable identity across renders.
- */
 export const outgoingLetterEditorFonts = (async () => {
     const base = await defaultFonts({ families: ALL_WORD_DEFAULT_FAMILIES });
     const light = calibriLightSourcesFromCarlito(base.sources);

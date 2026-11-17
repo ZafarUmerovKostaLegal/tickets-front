@@ -16,7 +16,6 @@ export type InvoiceLineDto = {
     timeEntryWorkDate?: string | null;
 
     timeAuthorAuthUserId?: number | null;
-    /** Name of the task linked on the time entry (`time_tracking_client_tasks.name`). */
     timeEntryTaskName?: string | null;
     timeEntryTaskId?: string | null;
 
@@ -55,7 +54,6 @@ export type InvoiceDto = {
     balanceDue: number;
     clientNote: string | null;
     internalNote: string | null;
-    /** Preview polish (legal / cover / time report). */
     documentOverrides?: Record<string, unknown> | null;
     sentAt: string | null;
     lastSentAt: string | null;
@@ -99,7 +97,6 @@ export type UnbilledExpenseEntryDto = {
     expenseDate: string;
     description: string | null;
     equivalentAmount: number;
-    /** Som amount entered on the expense. Present when the report currency is UZS. */
     amountUzs?: number;
     exchangeRate?: number;
     status: string;
@@ -207,17 +204,11 @@ export type InvoiceCreateInput = {
     partnerBillingPeriodFrom?: string;
     partnerBillingPeriodTo?: string;
     partnerConfirmationRequestId?: string;
-    /** One-off: bill this period without requiring every partner signature. */
     skipPartnerInvoiceConfirmation?: boolean;
-    /** Same gate, explicit name: issue now, partner still signs later. */
     deferPartnerConfirmation?: boolean;
-    /** Client-facing total; closes selected time/expenses but bills this amount. */
     billedAmount?: number | null;
-    /** Service line on the legal invoice page (with billedAmount). */
     serviceDescription?: string | null;
-    /** Multiple legal-page rows; amounts must sum to billedAmount. */
     billedServiceLines?: Array<{ description: string; amount: number }> | null;
-    /** Amount added on top of hours, in the invoice currency. 0 skips the project default. */
     extraFixedFeeAmount?: number | null;
     extraFixedFeeDescription?: string | null;
 };
@@ -233,9 +224,7 @@ export type InvoicePatchInput = {
     discountAmount?: number | null;
     projectId?: string | null;
     lines?: Record<string, unknown>[] | null;
-    /** Preview document overrides; `null` clears stored overrides. */
     documentOverrides?: Record<string, unknown> | null;
-    /** Draft-only line added on top of hours. 0 removes it. */
     extraFixedFeeAmount?: number | null;
     extraFixedFeeDescription?: string | null;
 };
@@ -407,7 +396,6 @@ export type EnsureInvoiceFxRatesResult = {
     currency: string;
 };
 
-/** Seed time_tracking_fx_rates from CBU (client-fetched rates preferred). */
 export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Promise<EnsureInvoiceFxRatesResult> {
     const dates = [...new Set(
         (body.dates ?? [])
@@ -452,16 +440,10 @@ export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Pro
     };
 }
 
-/**
- * Ask the backend to seed time_tracking_fx_rates for billing dates.
- * Prefer server-side CBU fetch (one POST) — avoids browser /cbu-rates + direct cbu.uz spam.
- * Optionally attach client-fetched rates when already cached.
- */
 export async function ensureInvoiceFxRatesForBilling(opts: {
     dateFrom?: string | null;
     dateTo?: string | null;
     issueDate?: string | null;
-    /** Extra rate dates (e.g. last day of previous month for custom-billed FX). */
     extraDates?: readonly string[] | null;
     expenseDates?: readonly string[] | null;
     currency?: string | null;
@@ -480,8 +462,6 @@ export async function ensureInvoiceFxRatesForBilling(opts: {
 
     const currency = opts.currency?.trim().toUpperCase() || undefined;
 
-    // Reuse in-memory CBU cache if present (expenses form may have warmed it).
-    // Do not trigger new gateway/direct CBU calls here — backend ensure seeds from CBU.
     let rates: Array<{
         fromCurrency: string;
         toCurrency: string;
@@ -952,7 +932,6 @@ export function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     let amountPaid = coalesceInvoiceMoney(o.amountPaid, o.amount_paid, invoice.amountPaid);
     if (paidFromPayments > 1e-9)
         amountPaid = Math.max(amountPaid, paidFromPayments);
-    // Always derive balance from total − paid. Server can drift by 0.01 (expense FX vs registry USD).
     const balanceDue = Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100);
 
     let statusPick: InvoiceUiStatus = invoice.status;
@@ -1026,7 +1005,6 @@ export async function sendInvoice(id: string): Promise<InvoiceDto> {
     return normalizeInvoiceDto(await res.json());
 }
 
-/** Clear «sent to client» mark and return invoice to draft (no payments). */
 export async function unsendInvoice(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/unsend`, {
         ...invoiceApiFetchInit,
@@ -1139,7 +1117,6 @@ export async function createInvoiceOutlookDraft(
     const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
     let webLink = typeof o.webLink === 'string' ? o.webLink.trim() : '';
     const messageId = o.messageId != null ? String(o.messageId) : null;
-    // Client-side safety: Graph webLink opens drafts in read mode; force compose.
     if (messageId && (!webLink || webLink.includes('/deeplink/read/'))) {
         const q = encodeURIComponent(messageId);
         webLink = `https://outlook.office.com/mail/deeplink/compose/${q}?ItemID=${q}&exvsurl=1`;

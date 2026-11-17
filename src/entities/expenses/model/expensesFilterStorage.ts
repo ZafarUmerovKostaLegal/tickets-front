@@ -139,7 +139,6 @@ export function clearExpensesSavedFilters(userId: number, variant: ExpensesFilte
         window.localStorage.removeItem(expensesFiltersStorageKey(userId, variant));
     }
     catch {
-        // Filtering must remain usable even when browser storage is unavailable.
     }
 }
 
@@ -157,6 +156,5 @@ export function saveExpensesSavedFilters(
         );
     }
     catch {
-        // Filtering must remain usable even when browser storage is unavailable.
     }
 }

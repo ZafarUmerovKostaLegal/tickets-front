@@ -185,7 +185,6 @@ function readPinTop(): number {
             return clampPinTop(raw);
     }
     catch {
-        /* storage can be unavailable */
     }
     return fallback;
 }
@@ -286,7 +285,6 @@ function LegalHubPageBody() {
                 localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
             }
             catch {
-                /* storage can be unavailable */
             }
             return next;
         });
@@ -443,7 +441,6 @@ function LegalHubPageBody() {
             localStorage.setItem(SIDEBAR_DOCKED_KEY, next ? '1' : '0');
         }
         catch {
-            /* storage can be unavailable */
         }
     }, []);
     useEffect(() => {
@@ -632,7 +629,6 @@ function LegalHubPageBody() {
                         localStorage.setItem(SIDE_PIN_KEY, String(pinTopLive.current));
                     }
                     catch {
-                        /* storage can be unavailable */
                     }
                     window.setTimeout(() => {
                         pinMoved.current = false;

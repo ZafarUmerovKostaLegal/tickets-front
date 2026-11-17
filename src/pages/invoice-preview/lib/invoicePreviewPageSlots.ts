@@ -1,4 +1,3 @@
-/** Stable page identities for invoice preview packs (survive reordering / chunk count changes). */
 export type InvoicePreviewPageKey = 'cover' | 'invoice' | `tr:${number}`;
 
 export type InvoicePreviewPageSlot =
@@ -54,20 +53,13 @@ export function normalizeIncludedPageKeys(
         if (allKeys.includes(key))
             next.add(key);
     }
-    // Always keep at least one page.
     if (next.size === 0 && allKeys.length > 0)
         next.add(allKeys[allKeys.length - 1]!);
-    // Prefer keeping invoice page if everything else was pruned oddly.
     if (next.size === 0 && allKeys.includes('invoice'))
         next.add('invoice');
     return next;
 }
 
-/**
- * If saved keys are exactly a full pack for fewer TR chunks (typical race: keys frozen
- * against the empty 1-chunk placeholder before the real pack loaded), expand to the
- * current full pack. Keeps intentional invoice-only and other deliberate subsets.
- */
 export function expandIncludedPageKeysIfCompleteSubset(
     included: Iterable<InvoicePreviewPageKey>,
     allSlots: readonly InvoicePreviewPageSlot[],

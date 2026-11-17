@@ -173,7 +173,6 @@ export function saveProjectDisplay(userId: number, settings: ProjectDisplaySetti
         localStorage.setItem(storageKey(userId), JSON.stringify(normalizeProjectDisplay(settings)));
     }
     catch {
-        /* private mode */
     }
 }
 

@@ -76,7 +76,6 @@ export async function hydratePartnerConfirmationCommentsSummaries(
                 );
             }
             catch (err) {
-                // Mark as hydrated (0 comments) so remounts don't re-spam 404/CORS in the console.
                 next[current.index] = applyPartnerConfirmationCommentsSummary(
                     current.row,
                     { commentsCount: 0, lastComment: null },

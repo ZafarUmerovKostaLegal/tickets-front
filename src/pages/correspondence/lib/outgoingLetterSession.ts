@@ -8,7 +8,6 @@ export type OutgoingLetterAttachmentMeta = {
     sizeLabel: string;
 };
 
-/** App-side review comments (docx-editor pro is not used). Anchored by quote + optional selection JSON. */
 export type OutgoingLetterDraftComment = {
     id: string;
     quote: string;
@@ -17,7 +16,6 @@ export type OutgoingLetterDraftComment = {
     authorUserId: number | null;
     createdAt: string;
     resolved: boolean;
-    /** Serialized editor DocRange for best-effort restore on click. */
     selectionJson?: string | null;
 };
 
@@ -29,7 +27,6 @@ export type OutgoingLetterDraftV1 = {
     coverModel: InvoiceCoverLetterModel;
     attachmentMeta: OutgoingLetterAttachmentMeta[];
     comments?: OutgoingLetterDraftComment[];
-    /** Server correspondence draft UUID (for QR mint / submit reuse). */
     serverDocumentId?: string | null;
 };
 

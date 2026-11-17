@@ -53,7 +53,6 @@ type InvoicePageSkeletonType = 'cover' | 'report' | 'invoice';
 function InvoicePageSkeleton({ type }: { type: InvoicePageSkeletonType }) {
     return (
       <div className="tt-inv-skel-page" aria-hidden="true">
-        {/* Header: logo + address */}
         <div className="tt-inv-skel-cover__header">
           <span className="tt-inv-skel-b tt-inv-skel-cover__logo"/>
           <div className="tt-inv-skel-cover__addr">
@@ -96,7 +95,6 @@ function InvoicePageSkeleton({ type }: { type: InvoicePageSkeletonType }) {
 
         {(type === 'report' || type === 'invoice') && (
           <>
-            {/* Table */}
             <div style={{ marginTop: 28 }}>
               <div className="tt-inv-skel-table__head tt-inv-skel-b" style={{ animationDelay: '0.04s' }}>
                 {[60, 40, 120, 180, 55, 60, 70].map((w, i) => (
@@ -156,8 +154,6 @@ export function InvoicePreviewPage() {
     const location = useLocation();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | 'page' | null>(null);
     const [saveBusy, setSaveBusy] = useState(false);
-    // Stabilize session identity — readInvoicePreviewSession() returns a new object every call;
-    // using it bare in effect deps cancels pack loading on every re-render (empty tables, PDF still works).
     const session = useMemo(
         () => readInvoicePreviewSession(),
         [location.key, location.pathname],
@@ -177,7 +173,6 @@ export function InvoicePreviewPage() {
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [showInitiatorName, setShowInitiatorName] = useState(false);
     const [combinedReport, setCombinedReport] = useState<CombinedReportSnapshot | null>(null);
-    /** Existing invoice with billedAmount: legal/cover keep this total; time report shows worked sums. */
     const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string } | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -293,11 +288,7 @@ export function InvoicePreviewPage() {
         if (!doc)
             return;
         pendingDocOverridesRef.current = doc;
-        // Do not set userPickedBankRef — saved legal edits must not block auto-pick of
-        // firm banking by invoice currency (USD invoice → USD реквизиты).
         skipNextAutosaveRef.current = true;
-        // Keep includedPageKeys in pendingDocOverridesRef only — hydrate after the real
-        // time-report pack is ready so tr:1+ are not dropped against the empty 1-chunk pack.
         setLegalOverrides((prev) => ({
             ...prev,
             ...(doc.legal ?? {}),
@@ -308,8 +299,6 @@ export function InvoicePreviewPage() {
         }
         setShowInitiatorName(doc.showServiceInitiatorName === true);
         setCombinedReport(doc.combinedReport ?? null);
-        // timeReport is applied after live resolve (mergeTimeReportPackPreferLiveExpenses)
-        // so expense USD stays locked to the registry, not a stale invoice FX snapshot.
     }, []);
 
     useEffect(() => {
@@ -450,7 +439,6 @@ export function InvoicePreviewPage() {
                 }));
             }
 
-            // Prefer invoice currency immediately; coverModel effect will refine once totals load.
             const picked = pickFirmBankingProfileForCurrency(profiles, invoiceCurrency);
             if (picked && !userPickedBankRef.current)
                 applyBankProfile(picked);
@@ -576,7 +564,6 @@ export function InvoicePreviewPage() {
         setEditMode(true);
     }, [editMode, persistPreviewEdits]);
 
-    // Autosave while editing (debounced).
     useEffect(() => {
         if (!editMode || !session || !coverModel)
             return;
@@ -739,7 +726,6 @@ export function InvoicePreviewPage() {
         return nums;
     }, [allPageSlots, resolvedIncludedKeys]);
 
-    // Seed included pages only after the real time-report pack is loaded (not the empty fallback).
     useEffect(() => {
         if (timeReportPack == null)
             return;
@@ -759,8 +745,6 @@ export function InvoicePreviewPage() {
         }
     }, [timeReportPack, allPageSlots, includedPageKeys]);
 
-    // If the pack grows after hydrate (more TR chunks) and the current selection is still a
-    // complete smaller pack, treat that as the load race / row growth — include new pages.
     useEffect(() => {
         if (timeReportPack == null || includedPageKeys == null || !includedPagesHydratedRef.current)
             return;
@@ -823,7 +807,6 @@ export function InvoicePreviewPage() {
             void persistPreviewEditsRef.current({ silent: true });
     }, []);
 
-    // Persist page inclusion changes (even outside edit mode).
     useEffect(() => {
         if (!session || !coverModel || includedPageKeys == null)
             return;
@@ -918,7 +901,6 @@ export function InvoicePreviewPage() {
                         healed = applyLinkedTaskNamesToTimeReportPack(healed, hints);
                     }
                     catch {
-                        // The report still shows without the extra task lookup.
                     }
                 }
                 if (cancel)
@@ -1151,7 +1133,6 @@ export function InvoicePreviewPage() {
             return;
         setDownloadBusy('page');
         try {
-            // Persist latest edits first so the downloaded page matches what is on screen.
             await persistPreviewEdits({ silent: true });
             const { buildInvoicePreviewPdfBlob } = await import('../lib/buildInvoicePreviewPdf');
             const blob = await buildInvoicePreviewPdfBlob({

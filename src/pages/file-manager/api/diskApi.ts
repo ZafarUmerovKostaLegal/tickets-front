@@ -47,7 +47,6 @@ async function fail(response: Response): Promise<never> {
             message = body.detail;
     }
     catch {
-        /* ignore */
     }
     throw new FilesApiError(response.status, message);
 }

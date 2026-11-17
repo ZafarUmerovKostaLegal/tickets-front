@@ -1,10 +1,3 @@
-/**
- * Snow bank along the bottom of the viewport: it fills up from landing
- * flakes plus a light ambient deposit, and a toy plow clears it once it is
- * deep enough (behaviour from the WinterForWindows / snow-rs overlay).
- * Pure simulation + drawing — the render loop lives in snowScene.ts.
- */
-
 const COLUMN = 4;
 const MAX_SLOPE = 1.35;
 const PLOW_TRIGGER = 0.62;
@@ -66,7 +59,6 @@ export function bankHeightAt(b: Bank, x: number): number {
     return c >= 0 && c < b.h.length ? b.h[c] : 0;
 }
 
-/** A flake landed at `x`: pile a soft bump over a few columns. */
 export function depositSnow(b: Bank, x: number, amount: number): void {
     if (b.plowActive && Math.abs(x - b.plowX) < PLOW_LENGTH + 20)
         return;
@@ -126,7 +118,6 @@ export function stepBank(b: Bank, dt: number, groundY: number): void {
     b.time += dt;
     const n = b.h.length;
 
-    // Light ambient deposit so the bank grows evenly, not only under flakes.
     const deposits = Math.ceil(b.w / 90);
     for (let i = 0; i < deposits; i += 1) {
         if (Math.random() < 0.5) {
@@ -137,7 +128,6 @@ export function stepBank(b: Bank, dt: number, groundY: number): void {
     if (!b.plowActive)
         relax(b.h);
 
-    // Sparkles on the surface.
     if (Math.random() < dt * 2.2) {
         const x = Math.random() * b.w;
         if (bankHeightAt(b, x) > 3)
@@ -194,8 +184,6 @@ export function stepBank(b: Bank, dt: number, groundY: number): void {
     }
 }
 
-/* ---------- Drawing ---------- */
-
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, hh: number, r: number) {
     const rr = Math.min(r, w / 2, hh / 2);
     ctx.beginPath();
@@ -208,7 +196,6 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
     ctx.fill();
 }
 
-/** Smooth surface through the column tops (midpoint quadratic curves). */
 function tracePile(ctx: CanvasRenderingContext2D, b: Bank, groundY: number) {
     const n = b.h.length;
     ctx.moveTo(0, groundY - b.h[0]);

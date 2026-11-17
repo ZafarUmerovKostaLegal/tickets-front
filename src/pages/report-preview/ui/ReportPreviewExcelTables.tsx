@@ -15,7 +15,6 @@ import { DecimalDurationInput } from './DecimalDurationInput';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { isKostaLegalInternalTask } from '../lib/reportPreviewInternalTask';
 
-/** Above `.tt-rp-mtable-wrap--fullscreen` (12000) and dock so bottom-row menus stay visible. */
 const TT_RP_SELECT_PORTAL_Z = 15000;
 import { PREVIEW_CATEGORY_OPTIONS, PREVIEW_TASK_OPTIONS, } from '../lib/previewFormOptions';
 import {
@@ -499,7 +498,6 @@ function normalizeHexColor(value: string): string {
     return raw.toUpperCase();
 }
 
-/** Valid #RRGGBB or null (empty / invalid). */
 function parseScopeHexColor(value: string | null | undefined): string | null {
     const raw = String(value ?? '').trim().toUpperCase();
     if (!/^#([0-9A-F]{6})$/.test(raw))
@@ -712,7 +710,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
 } & UserRowSelectionProps & PreviewServerReloadProps & TimeReportPersistenceProps) {
     const isFull = viewMode === 'full';
     const readOnlyUi = Boolean(readOnly);
-    // In confirmed (read-only) preview still show delete when handler is provided.
     const showEntryActions = !isFull && (
         Boolean(onDeleteTimeEntry)
         || Boolean(onApplyScopeColorToSelection)

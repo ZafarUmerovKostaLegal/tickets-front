@@ -3,9 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import './TileFestiveAccent.css';
 
 type TileFestiveAccentProps = {
-    /** Varies ornament style, thread length and swing so neighbours differ. */
     seed: number;
-    /** Kept for call-site compat. */
     compact?: boolean;
 };
 
@@ -17,17 +15,15 @@ function rand(seed: number, n: number): number {
 type Palette = { light: string; mid: string; dark: string; trim: string };
 
 const PALETTES: Palette[] = [
-    { light: '#ff8a80', mid: '#d32f2f', dark: '#7f1416', trim: '#f4d27a' }, // crimson + gold
-    { light: '#fff1b8', mid: '#e0a92e', dark: '#8a5a0c', trim: '#ffffff' }, // gold + white
-    { light: '#8fe0b4', mid: '#1f8a5b', dark: '#0b4029', trim: '#f4d27a' }, // emerald + gold
-    { light: '#9fc0ff', mid: '#2f5bb7', dark: '#132a5e', trim: '#e9f0ff' }, // midnight + silver
-    { light: '#ffffff', mid: '#c9d3df', dark: '#6b7889', trim: '#d32f2f' }, // silver + red
+    { light: '#ff8a80', mid: '#d32f2f', dark: '#7f1416', trim: '#f4d27a' },
+    { light: '#fff1b8', mid: '#e0a92e', dark: '#8a5a0c', trim: '#ffffff' },
+    { light: '#8fe0b4', mid: '#1f8a5b', dark: '#0b4029', trim: '#f4d27a' },
+    { light: '#9fc0ff', mid: '#2f5bb7', dark: '#132a5e', trim: '#e9f0ff' },
+    { light: '#ffffff', mid: '#c9d3df', dark: '#6b7889', trim: '#d32f2f' },
 ];
 
 type BaubleKind = 'stripes' | 'dots' | 'snowflake' | 'drop';
 const KINDS: BaubleKind[] = ['stripes', 'dots', 'snowflake', 'drop'];
-
-/* ---------- Hanging bauble ---------- */
 
 const B_W = 34;
 const R = 12;
@@ -159,8 +155,6 @@ function Bauble({ seed, uid }: { seed: number; uid: string }) {
     );
 }
 
-/* ---------- Fir sprig in the bottom-right corner ---------- */
-
 type Pt = [number, number];
 
 function quad(a: Pt, c: Pt, b: Pt, t: number): Pt {
@@ -204,8 +198,6 @@ function branchNeedles(seed: number, salt: number, a: Pt, c: Pt, b: Pt, maxLen: 
 
 function FirSprig({ seed }: { seed: number }) {
     const branches = useMemo(() => {
-        // Both branches start at the corner: one lies along the bottom edge,
-        // the other rises diagonally — they stay inside the tile.
         const main: [Pt, Pt, Pt] = [[74, 46], [48, 46], [14, 38]];
         const upper: [Pt, Pt, Pt] = [[72, 44], [64, 30], [50, 16]];
         return [
@@ -232,7 +224,6 @@ function FirSprig({ seed }: { seed: number }) {
                 </g>
             ))}
 
-            {/* Pine cone */}
             <g transform="translate(44 39) rotate(-70) scale(0.9)">
                 <ellipse cx="0" cy="0" rx="4.4" ry="7" fill="#7a4a26" />
                 {[-4, -1.2, 1.6, 4.4].map((y) => (
@@ -242,7 +233,6 @@ function FirSprig({ seed }: { seed: number }) {
                 <ellipse cx="-1.6" cy="-3" rx="1" ry="2" fill="#b97d4a" opacity="0.55" />
             </g>
 
-            {/* Velvet bow */}
             <g transform="translate(66 38) scale(0.9)">
                 <path d="M 0 0 C -6 -7 -13 -3 -10 2 C -8 5 -3 3 0 0 Z" fill="#c62828" />
                 <path d="M 0 0 C 6 -7 13 -3 10 2 C 8 5 3 3 0 0 Z" fill="#b71c1c" />
@@ -256,11 +246,6 @@ function FirSprig({ seed }: { seed: number }) {
     );
 }
 
-/**
- * New Year tile decoration: a glass bauble hanging on a thread from the
- * tile's top edge (gently swinging, jingles on hover) and a fir sprig with
- * a pine cone and a velvet bow tucked into the bottom-right corner.
- */
 export function TileFestiveAccent({ seed }: TileFestiveAccentProps) {
     const uid = useId().replace(/:/g, '');
 

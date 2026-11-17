@@ -6,7 +6,6 @@ import { COVER_LETTERHEAD_LOGO_ASPECT } from './invoiceCoverLogoRaster';
 import { formatTimeReportHours } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 
-/** Keep letterhead aspect; old 118×30 squeezed the mark. */
 const REPORT_LOGO_H = 42;
 const REPORT_LOGO_W = REPORT_LOGO_H * COVER_LETTERHEAD_LOGO_ASPECT;
 const REPORT_HEADER_CHROME = REPORT_LOGO_H + 18;

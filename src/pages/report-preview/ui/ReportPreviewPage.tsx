@@ -412,7 +412,6 @@ export function ReportPreviewPage() {
         setRangeFrom(clamped.dateFrom);
         setRangeTo(clamped.dateTo);
         const resolvedPeriod = resolveReportPreviewPeriodState(clamped.dateFrom, clamped.dateTo, xfer.period);
-        // Oversized legacy "all time" (2000-01-01) must not stay as a custom range — use clamped preset.
         if (
             xfer.period?.customRangeActive
             && (base.dateFrom.slice(0, 10) !== clamped.dateFrom || base.dateTo.slice(0, 10) !== clamped.dateTo)
@@ -637,7 +636,6 @@ export function ReportPreviewPage() {
         setRangeFrom(presetRange.dateFrom);
         setRangeTo(presetRange.dateTo);
     }, [xferHydrated, presetRange.dateFrom, presetRange.dateTo, customRangeActive]);
-    // Legacy / custom ranges may still hold 2000-01-01 → far dateTo; clamp to API max (~10y).
     useEffect(() => {
         if (!xferHydrated || !rangeFrom || !rangeTo)
             return;
@@ -914,7 +912,6 @@ export function ReportPreviewPage() {
                 }
                 setSnapshotRowIdByPreviewKey(nextKeyMap);
                 setRowScopeColorsByKey((prev) => {
-                    // Prefer colors already loaded from live report / local edits; fill gaps from snapshot.
                     const merged = { ...nextColors, ...prev };
                     return merged;
                 });
@@ -990,7 +987,6 @@ export function ReportPreviewPage() {
                     });
                 }
                 catch {
-                    /* live entry already saved — snapshot stub may lack this row */
                 }
             }
             setTimeEntrySaveUI('saved');
@@ -1619,7 +1615,6 @@ export function ReportPreviewPage() {
                         await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: picked });
                     }
                     catch {
-                        /* snapshot stub may lack entry rows — time entry is source of truth */
                     }
                 }
             }));
@@ -1732,7 +1727,6 @@ export function ReportPreviewPage() {
                         await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: null });
                     }
                     catch {
-                        /* ignore stub snapshot */
                     }
                 }
             }));

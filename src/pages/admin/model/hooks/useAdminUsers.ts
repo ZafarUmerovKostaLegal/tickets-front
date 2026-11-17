@@ -52,8 +52,6 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
             .then((list) => {
                 if (cancelled)
                     return;
-                // Merge API catalog with local fallback so new titles (e.g. Trainee)
-                // appear even if the API/cache is still on an older list.
                 const seen = new Set<string>();
                 const merged: string[] = [];
                 for (const p of [...list, ...TT_POSITIONS_FALLBACK]) {

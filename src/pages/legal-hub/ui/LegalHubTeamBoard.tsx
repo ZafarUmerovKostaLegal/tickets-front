@@ -366,7 +366,6 @@ export function LegalHubUtilRail({ mobileOpen, onMobileClose }: {
                 localStorage.setItem(UTIL_COLLAPSED_KEY, next ? '1' : '0');
             }
             catch {
-                /* storage can be unavailable */
             }
             return next;
         });

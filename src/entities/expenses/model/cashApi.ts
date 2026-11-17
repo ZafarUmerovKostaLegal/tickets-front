@@ -37,7 +37,7 @@ async function throwIfNotOk(res: Response): Promise<Response> {
         if (typeof j.detail === 'string' && j.detail)
             msg = j.detail;
     }
-    catch { /* keep status text */ }
+    catch {}
     throw new Error(msg);
 }
 

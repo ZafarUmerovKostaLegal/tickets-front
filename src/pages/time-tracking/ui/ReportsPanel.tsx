@@ -228,7 +228,6 @@ export function ReportsPanel() {
     setDateFrom(presetRange.dateFrom);
     setDateTo(presetRange.dateTo);
   }, [presetRange.dateFrom, presetRange.dateTo, customRangeActive]);
-  // Legacy prefs / manual ranges may still hold 2000-01-01 → today; clamp to API max.
   useEffect(() => {
     const clamped = clampReportsDateRange(dateFrom, dateTo);
     if (clamped.dateFrom !== dateFrom || clamped.dateTo !== dateTo) {
@@ -330,7 +329,6 @@ export function ReportsPanel() {
   const [usersForFilterError, setUsersForFilterError] = useState<string | null>(null);
   type AnyRow = TimeReportRow | ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam | UninvoicedRow | BudgetRow;
   const [results, setResults] = useState<AnyRow[]>([]);
-  /** Rows belong to this view; ignore stale payloads after tab switches. */
   const [resultsViewKey, setResultsViewKey] = useState<string | null>(null);
   const reportFetchGenRef = useRef(0);
   const [serverTotals, setServerTotals] = useState<ReportTotals | null>(null);

@@ -36,10 +36,8 @@ type InventoryContextValue = {
     setFilterStatus: (v: string) => void;
     filterEquipmentClass: string;
     setFilterEquipmentClass: (v: string) => void;
-    /** Точный балл 1–10; пусто = без фильтра по оценке. */
     filterScore: number | '';
     setFilterScore: (v: number | '') => void;
-    /** Сортировка по баллам: '' | 'asc' | 'desc'. */
     scoreSort: '' | 'asc' | 'desc';
     setScoreSort: (v: '' | 'asc' | 'desc') => void;
     filterAssignedTo: number | '';
@@ -248,7 +246,6 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
                 ? filterScore
                 : null;
             const sortOrder = scoreSort === 'asc' || scoreSort === 'desc' ? scoreSort : null;
-            // Score filter/sort are computed client-side from purchase_date / class — fetch a wide page.
             const clientScoreMode = scoreFilter != null || sortOrder != null;
             const page = await getItems({
                 skip: clientScoreMode ? 0 : skip,

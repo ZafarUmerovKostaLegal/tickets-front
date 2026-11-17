@@ -85,7 +85,6 @@ function rasterizeElement(el: HTMLElement): Promise<Uint8Array> {
     });
 }
 
-/** Paint each preview sheet off-screen and return a PNG of that exact page. */
 export async function rasterizeCombinedReportPages(report: CombinedReportSnapshot): Promise<Uint8Array[]> {
     const slices = planCombinedReportPreviewPages(report);
     const host = document.createElement('div');

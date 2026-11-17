@@ -9,7 +9,6 @@ export type ReportPreviewFilterPopoverProps = {
     title?: string;
     'aria-label': string;
     children: ReactNode;
-    /** When true, trigger looks “filtered” even if the panel is closed. */
     active?: boolean;
 };
 

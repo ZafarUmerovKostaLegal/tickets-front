@@ -8,7 +8,6 @@ export type AttendanceEmployeePeriodExportInput = {
     dateFrom: string;
     dateTo: string;
     items: PeriodAttendanceItem[];
-    /** Optional raw camera marks for sheet 2. */
     rawMarks?: AttendanceRecord[];
 };
 
@@ -114,7 +113,6 @@ function parseEventMs(iso: string | null | undefined): number | null {
     return Number.isFinite(t) ? t : null;
 }
 
-/** Interval first→last only; empty if no last punch. */
 export function formatIntervalHm(firstIso: string | null | undefined, lastIso: string | null | undefined): string {
     const a = parseEventMs(firstIso);
     const b = parseEventMs(lastIso);

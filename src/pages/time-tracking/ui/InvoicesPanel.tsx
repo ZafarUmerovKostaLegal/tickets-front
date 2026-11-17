@@ -220,7 +220,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         setInvoiceListTotalCount(typeof r.totalCount === 'number' ? r.totalCount : null);
         if (!silent && !signal?.aborted)
           setListLoading(false);
-        // Align USD list Сумма/Остаток with expense registry (not issue-date FX).
         const enriched = await enrichInvoicesWithDisplayMoney(rows, signal);
         if (!signal?.aborted)
           setItems(enriched);
@@ -381,7 +380,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       window.sessionStorage.setItem(INV_TAB_KEY, tab);
     }
     catch {
-      /* private mode */
     }
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);

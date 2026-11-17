@@ -123,7 +123,6 @@ export function CorrespondenceLetterEditorProvider({
         const el = editorRef.current;
         if (!el)
             return;
-        // While typing, never rewrite DOM from props — that kills Enter / caret.
         if (document.activeElement === el)
             return;
         const seed = ensureLetterEditorHtml(normalized);
@@ -146,7 +145,6 @@ export function CorrespondenceLetterEditorProvider({
             document.execCommand('styleWithCSS', false, 'true');
         }
         catch {
-            // ignore
         }
         const el = editorRef.current;
         if (el && !el.innerHTML.trim())
@@ -157,7 +155,6 @@ export function CorrespondenceLetterEditorProvider({
         const el = editorRef.current;
         if (!el)
             return;
-        // Keep a seed paragraph so the next Enter still works after clearing.
         if (!el.innerHTML.trim() || el.innerHTML === '<br>')
             el.innerHTML = '<p><br></p>';
         const html = sanitizeLetterHtml(el.innerHTML);
@@ -219,7 +216,6 @@ export function CorrespondenceLetterEditorProvider({
                 document.execCommand(deltaPx > 0 ? 'indent' : 'outdent');
             }
             catch {
-                // ignore
             }
             emitChange();
             refreshActive();
@@ -254,7 +250,6 @@ export function CorrespondenceLetterEditorProvider({
             document.execCommand(cmd, false, arg);
         }
         catch {
-            // ignore unsupported commands
         }
         emitChange();
         refreshActive();
@@ -279,7 +274,6 @@ export function CorrespondenceLetterEditorProvider({
                 emitChange();
                 return;
             }
-            // Hard line break → new paragraph (Word-like).
             e.preventDefault();
             try {
                 const ok = document.execCommand('insertParagraph');
@@ -323,12 +317,10 @@ export function CorrespondenceLetterEditorProvider({
         ensureEditableStructure();
         const htmlClip = e.clipboardData.getData('text/html');
         const textClip = e.clipboardData.getData('text/plain');
-        // Prefer plain text paragraphs so pasted Word fonts never sneak in.
         const safe = textClip
             ? plainTextToLetterHtml(textClip)
             : sanitizeLetterHtml(htmlClip);
         try {
-            // insertHTML of full <p> blocks can nest poorly — insert fragment lines.
             if (textClip) {
                 const parts = textClip.replace(/\r\n/g, '\n').split('\n');
                 const html = parts.map((line, i) => {
@@ -430,7 +422,6 @@ function ToolbarBtn({
     );
 }
 
-/** Formatting bar — place in the page chrome (above the sheet). */
 export function CorrespondenceLetterEditorToolbar() {
     const ctx = useLetterEditorOptional();
     if (!ctx?.editable)
@@ -499,7 +490,6 @@ export function CorrespondenceLetterEditorToolbar() {
     );
 }
 
-/** Editable / readonly letter body surface (lives inside the A4 sheet). */
 export function CorrespondenceLetterEditorSurface() {
     const ctx = useLetterEditorOptional();
     if (!ctx) {
@@ -507,7 +497,6 @@ export function CorrespondenceLetterEditorSurface() {
     }
 
     if (!ctx.editable) {
-        // Provider still wraps readonly for preview when needed; fall back to empty.
         return <div className="corr-letter-editor__readonly corr-letter-editor__readonly--empty" />;
     }
 
@@ -539,7 +528,6 @@ export function CorrespondenceLetterEditorSurface() {
     );
 }
 
-/** Standalone readonly body (preview without provider). */
 export function CorrespondenceLetterBodyReadonly({ value }: { value: string }) {
     const html = normalizeLetterBodyHtml(value);
     if (!html)
@@ -552,7 +540,6 @@ export function CorrespondenceLetterBodyReadonly({ value }: { value: string }) {
     );
 }
 
-// Keep a thin compatibility export used by older imports.
 export function CorrespondenceLetterBodyEditor(props: {
     value: string;
     editable?: boolean;

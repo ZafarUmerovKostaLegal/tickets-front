@@ -3,7 +3,6 @@ import type { CSSProperties, RefObject } from 'react';
 import './SnowCap.css';
 
 type SnowCapProps = {
-    /** Varies the silhouette and cycle timing so neighbouring tiles don't look identical. */
     seed: number;
 };
 
@@ -23,7 +22,6 @@ function lerp(a: number, b: number, t: number): number {
 
 type Pt = [number, number];
 
-/** Catmull-Rom handle, clamped so unevenly spaced points can't make the curve loop. */
 function handle(from: Pt, prev: Pt, next: Pt, segment: Pt, sign: 1 | -1): Pt {
     let hx = (next[0] - prev[0]) / 6;
     let hy = (next[1] - prev[1]) / 6;
@@ -36,7 +34,6 @@ function handle(from: Pt, prev: Pt, next: Pt, segment: Pt, sign: 1 | -1): Pt {
     return [from[0] + sign * hx, from[1] + sign * hy];
 }
 
-/** Smooth curve through points (Catmull-Rom → cubic Bézier). */
 function smoothThrough(points: Pt[]): string {
     let d = '';
     for (let i = 0; i < points.length - 1; i += 1) {
@@ -51,10 +48,8 @@ function smoothThrough(points: Pt[]): string {
     return d;
 }
 
-/** SVG box height in px; the tile's top edge sits at EDGE. Keep in sync with SnowCap.css. */
 const BOX_H = 42;
 const EDGE = 22;
-/** Matches `--hn-tile-radius` in HomeNavTiles.css. */
 const RADIUS = 14;
 const MAX_DEPTH = 20;
 const FROST = 2.2;
@@ -73,11 +68,6 @@ function lipOf(level: number, melt: number): number {
     return 0.8 + level * 2 - melt * 0.5;
 }
 
-/**
- * Point on the tile's rounded top corner. `theta` = 0 is the top of the arc,
- * π/2 the side; `side` = -1 for the left corner, 1 for the right one.
- * `out` pushes the point outward along the normal.
- */
 function cornerPoint(width: number, side: -1 | 1, theta: number, out: number): Pt {
     const cx = side < 0 ? RADIUS : width - RADIUS;
     const cy = EDGE + RADIUS;
@@ -85,12 +75,6 @@ function cornerPoint(width: number, side: -1 | 1, theta: number, out: number): P
     return [cx + side * r * Math.sin(theta), cy - r * Math.cos(theta)];
 }
 
-/**
- * Snow layer for a tile `width` px wide. `level` is snow depth
- * (0 = thin frost, 1 = full drift); `melt` grows icicles and makes the
- * surface lumpy. Deeper snow slumps further down the rounded corners.
- * Every state has the same point count so SMIL can morph between them.
- */
 function buildSnowPath(seed: number, width: number, level: number, melt: number): string {
     const heap = 0.28 + rand(seed, 1) * 0.44;
     const ph1 = rand(seed, 2);
@@ -106,7 +90,6 @@ function buildSnowPath(seed: number, width: number, level: number, melt: number)
         return FROST + level * MAX_DEPTH * taper * Math.max(0.15, shape) + lumps;
     };
 
-    // How far the snow has slid down each corner arc.
     const thetaEnd = lerp(0.4, 0.95, level);
     const noseThick = 0.8 + level * 2.2;
     const lip = lipOf(level, melt);
@@ -156,7 +139,6 @@ function buildSnowPath(seed: number, width: number, level: number, melt: number)
 }
 
 
-/** Resting shape: a full drift with short icicles. */
 const LEVEL = 1;
 const MELT = 0.4;
 
@@ -167,7 +149,6 @@ function useElementWidth<T extends HTMLElement>(): [RefObject<T | null>, number]
         const el = ref.current;
         if (!el)
             return;
-        // Layout width, unaffected by the tile's hover transform.
         const measure = () => setWidth(el.offsetWidth);
         measure();
         if (typeof ResizeObserver === 'undefined')
@@ -179,11 +160,6 @@ function useElementWidth<T extends HTMLElement>(): [RefObject<T | null>, number]
     return [ref, width];
 }
 
-/**
- * Snow drift on top of a tile. The silhouette is static (no per-frame path
- * morphing): it settles in once, then only cheap CSS effects run —
- * a shine sweep, sparkles and drops falling from the icicles.
- */
 export function SnowCap({ seed }: SnowCapProps) {
     const uid = useId().replace(/:/g, '');
     const [ref, width] = useElementWidth<HTMLSpanElement>();

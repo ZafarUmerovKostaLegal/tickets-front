@@ -240,7 +240,6 @@ export async function deleteAttachment(id: string, attId: string): Promise<Expen
             return withoutAtt(normalizeExpenseRequest(await res.json() as ExpenseRequest));
         }
         catch {
-            /* тело ответа битое — сверка через GET */
         }
     }
     try {
@@ -250,7 +249,6 @@ export async function deleteAttachment(id: string, attId: string): Promise<Expen
             return withoutAtt(fresh);
     }
     catch {
-        /* исходную ошибку удаления покажем ниже */
     }
     await throwIfNotOk(res);
     throw new Error('Не удалось удалить файл');

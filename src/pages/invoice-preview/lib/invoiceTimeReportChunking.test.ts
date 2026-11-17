@@ -32,7 +32,6 @@ describe('splitDetailRowsForPagedTimeReport', () => {
     it('does not create sparse balanced pairs like [4,4]', () => {
         for (let n = 1; n <= TIME_REPORT_PDF_ROWS_LAST_CHUNK; n += 1)
             expect(chunkSizes(n)).toEqual([n]);
-        // Just over last-page capacity: fill mid, then last — never half/half.
         expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 1).length).toBeGreaterThanOrEqual(1);
         const over = chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 8);
         expect(over.reduce((a, b) => a + b, 0)).toBe(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 8);
@@ -65,7 +64,6 @@ describe('splitDetailRowsForPagedTimeReport', () => {
     });
 
     it('folds tiny penultimate pages into the last page', () => {
-        // remaining-LAST would be 3 (< MIN_DENSE_MID_CHUNK) → single page
         expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 3)).toEqual([TIME_REPORT_PDF_ROWS_LAST_CHUNK + 3]);
     });
 });

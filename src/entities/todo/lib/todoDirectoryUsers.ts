@@ -14,7 +14,6 @@ export async function loadTodoDirectoryUsers(): Promise<User[]> {
             return filtered;
     }
     catch {
-        /* fall through to getUsers */
     }
     try {
         return (await getUsers(false)).filter(isPickerEligible);
@@ -32,7 +31,6 @@ export async function loadTodoBoardDisplayUsers(): Promise<User[]> {
             return filtered;
     }
     catch {
-        /* fall through */
     }
     try {
         return (await getUsers(false)).filter((u) => !isHiddenSystemUser(u));

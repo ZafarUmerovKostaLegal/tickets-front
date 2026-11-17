@@ -17,7 +17,6 @@ const DISCLAIMER_RU = 'Данное электронное сообщение и
 
 const DEFAULT_SENDER_POSITION = 'Contract Manager';
 
-/** Title printed under the sender name in the client invoice email. */
 export function invoiceSenderPosition(senderName: string | null | undefined): string {
     const normalized = (senderName ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
     if (normalized === 'kamola yusupova' || normalized === 'yusupova kamola')
@@ -29,7 +28,6 @@ export function invoiceClientMailSignature(input: {
     name: string;
     position?: string | null;
     logoUrl?: string | null;
-    /** When true, the PNG is attached to the Outlook draft as cid:kosta-legal-logo. */
     embedLogo?: boolean;
 }): { html: string; text: string } {
     const name = (input.name || 'Kosta Legal').trim() || 'Kosta Legal';
@@ -82,7 +80,6 @@ export function invoiceClientMailSignature(input: {
     return { html, text };
 }
 
-/** Rasterize the public mark so Outlook can show it as an inline PNG, not an SVG link. */
 export async function rasterizePublicLogoPng(): Promise<string | null> {
     try {
         const img = new Image();

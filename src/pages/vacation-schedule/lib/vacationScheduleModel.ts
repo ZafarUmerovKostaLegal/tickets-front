@@ -454,7 +454,6 @@ export function collectPartnerAuthUserIds(
     return partnerUserIds;
 }
 
-/** Flag partner rows so the grid can show vacation without attendance. */
 export function markVacationSchedulePartnerRows(
     rows: ReadonlyArray<VacationScheduleEmployeeRow>,
     users: ReadonlyArray<VacationScheduleUserOrgRef>,
@@ -538,7 +537,6 @@ export function formatVacationLateMinutes(minutes: number): string {
     return `${minutes}м`;
 }
 
-/** Readable total for dashboards / employee detail (e.g. «1 ч 30 мин»). */
 export function formatVacationLateMinutesTotal(minutes: number): string {
     if (!(minutes > 0))
         return '0 мин';

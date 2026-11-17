@@ -97,7 +97,6 @@ export type ProjectMemberRateDraft = {
     amount: string;
     currency: string;
     rateId?: string;
-    /** Where the displayed amount came from when the modal loaded. */
     source?: 'project' | 'global' | 'other_project' | 'none';
     baselineAmount?: string;
     baselineCurrency?: string;

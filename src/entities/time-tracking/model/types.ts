@@ -19,7 +19,6 @@ export type ProjectRow = {
     partnerAuthUserIds?: number[];
     participantAuthUserIds?: number[];
     hasBudgetConfigured?: boolean;
-    /** Raw budget_type from API (`hourly_rate`, `no_budget`, `money`, …). */
     budgetType?: string | null;
     budgetIncludesExpenses?: boolean;
     deletable?: boolean;

@@ -1,11 +1,5 @@
 import type { ExpenseAmountCurrency, ExpenseStatus, ExpenseType, PartnerExpenseCategory, PaymentMethod, } from './types';
 
-/**
- * Statuses in company/partner registry filters and reports.
- * Matches the live UI workflow (create → approve → pay / reject / revise / withdraw).
- * `closed` / `not_reimbursable` remain in STATUS_META for legacy rows but are not
- * offered as filters after close / «Не оплачено» actions were removed.
- */
 export const EXPENSE_REGISTRY_STATUSES: ExpenseStatus[] = [
     'draft',
     'pending_approval',
@@ -17,7 +11,6 @@ export const EXPENSE_REGISTRY_STATUSES: ExpenseStatus[] = [
 ];
 export const EXPENSE_REGISTRY_STATUS_SET = new Set<ExpenseStatus>(EXPENSE_REGISTRY_STATUSES);
 
-/** Create / submit / moderation queue — subset of workflow statuses. */
 export const EXPENSE_WORKFLOW_STATUSES: ExpenseStatus[] = [
     'draft',
     'pending_approval',
@@ -126,7 +119,6 @@ export const EXPENSE_TYPES: {
     { value: 'partner_expense', label: 'Расход партнёра' },
     { value: 'other', label: 'Прочее' },
 ];
-/** Types on «Расходы компании» (без partner — партнёрские в отдельном табе). */
 export const COMPANY_EXPENSE_TYPES: {
     value: Exclude<ExpenseType, 'partner_expense'>;
     label: string;
@@ -138,7 +130,6 @@ export const COMPANY_EXPENSE_TYPE_CODES = COMPANY_EXPENSE_TYPES
     .map(t => t.value)
     .filter((value): value is Exclude<ExpenseType, 'partner_expense' | 'company_expense'> => value !== 'company_expense');
 
-/** Приватный тип: в списке у партнёров, создать и согласовать могут только эти почты. */
 export const COMPANY_EXPENSE_ACTOR_EMAILS = [
     'oidrisova@kostalegal.com',
     'zumerov@kostalegal.com',

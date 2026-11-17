@@ -442,7 +442,6 @@ body[data-theme='dark'] .inv__mini-btn:hover {
   min-height: 100%;
 }
 
-/* Fallback when View Transition API is unavailable */
 @supports not (view-transition-name: none) {
   .page-transition {
     animation: page-fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -460,7 +459,6 @@ body[data-theme='dark'] .inv__mini-btn:hover {
   }
 }
 
-/* React <ViewTransition> classes (page-enter / page-exit / page-share) */
 @supports (view-transition-name: none) {
   ::view-transition-old(.page-exit),
   ::view-transition-old(.page-share) {

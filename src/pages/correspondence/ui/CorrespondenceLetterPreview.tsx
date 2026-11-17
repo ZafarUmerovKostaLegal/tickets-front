@@ -68,7 +68,6 @@ export function CorrespondenceLetterPreview({
             });
         }
         catch {
-            // keep silent; sheet remains available for print
         }
         finally {
             setPdfBusy(false);

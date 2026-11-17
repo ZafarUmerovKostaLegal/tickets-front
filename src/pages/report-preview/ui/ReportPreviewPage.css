@@ -92,8 +92,6 @@
   box-sizing: border-box;
 }
 
-/* ——— Compact period / filters toolbar ——— */
-
 .tt-rp-preview__filters--toolbar {
   --tt-rp-toolbar-h: 2rem;
   padding: 0.4rem 0.55rem;
@@ -230,7 +228,6 @@
   flex: 1 1 12rem;
 }
 
-/* Same control height across chips, selects, user filter, CTA */
 .tt-rp-preview__toolbar-filters .tt-reports__btn,
 .tt-rp-preview__toolbar-filters .tsp-srch__btn,
 .tt-rp-preview__toolbar-filters .rp-user-filter__btn,
@@ -1114,7 +1111,6 @@ body[data-theme='dark'] .tt-rp-brief-columns__list::-webkit-scrollbar-thumb {
   vertical-align: top;
 }
 
-/* Sticky report totals + sign CTA at bottom of table card */
 .tt-rp-mtable-dock {
   flex-shrink: 0;
   display: flex;
@@ -1306,7 +1302,6 @@ body[data-theme='dark'] .tt-rp-mtable-dock__stat strong {
   height: 32px;
 }
 
-/* Title + search + actions on one row; flush under filters bar */
 .tt-rp-mtable-head--composed {
   gap: 0;
   padding: 0.4rem 0.55rem;
@@ -1347,7 +1342,6 @@ body[data-theme='dark'] .tt-rp-mtable-dock__stat strong {
   min-width: 0;
 }
 
-/* Fixed-size save status — no layout jump when state changes */
 .tt-rp-mtable-save-ind {
   flex: 0 0 auto;
   display: inline-flex;

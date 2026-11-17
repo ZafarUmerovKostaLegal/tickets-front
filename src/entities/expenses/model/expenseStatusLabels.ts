@@ -67,7 +67,6 @@ export function expenseStatusBadgeClass(
     return base;
 }
 
-/** Human-readable status: employee personal-funds payout vs vendor payment. */
 export function expenseStatusLabel(
     expense: Pick<ExpenseRequest, 'status' | 'isReimbursable' | 'paymentMethod' | 'expenseType'> | { status: ExpenseStatus; isReimbursable?: boolean; paymentMethod?: string | null; expenseType?: string | null },
 ): string {

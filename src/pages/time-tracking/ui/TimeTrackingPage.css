@@ -6321,12 +6321,6 @@ a.pp__proj-name--link:hover {
   isolation: isolate;
 }
 
-/* ==========================================================================
-   Учёт времени — адаптив админ-панелей (телефоны)
-   Блок последний в файле, перекрывает ранние мобильные правила.
-   ========================================================================== */
-
-/* --- Чип-ряды переключателей: перенос вместо горизонтального скролла ----- */
 @media (max-width: 768px) {
   .tt-reports__type-nav,
   .tt-reports__group-nav {
@@ -6341,9 +6335,7 @@ a.pp__proj-name--link:hover {
   }
 }
 
-/* --- Клиенты и Проекты: строки таблицы -> карточки ---------------------- */
 @media (max-width: 768px) {
-  /* контейнер перестаёт быть горизонтальным скроллером и рамкой-таблицей */
   .pp .pp__table-wrap {
     overflow: visible;
     border: none;
@@ -6391,7 +6383,7 @@ a.pp__proj-name--link:hover {
     grid-area: name;
     flex-wrap: wrap;
     gap: 0.4rem;
-    padding-right: 2rem; /* место под чекбокс */
+    padding-right: 2rem;
     font-size: 0.9375rem;
   }
   .pp .pp__td--bar { grid-area: bar; }
@@ -6401,7 +6393,6 @@ a.pp__proj-name--link:hover {
   .pp .pp__td--costs { grid-area: costs; }
   .pp .pp__td--actions { grid-area: actions; }
 
-  /* чекбокс выбора — в правый верхний угол карточки */
   .pp .pp__td--check {
     position: absolute;
     top: 0.75rem;
@@ -6410,7 +6401,6 @@ a.pp__proj-name--link:hover {
     margin: 0;
   }
 
-  /* метрики: подпись (data-label) над значением, 2 колонки */
   .pp .pp__td--budget,
   .pp .pp__td--spent,
   .pp .pp__td--remaining,
@@ -6445,7 +6435,6 @@ a.pp__proj-name--link:hover {
     min-height: 40px;
   }
 
-  /* заголовок группы клиента — название сверху, кнопки ниже, без наложения */
   .pp .pp__client-row {
     flex-wrap: wrap;
     row-gap: 0.4rem;
@@ -6468,7 +6457,6 @@ a.pp__proj-name--link:hover {
     min-height: 36px;
   }
 
-  /* пустое состояние и подсказки не вылезают */
   .pp .pp__empty {
     width: auto;
     max-width: 100%;

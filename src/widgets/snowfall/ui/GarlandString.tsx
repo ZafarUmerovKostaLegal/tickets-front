@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './GarlandString.css';
 
-/** Animation modes from the winter design mockup. */
 type GlowMode = 'wave' | 'twinkle' | 'chase' | 'steady';
 
 type Bulb = {
@@ -39,10 +38,6 @@ function timingFor(mode: GlowMode, i: number, total: number): { key: string; tim
     };
 }
 
-/**
- * Festoon geometry + bulb placement from the winter design mockup:
- * quadratic wire, 4 bulbs per span, tilt follows the local slope.
- */
 function buildGarland(width: number, mode: GlowMode): Model {
     const n = Math.max(2, Math.round(width / 250));
     const seg = width / n;
@@ -84,7 +79,6 @@ function readTopbarBottom(): number {
     return Math.round(bar.getBoundingClientRect().bottom);
 }
 
-/** Header festoon — fixed under the topbar so it stays visible while scrolling. */
 export function GarlandString() {
     const ref = useRef<HTMLDivElement | null>(null);
     const [width, setWidth] = useState(0);

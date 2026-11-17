@@ -3,7 +3,6 @@ import {
     resolveTimeEntryNotesOnly,
 } from '@entities/time-tracking/lib/timesheetTimerPersist';
 
-/** Default project task labels that must not appear in client-facing invoice descriptions. */
 export const INVOICE_DESCRIPTION_TASK_PREFIXES = [
     'Court Hearing Preparation',
     'Court Hearing',
@@ -36,7 +35,6 @@ function isSafePrefixBoundary(after: string): boolean {
     const ch = after[0]!;
     if (/[\s:\n.\u2014\u2013-]/.test(ch))
         return true;
-    // Glued Harvest-style: "Document ReviewЗаконодательство"
     if (ch.charCodeAt(0) > 127)
         return true;
     if (ch === ch.toUpperCase() && ch !== ch.toLowerCase())
@@ -44,12 +42,6 @@ function isSafePrefixBoundary(after: string): boolean {
     return false;
 }
 
-/**
- * Client-facing invoice / unbilled description: notes only, without task name
- * (`Task\\nNotes` storage) or a leading known task label (`Document Review …`).
- * Also strips glued labels without a separator (`Document ReviewЗаконодательство`).
- */
-/** Invoice line text with the task label kept (`Emails an email`). */
 export function invoiceDescriptionWithTask(raw: string | null | undefined): string {
     return (raw ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -96,7 +88,6 @@ export function invoiceClientDescription(
     return text;
 }
 
-/** Detects a leading task label in raw time-entry or invoice-line description. */
 export function detectInvoiceDescriptionTaskPrefix(raw: string | null | undefined): string {
     const base = (raw ?? '').trim();
     if (!base)

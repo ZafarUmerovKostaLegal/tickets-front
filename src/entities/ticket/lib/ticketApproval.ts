@@ -1,4 +1,3 @@
-/** Ticket status value from API (Russian label used as value). */
 export const TICKET_STATUS_ON_APPROVAL = 'На согласовании';
 
 export function isTicketOnApprovalStatus(status: string | null | undefined): boolean {

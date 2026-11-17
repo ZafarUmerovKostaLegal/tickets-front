@@ -561,7 +561,6 @@ export function CorrespondenceDocumentCardModal({
             className="corr-modal corr-modal--enter corr-card-modal"
             role="presentation"
             onMouseDown={(e) => {
-                // Full-screen card — only close via explicit buttons, not backdrop click.
                 if (e.target === e.currentTarget)
                     e.preventDefault();
             }}

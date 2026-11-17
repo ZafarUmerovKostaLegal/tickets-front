@@ -1,20 +1,10 @@
 import { emptyDetailRow, type InvoiceTimeReportDetailRow, trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
 
-/**
- * Continuation pages (title only + detail grid, no summary / expenses).
- * Keep high so mid pages stay dense instead of half-blank A4 sheets.
- */
 export const TIME_REPORT_PDF_ROWS_MID_CHUNK = 24;
 
-/**
- * Last time-report page also carries totals + summary (+ expenses/mehnat when present).
- * Align with TIME_REPORT_DETAIL_ROWS (14) so typical monthly reports stay on one sheet.
- */
 export const TIME_REPORT_PDF_ROWS_LAST_CHUNK = 16;
 
-/** If the penultimate page would hold fewer rows than this, fold everything onto the last page. */
 const MIN_DENSE_MID_CHUNK = 6;
-/** Last page may run this many short rows past the nominal capacity. */
 const LAST_SLACK = 3;
 
 function textLines(text: string, charsPerLine: number): number {
@@ -27,7 +17,6 @@ function textLines(text: string, charsPerLine: number): number {
     return Math.max(1, count);
 }
 
-/** 1 = a single-line row. Wrapped description/task lines consume extra capacity. */
 function rowUnits(row: InvoiceTimeReportDetailRow): number {
     const lines = Math.max(
         textLines(row.description, 42),

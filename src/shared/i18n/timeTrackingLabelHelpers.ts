@@ -52,14 +52,12 @@ export function ttProjectTypeLabel(type: string, t: TimeTrackingT): string {
         return '';
     const normalized = raw.toLowerCase().replace(/[\s-]+/g, '_');
     const map: Record<string, TranslationKey> = {
-        // Canonical UI values (stored on ProjectRow)
         'Время и материалы': 'timeTrackingPage.projects.modal.projectTypes.timeAndMaterials',
         'Фиксированная ставка': 'timeTrackingPage.projects.modal.projectTypes.fixedFee',
         'Фиксированный гонорар': 'timeTrackingPage.projects.modal.projectTypes.fixedFee',
         'Без бюджета': 'timeTrackingPage.projects.modal.projectTypes.noBudget',
         'Не оплачиваемый': 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
         'Пакет часов': 'timeTrackingPage.projects.modal.projectTypes.hourPackage',
-        // API / legacy aliases (hourly / fixed / capped)
         hourly: 'timeTrackingPage.projects.modal.projectTypes.timeAndMaterials',
         time_and_materials: 'timeTrackingPage.projects.modal.projectTypes.timeAndMaterials',
         tm: 'timeTrackingPage.projects.modal.projectTypes.timeAndMaterials',

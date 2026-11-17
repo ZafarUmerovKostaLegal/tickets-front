@@ -1,16 +1,13 @@
 import type { PeriodGranularity } from '@entities/time-tracking/model/reportsPanelConfig';
 
-/** Absolute floor for "all time" (never earlier than this calendar day). */
 export const REPORTS_ALL_TIME_DATE_FROM = '2000-01-01';
 
-/** Must match backend reports period guard in time_tracking presentation/routes/reports.py */
 export const REPORTS_MAX_RANGE_DAYS = 3650;
 
 export function reportsAllTimeDateTo(reference = new Date()): string {
     return isoDateLocal(reference);
 }
 
-/** Earliest dateFrom for "За всё время" that stays within REPORTS_MAX_RANGE_DAYS. */
 export function reportsAllTimeDateFrom(reference = new Date()): string {
     const to = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
     const from = new Date(to);
@@ -21,10 +18,6 @@ export function reportsAllTimeDateFrom(reference = new Date()): string {
     return isoDateLocal(from);
 }
 
-/**
- * Clamp [dateFrom, dateTo] so the span is at most REPORTS_MAX_RANGE_DAYS
- * (keeps dateTo, moves dateFrom forward when needed).
- */
 export function clampReportsDateRange(dateFrom: string, dateTo: string): {
     dateFrom: string;
     dateTo: string;

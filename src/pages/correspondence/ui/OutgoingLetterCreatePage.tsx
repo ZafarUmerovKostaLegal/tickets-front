@@ -339,7 +339,6 @@ export function OutgoingLetterCreatePage() {
             return { url: minted.url, documentId: docId };
         }
         catch (err) {
-            // Session can keep a draft id after the letter was deleted. Open a new one and mint again.
             if (!reusedStoredId || !isCorrespondenceHttpError(err, 404))
                 throw err;
             docId = await openDraft();
@@ -485,7 +484,6 @@ export function OutgoingLetterCreatePage() {
                     await uploadCorrespondenceAttachment(docId, seed, 'attachment');
                 }
                 catch {
-                    /* download will work after submit */
                 }
             }
         }
@@ -520,19 +518,16 @@ export function OutgoingLetterCreatePage() {
                     const bytes = await fileToUint8Array(existingWord);
                     if (!cancelled)
                         applyDocumentBytes(bytes, true);
-                    // Still mint QR for overlay / later rebuild even if imported file has none.
                     if (!cancelled) {
                         try {
                             await ensureServerDraftAndQr();
                         }
                         catch {
-                            /* toast on blank rebuild */
                         }
                     }
                     return;
                 }
                 catch {
-                    /* fall through to blank */
                 }
             }
             if (!cancelled)

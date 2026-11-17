@@ -10,7 +10,6 @@ import {
 import type { ExpenseFilesByKind, ExpenseFormValues, ExpenseRequest } from './types';
 import { EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, EXPENSE_ATTACHMENT_MAX_COUNT } from './types';
 
-/** Prefer exact locked UZS over FX rebuild from rounded USD/foreign. */
 export function resolveAmountUzsForApi(values: ExpenseFormValues): number {
     const locked = values.lockedAmountUzs;
     if (locked != null && Number.isFinite(locked) && locked > 0)
@@ -56,13 +55,10 @@ export function expenseFormValuesToApiBody(values: ExpenseFormValues): ExpenseCr
 export type SaveExpenseFromFormOptions = {
     values: ExpenseFormValues;
     files: ExpenseFilesByKind;
-    /** Existing expense to update; omit to create a new one. */
     expenseId?: string | null;
-    /** Send for approval after saving; draft saves keep the expense editable. */
     submit: boolean;
 };
 
-/** Create or update an expense, upload its attachments, then optionally send it for approval. */
 export async function saveExpenseFromForm({
     values,
     files,

@@ -10,7 +10,6 @@ export type UseCorrespondenceDownloadQrResult = {
     error: string | null;
 };
 
-/** Mint / refresh a signed public download URL for letter QR (HMAC + TTL on backend). */
 export function useCorrespondenceDownloadQr(
     documentId: string | null | undefined,
     enabled = true,

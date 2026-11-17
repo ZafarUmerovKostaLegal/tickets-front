@@ -3,7 +3,6 @@ import type { InvoiceRegistryRow } from './types';
 
 export type RegistryDay = { year: number; month: number; day: number };
 
-/** First calendar day in an issue/payment cell. ISO and Excel d.m.yyyy both count. */
 export function parseRegistryDay(raw: string): RegistryDay | null {
     const head = String(raw ?? '').split(/[\n/]/)[0]?.trim() ?? '';
     if (!head)

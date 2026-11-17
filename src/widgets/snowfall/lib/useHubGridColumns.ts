@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-// Mirrors the breakpoints of `.home-nav-tiles--hub .home-nav-tiles__grid` in HomeNavTiles.css.
 const BREAKPOINTS: Array<[query: string, columns: number]> = [
     ['(min-width: 1100px)', 4],
     ['(min-width: 900px)', 3],

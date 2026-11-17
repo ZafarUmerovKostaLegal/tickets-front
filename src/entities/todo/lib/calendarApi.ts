@@ -94,13 +94,9 @@ export async function connectOutlookCalendar(options?: { forceConsent?: boolean 
     throw new Error(detail ?? 'Не удалось начать подключение календаря');
 }
 
-/** Disconnect then start OAuth again. Soft connect by default — org admin consent
- * already covers Mail.ReadWrite; prompt=consent forces a user consent screen that
- * non-admins cannot complete («Требуется утверждение администратора»). */
 export async function reconnectOutlookCalendar(options?: { forceConsent?: boolean }): Promise<void> {
     const disc = await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
     invalidateCalendarApiCache();
-    // 404/405 = old gateway without disconnect route — still continue to connect.
     if (!disc.ok && disc.status !== 404 && disc.status !== 405 && disc.status !== 409) {
         const body = await parseBody(disc);
         const detail = typeof body?.detail === 'string' ? body.detail : null;
@@ -125,9 +121,7 @@ export async function disconnectOutlookCalendar(): Promise<void> {
 }
 export type CalendarStatusResult = {
     connected: boolean;
-    /** False when calendar token exists but Mail.ReadWrite is missing. */
     mailReady?: boolean;
-    /** missing_scope | no_exchange_mailbox | mail_api_error */
     mailReadyReason?: string;
     detail?: string;
 };

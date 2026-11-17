@@ -2,7 +2,6 @@ import { isOfficeManagerRole, isPartnerOrgRole, normalizeOrgRoleKey } from '@sha
 
 const ADMIN_KEYS = new Set(['главный администратор', 'администратор']);
 
-/** Same set as correspondence check_manage_role: admin, partner, office manager. */
 export function canDeleteCorrespondence(role: string | null | undefined, position?: string | null): boolean {
     const key = normalizeOrgRoleKey(role);
     if (ADMIN_KEYS.has(key))

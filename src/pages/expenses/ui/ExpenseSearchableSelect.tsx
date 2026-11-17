@@ -27,7 +27,6 @@ type Props<T> = {
     }) => ReactNode;
     className?: string;
     buttonClassName?: string;
-    /** Render dropdown in a portal (avoids clipping inside overflow panels). */
     portalDropdown?: boolean;
     portalZIndex?: number;
     'aria-invalid'?: boolean;

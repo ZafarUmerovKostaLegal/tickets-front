@@ -20,7 +20,6 @@ function writeLayout(key: string, layout: DirectoryLayout) {
     try {
         localStorage.setItem(key, layout);
     } catch {
-        /* ignore */
     }
 }
 

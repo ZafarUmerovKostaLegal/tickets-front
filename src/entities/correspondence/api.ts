@@ -19,7 +19,6 @@ import type {
 
 const PREFIX = '/api/v1/correspondence';
 
-/** Turn mint response url (absolute or relative) into a phone-scannable absolute URL. */
 export function resolveCorrespondenceDownloadQrUrl(urlFromApi: string): string {
     const raw = (urlFromApi || '').trim();
     if (!raw)

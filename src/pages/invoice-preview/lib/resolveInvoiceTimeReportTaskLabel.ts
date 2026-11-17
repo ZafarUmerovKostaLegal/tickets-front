@@ -27,9 +27,7 @@ export type ResolveInvoiceTimeReportTaskLabelInput = {
     entry?: TimeEntryRow | null;
     invoiceLineDescription?: string | null;
     taskNameById?: Map<string, string>;
-    /** Task name loaded with the time entry (DB), not parsed from the note. */
     storedTaskName?: string | null;
-    /** Linked task id when the entry row itself was not loaded. */
     taskId?: string | null;
 };
 
@@ -37,7 +35,6 @@ function sameText(a: string, b: string): boolean {
     return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-/** True when a stored label is actually the time-entry note, not the project task. */
 function labelIsTheNote(label: string, entry: TimeEntryRow | null, invoiceLineDescription: string | null | undefined): boolean {
     const note = (entry?.description ?? invoiceLineDescription ?? '').trim();
     if (!label || !note)
@@ -46,10 +43,6 @@ function labelIsTheNote(label: string, entry: TimeEntryRow | null, invoiceLineDe
     return sameText(label, note) || sameText(label, firstLine);
 }
 
-/**
- * Task column is the linked task name (the same value as in the time report).
- * The note is never used as the task, even when it looks like one.
- */
 export function resolveInvoiceTimeReportTaskLabel(input: ResolveInvoiceTimeReportTaskLabelInput): string {
     const entry = input.entry ?? null;
     const taskNameById = input.taskNameById;

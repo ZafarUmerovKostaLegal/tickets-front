@@ -19,7 +19,6 @@ import { formatDateOnly } from '@shared/lib/formatDate';
 export type InventoryCategoryExcelInput = {
     categoryId: number;
     categoryName: string;
-    /** Status filter from UI; empty = all. */
     status?: string;
     includeArchived?: boolean;
     assignedToUserId?: number | null;
@@ -65,7 +64,6 @@ function safeFilePart(name: string): string {
 
 const PAGE_SIZE = 200;
 
-/** Load all inventory items for a category (paginated API). */
 export async function fetchInventoryItemsForCategoryExport(
     input: Pick<InventoryCategoryExcelInput, 'categoryId' | 'status' | 'includeArchived' | 'assignedToUserId'>,
     signal?: AbortSignal,
@@ -154,7 +152,6 @@ const COLUMNS: { key: string; header: string; width: number }[] = [
     { key: 'uuid', header: 'UUID', width: 36 },
 ];
 
-/** Build and download .xlsx for one inventory category. */
 export async function exportInventoryCategoryToExcel(
     input: InventoryCategoryExcelInput,
     signal?: AbortSignal,

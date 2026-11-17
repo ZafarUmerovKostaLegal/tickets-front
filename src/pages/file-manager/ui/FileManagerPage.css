@@ -82,8 +82,6 @@
   white-space: nowrap;
 }
 
-/* sidebar */
-
 .fm-side {
   display: flex;
   flex-direction: column;
@@ -258,8 +256,6 @@
   padding-left: 0.35rem;
 }
 
-/* main */
-
 .fm__main {
   display: flex;
   flex: 1;
@@ -365,8 +361,6 @@
   margin: 0;
   font-size: 0.9rem;
 }
-
-/* controls */
 
 .fm-btn {
   display: inline-flex;
@@ -776,8 +770,6 @@
   color: var(--fm-muted);
 }
 
-/* badges */
-
 .fm-kind {
   display: inline-flex;
   align-items: center;
@@ -864,8 +856,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   color: #b45309;
 }
 
-/* browser */
-
 .fm-split {
   display: flex;
   flex: 1;
@@ -902,8 +892,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   color: var(--fm-text);
   font-weight: 650;
 }
-
-/* Matter folder tiles */
 
 .fm-tiles {
   position: relative;
@@ -1335,8 +1323,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   pointer-events: none;
 }
 
-/* table */
-
 .fm-table-wrap {
   overflow: auto;
   border: 1px solid var(--fm-border);
@@ -1522,8 +1508,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   align-self: center;
   margin-top: 0.9rem;
 }
-
-/* pane */
 
 .fm-pane {
   display: flex;
@@ -1792,8 +1776,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   color: #be123c;
 }
 
-/* lists */
-
 .fm-section-title {
   margin: 0.4rem 0 0.6rem;
   color: var(--fm-text);
@@ -1855,8 +1837,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   border-radius: 10px;
   background: var(--fm-surface);
 }
-
-/* requests & security */
 
 .fm-requests {
   display: flex;
@@ -1947,8 +1927,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 .fm-grant .fm-btn {
   margin-bottom: 1px;
 }
-
-/* Matter security */
 
 .fm-sec {
   display: flex;
@@ -2518,8 +2496,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   border-color: currentColor;
 }
 
-/* monitoring & template */
-
 .fm-stats {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -2657,8 +2633,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   font-size: 0.86rem;
 }
 
-/* modal & toast */
-
 .fm-modal {
   position: fixed;
   inset: 0;
@@ -2742,8 +2716,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 .fm-toast--error {
   background: #be123c;
 }
-
-/* transitions */
 
 @supports not (view-transition-name: none) {
   .fm__main {

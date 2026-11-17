@@ -43,7 +43,6 @@
   box-sizing: border-box;
 }
 
-/* ── Overview card (week + segment bar) ── */
 .att-overview {
   width: 100%;
   max-width: none;

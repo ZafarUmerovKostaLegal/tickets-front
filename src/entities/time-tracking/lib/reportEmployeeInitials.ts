@@ -9,7 +9,6 @@ export function initialsFromDisplayName(name: string): string {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-/** Swap name-derived codes (AA) for the single system user whose stored initials differ. */
 export function systemInitialsForDisplayedCode(
     displayed: string,
     users: ReadonlyArray<{ display_name?: string | null; initials?: string | null }>,

@@ -55,8 +55,6 @@ const FILTERS: ReadonlyArray<{ value: VacationLeaveRequestStatus; label: string 
 
 export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleMayHaveChanged }: Props) {
     const { user } = useCurrentUser();
-    // В «на согласование» показываем обе ступени сразу: у курирующего и у управляющего
-    // партнёра ждут решения заявки в разных статусах.
     const [status, setStatus] = useState<VacationLeaveRequestStatus | 'any'>('any');
     const [items, setItems] = useState<VacationLeaveRequestApi[]>([]);
     const [kinds, setKinds] = useState<VacationLeaveKindApi[]>([]);
@@ -153,7 +151,6 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
         setCalendarRequest((prev) => (prev?.id === next.id ? next : prev));
         invalidateVacationLeaveRequests();
-        // Дни в графике есть только у одобренной заявки — отзыв pending график не меняет.
         if (authorAction?.action === 'cancel')
             onScheduleMayHaveChanged?.();
     }, [authorAction, onScheduleMayHaveChanged]);

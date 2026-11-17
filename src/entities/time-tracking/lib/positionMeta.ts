@@ -7,7 +7,6 @@ export function resolveTimeTrackingPositionRole(pos: string | null | undefined):
     return TIME_TRACKING_ROLES.find((r) => r.toLowerCase() === key) ?? null;
 }
 
-/** Accent color for known TT job titles (case-insensitive). */
 export function resolveTimeTrackingPositionColor(pos: string | null | undefined): string | null {
     const role = resolveTimeTrackingPositionRole(pos);
     return role ? TIME_TRACKING_ROLE_META[role].color : null;

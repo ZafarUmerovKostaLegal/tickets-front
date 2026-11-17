@@ -9,9 +9,7 @@ export type InvoiceCoverRasterizedLogo = {
     heightPx: number;
 };
 
-/** Horizontal letterhead (cover page 1). */
 export const COVER_LETTERHEAD_LOGO_ASPECT = 439 / 219;
-/** Vertical mark (legal invoice page). */
 export const LEGAL_VERT_LOGO_ASPECT = 224 / 377;
 
 const VERT_LOGO_PUBLIC_PATH = 'vert-logo.svg';
@@ -125,7 +123,6 @@ export async function rasterizeInvoiceLogoSvg(
     }
 }
 
-/** @deprecated Prefer rasterizeInvoiceLogoSvg(width, 'cover'). */
 export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
     return rasterizeInvoiceLogoSvg(renderWidthPx, 'cover');
 }
@@ -138,10 +135,8 @@ export function legalVertLogoPublicUrl(): string {
     return publicAssetUrl(VERT_LOGO_PUBLIC_PATH);
 }
 
-/** @deprecated Use coverLetterheadLogoUrl / legalVertLogoPublicUrl. */
 export function invoiceLogoPublicUrl(): string {
     return legalVertLogoPublicUrl();
 }
 
-/** @deprecated Use COVER_LETTERHEAD_LOGO_ASPECT / LEGAL_VERT_LOGO_ASPECT. */
 export const INVOICE_LOGO_ASPECT = LEGAL_VERT_LOGO_ASPECT;

@@ -68,13 +68,10 @@ const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
 const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 
-/** Preview body is 11px. DejaVu at 8.25pt reads smaller than Calibri on the sheet, so the PDF sits a step higher. */
 const DOC_FS = 9;
 const DOC_LH = DOC_FS * 1.45;
-/** CSS rem @ 16px root → pt (shared layout rhythm). */
 const CSS_REM_PT = 12;
 const CELL_MUTED = rgb(0.28, 0.33, 0.41);
-/** Match InvoiceTimeReportPage.css cell padding, scaled for PDF readability. */
 const CELL_PAD_X = 7;
 const CELL_PAD_Y = 7;
 const CELL_HEAD_PAD_Y = 7;
@@ -83,16 +80,13 @@ const TEXT_ASCENT_RATIO = 0.78;
 const CELL_LINE_STEP = DOC_LH;
 const TABLE_FOOTER_H = CELL_FOOT_PAD_TOP + DOC_FS + CELL_PAD_Y + 2;
 const TR_TITLE_TABLE_GAP = CSS_REM_PT * 0.65;
-/** Reserve space for page number band at bottom. */
 const PAGE_FOOTER_ZONE_TOP = MB + 52;
 const TR_SECTION_GAP = DOC_LH * 2.2;
 const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 
-/** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
 const COVER_LOGO_H_PT = 42;
 const COVER_LOGO_W_PT = COVER_LOGO_H_PT * COVER_LETTERHEAD_LOGO_ASPECT;
 const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 1.85;
-/** Contact block: 8px on 794px preview ≈ 6pt on A4. */
 const COVER_CONTACT_FS = 6;
 const COVER_CONTACT_LH = COVER_CONTACT_FS * 1.35;
 const COVER_DATE_AFTER = CSS_REM_PT * 1.65;
@@ -104,7 +98,6 @@ const COVER_SIG_BEFORE = CSS_REM_PT * 2;
 const LEGAL_LOGO_H_PT = 52;
 const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * LEGAL_VERT_LOGO_ASPECT;
 const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
-/** Match InvoiceLegalInvoicePage.css: ribbon margin-bottom + panels padding-top. */
 const LEGAL_RIBBON_MB = CSS_REM_PT * (0.75 + 0.55);
 const LEGAL_PANELS_PT = CSS_REM_PT * 0.65;
 
@@ -144,7 +137,6 @@ function wrapTextBlock(
     return cy;
 }
 
-/** wrapTextBlock but keep explicit line breaks from the invoice / client address. */
 function wrapTextBlockPreservingNewlines(
     page: PDFPage,
     text: string,
@@ -278,9 +270,6 @@ function drawCoverPage(
     const coverAddrW = W - ML - MR;
     y = wrapTextBlockPreservingNewlines(page, model.letterDateDisplay, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 
-    // PDF positions text by its baseline, while the preview's CSS margins start
-    // after the current line box. Include both so exported block spacing matches
-    // the on-screen cover letter.
     y -= COVER_DATE_AFTER;
     y = wrapTextBlockPreservingNewlines(page, model.recipientCompany, ML, y, coverAddrW, DOC_FS, fontBold, BODY, DOC_LH);
     y = wrapTextBlockPreservingNewlines(
@@ -321,8 +310,6 @@ function drawCoverPage(
     const maxW = W - ML - MR;
     y = wrapTextBlockPreservingNewlines(page, p1, ML, y, maxW, DOC_FS, font, BODY, COVER_PARA_GAP);
 
-    // The wrapper already advances by one line height after its last
-    // line; this is the paragraph's CSS margin-bottom.
     y -= COVER_PARA_GAP;
     const p2 = resolveCoverInvoiceParagraph(model);
     y = wrapTextBlockPreservingNewlines(page, p2, ML, y, maxW, DOC_FS, font, BODY, COVER_PARA_GAP);
@@ -424,7 +411,6 @@ function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: nu
     return { text: clipPdfCellText(t, maxW, font, minSize), size: minSize };
 }
 
-/** Wrap at spaces; if a single token is wider than the cell, split mid-word so PDF text cannot overflow. */
 function wrapCellLines(text: string, maxW: number, font: PDFFont, size: number): string[] {
     return wrapPdfCellLines(text, maxW, (s) => font.widthOfTextAtSize(s, size));
 }
@@ -569,7 +555,6 @@ type PdfTimeReportPagePlan = {
     continuation: boolean;
     showDetailTotals: boolean;
     showSummarySection: boolean;
-    /** False on a continuation page that only carries the summary block. */
     showDetailGrid: boolean;
 };
 
@@ -630,8 +615,6 @@ function paginateDetailRowsForPdf(
             true,
             new Set([2]),
         );
-    // Mehnat/expenses must not push Summary of services onto the next sheet
-    // when the detail table still has a large empty region under it.
     const summaryReserve = summaryOnlyReserve + fixedFeeReserve;
 
     const pages: PdfTimeReportPagePlan[] = [];
@@ -1035,7 +1018,6 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-/** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
 const TIME_REPORT_PDF_DETAIL_WEIGHTS = [12, 16, 12, 14, 10, 18, 18] as const;
 const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [10, 14, 10, 11, 11, 10, 17, 17] as const;
 const TIME_REPORT_PDF_MEHNAT_WEIGHTS = [12, 16, 11, 13, 15, 15, 18] as const;
@@ -1043,11 +1025,9 @@ const TIME_REPORT_PDF_MEHNAT_NAME_WEIGHTS = [10, 14, 10, 11, 10, 14, 14, 17] as 
 const TIME_REPORT_PDF_FIXED_FEE_WEIGHTS = [46, 24, 30] as const;
 const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [18, 52, 30] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [22, 18, 18, 10, 16, 16] as const;
-/** Task, Description, Rate, Amount — wrap at spaces; long tokens may split mid-word to fit the column. */
 const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
 const TR_DETAIL_NAME_WRAP_COLS = new Set([2, 3, 4, 6, 7]);
 const TR_SUMMARY_WRAP_COLS = new Set([1, 2, 4, 5]);
-/** Date / Initials / Hours — always DOC_FS (never shrink to fit). */
 const TR_DETAIL_FIXED_FS_COLS = new Set([0, 1, 4]);
 const TR_DETAIL_NAME_FIXED_FS_COLS = new Set([0, 1, 5]);
 
@@ -1516,7 +1496,6 @@ function drawLegalInvoicePdfPage(
     const rightColW = W - MR - splitX - 8;
     const leftColW = Math.max(80, splitX - ML - 8);
     const billLineGap = DOC_LH * 0.92;
-    // Baseline below the reserved gap so glyph ascent does not eat into ribbon spacing.
     const panelsTop = y - textAscent(fontBold, DOC_FS);
 
     page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
@@ -1674,7 +1653,6 @@ function drawLegalInvoicePdfPage(
         ...totalsValues.map((v) => fontBold.widthOfTextAtSize(v, DOC_FS)),
         fontBold.widthOfTextAtSize('EUR 0.00', DOC_FS),
     );
-    // Long amounts (e.g. UZS 48,748,000.00) need real width — fixed 78pt overlapped the due label.
     const valueReserve = maxValW + valueGap;
     const totalsW = Math.min(contentW, Math.max(contentW * 0.46, valueReserve + contentW * 0.28));
     const totalsLeft = rightX - totalsW;
@@ -1685,8 +1663,6 @@ function drawLegalInvoicePdfPage(
         const valueColor = BODY;
         const valW = fontBold.widthOfTextAtSize(value, DOC_FS);
         const labelStartY = y - DOC_FS + 1;
-        // Keep the amount on the first line. A long due phrase wraps under it
-        // instead of running through the number.
         if (due) {
             const maxLabelW = Math.max(48, rightX - valW - valueGap - totalsLeft);
             const labelLines = splitTextLines(label, maxLabelW, DOC_FS, fontBold);
@@ -1760,10 +1736,6 @@ function drawLegalInvoicePdfPage(
     wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, DOC_FS, font, DISCLAIMER_TEXT, DOC_LH);
 }
 
-/**
- * Preview checkboxes use fixed chunk page numbers; PDF may split time-report
- * rows differently. Map cover / TR indices / invoice by role so selection matches UI.
- */
 function remapPreviewPageSelectionToPdf(
     selectedPreview: Set<number> | null,
     previewPageCount: number,
@@ -1905,7 +1877,6 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     const showInitiatorName = input.showServiceInitiatorName === true;
     const detailPlans = paginateDetailRowsForPdf(timeReport.detailSlots, model, timeReport, font, fontBold, showInitiatorName);
     const pdfPageCount = 2 + detailPlans.length;
-    /** Preview/DOCX page numbers (fixed chunking) — selection UI uses these. */
     const previewTrChunks = splitDetailRowsForPagedTimeReport(timeReport.detailSlots);
     const previewPageCount = invoicePreviewPageCount(previewTrChunks.length);
     const selectedPreview = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
@@ -1945,7 +1916,6 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     return new Blob([copy], { type: 'application/pdf' });
 }
 
-/** Cover letter only (no time-report / legal pages) — for outgoing correspondence. */
 export async function buildCoverLetterOnlyPdfBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);

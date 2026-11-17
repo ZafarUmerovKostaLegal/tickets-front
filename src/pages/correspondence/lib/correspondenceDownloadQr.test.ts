@@ -19,7 +19,6 @@ describe('buildCorrespondenceQrPngBytes', () => {
         );
         expect(bytes).not.toBeNull();
         expect(bytes!.length).toBeGreaterThan(40);
-        // PNG signature
         expect([...bytes!.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
     });
 

@@ -51,7 +51,6 @@ export function writeProjectsFiltersToStorage(p: Omit<ProjectsFiltersStored, 'v'
         window.localStorage.setItem(PROJECTS_FILTERS_STORAGE_KEY, JSON.stringify(payload));
     }
     catch {
-        /* quota / private mode */
     }
 }
 

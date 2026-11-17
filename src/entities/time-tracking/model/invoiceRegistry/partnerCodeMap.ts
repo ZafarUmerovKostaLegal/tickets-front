@@ -1,4 +1,3 @@
-/** Canonical partner code renames for invoice registry (display + seed/overrides). */
 const PARTNER_CODE_MAP: Record<string, string> = {
     AA: 'AAA',
     VG: 'VGB',
@@ -25,7 +24,6 @@ export function mapInvoiceRegistryPartnerCode(raw: string): string {
     return t;
 }
 
-/** Remap partner initials in advanceFee lines like `NH: 1 000` → `NFH: 1 000`. */
 export function mapInvoiceRegistryAdvanceFee(text: string): string {
     if (!text.trim())
         return text;

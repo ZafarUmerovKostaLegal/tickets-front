@@ -143,10 +143,6 @@ function addHoursAtRate(hoursByRate: Map<number, number>, rate: number, hours: n
     hoursByRate.set(rateKey, (hoursByRate.get(rateKey) ?? 0) + hours);
 }
 
-/**
- * Summary Rate is the contractual hourly rate (position table, else the rate on the person's hours),
- * never billed amount / hours. Package-covered hours shrink the amount and would otherwise show a fake blend.
- */
 export function pickExcelSummaryHourlyRate(opts: {
     title: string;
     hours: number;
@@ -495,7 +491,6 @@ function pickWorkedHoursNum(d: Record<string, unknown>): number | null {
     );
 }
 
-/** Prefer billable hours for money lines; fall back to worked hours so non-billable entries still export. */
 function resolveExcelExportHours(billableHours: number, workedHours: number): { hoursRaw: number; useBillableRate: boolean } {
     if (billableHours > 1e-9)
         return { hoursRaw: billableHours, useBillableRate: true };
@@ -551,7 +546,6 @@ export type PartnerConfirmedExcelFallbackRow = {
     authUserId: number;
     taskName: string;
     note: string;
-    /** Worked hours (include non-billable rows in Excel). */
     hours: number;
     billableHours: number;
     billableRate: number;

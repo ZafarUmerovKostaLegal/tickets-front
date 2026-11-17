@@ -9,7 +9,6 @@ export function queueOutlookAddTime(event: CalendarEvent): void {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(event));
     }
     catch {
-        /* private mode */
     }
     window.dispatchEvent(new CustomEvent(OUTLOOK_ADD_TIME_EVENT));
 }

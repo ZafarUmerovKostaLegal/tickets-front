@@ -7,7 +7,6 @@ function invoiceIdOf(row: InvoiceRegistryRow): string {
     return row.id.startsWith('sys-') ? row.id.slice(4) : '';
 }
 
-/** Fill an empty registry cell from the invoice partner note. A note already on the row stays. */
 export function mergeRegistryPartnerNotes(
     rows: readonly InvoiceRegistryRow[],
     notesByInvoiceId: ReadonlyMap<string, string>,

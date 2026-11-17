@@ -229,7 +229,6 @@ function writeStored(key: string, value: unknown): void {
         localStorage.setItem(key, JSON.stringify(value));
     }
     catch {
-        /* storage can be unavailable */
     }
 }
 
@@ -299,15 +298,11 @@ export function LegalHubMyTasks({
     project?: TaskProjectId | null;
     tasks?: MineTask[];
     onTasks?: (tasks: MineTask[]) => void;
-    /** Bumps from the top-bar + button. */
     createSignal?: number;
-    /** Project board: return to the list of projects. */
     onBack?: () => void;
     heading?: string | null;
     headingNote?: string | null;
-    /** Separate stored board title from the personal board. */
     scope?: string | null;
-    /** Whose board is open. Project boards ignore this and show that project's tasks. */
     boardOwnerId?: number | null;
 }) {
     const { t, locale } = useI18n();
@@ -897,7 +892,6 @@ export function LegalHubMyTasks({
             keys.forEach((key) => localStorage.removeItem(key));
         }
         catch {
-            /* private mode */
         }
     }, [setChrome]);
     const toolbar = (

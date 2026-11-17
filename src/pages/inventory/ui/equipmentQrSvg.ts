@@ -11,7 +11,6 @@ const createQr = (QRCode as unknown as {
     create: (value: string, opts: { errorCorrectionLevel: 'M' }) => QrSymbol;
 }).create;
 
-/** Vector sticker mark. Quiet zone is included so phones can scan a 4 cm print. */
 export function equipmentQrSvg(text: string): string {
     const qr = createQr(text, { errorCorrectionLevel: 'M' });
     const size = qr.modules.size;

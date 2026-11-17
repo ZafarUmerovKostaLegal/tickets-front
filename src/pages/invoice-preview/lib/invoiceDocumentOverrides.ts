@@ -85,10 +85,6 @@ function looksLikeAutoServiceDescription(text: string): boolean {
     return /^(Legal services rendered in |Юридические услуги, оказанные в )/i.test(text.trim());
 }
 
-/**
- * When billing period month ≠ issue month, drop auto-generated period display
- * fields that were baked from the issue date (e.g. AUGUST ribbon / «rendered in August»).
- */
 export function scrubStaleBillingPeriodDocumentOverrides(
     doc: InvoiceDocumentOverridesV1 | null | undefined,
     opts: { issueDateIso: string; billingPeriodIso: string | null | undefined },
@@ -143,7 +139,6 @@ export function scrubStaleBillingPeriodDocumentOverrides(
     return next;
 }
 
-/** Cover fields that can be polished in preview (not regenerated from invoice totals). */
 export type InvoiceCoverDocumentOverrides = Partial<Pick<
     InvoiceCoverLetterModel,
     | 'coverLanguage'
@@ -168,12 +163,9 @@ export type InvoiceDocumentOverridesV1 = {
     legal?: InvoiceLegalPageOverrides | null;
     cover?: InvoiceCoverDocumentOverrides | null;
     timeReport?: InvoiceTimeReportPack | null;
-    /** Show the service-initiator name (text after "/", "*" or "=" in Description) as its own column. */
     showServiceInitiatorName?: boolean;
-    /** Combined invoice keeps the letterhead fees report. Ordinary invoices omit this. */
     reportLayout?: 'combined';
     combinedReport?: CombinedReportSnapshot;
-    /** Pages kept in the invoice pack; omitted/null = all pages. */
     includedPageKeys?: InvoicePreviewPageKey[] | null;
 };
 
@@ -235,7 +227,6 @@ export function applyCoverDocumentOverrides(
         const currentHasMoney = current.length > 0 && !/(?:^|\s)0[.,]00$/.test(current);
         const overrideAmt = parseCoverLetterMoneyAmount(override);
         const currentAmt = parseCoverLetterMoneyAmount(current);
-        // Keep freshly computed total when saved cover only differs by FX/float cents.
         const fxCentDrift = overrideAmt != null && currentAmt != null
             && Math.abs(overrideAmt - currentAmt) > 0
             && Math.abs(overrideAmt - currentAmt) <= 0.02;
@@ -305,7 +296,6 @@ export function buildInvoiceDocumentOverridesPayload(input: {
     showServiceInitiatorName?: boolean;
     combinedReport?: CombinedReportSnapshot | null;
     includedPageKeys?: Iterable<InvoicePreviewPageKey> | null;
-    /** When true, always write includedPageKeys (even if it equals “all”). */
     persistIncludedPages?: boolean;
 }): InvoiceDocumentOverridesV1 {
     const included = input.includedPageKeys == null

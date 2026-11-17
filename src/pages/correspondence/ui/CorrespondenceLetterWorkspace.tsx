@@ -31,7 +31,6 @@ export type CorrespondenceLetterWorkspaceProps = {
     statusTone?: 'pending' | 'rejected' | 'approved' | null;
     statusIcon?: ReactNode;
     onBack: () => void;
-    /** When set, mint signed QR download link for this document. */
     downloadDocumentId?: string | null;
 };
 
@@ -58,7 +57,6 @@ export function CorrespondenceLetterWorkspace({
     const { url: downloadQrUrl } = useCorrespondenceDownloadQr(downloadDocumentId, Boolean(downloadDocumentId));
 
     const pagesZoomStyle = useMemo(() => {
-        // CSS `zoom` breaks contentEditable (Enter / caret) in Chromium — lock 100% while editing.
         const pct = editable ? 100 : sheetZoomPct;
         return { zoom: `${pct}%` } as CSSProperties;
     }, [editable, sheetZoomPct]);

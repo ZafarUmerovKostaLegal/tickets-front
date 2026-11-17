@@ -50,7 +50,6 @@ function defaultProjectTeamPeriod(): {
     from: string;
     to: string;
 } {
-    // Align with reports: full current calendar month (not month-to-date).
     const { dateFrom, dateTo } = periodToDates(new Date(), 'month');
     return { from: dateFrom, to: dateTo };
 }
@@ -81,7 +80,6 @@ function periodPresetToRange(id: PdpPeriodPresetId): {
 } {
     if (id === 'all')
         return fullProjectTeamPeriod();
-    // Same calendar bounds as Reports «Этот месяц/неделя/…» (full period, not MTD).
     const { dateFrom, dateTo } = periodToDates(new Date(), id);
     return { from: dateFrom, to: dateTo };
 }

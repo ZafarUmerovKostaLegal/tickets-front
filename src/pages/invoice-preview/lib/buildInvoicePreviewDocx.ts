@@ -71,7 +71,6 @@ function h(pt: number): number {
     return Math.round(pt * 2);
 }
 
-/** Document-wide Word typography: Calibri Light 11 pt. */
 const DOC_FONT = 'Calibri Light';
 const DOC_SIZE = h(11);
 

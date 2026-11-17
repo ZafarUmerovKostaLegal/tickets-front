@@ -324,7 +324,6 @@ export function HomeProvider({ children }: HomeProviderProps) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [filterPriorityOpen]);
-    // Full list without status/priority — stats must stay stable when filters change.
     const fetchTicketsForHome = useCallback(async () => {
         const pageSize = 200;
         const all: Ticket[] = [];

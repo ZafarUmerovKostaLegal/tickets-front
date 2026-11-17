@@ -17,14 +17,12 @@ export type HubTask = {
     workstream: string;
     owner: TaskPersonId;
     reviewer: TaskPersonId | null;
-    /** Real reviewer from the staff list. */
     reviewerId?: number;
     status: TaskStatusId;
     priority: TaskPriorityId;
     reviewOn: string | null;
     clientOn: string;
     minutes: number;
-    /** Real project from time tracking. Mock ids stay in `project`. */
     projectId?: string;
     projectName?: string;
     assigneeId?: number;

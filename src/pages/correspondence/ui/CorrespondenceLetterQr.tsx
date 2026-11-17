@@ -9,12 +9,10 @@ export type CorrespondenceLetterQrProps = {
 
 const QR_OPTS = {
     errorCorrectionLevel: 'M' as const,
-    /** Quiet zone must be ≥ 4 modules for phone cameras. */
     margin: 4,
     color: { dark: '#1e293b', light: '#ffffff' },
 };
 
-/** Letter QR — encodes a signed public download URL (sized for phone cameras). */
 export function CorrespondenceLetterQr({
     url,
     sizePx = 128,
@@ -62,7 +60,6 @@ export function CorrespondenceLetterQr({
     );
 }
 
-/** Build PNG bytes for embedding into PDF / DOCX (same URL the on-screen QR uses). */
 export async function buildCorrespondenceQrPngBytes(url: string, sizePx = 280): Promise<Uint8Array | null> {
     const target = url.trim();
     if (!target)

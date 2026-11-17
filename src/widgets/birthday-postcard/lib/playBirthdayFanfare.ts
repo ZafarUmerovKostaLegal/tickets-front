@@ -1,4 +1,3 @@
-/** Short celebratory fanfare via Web Audio (no external assets). */
 export function playBirthdayFanfare(): void {
     try {
         const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -40,6 +39,5 @@ export function playBirthdayFanfare(): void {
         }, 2500);
     }
     catch {
-        /* ignore autoplay / unsupported */
     }
 }

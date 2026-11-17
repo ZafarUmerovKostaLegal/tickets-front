@@ -7,7 +7,6 @@ import { MOCK_DONE_IDS, TASK_PROJECTS, type HubTask } from './legalHubTasks';
 
 export type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'projects' | 'allTeam';
 
-/** `/legal-hub?view=projects` — sections live in the URL so Back, refresh and shared links work. */
 export function legalHubSectionUrl(section: LegalHubNavId): string {
     return section === 'myTasks' ? routes.legalHub : `${routes.legalHub}?view=${section}`;
 }
@@ -40,7 +39,6 @@ export function dueText(delta: number, t: (key: TranslationKey) => string): stri
     return t('legalHub.taskDaysLeft').replace('{count}', String(delta));
 }
 
-/** Compact relative deadline: «просрочено 2 д», «сегодня», «ещё 3 д». */
 export function DueBadge({ iso, prefix, className = '' }: { iso: string; prefix?: string; className?: string }) {
     const { t } = useI18n();
     if (!iso)
@@ -68,7 +66,6 @@ export const ATTENTION_LABEL: Record<AttentionReason, TranslationKey> = {
 
 const ATTENTION_ORDER: AttentionReason[] = ['late', 'changes', 'reviewLate', 'follow', 'wait'];
 
-/** Why a task needs the owner's attention right now, or null when it can wait. */
 export function attentionReason(task: HubTask): AttentionReason | null {
     if (dayDelta(task.clientOn) < 0)
         return 'late';
@@ -96,10 +93,6 @@ export function hubBadges(tasks: HubTask[]): HubBadges {
     };
 }
 
-/**
- * The page header owns a slot on the right for the current section's primary action
- * ("Новая задача", "Временный сотрудник"). Sections render into it with <HeadActions>.
- */
 export const HeadActionsContext = createContext<HTMLElement | null>(null);
 
 export function HeadActions({ children }: { children: ReactNode }) {

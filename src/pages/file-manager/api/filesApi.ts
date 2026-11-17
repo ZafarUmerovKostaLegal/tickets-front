@@ -220,7 +220,6 @@ async function fail(response: Response): Promise<never> {
             message = body.detail;
     }
     catch {
-        /* non-JSON error body */
     }
     throw new FilesApiError(response.status, message);
 }

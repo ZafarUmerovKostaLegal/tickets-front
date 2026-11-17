@@ -139,7 +139,6 @@ export async function ensureChatBrowserPush(): Promise<void> {
         try {
             await subscribeGranted();
         } catch {
-            /* Push setup must not break the open app. */
         }
         refreshSubscriptionWhenVisible();
         return;
@@ -172,12 +171,10 @@ export async function disableChatBrowserPush(): Promise<void> {
         try {
             await deleteChatPushSubscription(endpoint);
         } catch {
-            /* Logout still continues if the server is unreachable. */
         }
     }
     try {
         await subscription?.unsubscribe();
     } catch {
-        /* Local unsubscribe is best-effort. */
     }
 }

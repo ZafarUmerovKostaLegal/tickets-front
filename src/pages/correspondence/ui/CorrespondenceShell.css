@@ -982,7 +982,6 @@ body[data-theme='dark'] .corr-shell :is(
   margin-top: 0.25rem;
 }
 
-/* The registry is a viewport workspace, independent of parent route sizing. */
 .corr-shell.corr-shell--full {
   position: fixed;
   inset: 0;

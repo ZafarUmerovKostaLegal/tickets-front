@@ -405,8 +405,6 @@ body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__se
   color: color-mix(in srgb, var(--hub-section-accent, #c4b5a8) 88%, #fff);
 }
 
-/* HUB-GRID-START */
-/* Главная (хаб): на телефоне плитки в две колонки — меньше прокрутки */
 @media (max-width: 559px) {
   .home-nav-tiles--hub .home-nav-tiles__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -430,4 +428,3 @@ body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__se
     min-height: 6rem;
   }
 }
-/* HUB-GRID-END */

@@ -46,7 +46,6 @@ export type CorrespondenceLetterSheetProps = {
     registryNumber?: string | null;
     editable?: boolean;
     onCoverModelChange?: (patch: Partial<InvoiceCoverLetterModel>) => void;
-    /** Signed public download URL for QR (HMAC + TTL). */
     downloadQrUrl?: string | null;
 };
 

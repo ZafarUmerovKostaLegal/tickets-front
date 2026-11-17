@@ -57,7 +57,6 @@ function triggerXlsxDownload(blob: Blob, filename: string): void {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-/** Client-side Excel export of the (already filtered) projects list for a partner. */
 export async function exportProjectsListExcel(input: ExportProjectsListExcelInput): Promise<string> {
     const projects = input.projects ?? [];
     if (projects.length === 0)

@@ -1,6 +1,5 @@
 import { formatCoverLetterDate, type InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 
-/** Contact block as on the official outgoing letterhead mock. */
 export const CORRESPONDENCE_LETTERHEAD_CONTACT = {
     addressLine1: '18 Anhor buyi str.,',
     addressLine2: 'Tashkent, 100011, Uzbekistan',

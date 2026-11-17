@@ -109,10 +109,6 @@ async function loadSnapshotForPartnerExport(
     }
 }
 
-/**
- * Same Excel pipeline as Report preview download (sort → flatten → dedupe → profiles → partner Excel).
- * Falls back to frozen snapshot rows only when live report data is empty.
- */
 export async function exportPartnerConfirmedReportExcel(row: PartnerReportConfirmationRequest): Promise<void> {
     const pid = row.projectId.trim();
     const df = row.dateFrom.slice(0, 10);

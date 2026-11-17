@@ -31,7 +31,6 @@ export async function loadExcelJS(): Promise<ExcelJSLib> {
     catch (e) {
         if (isLikelyStaleBundleError(e)) {
             reloadForStaleBundle();
-            // Hang while the page reloads so callers don't show a raw English error.
             await new Promise<never>(() => undefined);
         }
         throw e instanceof Error ? e : new Error(STALE_BUNDLE_USER_MESSAGE);

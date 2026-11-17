@@ -228,8 +228,6 @@
   border-bottom-color: var(--app-accent, #4f46e5);
 }
 
-/* ── Word-like body editor ───────────────────────────────────────── */
-
 .corr-letter-editor__chrome-bar {
   flex-shrink: 0;
   display: flex;
@@ -691,7 +689,6 @@
   color: var(--corr-muted, #6b5e5e);
 }
 
-/* In-app DocxEditor — true full-bleed compose surface */
 .corr-word--docx {
   max-width: none;
   width: 100%;
@@ -878,7 +875,6 @@ html.corr-docx-fs .corr-shell__header {
   flex-direction: column;
 }
 
-/* Hide recipient/subject action strip in immersive mode */
 .corr-word--docx.corr-word--docx-fs .corr-word__toolbar {
   display: none;
 }
@@ -927,7 +923,6 @@ html.corr-docx-fs .corr-shell__header {
   flex: 1 1 auto;
 }
 
-/* Word-like review comments pane (custom — free docx-editor has no comments) */
 .corr-word-comments {
   flex: 0 0 min(20rem, 38vw);
   width: min(20rem, 38vw);
@@ -1281,7 +1276,6 @@ html.corr-docx-fs .corr-shell__header {
   height: 100%;
   width: 100%;
   min-height: 0;
-  /* Local Word ribbon palette — isolate from app brand/orange accents */
   --corr-word-ribbon-bg: #f3f2f1;
   --corr-word-ribbon-surface: #ffffff;
   --corr-word-ribbon-border: #edebe9;
@@ -1292,10 +1286,8 @@ html.corr-docx-fs .corr-shell__header {
   --corr-word-ribbon-accent: #185abd;
   --corr-word-ribbon-text: #323130;
   --corr-word-ribbon-muted: #605e5c;
-  /* Chrome only — same as CorrespondenceShell / :root (--app-font-family) */
   --corr-word-ribbon-font: var(--app-font-family);
 
-  /* Override DocxEditor theme tokens inside this surface */
   --doc-surface: var(--corr-word-ribbon-surface);
   --doc-bg: #e8e6e4;
   --doc-bg-subtle: var(--corr-word-ribbon-bg);
@@ -1312,7 +1304,6 @@ html.corr-docx-fs .corr-shell__header {
   --doc-toggle-active-bg: var(--corr-word-ribbon-active);
   --doc-toggle-active-fg: var(--corr-word-ribbon-text);
 
-  /* Ruler tokens (ticks/labels/margin bands/indent markers use these inline) */
   --doc-text-subtle: #8a8886;
   --doc-shadow-subtle: #d2d0ce;
 }
@@ -1332,7 +1323,6 @@ html.corr-docx-fs .corr-shell__header {
   background: var(--doc-bg);
 }
 
-/* UI chrome — app typography; do not force font on document pages */
 .corr-docx-editor .docx-editor-shell__title-bar,
 .corr-docx-editor .docx-editor-shell__toolbar,
 .corr-docx-editor .docx-menubar,
@@ -1356,7 +1346,6 @@ html.corr-docx-fs .corr-shell__header {
   font-family: var(--app-font-family) !important;
 }
 
-/* File/Format menus may mount in a portal outside .corr-docx-editor */
 .docx-menubar__menu,
 .docx-menubar__submenu-panel,
 .docx-menubar__item-label,
@@ -1371,7 +1360,6 @@ html.corr-docx-fs .corr-shell__header {
   font-family: var(--app-font-family);
 }
 
-/* Hide packaged document title row — keep only ribbon tabs */
 .corr-docx-editor .docx-editor-shell__title-input,
 .corr-docx-editor .docx-editor__brand,
 .corr-docx-editor .docx-editor__brand-name,
@@ -1400,7 +1388,6 @@ html.corr-docx-fs .corr-shell__header {
   min-width: 0;
 }
 
-/* ── Menu = Word ribbon tabs ── */
 .corr-docx-editor .docx-menubar {
   width: 100%;
   gap: 0 !important;
@@ -1448,7 +1435,6 @@ html.corr-docx-fs .corr-shell__header {
   background: var(--corr-word-ribbon-accent);
 }
 
-/* ── Toolbar = Word Home ribbon ── */
 .corr-docx-editor .docx-editor-shell__toolbar {
   background: var(--corr-word-ribbon-bg) !important;
   border-bottom: 1px solid #c8c6c4 !important;
@@ -1556,13 +1542,11 @@ html.corr-docx-fs .corr-shell__header {
   background: var(--corr-word-ribbon-hover) !important;
 }
 
-/* Letters are always edited — hide mode switcher clutter */
 .corr-docx-editor .docx-toolbar__mode,
 .corr-docx-editor [data-slot='review.editingMode'] {
   display: none !important;
 }
 
-/* Word Desktop rulers — white face, gray margin bands, Segoe ticks */
 .corr-docx-editor [data-testid="docx-editor-ruler-row"] {
   position: sticky;
   background: #f3f2f1 !important;
@@ -1570,7 +1554,6 @@ html.corr-docx-fs .corr-shell__header {
   box-shadow: inset 0 -1px 0 #edebe9;
 }
 
-/* Corner cell where H + V rulers meet */
 .corr-docx-editor [data-testid="docx-editor-ruler-row"]::before {
   content: "";
   position: absolute;
@@ -1606,7 +1589,6 @@ html.corr-docx-fs .corr-shell__header {
     inset 1px 0 0 #edebe9;
 }
 
-/* Ruler tick labels — app UI font (not document body) */
 .corr-docx-editor .docx-horizontal-ruler [style*="font-size: 9px"],
 .corr-docx-editor .docx-horizontal-ruler [style*="font-size:9px"],
 .corr-docx-editor .docx-vertical-ruler [style*="font-size: 9px"],
@@ -1619,7 +1601,6 @@ html.corr-docx-fs .corr-shell__header {
   line-height: 1 !important;
 }
 
-/* Indent / margin markers — Word blue triangles */
 .corr-docx-editor .docx-ruler-indent,
 .corr-docx-editor .docx-ruler-marker {
   filter: drop-shadow(0 0.5px 0.5px rgba(0, 0, 0, 0.18));
@@ -1644,7 +1625,6 @@ html.corr-docx-fs .corr-shell__header {
   }
 }
 
-/* Dark theme: editor chrome follows the shell; the letter page uses the editor dark mode. */
 body[data-theme='dark'] .corr-letter,
 body[data-theme='dark'] .corr-blank-sheet {
   background: #1c2233;
@@ -1661,7 +1641,6 @@ body[data-theme='dark'] .corr-letter__logo {
   filter: invert(1);
 }
 
-/* Editor dark mode re-inverts images so photos stay natural; letterhead is black ink, so leave it inverted with the page. */
 body[data-theme='dark'] .corr-docx-editor .docx-page-content img,
 body[data-theme='dark'] .corr-docx-editor .docx-page-content svg {
   filter: none;
@@ -1994,7 +1973,6 @@ body[data-theme='dark'] .corr-docx-editor .docx-vertical-ruler [style*="font-siz
   color: #a8a49c !important;
 }
 
-/* Ribbon menus are portaled to body, outside .corr-docx-editor. */
 body[data-theme='dark'] .docx-menubar__menu,
 body[data-theme='dark'] .docx-menubar__submenu-panel,
 body[data-theme='dark'] .docx-toolbar__menu,

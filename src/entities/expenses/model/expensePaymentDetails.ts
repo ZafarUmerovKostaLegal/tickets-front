@@ -27,7 +27,6 @@ export function expenseHasReimbursementCard(req: {
     return isEmployeePersonalFundsPayout(req);
 }
 
-/** Сотрудник оплатил из личных средств / личной карты — фирме нужно вернуть ему деньги. */
 export function isEmployeePersonalFundsPayout(req: {
     paymentMethod?: string | null;
     expenseType?: string | null;
@@ -37,7 +36,6 @@ export function isEmployeePersonalFundsPayout(req: {
     return String(req.paymentMethod ?? '').trim().toLowerCase() === 'cash';
 }
 
-/** Approved spend paid from the employee's personal cash/card — firm must reimburse them. */
 export function isAwaitingEmployeeReimbursement(req: {
     status?: string | null;
     paymentMethod?: string | null;
@@ -46,7 +44,6 @@ export function isAwaitingEmployeeReimbursement(req: {
     return req.status === 'approved' && isEmployeePersonalFundsPayout(req);
 }
 
-/** Approved company spend paid by transfer/company card — vendor/bank payment. */
 export function isAwaitingVendorPayment(req: {
     status?: string | null;
     isReimbursable?: boolean | null;
@@ -59,17 +56,12 @@ export function isAwaitingVendorPayment(req: {
         && !isEmployeePersonalFundsPayout(req);
 }
 
-/** Office corporate card payment method (`card`). */
 export function isOfficeCorporateCardPayment(req: {
     paymentMethod?: string | null;
 }): boolean {
     return String(req.paymentMethod ?? '').trim().toLowerCase() === 'card';
 }
 
-/**
- * Company main registry hides corporate-card spend unless it is a client expense.
- * Client + corporate card stays in the general list; other card spend goes to Corporate Card.
- */
 export function shouldHideCorporateCardFromCompanyMainList(req: {
     paymentMethod?: string | null;
     expenseType?: string | null;
@@ -79,7 +71,6 @@ export function shouldHideCorporateCardFromCompanyMainList(req: {
     return String(req.expenseType ?? '').trim() !== 'client_expense';
 }
 
-/** Corporate Card section: office-card spend that is not a client expense. */
 export function belongsInCorporateCardSection(req: {
     paymentMethod?: string | null;
     expenseType?: string | null;

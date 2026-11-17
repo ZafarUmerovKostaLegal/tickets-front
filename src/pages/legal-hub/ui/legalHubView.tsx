@@ -20,7 +20,6 @@ export type LegalHubProject = {
     id: string;
     name: string;
     client: string;
-    /** Users who may open the project: partners and participants. */
     accessIds: number[];
 };
 
@@ -73,7 +72,6 @@ function collectStaff(
                 ids.add(id);
         }
     }
-    // Partners/counsel firm-wide so juniors can always send work upward for review.
     for (const row of users) {
         if (legalHubPositionRank(row.position, row.role) <= 1)
             ids.add(row.id);

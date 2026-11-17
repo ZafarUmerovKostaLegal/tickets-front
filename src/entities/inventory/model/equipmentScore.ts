@@ -23,7 +23,6 @@ export type EquipmentScoreInput = {
     purchase_date?: string | null;
 };
 
-/** Возраст техники в годах; null, если дата покупки не заполнена или не парсится. */
 export function equipmentAgeYears(purchaseDate: string | null | undefined, now: Date = new Date()): number | null {
     if (!purchaseDate)
         return null;
@@ -33,7 +32,6 @@ export function equipmentAgeYears(purchaseDate: string | null | undefined, now: 
     return Math.max(0, (now.getTime() - ms) / MS_PER_YEAR);
 }
 
-/** Балл 10 (новая) … 1 (к списанию): внутри диапазона буквы делим по половине срока. */
 export function equipmentScoreFromAgeYears(years: number): number {
     const age = Math.max(0, years);
     for (const tier of EQUIPMENT_TIERS) {
@@ -83,13 +81,11 @@ export function equipmentScoreTitle(result: EquipmentScoreResult): string {
 
 export type EquipmentScoreRangeOption = {
     code: EquipmentClassCode;
-    /** Диапазон баллов, например «9–10». */
     range: string;
     short: string;
     summary: string;
 };
 
-/** Варианты для ручного выбора и фильтра по диапазону: пользователь видит баллы, уходит буква. */
 export const EQUIPMENT_SCORE_RANGES: EquipmentScoreRangeOption[] = EQUIPMENT_TIERS.map((tier) => ({
     code: tier.code,
     range: `${tier.minScore}–${tier.maxScore}`,
@@ -97,7 +93,6 @@ export const EQUIPMENT_SCORE_RANGES: EquipmentScoreRangeOption[] = EQUIPMENT_TIE
     summary: tier.summary,
 }));
 
-/** Точные баллы 10…1 для фильтра списка (как в колонке «Оценка»). */
 export const EQUIPMENT_SCORE_POINTS: number[] = Array.from(
     { length: EQUIPMENT_SCORE_MAX },
     (_, i) => EQUIPMENT_SCORE_MAX - i,
@@ -114,7 +109,6 @@ export function itemMatchesEquipmentScore(
 
 export type EquipmentScoreSort = 'asc' | 'desc';
 
-/** Sort by resolved score; items without a score go last. */
 export function compareItemsByEquipmentScore(
     a: EquipmentScoreInput,
     b: EquipmentScoreInput,

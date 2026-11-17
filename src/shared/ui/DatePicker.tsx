@@ -112,7 +112,6 @@ export type DatePickerProps = {
     isDateDisabled?: (iso: string) => boolean;
     emptyLabel?: string;
     labelText?: string;
-    /** Allow typing dd.mm.yyyy (or ISO) in addition to the calendar. */
     editable?: boolean;
 };
 export function DatePicker({ value, onChange, min, max, disabled = false, isDateDisabled, className = '', buttonClassName = '', id, 'aria-labelledby': ariaLabelledBy, portal = false, portalZIndex = 1300, title = 'Выбрать дату', iconAfterLabel = false, showChevron = true, emptyLabel, labelText, editable = false, }: DatePickerProps) {
@@ -160,7 +159,6 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
     const builtFromSegs = useMemo(() => buildDateFromSegments(segs.day, segs.month, segs.year), [segs]);
     const segsComplete = segs.day.length >= 2 && segs.month.length >= 2 && segs.year.length === 4;
     const segsInvalid = segsComplete && (builtFromSegs == null || isDisabledDay(builtFromSegs));
-    /** Keep typed day/month; block year until the date is valid again. */
     const yearLocked = segsInvalid;
     const commitSegments = useCallback((next: DateSegments) => {
         const d = buildDateFromSegments(next.day, next.month, next.year);
@@ -194,7 +192,6 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
         if (stillInside)
             return;
         editingRef.current = false;
-        // Keep typed segments when invalid — do not snap back to today/previous value.
         const cur = segsRef.current;
         const d = buildDateFromSegments(cur.day, cur.month, cur.year);
         const invalid = cur.day.length >= 2 && cur.month.length >= 2 && cur.year.length === 4

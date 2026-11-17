@@ -1,6 +1,5 @@
 import { pickPreferredTodoBoardId, type TodoBoardsListResult } from '../api';
 
-/** Next openable board after deleting one. Null means the list is empty. */
 export function pickBoardIdAfterDelete(
     data: TodoBoardsListResult,
     deletedBoardId: number,

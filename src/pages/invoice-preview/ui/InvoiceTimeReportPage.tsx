@@ -21,9 +21,7 @@ export type InvoiceTimeReportPageProps = {
     showMehnatSection?: boolean;
 
     showSummarySection?: boolean;
-    /** Summary of services on its own sheet, without the hours table. */
     summaryOnly?: boolean;
-    /** Cut the name after "/", "*" or "=" out of Description and show it in its own column. */
     showInitiatorName?: boolean;
     editable?: boolean;
     onPatchDetailRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;

@@ -13,7 +13,6 @@ export function rememberAuthReturnPath(pathname: string | null | undefined, sear
         sessionStorage.setItem(AUTH_RETURN_PATH_KEY, `${path}${query}`);
     }
     catch {
-        /* private mode */
     }
 }
 

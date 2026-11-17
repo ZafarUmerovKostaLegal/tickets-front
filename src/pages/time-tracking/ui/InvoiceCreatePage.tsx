@@ -149,7 +149,6 @@ export function InvoiceCreatePage() {
   const [customBilledFxError, setCustomBilledFxError] = useState<string | null>(null);
   const [customBilledFxHint, setCustomBilledFxHint] = useState<string | null>(null);
 
-  /** All clients that have at least one active project. */
   const clientsForCreate = useMemo(
     () => clients.filter((c) => clientIdsWithActiveProjects.has(c.id)),
     [clients, clientIdsWithActiveProjects],
@@ -600,7 +599,6 @@ export function InvoiceCreatePage() {
             }
           }
           catch {
-            /* keep unfiltered unbilled if snapshot load fails */
           }
         }
       }
@@ -880,7 +878,6 @@ export function InvoiceCreatePage() {
       extraFixedFeeDescription = null;
     }
     const closingReportLines = selTime.size > 0 || selExp.size > 0;
-    // Custom billed amount alone is enough; report lines are optional.
     if (!closingReportLines && billedAmountNum == null) {
       await showAlert({ message: t('timeTrackingPage.invoices.errors.selectLines') });
       return;
@@ -907,7 +904,6 @@ export function InvoiceCreatePage() {
       });
       return;
     }
-    // Pure custom-billed invoice does not close a partner period — skip confirmation gate.
     if (closingReportLines) {
       const confirmedAllowed = skipPartnerGate
         || await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
@@ -921,7 +917,6 @@ export function InvoiceCreatePage() {
     setCreateBusy(true);
     try {
       const manualNumber = createInvoiceNumber.trim();
-      // Custom billed: selected currency; otherwise project → client.
       const projectCur = String(selectedProject?.currency ?? '').trim().toUpperCase();
       const clientCur = String(clients.find((c) => c.id === createClientId)?.currency ?? '').trim().toUpperCase();
       const currency = customBilledEnabled
@@ -932,8 +927,6 @@ export function InvoiceCreatePage() {
         .map((x) => String(x.expenseDate ?? '').trim().slice(0, 10))
         .filter(Boolean);
       const prevMonthEnd = customBilledEnabled ? lastDayOfPreviousMonthIso(issueDate) : null;
-      // Seed FX for expense dates so backend can convert at the expense CBU rate
-      // (not only the invoice issue date — that was understating USD vs the registry).
       if (closingReportLines || customBilledEnabled || expenseDates.length > 0) {
         await ensureInvoiceFxRatesForBilling({
           dateFrom: closingReportLines ? unbilledFrom : undefined,
@@ -961,8 +954,6 @@ export function InvoiceCreatePage() {
             expenseIds: [...selExp],
           }
           : {}),
-        // Always persist billing period for ribbon / «services rendered in …»
-        // (pure billedAmount skips partner snapshot materialization on the backend).
         ...(hasBillingPeriod
           ? {
             partnerBillingPeriodFrom: periodFrom,

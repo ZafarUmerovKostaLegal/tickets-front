@@ -54,7 +54,6 @@ const AMOUNT_RECALC_PATCH_KEYS: (keyof TimeExcelPreviewRow)[] = [
 export function applyTimePreviewRowPatch(row: TimeExcelPreviewRow, patch: Partial<TimeExcelPreviewRow>, allRows: TimeExcelPreviewRow[]): TimeExcelPreviewRow {
     const prevAuth = row.authUserId;
     const merged: TimeExcelPreviewRow = { ...row, ...patch };
-    // Keep session-copy origin; after a content edit the UI shows a dot instead of «Копия».
     if (row.isSessionCopy) {
         const keys = Object.keys(patch) as (keyof TimeExcelPreviewRow)[];
         const contentEdit = keys.some((k) => k !== 'isSessionCopy' && k !== 'sessionCopyEdited' && k !== 'scopeColor');

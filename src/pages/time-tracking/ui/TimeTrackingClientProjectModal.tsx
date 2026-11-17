@@ -360,7 +360,6 @@ function buildCreatePayload(
     progressBudgetAmount = null;
   }
   else if (pt === 'no_budget') {
-    // "Без бюджета": billed hourly, no money / hours limit at all.
     budgetAmount = null;
     budgetHours = null;
     progressBudgetAmount = null;

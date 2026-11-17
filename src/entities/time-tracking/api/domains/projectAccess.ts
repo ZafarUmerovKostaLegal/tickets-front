@@ -27,7 +27,6 @@ export function parseUserProjectAccess(raw: unknown): UserProjectAccessOut {
 
 export const userProjectAccessInflight = new Map<number, Promise<UserProjectAccessOut>>();
 export const projectAccessPickInflight = new Map<string, Promise<ProjectPartnerAccessRow[]>>();
-/** One reverse lookup per project instead of N× GET /users/{id}/project-access. */
 const projectAssigneesInflight = new Map<string, Promise<ProjectPartnerAccessRow[]>>();
 
 export function invalidateUserProjectAccessCache(authUserId?: number): void {
@@ -133,7 +132,6 @@ function parseProjectAssigneesPayload(raw: unknown): ProjectPartnerAccessRow[] {
     return out;
 }
 
-/** Single reverse lookup: users who have access to the project. */
 export async function fetchProjectAccessUsers(projectId: string): Promise<ProjectPartnerAccessRow[]> {
     const pid = String(projectId ?? '').trim();
     if (!pid)

@@ -10,7 +10,6 @@ import { buildOutgoingLetterPdfBlob, outgoingLetterPdfFileName } from './buildOu
 import { pickOutgoingWordFile } from './openOutgoingLetterInWord';
 import { resolveOutgoingCounterparty } from './outgoingLetterSession';
 
-/** Create draft + send to partner for review (registration happens after approve). */
 export async function submitOutgoingLetterForReview(input: {
     subject: string;
     coverModel: InvoiceCoverLetterModel;
@@ -18,7 +17,6 @@ export async function submitOutgoingLetterForReview(input: {
     partnerUserId: number;
     extraFiles?: File[];
     comment?: string;
-    /** Reuse early server draft that already has a minted download QR. */
     existingDocumentId?: string | null;
     downloadQrUrl?: string | null;
 }): Promise<CorrespondenceDocument> {

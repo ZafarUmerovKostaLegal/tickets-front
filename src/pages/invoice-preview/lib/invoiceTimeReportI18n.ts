@@ -18,20 +18,16 @@ export type TimeReportLabels = {
     description: string;
     initiatorName: string;
     hours: string;
-    /** My Mehnat table: count is per recording, not hours. */
     perRecording: string;
     rate: string;
     amount: (currency: string) => string;
-    /** Fixed-fee table amount column, without a currency suffix. */
     fixedFeeAmount: string;
     total: string;
     summaryTitle: string;
     expensesTitle: string;
     mehnatTitle: string;
     fixedFeeTitle: string;
-    /** Fixed-fee table: narrative of what the fee covers. */
     fixedFeeScope: string;
-    /** Fixed-fee table: the fee-type column. */
     fixedFeeCol: string;
     name: string;
     titleCol: string;
@@ -110,7 +106,6 @@ export function isGeneratedTimeReportHeading(title: string | null | undefined): 
     return /^(TIME REPORT FOR SERVICES PROVIDED IN |ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В )/i.test(t);
 }
 
-/** Saved auto-titles that still list months absent from the current rows. */
 export function generatedTitleListsMonthsOutside(title: string, servicesMonthYear: string): boolean {
     if (!isGeneratedTimeReportHeading(title))
         return false;
@@ -197,7 +192,6 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
     },
 };
 
-/** Known default project task names → Russian labels for client-facing reports. */
 const TASK_LABEL_PAIRS: ReadonlyArray<readonly [string, string]> = [
     ['Court Hearing Preparation', 'Подготовка к судебному заседанию'],
     ['Court Hearing', 'Судебное заседание'],

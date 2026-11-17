@@ -275,7 +275,6 @@ async function storageError(response: Response, fallback: string): Promise<strin
             return body.detail.trim().slice(0, 200);
     }
     catch {
-        /* ответ без json */
     }
     return response.status === 403 ? 'Нет доступа к хранилищу' : fallback;
 }

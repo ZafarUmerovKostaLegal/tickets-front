@@ -24,6 +24,5 @@ export function canDecideVacationLeaveRequests(user: User | null | undefined): b
     const k = normalizeOrgRoleKey(user?.role);
     if (k.includes('партнер') || k.includes('partner'))
         return true;
-    // Управляющий партнёр решает вторую ступень независимо от того, как записана его роль.
     return isVacationManagingPartner(user?.email);
 }

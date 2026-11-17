@@ -111,7 +111,6 @@ export function ContactsPage() {
                             enriched[index] = { ...client, extra_contacts };
                         }
                         catch {
-                            // Keep the client row usable even when one contact list fails.
                         }
                     }
                 }

@@ -6,9 +6,7 @@ import { apiRequestMetricNow, recordApiRequestMetric, type ApiRequestDelivery } 
 export type RequestInitAuth = RequestInit & {
     skipAuth?: boolean;
     skipAuthRedirectOn401?: boolean;
-    /** Reuse a completed successful GET response for this many milliseconds. */
     getReuseWindowMs?: number;
-    /** Skip GET response reuse. File downloads must keep the original body; reuse clones it and then cancels the stream. */
     skipGetDedupe?: boolean;
 };
 

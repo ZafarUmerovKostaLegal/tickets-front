@@ -521,7 +521,6 @@ export type VacationLeaveRequestKind = (typeof VACATION_LEAVE_REQUEST_KINDS)[num
 
 export const VACATION_LEAVE_REQUEST_STATUSES = [
     'pending',
-    // Курирующий партнёр согласовал, ждём финального решения управляющего партнёра.
     'pending_final',
     'approved',
     'declined',
@@ -553,10 +552,8 @@ export type VacationLeaveRequestApi = {
     date_to: string;
     days_count: number;
     reason: string | null;
-    /** Решение курирующего партнёра — первая ступень. */
     decision_at: string | null;
     decision_reason: string | null;
-    /** Решение управляющего партнёра — обязательная вторая ступень. */
     final_decision_at: string | null;
     final_decision_reason: string | null;
     managing_partner_full_name: string | null;
@@ -901,17 +898,14 @@ async function postLeaveRequestCancellation(
     return out;
 }
 
-/** Отзыв своей заявки, пока партнёр не принял решение. */
 export async function withdrawVacationLeaveRequest(id: number, reason?: string | null): Promise<VacationLeaveRequestApi> {
     return postLeaveRequestCancellation(id, 'withdraw', reason);
 }
 
-/** Отмена уже согласованного отсутствия: дни убираются из графика. */
 export async function cancelVacationLeaveRequest(id: number, reason?: string | null): Promise<VacationLeaveRequestApi> {
     return postLeaveRequestCancellation(id, 'cancel', reason);
 }
 
-/** Полное удаление отменённой или отклонённой заявки вместе с PDF. */
 export async function deleteVacationLeaveRequest(id: number): Promise<void> {
     const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}`, { method: 'DELETE' });
     if (res.status === 401)

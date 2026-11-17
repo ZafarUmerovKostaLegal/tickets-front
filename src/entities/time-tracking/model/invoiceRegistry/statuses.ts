@@ -1,4 +1,3 @@
-/** Fixed statuses for the registry «Статус» column. */
 export const INVOICE_REGISTRY_STATUSES = [
     'Черновик',
     'На согласовании с Клиентом',
@@ -9,7 +8,6 @@ export const INVOICE_REGISTRY_STATUSES = [
 
 export type InvoiceRegistryStatus = (typeof INVOICE_REGISTRY_STATUSES)[number];
 
-/** Statuses an accountant can set on a live system invoice from the registry. */
 export const SYSTEM_INVOICE_REGISTRY_STATUSES = [
     'Черновик',
     'На согласовании с Клиентом',
@@ -28,7 +26,6 @@ export function isInvoiceRegistryStatus(value: string): value is InvoiceRegistry
     return (INVOICE_REGISTRY_STATUSES as readonly string[]).includes(value);
 }
 
-/** Short free-text statuses already used on the Excel sheets. */
 export const LEGACY_INVOICE_REGISTRY_STATUSES = [
     'Жду подтверждения от клиента',
     'Аннулирован',
@@ -49,7 +46,6 @@ function registryStatusKey(raw: string): string {
     return raw.replace(/\s+/g, ' ').trim().replace(/\.+$/g, '').toLowerCase();
 }
 
-/** One spelling, and a capital first letter for every status label. */
 export function normalizeRegistryStatusLabel(raw: string): string {
     const value = raw.replace(/\s+/g, ' ').trim().replace(/\.+$/g, '');
     if (!value)
@@ -61,7 +57,6 @@ export function normalizeRegistryStatusLabel(raw: string): string {
     return first === upper ? text : upper + text.slice(1);
 }
 
-/** Fixed list, then the old Excel phrases, then any other text already on the sheet. */
 export function collectRegistryStatusOptions(used: readonly string[]): string[] {
     const seen = new Set<string>();
     const out: string[] = [];
@@ -81,7 +76,6 @@ export function collectRegistryStatusOptions(used: readonly string[]): string[] 
     return out;
 }
 
-/** Tone class for the registry status pill, including live system-invoice labels. */
 export function registryStatusToneClass(value: string): string {
     const label = normalizeRegistryStatusLabel(value);
     if (label === 'Черновик')

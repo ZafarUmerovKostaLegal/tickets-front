@@ -8,13 +8,11 @@ export type LaptopRamUpgradeInput = {
 
 export type LaptopRamUpgradeResult = {
     canAddRam: boolean;
-    /** Короткая подсказка для title, если слот есть. */
     hint: string;
 };
 
 const LAPTOP_CATEGORY = /ноутбук/i;
 
-/** Память на плате — слота нет. Более узкие шаблоны идут первыми. */
 const SOLDERED: RegExp[] = [
     /envy/i,
     /spectre/i,
@@ -32,7 +30,6 @@ const SOLDERED: RegExp[] = [
     /elitebook\s*x\b/i,
 ];
 
-/** Есть SODIMM / комбинированный слот — можно добавить или заменить планку. */
 const UPGRADEABLE: RegExp[] = [
     /thinkpad/i,
     /\b20td/i,
@@ -73,11 +70,6 @@ function matchesAny(text: string, patterns: RegExp[]): boolean {
     return patterns.some((p) => p.test(text));
 }
 
-/**
- * Метка «можно добавить ОЗУ» только если категория — ноутбук
- * и по модели/заметкам ясно, что есть пользовательский слот.
- * Неизвестные модели не помечаем.
- */
 export function laptopRamUpgrade(item: LaptopRamUpgradeInput): LaptopRamUpgradeResult | null {
     if (!isLaptop(item))
         return null;

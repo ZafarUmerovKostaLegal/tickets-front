@@ -4,11 +4,6 @@ type PageTransitionProps = {
     children: ReactNode;
 };
 
-/**
- * Route-level View Transition boundary.
- * Enter/exit/share activate when navigation runs inside startTransition
- * (see AnimatedLink / navigateWithTransition).
- */
 export function PageTransition({ children }: PageTransitionProps) {
     return (
         <ViewTransition

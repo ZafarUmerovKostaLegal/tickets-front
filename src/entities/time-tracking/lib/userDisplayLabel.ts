@@ -13,7 +13,6 @@ export function firstNonStubUserText(...values: Array<string | null | undefined>
     return undefined;
 }
 
-/** Never show TT stub emails (`auth-user-{id}@tt.local`) as a person label. */
 export function pickUserDisplayLabel(
     displayName: string | null | undefined,
     email: string | null | undefined,
@@ -29,7 +28,6 @@ export type TimeUserLabelSource = {
     email?: string | null;
 };
 
-/** Catalog (hydrated TT) → colleagues → workload member; never a stub email. */
 export function resolveTimeUserDisplayName(
     sources: {
         catalog?: TimeUserLabelSource | null;

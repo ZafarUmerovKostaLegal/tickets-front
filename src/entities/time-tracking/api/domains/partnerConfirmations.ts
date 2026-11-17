@@ -24,7 +24,6 @@ export type PartnerReportConfirmationRequest = {
     dateTo: string;
     title: string;
     status: string;
-    /** Приоритет проверки: red | yellow | green (задаётся отправителем/менеджером). */
     reviewPriority: 'red' | 'yellow' | 'green';
     submittedByAuthUserId: number;
     requiredPartnerAuthUserIds: number[];
@@ -305,7 +304,6 @@ export async function listPartnerReportConfirmationsPending(options?: {
     return partnerConfirmationsPendingInflight.get(key)!;
 }
 
-/** Первая страница (до 200) — для поиска заявки по проекту/периоду вне панели «на проверке». */
 export async function listPartnerReportConfirmationsPendingItems(options?: {
     scope?: PartnerPendingListScope;
 }): Promise<PartnerReportConfirmationRequest[]> {

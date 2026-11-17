@@ -51,7 +51,6 @@ function wrapText(text: string, font: { widthOfTextAtSize: (t: string, s: number
     return lines;
 }
 
-/** Outgoing letter PDF with letterhead + free-form body text (Unicode / Cyrillic via DejaVu). */
 export async function buildOutgoingLetterPdfBlob(
     model: InvoiceCoverLetterModel,
     opts?: { registryNumber?: string | null; downloadQrUrl?: string | null },
@@ -202,7 +201,6 @@ export function outgoingLetterPdfFileName(subject: string, dateIso: string): str
     return `ИСХ_${safe}_${day}.pdf`;
 }
 
-/** Build and trigger browser download of the outgoing letter PDF. */
 export async function downloadOutgoingLetterPdf(
     model: InvoiceCoverLetterModel,
     opts?: {

@@ -26,7 +26,7 @@ import { OUTGOING_LETTER_DOC_FONT } from './outgoingLetterEditorFonts';
 import { buildCorrespondenceQrPngBytes } from '../ui/CorrespondenceLetterQr';
 
 const DOC_FONT = OUTGOING_LETTER_DOC_FONT;
-const DOC_SIZE = 22; // 11 pt
+const DOC_SIZE = 22;
 const MUTED = '64748B';
 
 const cellBorderNil = {
@@ -60,11 +60,9 @@ function bodyPara(text: string, opts?: { bold?: boolean; before?: number; after?
 
 export type BuildOutgoingLetterDocxOpts = {
     registryNumber?: string | null;
-    /** Signed public download URL — embedded as QR at the foot of the letter. */
     downloadQrUrl?: string | null;
 };
 
-/** Official outgoing letterhead as .docx for Word / Word Online. */
 export async function buildOutgoingLetterDocxBlob(
     model: InvoiceCoverLetterModel,
     opts?: BuildOutgoingLetterDocxOpts,
@@ -205,7 +203,6 @@ export async function buildOutgoingLetterDocxBlob(
     return Packer.toBlob(doc);
 }
 
-/** Same letterhead as Blob, for in-browser DocxEditor (`Uint8Array`). */
 export async function buildOutgoingLetterDocxBytes(
     model: InvoiceCoverLetterModel,
     opts?: BuildOutgoingLetterDocxOpts,

@@ -9,7 +9,6 @@ export type LeaveInboxFilter = VacationLeaveRequestStatus | 'any';
 
 const AWAITING_DECISION: ReadonlySet<VacationLeaveRequestStatus> = new Set(['pending', 'pending_final']);
 
-/** Вкладка «На согласовании» без выбранного чипа — только заявки, которые ещё ждут решения. */
 export function leaveRequestMatchesInboxFilter(
     req: VacationLeaveRequestApi,
     filter: LeaveInboxFilter,
@@ -22,11 +21,6 @@ export function leaveRequestMatchesInboxFilter(
     return true;
 }
 
-/**
- * Заявка проходит две ступени: сначала выбранный курирующий партнёр, затем
- * обязательное финальное подтверждение управляющего партнёра. Его адрес и ФИО
- * приходят с бэкенда вместе с заявкой, поэтому сверяемся именно с ними.
- */
 export function isManagingPartnerEmail(
     userEmail: string | null | undefined,
     req: VacationLeaveRequestApi,
@@ -34,7 +28,6 @@ export function isManagingPartnerEmail(
     return isVacationManagingPartner(userEmail, req.managing_partner_email);
 }
 
-/** Сотрудник выбрал управляющего партнёра курирующим — второй ступени нет. */
 export function isDirectManagingPartnerRequest(req: VacationLeaveRequestApi): boolean {
     return isVacationManagingPartner(req.partner_email, req.managing_partner_email);
 }
@@ -44,7 +37,6 @@ export type LeaveDecisionActor = {
     userEmail: string | null | undefined;
 };
 
-/** Кто и на какой ступени вправе решить: статус заявки однозначно задаёт ступень. */
 export function canDecideLeaveRequest(req: VacationLeaveRequestApi, actor: LeaveDecisionActor): boolean {
     if (req.status === 'pending')
         return actor.userId != null && req.partner_user_id === actor.userId;
@@ -53,7 +45,6 @@ export function canDecideLeaveRequest(req: VacationLeaveRequestApi, actor: Leave
     return false;
 }
 
-/** Кто ждёт решения по заявке: подпись для карточки. */
 export function leaveApprovalWaitingFor(req: VacationLeaveRequestApi): string | null {
     if (req.status === 'pending') {
         if (isDirectManagingPartnerRequest(req))
@@ -68,7 +59,6 @@ export function leaveApprovalWaitingFor(req: VacationLeaveRequestApi): string | 
 export type LeaveRequestViewer = LeaveDecisionActor & {
     isAuthor: boolean;
     canActAsDecider: boolean;
-    /** Партнёр может удалить любую заявку, не только свою отозванную. */
     isPartner?: boolean;
 };
 
@@ -79,7 +69,6 @@ export type LeaveRequestAvailableActions = {
     canDelete: boolean;
 };
 
-/** Какие кнопки показывать автору и согласующему на текущей ступени. */
 export function leaveRequestAvailableActions(
     req: VacationLeaveRequestApi,
     viewer: LeaveRequestViewer,

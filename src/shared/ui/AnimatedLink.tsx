@@ -1,7 +1,6 @@
 import { type ReactNode, addTransitionType, startTransition } from 'react';
 import { Link, NavLink, useNavigate, type NavigateFunction, type To } from 'react-router-dom';
 
-/** Transition type used by page ViewTransition enter/exit class maps. */
 export const NAV_TRANSITION_TYPE = 'navigation';
 
 export function navigateWithTransition(navigate: NavigateFunction, to: To): void {

@@ -1,18 +1,7 @@
 import { bankHeightAt, createBank, depositSnow, drawBank, resizeBank, stepBank } from './snowBank';
 
-/**
- * Full-viewport winter scene on a single canvas and a single rAF loop:
- * three depth layers of flakes (soft dots + rotating crystals), drifting
- * wind with occasional gusts, a cursor that gently pushes flakes aside,
- * and a snow bank at the bottom that collects the flakes that land on it.
- *
- * Cheap by design: flakes are pre-rendered sprites blitted with drawImage,
- * DPR is capped, the loop is capped at ~60 fps and stops with the tab.
- */
-
 export type SnowSceneOptions = {
     count: number;
-    /** Max bank height in px; 0 disables the bank. */
     bankMax: number;
 };
 
@@ -31,7 +20,6 @@ type Flake = {
     swayAmp: number;
     swayFreq: number;
     phase: number;
-    /** Impulse from the cursor, decays over time. */
     ivx: number;
     ivy: number;
 };
@@ -45,8 +33,6 @@ const POINTER_R = 120;
 function between(a: number, b: number): number {
     return a + Math.random() * (b - a);
 }
-
-/* ---------- Sprites ---------- */
 
 type Sprites = { soft: HTMLCanvasElement; dot: HTMLCanvasElement; crystal: HTMLCanvasElement };
 
@@ -129,8 +115,6 @@ function buildSprites(dark: boolean): Sprites {
     return { soft, dot, crystal };
 }
 
-/* ---------- Flakes ---------- */
-
 function pickLayer(): Layer {
     const r = Math.random();
     if (r < LAYER_WEIGHTS[0])
@@ -179,8 +163,6 @@ function makeFlakes(count: number, w: number, h: number): Flake[][] {
     return layers;
 }
 
-/* ---------- Scene ---------- */
-
 export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions): () => void {
     const ctx = canvas.getContext('2d');
     if (!ctx)
@@ -220,7 +202,6 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
     };
     window.addEventListener('resize', onResize);
 
-    // Cursor wind
     const pointer = { x: -9999, y: -9999, vx: 0, vy: 0, t: 0 };
     const onPointerMove = (e: PointerEvent) => {
         const now = performance.now();
@@ -248,7 +229,6 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
     });
     themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
 
-    // Wind: two slow waves plus an occasional gust.
     let time = 0;
     let gust = 0;
     let gustTarget = 0;
@@ -353,7 +333,6 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
     const tick = (now: number) => {
         raf = requestAnimationFrame(tick);
         const elapsed = now - last;
-        // Cap at ~60 fps on high-refresh screens.
         if (elapsed < FRAME_MS - 1)
             return;
         last = now;

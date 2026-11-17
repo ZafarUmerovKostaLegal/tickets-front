@@ -1,6 +1,5 @@
 import letterCss from '../ui/VacationLeaveApplicationLetter.css?raw';
 
-/** Prints only the leave letter, without the app page title or URL in browser headers. */
 export function printVacationLeaveLetter(letter: HTMLElement): void {
     const iframe = document.createElement('iframe');
     iframe.setAttribute('aria-hidden', 'true');

@@ -1,6 +1,5 @@
 import type { PartnerReportConfirmationRequest, PartnerReviewPriority } from '../api/monolith';
 
-/** Приоритет проверки сформированного отчёта (хранится на бэке). */
 export type ForReviewPriority = PartnerReviewPriority;
 
 export const FOR_REVIEW_PRIORITY_ORDER: readonly ForReviewPriority[] = ['red', 'yellow', 'green'];
@@ -19,7 +18,6 @@ export function forReviewPriorityRank(priority: ForReviewPriority): number {
     return idx >= 0 ? idx : FOR_REVIEW_PRIORITY_ORDER.indexOf('yellow');
 }
 
-/** Локальная сортировка (если сервер уже отсортировал — порядок сохранится). */
 export function compareForReviewByPriority(
     a: PartnerReportConfirmationRequest,
     b: PartnerReportConfirmationRequest,

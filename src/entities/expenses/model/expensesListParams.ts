@@ -37,7 +37,6 @@ export function buildExpensesListParams(args: {
     filterType: ExpenseType | '';
     filterSubtype?: PartnerExpenseCategory | '';
     filterPartnerUserId?: number | '';
-    /** Author (created_by) — API `employeeUserId`. */
     filterAuthorUserId?: number | '';
     filterReimb: 'reimbursable' | 'non_reimbursable' | '';
     filterPeriod: ExpensesUiFilterPeriod;
@@ -47,10 +46,8 @@ export function buildExpensesListParams(args: {
     page: number;
     pageSize?: number;
     scopeMode?: ExpensesScopeMode;
-    /** Force type (client tab) or exclude type (company tab without client expenses). */
     forceExpenseType?: ExpenseType;
     excludeExpenseType?: ExpenseType;
-    /** Force payment method (corporate card / cash queues). */
     forcePaymentMethod?: string;
 }): ListParams {
     const pageSize = args.pageSize ?? EXPENSES_LIST_PAGE_SIZE;

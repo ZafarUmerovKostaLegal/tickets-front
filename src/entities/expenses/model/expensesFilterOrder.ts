@@ -133,6 +133,5 @@ export function saveExpensesFilterOrder(
         );
     }
     catch {
-        // Reordering must remain usable even when browser storage is unavailable.
     }
 }

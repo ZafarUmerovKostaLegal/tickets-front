@@ -187,10 +187,6 @@ export async function replaceFirmBankProfiles(items: FirmBankingProfile[]): Prom
     return parseItems(await res.json());
 }
 
-/**
- * Load profiles from API; if server is empty and localStorage has data, migrate once.
- * Falls back to localStorage when the API is unavailable.
- */
 export async function loadFirmBankingProfiles(options?: {
     migrateLocal?: boolean;
 }): Promise<FirmBankingProfile[]> {
@@ -202,7 +198,6 @@ export async function loadFirmBankingProfiles(options?: {
                 localStorage.setItem(MIGRATION_FLAG, '1');
             }
             catch {
-                // ignore
             }
             return cacheProfiles(remote);
         }
@@ -224,7 +219,6 @@ export async function loadFirmBankingProfiles(options?: {
                 localStorage.setItem(MIGRATION_FLAG, '1');
             }
             catch {
-                // ignore
             }
             return cacheProfiles(migrated);
         }

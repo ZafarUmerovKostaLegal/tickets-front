@@ -347,7 +347,6 @@ export type TimeManagerClientProjectRow = {
     budget_amount: string | number | null;
 
     progress_budget_amount?: string | number | null;
-    /** API alias for progress_budget_amount (FastAPI by_alias). */
     progressBudgetAmount?: string | number | null;
     budget_hours: string | number | null;
     budget_resets_every_month: boolean;
@@ -393,7 +392,6 @@ export type TimeManagerClientProjectRow = {
     extraFixedFeeDescription?: string | null;
 };
 
-/** True when project allows invoices without fully_confirmed partner period. */
 export function projectSkipsPartnerInvoiceConfirmation(
     row: TimeManagerClientProjectRow | Record<string, unknown> | null | undefined,
 ): boolean {
@@ -403,7 +401,6 @@ export function projectSkipsPartnerInvoiceConfirmation(
     return o.skip_partner_invoice_confirmation === true || o.skipPartnerInvoiceConfirmation === true;
 }
 
-/** API may return `recordsLanguage` (alias) or `records_language`. */
 export function readProjectRecordsLanguage(
     row: TimeManagerClientProjectRow | Record<string, unknown> | null | undefined,
 ): TimeManagerProjectRecordsLanguage {
@@ -414,7 +411,6 @@ export function readProjectRecordsLanguage(
     return v === 'RU' ? 'RU' : 'ENG';
 }
 
-/** Normalize mixed camelCase/snake_case project payloads from the API. */
 function coalesceProjectNumericField(
     o: Record<string, unknown>,
     snake: string,
@@ -448,7 +444,6 @@ export function normalizeTimeManagerClientProjectRow(raw: unknown): TimeManagerC
     const skipPartner = o.skip_partner_invoice_confirmation === true || o.skipPartnerInvoiceConfirmation === true;
     row.skip_partner_invoice_confirmation = skipPartner;
     row.skipPartnerInvoiceConfirmation = skipPartner;
-    // Out schema aliases progress/package/rate fields; hydrate snake_case for form + list consumers.
     const progressBudget = coalesceProjectNumericField(o, 'progress_budget_amount', 'progressBudgetAmount');
     if (progressBudget !== undefined) {
         row.progress_budget_amount = progressBudget;
@@ -897,7 +892,6 @@ export type TimeManagerClientProjectCreatePayload = {
 
     initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[];
 
-    /** When set, backend should seed only these catalog task names (empty = none). */
     initialTaskNames?: string[];
 };
 export type TimeManagerClientProjectPatchPayload = {

@@ -1,7 +1,6 @@
 import { isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
 import { normalizeReportEmployeePositionLabel } from '@entities/time-tracking/lib/reportEmployeePosition';
 
-/** Lower rank is more senior. Partner is 0. Associate is 5. Unknown sits at the bottom. */
 const POSITION_RANK: readonly string[] = [
     'Partner',
     'Counsel',
@@ -58,11 +57,6 @@ export function canAssignLegalHubTask(
     return false;
 }
 
-/**
- * Juniors/associates send work upward for review.
- * Target must be more senior than the actor (or any partner/counsel).
- * Juniors and trainees are never valid reviewers.
- */
 export function canSelectLegalHubReviewer(
     actor: { id: number; rank: number },
     target: { id: number; rank: number },

@@ -19,7 +19,6 @@ export type BirthdayGreetingPayload = {
     insideTitle?: string;
 };
 
-/** Demo / QA: set an email to force postcard on login. Empty = disabled. */
 export const BIRTHDAY_DEMO_FORCE_EMAIL = '';
 
 export const DEFAULT_BIRTHDAY_MESSAGE =

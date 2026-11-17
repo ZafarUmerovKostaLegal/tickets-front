@@ -38,7 +38,6 @@ function pickNum(d: Record<string, unknown>, ...keys: string[]): number | null {
     return null;
 }
 
-/** Same inclusion rules as partner confirmed Excel detail lines (billable time entries only). */
 export function isConfirmedSnapshotBillableTimeRow(sr: ReportSnapshotRow): boolean {
     const d = getSnapshotRowDisplayData(sr);
     if (pickBool(d, 'isVoided', 'is_voided'))
@@ -95,10 +94,6 @@ export function collectConfirmedSnapshotTimeEntryIds(rows: readonly ReportSnapsh
     return out;
 }
 
-/**
- * Keep only preview time-entry ids that belong to the confirmed snapshot.
- * If snapshot has no resolvable ids, fall back to unique preview ids (backend may still dedupe).
- */
 export function intersectPreviewTimeEntryIdsWithSnapshot(
     previewTimeEntryIds: readonly string[],
     snapshotTimeEntryIds: readonly string[],

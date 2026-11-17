@@ -17,8 +17,6 @@ export function leaveKindLabel(
     kind: VacationLeaveRequestKind,
     catalog?: ReadonlyArray<VacationLeaveKindApi> | null,
 ): string {
-    // Keep the current product wording even when an older API catalog still
-    // returns the legacy "Day Off" label.
     if (kind === 'day_off')
         return KIND_LABEL_FALLBACK.day_off;
     if (catalog) {

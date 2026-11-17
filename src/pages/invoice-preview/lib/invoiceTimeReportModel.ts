@@ -24,11 +24,8 @@ export type InvoiceTimeReportSummaryRow = {
 export type InvoiceTimeReportPack = {
     currency: string;
     detailSlots: InvoiceTimeReportDetailRow[];
-    /** Expense lines shown in a separate table (not mixed into time details). */
     expenseSlots: InvoiceTimeReportDetailRow[];
-    /** My Mehnat time lines — own table, not mixed into the main time grid. */
     mehnatSlots: InvoiceTimeReportDetailRow[];
-    /** Fixed amount on top of hours — own table, above Summary of services. */
     fixedFeeSlots?: InvoiceTimeReportDetailRow[];
     summarySlots: InvoiceTimeReportSummaryRow[];
     detailTotalHoursDisplay: string;
@@ -39,9 +36,7 @@ export type InvoiceTimeReportPack = {
     fixedFeeTotalAmountDisplay?: string;
     summaryGrandHoursDisplay: string;
     summaryGrandAmountDisplay: string;
-    /** Edited heading on the first time-report sheet. Empty means the generated title. */
     reportTitle?: string | null;
-    /** Edited heading on continuation sheets. */
     reportTitleContinued?: string | null;
 };
 
@@ -72,14 +67,12 @@ export function emptyInvoiceTimeReportPack(currency: string): InvoiceTimeReportP
     };
 }
 
-/** Same 2-decimal rounding as the partner Excel export (`excelNum2`). */
 export function roundTimeReportHours2(n: number): number {
     if (!Number.isFinite(n))
         return 0;
     return Math.round(n * 100) / 100;
 }
 
-/** Task label stays in the description. It used to be stripped before the notes. */
 export function descriptionKeepingTaskWords(task: string, description: string): string {
     const taskText = task.trim();
     const note = description.trim();
@@ -97,14 +90,12 @@ export function descriptionKeepingTaskWords(task: string, description: string): 
 export function formatTimeReportHours(n: number): string {
     if (!Number.isFinite(n))
         return '';
-    // Match partner Excel export: 2 decimal places, ru-RU comma separator (e.g. 0,63).
     return n.toLocaleString('ru-RU', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 }
 
-/** Sum hours the way the invoice grid shows them: round each line, then add. */
 export function sumRoundedTimeReportHours(values: readonly number[]): number {
     return roundTimeReportHours2(values.reduce((sum, n) => sum + roundTimeReportHours2(n), 0));
 }
@@ -121,7 +112,6 @@ export function trimTrailingEmptyDetailSlots(rows: readonly InvoiceTimeReportDet
     return out;
 }
 
-/** True when the pack has at least one non-empty time or expense row (not a placeholder). */
 export function timeReportPackHasContent(pack: InvoiceTimeReportPack | null | undefined): boolean {
     if (!pack)
         return false;
@@ -135,10 +125,6 @@ function expenseAmountKey(row: InvoiceTimeReportDetailRow): number {
     return Math.round(parseTimeReportAmountDisplay(row.amount) * 100);
 }
 
-/**
- * Live rows supply the amount (FX). A saved description in another language
- * stays on the same expense, matched by date and amount.
- */
 export function mergeExpenseSlotsKeepSavedText(
     saved: readonly InvoiceTimeReportDetailRow[],
     live: readonly InvoiceTimeReportDetailRow[],
@@ -194,7 +180,6 @@ function reportDateToIso(display: string): string {
     return display.trim().slice(0, 10);
 }
 
-/** Fill Task from the linked project task when a saved row still shows the note. */
 export function applyLinkedTaskNamesToTimeReportPack(
     pack: InvoiceTimeReportPack,
     hints: readonly { workDate: string; hours: number; description: string | null; taskName: string }[],
@@ -244,7 +229,6 @@ function sameTimeReportLineIgnoreAmount(
         && normReportHours(a.hours) === normReportHours(b.hours);
 }
 
-/** Saved wording stays; Task always comes from the live row (task linked in the DB). */
 function mergeTimeRowsKeepLiveDescription(
     saved: readonly InvoiceTimeReportDetailRow[],
     live: readonly InvoiceTimeReportDetailRow[],
@@ -260,7 +244,6 @@ function mergeTimeRowsKeepLiveDescription(
         let match = savedRows.findIndex((savedRow, index) => (
             !used.has(index) && sameTimeReportLine(liveRow, savedRow)
         ));
-        // Billed-override restore changes amount (0 → sourceAmount); still keep saved notes.
         if (match < 0) {
             match = savedRows.findIndex((savedRow, index) => (
                 !used.has(index) && sameTimeReportLineIgnoreAmount(liveRow, savedRow)
@@ -284,13 +267,6 @@ function mergeTimeRowsKeepLiveDescription(
     });
 }
 
-/**
- * Keep saved wording for time lines and expenses, take expense amounts from the
- * live pack, and take summary rows from the live pack so a rate-card change
- * shows up in a draft that was saved as one line per person.
- * Detail/mehnat totals also come from live so a billed-override restore
- * (sourceAmount / rate card) replaces a previously saved USD 0.00 pack.
- */
 export function mergeTimeReportPackPreferLiveExpenses(
     saved: InvoiceTimeReportPack,
     live: InvoiceTimeReportPack,
@@ -386,7 +362,6 @@ function mergeSummarySlotsPreferLiveRates(
     };
 }
 
-/** Task names like «My mehnat registration» / «Регистрация My mehnat». Description-only mentions do not count. */
 export function isMyMehnatTimeReportRow(row: Pick<InvoiceTimeReportDetailRow, 'task'>): boolean {
     return (row.task ?? '').toLowerCase().includes('mehnat');
 }
@@ -426,15 +401,10 @@ function sumDetailHours(rows: readonly InvoiceTimeReportDetailRow[]): number {
     return roundTimeReportHours2(rows.reduce((s, r) => s + hoursShownOnLine(r.hours), 0));
 }
 
-/** My Mehnat billed per hour belongs in the summary hours, not only in the amount. */
 function mehnatLineBilledHourly(row: InvoiceTimeReportDetailRow): boolean {
     return hoursShownOnLine(row.hours) > 0 && parseTimeReportAmountDisplay(row.hourlyRate) > 0;
 }
 
-/**
- * Line hours, the person row and both totals must use the same 2-decimal hours.
- * Raw 0,083 + 0,084 is 0,17, while each line shows 0,08 and 0,08 + 0,08 = 0,16.
- */
 function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
     const detailSlots = pack.detailSlots.map(withLineHoursRounded);
     const mehnatSlots = (pack.mehnatSlots ?? []).map(withLineHoursRounded);
@@ -499,7 +469,6 @@ function blankReportCell(raw: string): boolean {
 
 const GENERIC_FIXED_FEE_DESCRIPTION = /^(fixed fee|fixed amount|фиксированная сумма)$/i;
 
-/** Text for the fixed-fee table column «Scope description». */
 export function fixedFeeScopeText(row: Pick<InvoiceTimeReportDetailRow, 'task' | 'description'>): string {
     const desc = row.description.trim();
     const task = row.task.trim();
@@ -512,7 +481,6 @@ export function fixedFeeScopeText(row: Pick<InvoiceTimeReportDetailRow, 'task' |
     return row.description;
 }
 
-/** The hours-plus-fee line: no date, person, hours or rate, task Other. */
 export function isFixedFeeTimeReportRow(row: InvoiceTimeReportDetailRow): boolean {
     const hours = row.hours.trim();
     const hoursBlank = blankReportCell(hours) || hours === '0' || hours === '0.00' || hours === '0,00';
@@ -539,7 +507,6 @@ function detailAmountWithoutFixedFee(
     return pack.detailTotalAmountDisplay;
 }
 
-/** Pull the fixed-fee line out of the time grid (also heals older saved packs). */
 export function ensureFixedFeeSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
     const details = trimTrailingEmptyDetailSlots(pack.detailSlots);
     const already = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
@@ -575,7 +542,6 @@ export function ensureFixedFeeSeparatedPack(pack: InvoiceTimeReportPack): Invoic
     });
 }
 
-/** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
 function separateMehnatRows(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
     const details = trimTrailingEmptyDetailSlots(pack.detailSlots);
     const already = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
@@ -616,7 +582,6 @@ function separateMehnatRows(pack: InvoiceTimeReportPack): InvoiceTimeReportPack 
     });
 }
 
-/** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
 export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
     return ensureFixedFeeSeparatedPack(separateMehnatRows(pack));
 }
@@ -673,11 +638,9 @@ export type OfficialSummaryRateSlice = {
     rate: number;
     hours: number;
     amount: number;
-    /** Rate card valid_from. Newer card row is listed first; its title stays, older rows stay blank. */
     validFrom: string;
 };
 
-/** A second summary line only when the rate card itself changed, not when FX rounding drifts. */
 export function summaryRowsForOfficialRates(input: {
     initials: string;
     name: string;
@@ -753,7 +716,6 @@ function summaryPersonKey(row: InvoiceTimeReportSummaryRow): string {
     return `${row.initials.trim().toUpperCase()}\0${row.name.trim().toLowerCase()}`;
 }
 
-/** Partner, then Counsel, Senior Associate, Associate, Junior Associate, Trainee. Same title: higher rate, then higher amount. */
 export function orderTimeReportSummarySlots(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
     const filled = trimTrailingEmptySummarySlots(rows);
     const groups = new Map<string, InvoiceTimeReportSummaryRow[]>();
@@ -803,7 +765,6 @@ function withSummaryOrderedBySeniority(pack: InvoiceTimeReportPack): InvoiceTime
     return { ...pack, summarySlots };
 }
 
-/** Fees and expenses as printed on the time report. The invoice total is their sum. */
 export function billedAmountsFromTimeReport(pack: InvoiceTimeReportPack): {
     currency: string;
     services: number;

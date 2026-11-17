@@ -230,8 +230,6 @@ export function InvoiceSendContactModal({
         setOutlookError(null);
         setOutlookBusy(true);
         try {
-            // Never use prompt=consent here: non-admins get «Требуется утверждение администратора»
-            // even when org admin consent is already granted.
             if (!outlookConnected)
                 await connectOutlookCalendar();
             else

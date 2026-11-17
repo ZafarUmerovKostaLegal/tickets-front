@@ -9,7 +9,6 @@ const ALLOWED_TAGS = [
 
 const ALLOWED_ATTR = ['href', 'target', 'rel', 'style', 'class'];
 
-/** Keep layout styles only — font family/size are locked to Calibri Light in CSS. */
 function scrubLockedFontStyles(html: string): string {
     if (typeof document === 'undefined')
         return html;
@@ -30,7 +29,6 @@ function scrubLockedFontStyles(html: string): string {
             span.appendChild(node.firstChild);
         node.replaceWith(span);
     });
-    // Drop heading tags that imply different type size — keep content as paragraphs.
     wrap.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
         const p = document.createElement('p');
         while (h.firstChild)
@@ -51,7 +49,6 @@ export function sanitizeLetterHtml(html: string): string {
     return scrubLockedFontStyles(cleaned).trim();
 }
 
-/** Convert legacy plain-text body into minimal HTML. */
 export function plainTextToLetterHtml(text: string): string {
     const raw = (text ?? '').replace(/\r\n/g, '\n');
     const trimmed = raw.trim();
@@ -96,7 +93,6 @@ export function normalizeLetterBodyHtml(raw: string | null | undefined): string 
     return plainTextToLetterHtml(s);
 }
 
-/** Non-empty seed so contentEditable can create paragraphs with Enter. */
 export function ensureLetterEditorHtml(raw: string | null | undefined): string {
     const n = normalizeLetterBodyHtml(raw);
     return n || '<p><br></p>';

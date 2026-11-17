@@ -3,11 +3,6 @@ export type CoalescedRequest = {
     cancel(): void;
 };
 
-/**
- * Batches bursty invalidation events and guarantees at most one active task.
- * If another event arrives while the task is running, exactly one trailing
- * execution is scheduled after it settles.
- */
 export function createCoalescedRequest(
     task: () => Promise<void>,
     delayMs = 100,

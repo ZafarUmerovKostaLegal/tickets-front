@@ -133,7 +133,6 @@ function readAccountingTab(): AccountingTab {
             return saved;
     }
     catch {
-        /* private mode */
     }
     return 'overview';
 }
@@ -150,7 +149,6 @@ export function AccountingPage() {
             window.sessionStorage.setItem(ACCOUNTING_TAB_KEY, tab);
         }
         catch {
-            /* private mode */
         }
     };
 

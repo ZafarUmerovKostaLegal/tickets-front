@@ -27,7 +27,6 @@ export function writeInvoiceRegistryOverrides(year: InvoiceRegistryYearId, rows:
         localStorage.setItem(storageKey(year), JSON.stringify(rows));
     }
     catch {
-        /* quota / private mode */
     }
 }
 
@@ -36,6 +35,5 @@ export function clearInvoiceRegistryOverrides(year: InvoiceRegistryYearId): void
         localStorage.removeItem(storageKey(year));
     }
     catch {
-        /* ignore */
     }
 }

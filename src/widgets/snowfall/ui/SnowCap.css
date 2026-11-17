@@ -8,7 +8,6 @@
   position: absolute;
   left: 0;
   right: 0;
-  /* BOX_H / EDGE in SnowCap.tsx: the tile's top edge is 22px into a 42px box */
   top: -22px;
   height: 42px;
   z-index: 5;
@@ -16,7 +15,6 @@
   transition: translate 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Follow the tile's hover lift (-2px) */
 .home-nav-tiles__item:hover > .snow-cap {
   translate: 0 -2px;
 }
@@ -36,7 +34,6 @@ body[data-theme='dark'] .snow-cap {
   overflow: visible;
 }
 
-/* Snow settles onto the tile once: grows up from the tile's top edge (EDGE = 22px). */
 .snow-cap__drift {
   transform-box: view-box;
   transform-origin: 50% 22px;
@@ -95,7 +92,6 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
   80% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Once per cycle a drop swells at the icicle tip, then falls and fades */
 @keyframes snow-cap-drip {
   0% { opacity: 0; transform: translateY(0) scale(0.4); }
   14% { opacity: 1; transform: translateY(0) scale(1); }

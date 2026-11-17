@@ -174,7 +174,6 @@ type Props = {
     onSubmit: (values: ExpenseFormValues, files: ExpenseFilesByKind) => void;
     saveDraftPending?: boolean;
     submitPending?: boolean;
-    /** Save or submit failure. Shown in the panel so it is not hidden behind the drawer. */
     formActionError?: string | null;
     onExpenseSnapshotUpdated?: (expense: ExpenseRequest) => void;
     canModerate?: boolean;
@@ -189,9 +188,7 @@ type Props = {
     currentUserRole?: string | null;
     currentUserEmail?: string | null;
     currentUserDisplayName?: string | null;
-    /** company — без partner/client; client — только «За клиента»; partner — только расход партнёра */
     formScope?: 'company' | 'partner' | 'client';
-    /** Значения, которыми заполняется пустая форма создания (например, проект из журнала учёта времени). */
     presetValues?: Partial<ExpenseFormValues> | null;
 };
 function PanelBtnSpinner({ className }: {
@@ -306,7 +303,6 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
                 e.attachmentsPaymentDoc = 'Прикрепите документ для оплаты';
         }
         else if (legacyOnly) {
-            // Legacy attachments are accepted because their kind was not stored.
         }
         else if (s.length + opts.filesPaymentDoc.length < 1) {
             e.attachmentsPaymentDoc = 'Для возмещаемого расхода приложите документ для оплаты';
@@ -363,7 +359,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
-    // Read through a ref: a new object identity from the caller must not reset an open form.
     const presetValuesRef = useRef(presetValues);
     presetValuesRef.current = presetValues;
     const [errors, setErrors] = useState<ExpenseFormErrors>({});
@@ -461,7 +456,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             return;
         setCbuParsed(null);
         setCbuError(null);
-        // Do not touch cbuLoading here — the CBU fetch effect owns it (avoids stuck «Загрузка…»).
         setValues({
             ...EMPTY,
             expenseDate: todayIsoLocal(),
@@ -877,7 +871,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                 next.lockedAmountUzs = Number.isFinite(n) && n > 0 ? roundMoney2(n) : null;
             }
             else {
-                // Editing foreign/USD amount: drop UZS lock so save follows the typed currency.
                 next.lockedAmountUzs = null;
             }
             return next;
@@ -1094,7 +1087,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             return EXPENSE_TYPES.filter(t => t.value === 'partner_expense');
         if (formScope === 'client')
             return EXPENSE_TYPES.filter(t => t.value === 'client_expense');
-        // Company create/edit: all types except partner (partners use their own page).
         const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense');
         const showPrivate = canManageCompanyExpense(currentUserEmail)
             || editingRequest?.expenseType === 'company_expense';

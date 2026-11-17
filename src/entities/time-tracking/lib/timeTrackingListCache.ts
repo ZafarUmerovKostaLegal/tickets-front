@@ -22,7 +22,6 @@ function readSlot<T>(cache: Map<string, CacheSlot<unknown>>, key: string): T | n
         cache.delete(key);
         return null;
     }
-    // Touch the entry so the map iteration order acts as a small LRU.
     cache.delete(key);
     cache.set(key, slot as CacheSlot<unknown>);
     return slot.data;

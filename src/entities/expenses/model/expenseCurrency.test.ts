@@ -26,7 +26,6 @@ describe('expenseCurrency money helpers', () => {
         const usd = computeUsdEquivalent('UZS', '300000', rate, '');
         expect(usd).not.toBeNull();
         expect(roundMoney2(usd!)).toBe(24.93);
-        // Classic bug: rebuild from rounded USD → 299999
         const badRebuild = Math.round(roundMoney2(usd!) * parseExpenseMoney(rate));
         expect(badRebuild).toBe(299999);
         expect(uzs).not.toBe(badRebuild);

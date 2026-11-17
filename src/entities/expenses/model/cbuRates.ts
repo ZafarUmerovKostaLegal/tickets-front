@@ -14,11 +14,9 @@ export interface CbuParsed {
     rateDateRu: string;
     uzsPerUsd: number;
     uzsPerUnit: Map<string, number>;
-    /** cbu — официальный ответ ЦБ; market — резервный курс на ту же дату, если сайт ЦБ недоступен. */
     source?: 'cbu' | 'market';
 }
 
-/** Dev-only direct/proxy origin; production always goes through gateway (no browser CORS to cbu.uz). */
 function getCbuOrigin(): string {
     const v = import.meta.env.VITE_CBU_ORIGIN as string | undefined;
     if (v?.trim())
@@ -94,11 +92,9 @@ async function fetchCbuRowsFrom(url: string, timeoutMs = CBU_FETCH_TIMEOUT_MS): 
     return rows;
 }
 
-/** Resolved ok results only — never cache a hung/rejected in-flight promise. */
 const cbuOkCache = new Map<string, CbuParsed>();
 const cbuInflight = new Map<string, Promise<CbuParsed>>();
 
-/** Prefer gateway proxy (same-origin) so prod browsers don't hit cbu.uz CORS / 404 spam. */
 async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
     const res = await withTimeout(
         apiFetch(
@@ -115,7 +111,6 @@ async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
             msg = String(j.detail ?? j.message ?? msg);
         }
         catch {
-            /* keep status message */
         }
         throw new Error(msg);
     }
@@ -213,13 +208,11 @@ export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed>
     return pending;
 }
 
-/** Sync peek of successful CBU cache (no network). */
 export function peekCachedCbuParsedForDate(isoDate: string): CbuParsed | null {
     const anchor = isoDate.trim().slice(0, 10);
     return cbuOkCache.get(anchor) ?? null;
 }
 
-/** Build FX pairs for invoice ensure (1 from = rate to) covering `forDate`. */
 export function cbuParsedToInvoiceFxRates(parsed: CbuParsed, forDate: string): Array<{
     fromCurrency: string;
     toCurrency: string;

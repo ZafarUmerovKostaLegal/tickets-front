@@ -2,7 +2,6 @@ const INITIATOR_MARKS = ['/', '*', '='] as const;
 
 export type ServiceInitiatorMark = (typeof INITIATOR_MARKS)[number];
 
-/** Name of the service initiator is stored in the note after the last "/", "*" or "=". */
 export function splitServiceInitiatorName(raw: string | null | undefined): {
     note: string;
     name: string;

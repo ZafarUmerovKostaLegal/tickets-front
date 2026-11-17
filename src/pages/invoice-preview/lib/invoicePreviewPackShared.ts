@@ -19,7 +19,6 @@ export function packResolveIssueIso(session: InvoicePreviewSessionV1 | null): st
     return session.form.issueDate.slice(0, 10);
 }
 
-/** Billing period month anchor (prefer period end); falls back to issue date. */
 export function packResolveBillingPeriodIso(
     session: InvoicePreviewSessionV1 | null,
     model?: Pick<InvoiceCoverLetterModel, 'billingPeriodIso'> | null,
@@ -93,10 +92,7 @@ export type InvoicePreviewPackInput = {
     legalOverrides?: InvoiceLegalPageOverrides;
 
     selectedPageNumbers?: number[];
-    /** Split the name after "/", "*" or "=" in Description into its own time-report column. */
     showServiceInitiatorName?: boolean;
-    /** Present only for a combined invoice. Ordinary invoices leave this unset. */
     combinedReport?: CombinedReportSnapshot | null;
-    /** Preview pages captured 1:1. One PNG per combined-report sheet, in preview order. */
     combinedReportPagePngs?: Uint8Array[] | null;
 };

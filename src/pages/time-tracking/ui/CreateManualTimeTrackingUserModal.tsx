@@ -43,7 +43,7 @@ export function CreateManualTimeTrackingUserModal({ canManage, onClose, onCreate
                 if (!cancelled)
                     setPositionOptions(mergePositionOptions(list));
             })
-            .catch(() => { /* подсказки необязательны */ });
+            .catch(() => {});
         return () => {
             cancelled = true;
         };

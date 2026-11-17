@@ -1,6 +1,5 @@
 import type { ExpenseAmountCurrency } from './types';
 
-/** Parse money input: spaces/nbsp, comma decimal. */
 export function parseExpenseMoney(raw: string): number {
     const t = String(raw ?? '')
         .trim()
@@ -13,7 +12,6 @@ export function parseExpenseMoney(raw: string): number {
     return Number.isFinite(n) ? n : NaN;
 }
 
-/** Half-up to 2 decimal places (money). Avoids binary float drift where possible. */
 export function roundMoney2(n: number): number {
     if (!Number.isFinite(n))
         return NaN;
@@ -25,7 +23,6 @@ export function roundMoney2(n: number): number {
     return (sign * rounded) / 100;
 }
 
-/** Format UZS/USD rate for storage (DB allows up to 6 dp). */
 export function formatExchangeRate(n: number): string {
     if (!Number.isFinite(n) || n <= 0)
         return '';
@@ -60,11 +57,6 @@ export function computeUsdEquivalent(
     return amt / fx;
 }
 
-/**
- * Amount in UZS for API.
- * UZS: exact entered sum (2 dp) — never rebuild from rounded USD.
- * USD / foreign: convert with half-up to 2 dp.
- */
 export function computeAmountUzsForApi(
     currency: ExpenseAmountCurrency,
     amountStr: string,

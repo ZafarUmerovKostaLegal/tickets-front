@@ -11,7 +11,6 @@ import './TimeTrackingForms.css';
 
 const CONTACT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** One address, or several separated by `;`. Returns null when empty, false when invalid. */
 function normalizeContactEmails(raw: string): string | null | false {
     const parts = raw.split(';').map((part) => part.trim()).filter(Boolean);
     if (parts.length === 0)
@@ -23,7 +22,6 @@ function normalizeContactEmails(raw: string): string | null | false {
 
 export type AddClientContactEditTarget = {
     kind: 'primary' | 'extra';
-    /** Extra contact id; ignored for primary. */
     id?: string;
     name: string;
     phone: string | null;
@@ -37,7 +35,6 @@ export type AddClientContactForClientModalProps = {
     canManage: boolean;
     onClose: () => void;
     onCreated?: (row: TimeManagerClientContactRow) => void;
-    /** When set, modal edits an existing primary or extra contact instead of creating. */
     editContact?: AddClientContactEditTarget | null;
     onSaved?: (payload: { key: string; email: string | null }) => void;
 };
@@ -80,7 +77,6 @@ export function AddClientContactForClientModal({
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
 
-    // Primary contact can be edited while archived (same as client card); extras cannot.
     const formLocked = !canManage || (clientArchived && !isPrimaryEdit);
 
     const submit = async () => {

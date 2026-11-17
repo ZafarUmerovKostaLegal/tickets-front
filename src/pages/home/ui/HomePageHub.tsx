@@ -14,7 +14,6 @@ export function HomePageHub() {
     const snowy = snowPreferenceOn && !loading && isSnowfallUser(user);
 
     useEffect(() => {
-        // Modals elsewhere may leave body overflow locked; hub must always scroll.
         document.body.style.overflow = '';
         document.documentElement.style.overflow = '';
     }, []);

@@ -86,7 +86,6 @@ function columnWidth(col: InvoiceRegistryColumnDef): number {
     return 18;
 }
 
-/** Client-side Excel export of the (already filtered) invoice registry rows. */
 export async function exportInvoiceRegistryExcel(input: ExportInvoiceRegistryExcelInput): Promise<string> {
     const rows = input.rows ?? [];
     if (rows.length === 0)

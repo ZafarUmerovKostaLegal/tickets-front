@@ -234,7 +234,6 @@ function systemInvoiceId(row: InvoiceRegistryRow): string {
     return row.id.startsWith('sys-') ? row.id.slice(4) : '';
 }
 
-/** Partner notes live on the invoice. The registry sheet only has them after the time-tracking service is updated. */
 async function partnerNotesByInvoiceId(): Promise<Map<string, string>> {
     const notes = new Map<string, string>();
     const limit = 500;
@@ -993,7 +992,6 @@ function readRegistryYear(): InvoiceRegistryYearId {
             return saved as InvoiceRegistryYearId;
     }
     catch {
-        /* private mode */
     }
     return '2026';
 }
@@ -1237,7 +1235,6 @@ export function InvoiceRegistryPanel({
                         nextRows = mergeRegistryPartnerNotes(nextRows, await partnerNotesByInvoiceId());
                     }
                     catch {
-                        /* the sheet still opens; notes appear after the service returns them */
                     }
                     if (cancelled)
                         return;
@@ -1663,7 +1660,6 @@ export function InvoiceRegistryPanel({
                                     window.sessionStorage.setItem(REGISTRY_YEAR_KEY, s.id);
                                 }
                                 catch {
-                                    /* private mode */
                                 }
                             }}
                         >
