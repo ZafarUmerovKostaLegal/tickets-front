@@ -542,3 +542,13 @@ body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__se
     transition-duration: 0.08s;
   }
 }
+
+@media (max-width: 600px) {
+  .home-nav-tiles--hub .home-nav-tiles__grid {
+    gap: 0.5rem;
+  }
+
+  .home-nav-tiles--hub .home-nav-tiles__link {
+    padding: 0.75rem 0.7rem 0.8rem;
+  }
+}

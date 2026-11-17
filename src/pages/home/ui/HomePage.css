@@ -3961,3 +3961,16 @@ body[data-theme='dark'] .home-page--tickets {
     padding-top: 4.25rem;
   }
 }
+
+/* Phones: one side gutter instead of main + inner (12px + 12px), tiles use the full width. */
+@media (max-width: 600px) {
+  .home-page__main.home-page__main--hub {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .home-page__main-inner.home-page__main-inner--hub {
+    padding-left: max(0.625rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)));
+    padding-right: max(0.625rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
+  }
+}

@@ -321,3 +321,52 @@ body[data-theme='dark'] .home-hub-topbar__search-input {
         display: none;
     }
 }
+
+/* Phones: compact top bar. Selectors beat the global 44px tap-target rule (button / input). */
+@media (max-width: 600px) {
+    .home-hub-topbar .home-hub-topbar__inner {
+        gap: 0.4rem 0.5rem;
+        padding-top: max(0.4rem, var(--mob-safe-top, 0px));
+        padding-bottom: 0.45rem;
+        padding-left: max(0.625rem, var(--mob-safe-left, 0px));
+        padding-right: max(0.625rem, var(--mob-safe-right, 0px));
+    }
+
+    .home-hub-topbar .home-hub-topbar__brand-logo {
+        height: 1.4rem;
+    }
+
+    .home-hub-topbar .home-hub-topbar__actions .app-header-actions {
+        gap: 0.3rem;
+    }
+
+    .home-hub-topbar .home-hub-topbar__actions .app-header-action--icon,
+    .home-hub-topbar .home-hub-topbar__actions .app-header-action--notifications,
+    .home-hub-topbar .home-hub-topbar__actions .header-user-menu--standalone .header-user-menu__trigger {
+        width: 2.1rem;
+        height: 2.1rem;
+        min-width: 2.1rem;
+        min-height: 0;
+        border-radius: 9px;
+    }
+
+    .home-hub-topbar .home-hub-topbar__actions .header-user-menu__avatar,
+    .home-hub-topbar .home-hub-topbar__actions .header-user-menu__avatar--initials,
+    .home-hub-topbar .home-hub-topbar__actions .header-user-menu__avatar--empty {
+        width: 1.45rem;
+        height: 1.45rem;
+    }
+
+    .home-hub-topbar .home-hub-topbar__search-input {
+        height: 2.25rem;
+        min-height: 0;
+        border-radius: 10px;
+    }
+}
+
+@media (max-width: 600px) {
+    .home-hub-topbar .home-hub-topbar__brand,
+    .home-hub-topbar .home-hub-topbar__brand a {
+        min-height: 0;
+    }
+}
