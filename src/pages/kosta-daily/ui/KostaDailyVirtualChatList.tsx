@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 
 export const VIRTUAL_CHAT_LIST_MIN = 32;
 const OVERSCAN = 6;
-const ESTIMATE_HEIGHT = 68;
+const ESTIMATE_HEIGHT = 72;
 
 export type KostaDailyChatListItem =
     | { kind: 'section'; id: string; label: string }

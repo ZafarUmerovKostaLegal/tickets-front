@@ -235,7 +235,9 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
     let gustTimer = between(8, 16);
     const windAt = () => 9 * Math.sin(time * 0.11) + 12 * Math.sin(time * 0.037 + 1.3) + gust;
 
+    let bankOn = false;
     const step = (dt: number) => {
+        bankOn = document.body.hasAttribute('data-snow-bank');
         time += dt;
         gustTimer -= dt;
         if (gustTimer <= 0) {
@@ -282,7 +284,7 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
                 else if (f.x > w + 60)
                     f.x -= w + 120;
 
-                if (bank && l > 0 && f.x >= 0 && f.x < w) {
+                if (bank && bankOn && l > 0 && f.x >= 0 && f.x < w) {
                     if (f.y + f.size * 0.25 >= groundY - bankHeightAt(bank, f.x)) {
                         depositSnow(bank, f.x, f.size * (f.crystal ? 0.12 : 0.28));
                         resetFlake(f, w, h, false);
@@ -293,7 +295,7 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
                     resetFlake(f, w, h, false);
             }
         }
-        if (bank)
+        if (bank && bankOn)
             stepBank(bank, dt);
     };
 
@@ -323,7 +325,7 @@ export function startSnowScene(canvas: HTMLCanvasElement, opts: SnowSceneOptions
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         drawLayer(0);
         drawLayer(1);
-        if (bank)
+        if (bank && bankOn)
             drawBank(ctx, bank, h - 1, dark);
         drawLayer(2);
     };

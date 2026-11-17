@@ -30,6 +30,7 @@ import { avatarColor, initials } from './kostaDailyAvatar';
 import { dailyMessageMatchesSearch } from './kostaDailySearchHighlight';
 import { REACTION_EMOJIS } from './kostaDailyReactions';
 import './KostaDailyPage.css';
+import './KostaDailyTelegram.css';
 
 type SidebarView = 'chats' | 'members';
 

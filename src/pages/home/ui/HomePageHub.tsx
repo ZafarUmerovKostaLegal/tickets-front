@@ -19,6 +19,13 @@ export function HomePageHub() {
     }, []);
 
     useEffect(() => {
+        if (!snowy)
+            return;
+        document.body.setAttribute('data-snow-bank', '1');
+        return () => document.body.removeAttribute('data-snow-bank');
+    }, [snowy]);
+
+    useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey)
                 return;

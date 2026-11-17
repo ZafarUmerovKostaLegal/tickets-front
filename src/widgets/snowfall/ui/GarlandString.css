@@ -100,19 +100,42 @@ body:not([data-theme='dark']) .hub-garland__light {
 }
 
 @keyframes hub-garland-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes hub-garland-shimmer {
-  0%, 100% { opacity: 0.62; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes hub-garland-sparkle {
-  0%, 82%, 100% { transform: scale(1); }
-  88% { transform: scale(1.7); }
-  94% { transform: scale(0.9); }
+
+  0%,
+  82%,
+  100% {
+    transform: scale(1);
+  }
+
+  88% {
+    transform: scale(1.7);
+  }
+
+  94% {
+    transform: scale(0.9);
+  }
 }
 
 .hub-garland--paused .kl-move {
@@ -120,6 +143,7 @@ body:not([data-theme='dark']) .hub-garland__light {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .hub-garland,
   .hub-garland .kl-move {
     animation: none !important;
