@@ -6,7 +6,9 @@ export type AuthProfile = {
 
 const PROFILE_KEY = 'kosta.outlook.profile';
 const LEGACY_REFRESH = 'kosta.outlook.refresh.enc';
-/** Same key as Hub SPA — shared on tickets.kostalegal.com */
+/** Add-in's own token slot — never overwrite or clear the Hub SPA session. */
+const ADDIN_TOKEN_KEY = 'kosta.addin.hubToken';
+/** Hub SPA key on the same origin: read-only fallback (older add-in builds wrote here). */
 const HUB_TOKEN_KEY = 'access_token';
 
 let sessionLive = false;
@@ -67,7 +69,7 @@ export function clearSession(): void {
   azureAccessExpiresAt = 0;
   try {
     localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(HUB_TOKEN_KEY);
+    localStorage.removeItem(ADDIN_TOKEN_KEY);
   } catch {
     /* ignore */
   }
@@ -96,8 +98,10 @@ export function setProfile(next: AuthProfile): void {
 
 export function readHubAccessToken(): string | null {
   try {
-    const token = localStorage.getItem(HUB_TOKEN_KEY);
-    return token?.trim() || null;
+    const own = localStorage.getItem(ADDIN_TOKEN_KEY)?.trim();
+    if (own)
+      return own;
+    return localStorage.getItem(HUB_TOKEN_KEY)?.trim() || null;
   } catch {
     return null;
   }
@@ -105,7 +109,7 @@ export function readHubAccessToken(): string | null {
 
 export function storeHubAccessToken(token: string): void {
   try {
-    localStorage.setItem(HUB_TOKEN_KEY, token);
+    localStorage.setItem(ADDIN_TOKEN_KEY, token);
   } catch {
     /* ignore */
   }

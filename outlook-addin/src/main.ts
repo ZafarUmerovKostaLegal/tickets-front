@@ -1,18 +1,17 @@
 import './styles.css';
 import {
   checkinDocument,
-  ensureDocumentsFolder,
-  ensureEmailsFolder,
+  clearApiCaches,
   listMatters,
   pingApi,
-  uploadToMatter,
+  uploadToCorrespondence,
   type MatterOption,
 } from './api';
 import { ensureHubSession, fetchHubMe, loginWithHub, logoutHub } from './auth/authApi';
 import { clearLegacyOutlookTokens, getProfile, isAuthenticated, readAzureAccessToken } from './auth/session';
 import { listConversationMessages } from './conversation';
 import { buildConversationEml } from './conversationBuild';
-import { buildEml, readCurrentMail, type MailSnapshot } from './email';
+import { buildEml, readCurrentMail, readCurrentMailMeta, type MailMeta } from './email';
 import { hostLabel, readCurrentOfficeDocument } from './officeDoc';
 import { itemHasSavedCategory, markItemSavedToKosta, SAVED_CATEGORY } from './outlookCategory';
 import { describeMatch, matchRule } from './rules';
@@ -21,6 +20,7 @@ import {
   getSettings,
   loadRoamingSettings,
   markFiled,
+  markFiledMany,
   newRuleId,
   saveSettings,
   setConversationDoc,
@@ -38,7 +38,9 @@ if (!app)
 
 let tab: Tab = 'file';
 let officeHost: Office.HostType | null = null;
-let mail: MailSnapshot | null = null;
+let mail: MailMeta | null = null;
+/** Bumped on every ItemChanged; async work for an older message must not overwrite newer state. */
+let mailSeq = 0;
 let matters: MatterOption[] = [];
 let statusText = '';
 let statusKind: '' | 'ok' | 'error' = '';
@@ -62,9 +64,24 @@ function isDocumentHost(): boolean {
     || officeHost === Office.HostType.PowerPoint;
 }
 
+function statusMarkup(): string {
+  return statusText
+    ? `<div class="status ${statusKind ? `is-${statusKind}` : ''}" role="status" aria-live="polite">${escape(statusText)}</div>`
+    : '';
+}
+
 function setStatus(text: string, kind: '' | 'ok' | 'error' = '') {
   statusText = text;
   statusKind = kind;
+  const slot = app?.querySelector<HTMLElement>('#statusSlot');
+  if (slot)
+    slot.innerHTML = statusMarkup();
+  else
+    render();
+}
+
+function setBusy(value: boolean) {
+  busy = value;
   render();
 }
 
@@ -80,8 +97,12 @@ let autoFileInFlight: string | null = null;
 
 async function refreshMail(options: { autoFile?: boolean } = {}): Promise<void> {
   const wantAuto = options.autoFile !== false;
-  mail = await readCurrentMail();
-  await refreshOutlookCategoryFlag();
+  const seq = ++mailSeq;
+  mail = readCurrentMailMeta();
+  const saved = await itemHasSavedCategory();
+  if (seq !== mailSeq)
+    return;
+  outlookSavedCategory = saved;
   if (!wantAuto)
     return;
   await tryAutoFileCurrent();
@@ -116,8 +137,8 @@ async function tryAutoFileCurrent(): Promise<boolean> {
   }
 }
 
-async function refreshMatters(): Promise<void> {
-  matters = await listMatters();
+async function refreshMatters(force = false): Promise<void> {
+  matters = await listMatters({ force });
 }
 
 async function ensureOutlookSavedMark(): Promise<void> {
@@ -127,30 +148,27 @@ async function ensureOutlookSavedMark(): Promise<void> {
     setStatus(`Файл в FM ок, но категорию Outlook не удалось поставить: ${result.detail}`, 'error');
 }
 
-async function refreshOutlookCategoryFlag(): Promise<void> {
-  outlookSavedCategory = await itemHasSavedCategory();
-}
-
 async function fileMail(rule: FilingRule, automatic: boolean): Promise<void> {
   if (!mail)
-    mail = await readCurrentMail();
+    mail = readCurrentMailMeta();
   if (wasFiled(mail.messageId) && automatic) {
     await ensureOutlookSavedMark();
     setStatus(`Уже загружено ранее → ${rule.matterName}`, 'ok');
     return;
   }
-  busy = true;
+  setBusy(true);
   setStatus(automatic ? 'Автозагрузка…' : 'Загрузка письма…');
   try {
-    const folderId = await ensureEmailsFolder(rule.matterId);
-    const file = buildEml(mail);
-    await uploadToMatter(
+    // Bodies are read only now, and only if the user is still on the same message.
+    const full = await readCurrentMail(mail.messageId);
+    const file = buildEml(full);
+    await uploadToCorrespondence(
       rule.matterId,
-      folderId,
+      'Emails',
       file,
-      `Outlook · ${mail.fromEmail} · ${describeMatch(rule)}`,
+      `Outlook · ${full.fromEmail} · ${describeMatch(rule)}`,
     );
-    markFiled(mail.messageId);
+    markFiled(full.messageId);
     await ensureOutlookSavedMark();
     setStatus(
       `Сохранено в «${rule.matterName}» / Correspondence/Emails\n${file.name}`
@@ -188,7 +206,7 @@ async function fileConversation(mode: 'all' | 'new'): Promise<void> {
     setStatus('Для переписки нужен Mail.Read — выйдите и войдите снова', 'error');
     return;
   }
-  busy = true;
+  setBusy(true);
   setStatus(mode === 'all' ? 'Читаем всю переписку…' : 'Проверяем переписку…');
   try {
     const { conversationId, messages } = await listConversationMessages();
@@ -234,8 +252,7 @@ async function fileConversation(mode: 'all' | 'new'): Promise<void> {
 
     if (!documentId) {
       setStatus(`Загружаем один файл переписки (${messages.length} писем)…`);
-      const folderId = await ensureEmailsFolder(target.matterId);
-      const uploaded = await uploadToMatter(target.matterId, folderId, file, comment);
+      const uploaded = await uploadToCorrespondence(target.matterId, 'Emails', file, comment);
       documentId = uploaded[0]?.id;
       if (!documentId)
         throw new Error('API не вернул id документа после загрузки');
@@ -249,8 +266,7 @@ async function fileConversation(mode: 'all' | 'new'): Promise<void> {
       messageCount: messages.length,
       updatedAt: new Date().toISOString(),
     });
-    for (const row of messages)
-      markFiled(row.internetMessageId);
+    markFiledMany(messages.map((row) => row.internetMessageId));
     await ensureOutlookSavedMark();
     setStatus(
       `Переписка ${action} → «${target.matterName}» / Correspondence/Emails\n`
@@ -298,12 +314,14 @@ function renderSettings(): string {
     ${renderAuthGate()}
     <section class="card">
       <h2>Подключение</h2>
-      <label class="field">File Manager API
-        <input id="apiBase" value="${escape(s.apiBase)}" placeholder="https://ticketsback.kostalegal.com/api/v1/files" />
-      </label>
+      ${import.meta.env.DEV ? `
+        <label class="field">File Manager API
+          <input id="apiBase" value="${escape(s.apiBase)}" placeholder="https://ticketsback.kostalegal.com/api/v1/files" />
+        </label>
+      ` : `<p class="hint">File Manager API: <code>${escape(s.apiBase)}</code></p>`}
       <p class="hint">Сессия Hub в этом WebView Outlook (токен после входа через Microsoft).</p>
       <div class="row">
-        <button type="button" id="saveSettings">Сохранить URL</button>
+        ${import.meta.env.DEV ? '<button type="button" id="saveSettings">Сохранить URL</button>' : ''}
         <button type="button" id="testApi" ${!isAuthenticated() ? 'disabled' : ''}>Проверить API</button>
       </div>
     </section>
@@ -364,15 +382,14 @@ async function fileOfficeDocument(): Promise<void> {
     setStatus('Выберите matter для документа', 'error');
     return;
   }
-  busy = true;
+  setBusy(true);
   setStatus(`Читаем файл ${hostLabel(officeHost ?? undefined)}…`);
   try {
     const file = await readCurrentOfficeDocument(officeHost ?? undefined);
     setStatus(`Загрузка «${file.name}»…`);
-    const folderId = await ensureDocumentsFolder(matter.id);
-    await uploadToMatter(
+    await uploadToCorrespondence(
       matter.id,
-      folderId,
+      'Documents',
       file,
       `${hostLabel(officeHost ?? undefined)} · ${getProfile()?.email || ''}`,
     );
@@ -518,7 +535,7 @@ function render(): void {
     ${tab === 'file' ? renderFile() : ''}
     ${tab === 'rules' && isOutlookHost() ? renderRules() : ''}
     ${tab === 'settings' ? renderSettings() : ''}
-    ${statusText ? `<div class="status ${statusKind ? `is-${statusKind}` : ''}">${escape(statusText)}</div>` : ''}
+    <div id="statusSlot">${statusMarkup()}</div>
   `;
   bind();
 }
@@ -543,7 +560,8 @@ function bind(): void {
     pinTipDone.onclick = () => {
       panePinned = true;
       saveSettings({ pinTipDismissed: true });
-      setStatus('Готово. Панель должна оставаться при смене писем.', 'ok');
+      statusText = 'Готово. Панель должна оставаться при смене писем.';
+      statusKind = 'ok';
       render();
     };
   }
@@ -554,7 +572,7 @@ function bind(): void {
       const apiBase = app!.querySelector<HTMLInputElement>('#apiBase')?.value.trim();
       if (apiBase !== undefined)
         saveSettings({ apiBase: apiBase || getSettings().apiBase });
-      busy = true;
+      setBusy(true);
       setStatus('Если белый диалог — нажмите Allow, затем войдите в Microsoft…');
       try {
         const profile = await loginWithHub();
@@ -584,8 +602,11 @@ function bind(): void {
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
       await logoutHub();
+      clearApiCaches();
       matters = [];
-      setStatus('Сессия Hub завершена', 'ok');
+      statusText = 'Сессия Hub завершена';
+      statusKind = 'ok';
+      render();
     };
   }
 
@@ -602,9 +623,9 @@ function bind(): void {
   const testApi = app!.querySelector<HTMLButtonElement>('#testApi');
   if (testApi) {
     testApi.onclick = async () => {
-      saveSettings({
-        apiBase: app!.querySelector<HTMLInputElement>('#apiBase')?.value.trim() ?? '',
-      });
+      const apiBaseInput = app!.querySelector<HTMLInputElement>('#apiBase');
+      if (apiBaseInput)
+        saveSettings({ apiBase: apiBaseInput.value.trim() });
       try {
         setStatus(await pingApi(), 'ok');
       } catch (error) {
@@ -617,8 +638,10 @@ function bind(): void {
   if (reloadMatters) {
     reloadMatters.onclick = async () => {
       try {
-        await refreshMatters();
-        setStatus(`Matters: ${matters.length}`, 'ok');
+        await refreshMatters(true);
+        statusText = `Matters: ${matters.length}`;
+        statusKind = 'ok';
+        render();
       } catch (error) {
         setStatus(error instanceof Error ? error.message : String(error), 'error');
       }
@@ -648,7 +671,9 @@ function bind(): void {
         }],
       });
       draft = { match: '', matterId: '', autoFile: true };
-      setStatus(`Правило: ${match} → ${matter.name}`, 'ok');
+      statusText = `Правило: ${match} → ${matter.name}`;
+      statusKind = 'ok';
+      render();
     };
   }
 
@@ -820,6 +845,7 @@ function wireOffice(): void {
           if (!getSettings().pinTipDismissed)
             saveSettings({ pinTipDismissed: true });
           if (!Office.context.mailbox.item) {
+            mailSeq += 1;
             mail = null;
             outlookSavedCategory = false;
             render();

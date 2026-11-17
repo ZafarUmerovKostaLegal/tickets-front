@@ -49,6 +49,9 @@ jobs:
       - name: Check bundle budget
         run: npm run build && npm run build:check-budget
 
+      - name: Outlook add-in (typecheck, manifests, build)
+        run: npm ci --prefix outlook-addin && npm run build --prefix outlook-addin
+
       - name: Upload hidden source maps
         if: always()
         uses: actions/upload-artifact@v4

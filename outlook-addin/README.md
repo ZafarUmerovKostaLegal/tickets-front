@@ -11,7 +11,7 @@
 | `KostaFile.manifest.xml` | **Outlook Classic** (Windows), New Outlook, Outlook в браузере, Mac, Mobile |
 | `KostaFile.Office.manifest.xml` | **Word**, **Excel**, **PowerPoint** (Desktop) |
 
-Версия Outlook-манифеста: `0.4.0.0` · Mailbox **1.5+** · **SupportsPinning** + `TaskpaneId`.
+Версия обоих манифестов: `0.5.0.0` (берётся из `package.json`) · Mailbox **1.5+** · **SupportsPinning** + `TaskpaneId`.
 
 ## Панель «всегда как MacroView»
 
@@ -26,7 +26,7 @@ Web add-in не может сам открыться при старте Outlook
 ## Установка Outlook (Classic / New)
 
 1. **Get Add-ins** → **My add-ins** → **Add a custom add-in** → **Add from File…**
-2. Выберите `KostaFile.manifest.xml` (**переустановите**, если уже стояла старая версия — нужен `0.4.0.0`)
+2. Выберите `KostaFile.manifest.xml` (**переустановите**, если уже стояла старая версия — нужен `0.5.0.0`)
 3. Откройте письмо → **Kosta File**
 4. Закрепите панель **📌**
 5. **Настройки** → **Войти в Kosta Hub** (если сессии ещё нет)
@@ -56,3 +56,35 @@ Web add-in не может сам открыться при старте Outlook
 ## API
 
 По умолчанию: `https://ticketsback.kostalegal.com/api/v1/files`
+
+## Разработка
+
+```bash
+npm ci
+npm run dev                # https://localhost:3001/outlook-addin/ (сертификат mkcert)
+```
+
+Sideload dev-манифестов из `manifests/dev/` — у них свои `Id` и имя «Kosta File (dev)»,
+поэтому они ставятся рядом с боевой надстройкой.
+
+| Команда | Что делает |
+|---------|------------|
+| `npm run build` | typecheck → проверка манифестов → `vite build` (так же в Docker и CI) |
+| `npm run typecheck` | `tsc` без тестов |
+| `npm test` | unit-тесты (Vitest основного проекта, `outlook-addin/src/**/*.test.ts`) |
+| `npm run manifests` | пересобрать манифесты из `manifests/templates/` |
+| `npm run manifests:check` | упасть, если XML в корне разошёлся с шаблонами |
+
+### Манифесты
+
+Правьте только `manifests/templates/*.xml` и `ENVIRONMENTS` в `scripts/manifests.mjs`,
+затем `npm run manifests`. Версия — `version` в `package.json` (`0.5.0` → `0.5.0.0`).
+Файлы в корне генерируются и коммитятся: их загружают админы M365.
+
+### Безопасность
+
+- Адрес File Manager API ограничен списком наших шлюзов (`settings.ts → ALLOWED_API_ORIGINS`):
+  токен Hub никогда не уходит на чужой хост. Поле адреса доступно только в dev-сборке.
+- Токен надстройки хранится в отдельном ключе `kosta.addin.hubToken` и не трогает сессию Hub SPA.
+- Roaming-настройки Office ограничены ~32 КБ: туда пишется урезанная история загрузок,
+  правила сохраняются всегда (`buildRoamingPayload`).

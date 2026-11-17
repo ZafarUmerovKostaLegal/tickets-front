@@ -296,34 +296,3 @@ export async function listConversationMessages(): Promise<{
   messages.sort((a, b) => a.received.localeCompare(b.received));
   return { conversationId, messages };
 }
-
-/** Download raw MIME (.eml) for a conversation message. */
-export async function downloadMessageMime(meta: ConversationMessageMeta, fileName: string): Promise<File> {
-  const safe = fileName.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 80) || 'email';
-  const name = safe.endsWith('.eml') ? safe : `${safe}.eml`;
-
-  if (meta.mimeBase64) {
-    const binary = Uint8Array.from(atob(meta.mimeBase64), (c) => c.charCodeAt(0));
-    return new File([binary], name, { type: 'message/rfc822' });
-  }
-
-  const token = readAzureAccessToken();
-  if (!token)
-    throw new Error('Нет Azure-токена для Graph. Войдите снова.');
-
-  const url = `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(meta.graphId)}/$value`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok)
-    throw new Error(`Не удалось скачать MIME (${response.status})`);
-  const blob = await response.blob();
-  return new File([blob], name, { type: 'message/rfc822' });
-}
-
-export function conversationFileName(meta: ConversationMessageMeta, index: number): string {
-  const stamp = (meta.received || '').slice(0, 10) || 'msg';
-  const who = (meta.fromEmail.split('@')[0] || 'user').slice(0, 24);
-  const sub = meta.subject.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 40) || 'email';
-  return `${stamp}_${String(index + 1).padStart(2, '0')}_${who}_${sub}.eml`;
-}

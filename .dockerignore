@@ -1,6 +1,8 @@
-# Dependencies & build outputs
+# Dependencies & build outputs (also nested, e.g. outlook-addin/node_modules)
 node_modules
+**/node_modules
 dist
+**/dist
 .turbo
 .next
 coverage

@@ -1,5 +1,6 @@
 import type { TodoCard, TodoCardAttachment, TodoCheckItem, TodoLabel } from '@entities/todo/lib/todoUtils';
 const MARKER = '\n\n<<<KL_TODO_CARD_JSON>>>';
+const MARKER_TOKEN = MARKER.trim();
 export type TodoCardExtras = {
     labels?: TodoLabel[];
     dueDate?: string;
@@ -40,11 +41,13 @@ export function splitCardBody(raw: string | null | undefined): {
     const text = raw?.trim() ?? '';
     if (!text)
         return { description: '', extras: {} };
-    const idx = text.lastIndexOf(MARKER);
+    // Look for the bare token: a body without a description starts with the marker,
+    // and trim() above has already stripped its leading line breaks.
+    const idx = text.lastIndexOf(MARKER_TOKEN);
     if (idx < 0)
         return { description: text, extras: {} };
     const description = text.slice(0, idx).replace(/\s+$/u, '');
-    const jsonPart = text.slice(idx + MARKER.length).trim();
+    const jsonPart = text.slice(idx + MARKER_TOKEN.length).trim();
     if (!jsonPart)
         return { description: text, extras: {} };
     try {

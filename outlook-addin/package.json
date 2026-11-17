@@ -1,11 +1,15 @@
 {
   "name": "kosta-outlook-file-addin",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run typecheck && npm run manifests:check && vite build",
+    "typecheck": "tsc -p .",
+    "test": "cd .. && npx vitest run outlook-addin",
+    "manifests": "node scripts/manifests.mjs",
+    "manifests:check": "node scripts/manifests.mjs --check",
     "preview": "vite preview --port 3001"
   },
   "devDependencies": {

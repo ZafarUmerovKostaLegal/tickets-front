@@ -32,7 +32,7 @@ export default defineConfig({
     },
     test: {
         name: 'unit',
-        include: ['src/**/*.{test,spec}.{ts,tsx}'],
+        include: ['src/**/*.{test,spec}.{ts,tsx}', 'outlook-addin/src/**/*.test.ts'],
         environment: 'node',
         globals: false,
         pool: 'threads',
@@ -41,13 +41,14 @@ export default defineConfig({
         testTimeout: 10_000,
         coverage: {
             provider: 'v8',
-            include: ['src/shared/**/*.ts', 'src/entities/**/*.ts', 'src/pages/time-tracking/ui/timesheet*.ts', 'src/pages/kosta-daily/ui/kostaDaily*.ts'],
-            exclude: ['**/*.{test,spec}.{ts,tsx}', '**/index.ts', '**/*.css'],
+            // All non-UI logic of the app; React components (.tsx) are covered by Playwright e2e.
+            include: ['src/**/*.ts'],
+            exclude: ['**/*.{test,spec}.{ts,tsx}', '**/index.ts', '**/*.d.ts', '**/*.css'],
             thresholds: {
-                statements: 15,
-                branches: 13,
-                functions: 17,
-                lines: 15,
+                statements: 26,
+                branches: 23,
+                functions: 27,
+                lines: 26,
             },
         },
     },

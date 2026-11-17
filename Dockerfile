@@ -14,6 +14,10 @@ COPY package.docker.json ./package.json
 COPY package-lock.docker.json ./package-lock.json
 RUN npm ci
 
+# Add-in deps right after the main ones: frontend source changes no longer invalidate this layer.
+COPY outlook-addin/package.json outlook-addin/package-lock.json ./outlook-addin/
+RUN npm ci --prefix outlook-addin
+
 COPY index.html vite.config.ts tsconfig.json tsconfig.build.json ./
 COPY public ./public
 COPY scripts ./scripts
@@ -32,11 +36,8 @@ ENV VITE_BUILD_REV=$BUILD_REV
 RUN echo "frontend build rev: $BUILD_REV" && npm run build
 
 # Outlook add-in → /outlook-addin/ on the same Hub domain
-COPY outlook-addin/package.json outlook-addin/package-lock.json ./outlook-addin/
-WORKDIR /app/outlook-addin
-RUN npm ci
-COPY outlook-addin/ ./
-RUN npm run build
+COPY outlook-addin/ ./outlook-addin/
+RUN npm run build --prefix outlook-addin
 
 FROM nginx:1.27-alpine
 

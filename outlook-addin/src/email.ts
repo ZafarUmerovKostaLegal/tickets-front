@@ -1,4 +1,5 @@
-export type MailSnapshot = {
+/** Headers of the open message — cheap to read on every ItemChanged. */
+export type MailMeta = {
   messageId: string;
   subject: string;
   fromEmail: string;
@@ -6,6 +7,9 @@ export type MailSnapshot = {
   to: string;
   cc: string;
   received: string;
+};
+
+export type MailSnapshot = MailMeta & {
   bodyHtml: string;
   bodyText: string;
 };
@@ -13,6 +17,12 @@ export type MailSnapshot = {
 /** Stable id for dedupe (Outlook may include or omit &lt;&gt;). */
 export function normalizeMessageId(value: string): string {
   return value.trim().replace(/^<|>$/g, '').toLowerCase();
+}
+
+/** Some hosts put "Name <mail@x>" into emailAddress — keep the bare address for rules. */
+export function bareEmailAddress(raw: string): string {
+  const value = (raw || '').trim();
+  return (value.match(/<([^>]+)>/)?.[1] || value).trim();
 }
 
 function getItem(): Office.MessageRead {
@@ -33,35 +43,42 @@ function readString(getter: (cb: (result: Office.AsyncResult<string>) => void) =
   });
 }
 
-export async function readCurrentMail(): Promise<MailSnapshot> {
-  const item = getItem();
-  const from = item.from;
-  const [bodyHtml, bodyText] = await Promise.all([
-    readString((cb) => item.body.getAsync(Office.CoercionType.Html, cb)),
-    readString((cb) => item.body.getAsync(Office.CoercionType.Text, cb)),
-  ]);
-
-  const to = (item.to ?? []).map((r) => r.emailAddress).filter(Boolean).join(', ');
-  const cc = (item.cc ?? []).map((r) => r.emailAddress).filter(Boolean).join(', ');
+function readMeta(item: Office.MessageRead): MailMeta {
+  const fromEmail = bareEmailAddress(item.from?.emailAddress || '');
   const internetId = typeof item.internetMessageId === 'string' ? item.internetMessageId : '';
   const itemId = typeof item.itemId === 'string' ? item.itemId : '';
-  const rawFrom = (from?.emailAddress || '').trim();
-  // Some hosts put "Name <mail@x>" into emailAddress — keep bare address for rules.
-  const fromEmail = (rawFrom.match(/<([^>]+)>/)?.[1] || rawFrom).trim();
-
   return {
     messageId: normalizeMessageId(
       internetId || itemId || `${fromEmail}|${item.subject ?? ''}|${item.dateTimeCreated?.toISOString?.() ?? ''}`,
     ),
     subject: item.subject || '(без темы)',
     fromEmail,
-    fromName: from?.displayName ?? fromEmail,
-    to,
-    cc,
+    fromName: item.from?.displayName ?? fromEmail,
+    to: (item.to ?? []).map((r) => r.emailAddress).filter(Boolean).join(', '),
+    cc: (item.cc ?? []).map((r) => r.emailAddress).filter(Boolean).join(', '),
     received: item.dateTimeCreated?.toISOString?.() ?? new Date().toISOString(),
-    bodyHtml,
-    bodyText,
   };
+}
+
+/** Headers only — no body round-trips. */
+export function readCurrentMailMeta(): MailMeta {
+  return readMeta(getItem());
+}
+
+/**
+ * Full message with HTML and text bodies (needed only when uploading).
+ * Throws if the user switched to another message meanwhile.
+ */
+export async function readCurrentMail(expectedMessageId?: string): Promise<MailSnapshot> {
+  const item = getItem();
+  const meta = readMeta(item);
+  if (expectedMessageId && meta.messageId !== expectedMessageId)
+    throw new Error('Письмо сменилось — повторите загрузку');
+  const [bodyHtml, bodyText] = await Promise.all([
+    readString((cb) => item.body.getAsync(Office.CoercionType.Html, cb)),
+    readString((cb) => item.body.getAsync(Office.CoercionType.Text, cb)),
+  ]);
+  return { ...meta, bodyHtml, bodyText };
 }
 
 function encodeHeader(value: string): string {
@@ -76,41 +93,51 @@ function encodeHeader(value: string): string {
   return `=?UTF-8?B?${btoa(binary)}?=`;
 }
 
-/** Build a simple .eml for upload into Correspondence/Emails. */
-export function buildEml(mail: MailSnapshot): File {
-  const boundary = `kosta_${Date.now().toString(36)}`;
+function toCrlf(value: string): string {
+  return value.replace(/\r?\n/g, '\r\n');
+}
+
+export function emlFileName(subject: string, received: string): string {
+  const safe = subject.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 80) || 'email';
+  return `${received.slice(0, 10)}_${safe}.eml`;
+}
+
+/** RFC 5322 message text: headers, one blank line, then a multipart/alternative body. */
+export function buildEmlText(mail: MailSnapshot, boundary = `kosta_${Date.now().toString(36)}`): string {
   const text = mail.bodyText || mail.bodyHtml.replace(/<[^>]+>/g, ' ');
   const html = mail.bodyHtml || `<pre>${escapeHtml(text)}</pre>`;
-  const lines = [
+  // An empty line ends the header block, so optional headers must be dropped, not blanked.
+  const headers = [
     `From: ${encodeHeader(mail.fromName)} <${mail.fromEmail}>`,
     `To: ${mail.to || 'undisclosed-recipients:;'}`,
-    mail.cc ? `Cc: ${mail.cc}` : '',
+    mail.cc ? `Cc: ${mail.cc}` : null,
     `Subject: ${encodeHeader(mail.subject)}`,
     `Date: ${new Date(mail.received).toUTCString()}`,
-    mail.messageId.includes('@') ? `Message-ID: ${mail.messageId}` : `Message-ID: <${mail.messageId}@kosta.local>`,
+    mail.messageId.includes('@') ? `Message-ID: <${mail.messageId}>` : `Message-ID: <${mail.messageId}@kosta.local>`,
     'MIME-Version: 1.0',
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    '',
+  ].filter((line): line is string => Boolean(line));
+  const body = [
     `--${boundary}`,
     'Content-Type: text/plain; charset="utf-8"',
     'Content-Transfer-Encoding: 8bit',
     '',
-    text,
-    '',
+    toCrlf(text),
     `--${boundary}`,
     'Content-Type: text/html; charset="utf-8"',
     'Content-Transfer-Encoding: 8bit',
     '',
-    html,
-    '',
+    toCrlf(html),
     `--${boundary}--`,
     '',
-  ].filter((line, index, arr) => !(line === '' && arr[index - 1] === '' && index < 8));
+  ];
+  return `${headers.join('\r\n')}\r\n\r\n${body.join('\r\n')}`;
+}
 
-  const blob = new Blob([lines.join('\r\n')], { type: 'message/rfc822' });
-  const safe = mail.subject.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 80) || 'email';
-  const stamp = mail.received.slice(0, 10);
-  return new File([blob], `${stamp}_${safe}.eml`, { type: 'message/rfc822' });
+/** Build a simple .eml for upload into Correspondence/Emails. */
+export function buildEml(mail: MailSnapshot): File {
+  const blob = new Blob([buildEmlText(mail)], { type: 'message/rfc822' });
+  return new File([blob], emlFileName(mail.subject, mail.received), { type: 'message/rfc822' });
 }
 
 function escapeHtml(value: string): string {

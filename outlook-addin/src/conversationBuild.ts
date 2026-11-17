@@ -99,6 +99,76 @@ export function conversationStorageKey(conversationId: string): string {
   return `conv:${shortConversationKey(conversationId)}`;
 }
 
+/** Parallel Graph reads: a 30-message thread no longer waits for 30 sequential round-trips. */
+const BODY_FETCH_CONCURRENCY = 5;
+
+/** Like Promise.all(items.map(fn)) but with at most `limit` calls in flight; keeps input order. */
+export async function mapWithConcurrency<T, R>(items: readonly T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await fn(items[index]!, index);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker));
+  return results;
+}
+
+async function renderMessageBlock(meta: ConversationMessageMeta, token: string): Promise<string> {
+  let bodyHtml = `<p><em>(тело письма недоступно)</em></p>`;
+  let to = '';
+  let cc = '';
+  let subject = meta.subject;
+  let fromLabel = meta.fromName
+    ? `${escapeHtml(meta.fromName)} &lt;${escapeHtml(meta.fromEmail)}&gt;`
+    : escapeHtml(meta.fromEmail);
+  let received = meta.received;
+  let loaded = false;
+  try {
+    const full = await fetchMessageBody(meta.graphId, token);
+    subject = full.subject || subject;
+    received = full.receivedDateTime || received;
+    const address = full.from?.emailAddress?.address || meta.fromEmail;
+    const name = full.from?.emailAddress?.name || meta.fromName;
+    fromLabel = name
+      ? `${escapeHtml(name)} &lt;${escapeHtml(address)}&gt;`
+      : escapeHtml(address);
+    to = formatRecipients(full.toRecipients);
+    cc = formatRecipients(full.ccRecipients);
+    const raw = full.body?.content || '';
+    if ((full.body?.contentType || '').toLowerCase() === 'text')
+      bodyHtml = `<pre style="white-space:pre-wrap;font-family:Segoe UI,sans-serif">${escapeHtml(raw)}</pre>`;
+    else
+      bodyHtml = raw || bodyHtml;
+    loaded = Boolean(raw);
+  } catch {
+    /* try EWS MIME below */
+  }
+  if (!loaded && meta.mimeBase64) {
+    const fromMime = bodyFromMimeBase64(meta.mimeBase64);
+    if (fromMime.html)
+      bodyHtml = fromMime.html;
+    else if (fromMime.text)
+      bodyHtml = `<pre style="white-space:pre-wrap;font-family:Segoe UI,sans-serif">${escapeHtml(fromMime.text)}</pre>`;
+  }
+
+  return `
+      <section style="border:1px solid #d8dee6;border-radius:10px;padding:14px 16px;margin:0 0 14px;background:#fff">
+        <div style="font-size:12px;color:#64748b;margin-bottom:8px">
+          <div><strong>From:</strong> ${fromLabel}</div>
+          ${to ? `<div><strong>To:</strong> ${to}</div>` : ''}
+          ${cc ? `<div><strong>Cc:</strong> ${cc}</div>` : ''}
+          <div><strong>Date:</strong> ${escapeHtml(received)}</div>
+          <div><strong>Subject:</strong> ${escapeHtml(subject)}</div>
+        </div>
+        <div style="font-size:13px;color:#0f172a;line-height:1.45">${bodyHtml}</div>
+      </section>
+    `;
+}
+
 /**
  * Build one .eml that contains the full thread as a readable HTML transcript
  * (single document in FM, like one Outlook conversation).
@@ -112,60 +182,13 @@ export async function buildConversationEml(
   if (!token)
     throw new Error('Нет Azure-токена для Graph. Войдите снова.');
 
-  const blocks: string[] = [];
-  for (let i = 0; i < messages.length; i += 1) {
-    onProgress?.(i + 1, messages.length);
-    const meta = messages[i];
-    let bodyHtml = `<p><em>(тело письма недоступно)</em></p>`;
-    let to = '';
-    let cc = '';
-    let subject = meta.subject;
-    let fromLabel = meta.fromName
-      ? `${escapeHtml(meta.fromName)} &lt;${escapeHtml(meta.fromEmail)}&gt;`
-      : escapeHtml(meta.fromEmail);
-    let received = meta.received;
-    let loaded = false;
-    try {
-      const full = await fetchMessageBody(meta.graphId, token);
-      subject = full.subject || subject;
-      received = full.receivedDateTime || received;
-      const address = full.from?.emailAddress?.address || meta.fromEmail;
-      const name = full.from?.emailAddress?.name || meta.fromName;
-      fromLabel = name
-        ? `${escapeHtml(name)} &lt;${escapeHtml(address)}&gt;`
-        : escapeHtml(address);
-      to = formatRecipients(full.toRecipients);
-      cc = formatRecipients(full.ccRecipients);
-      const raw = full.body?.content || '';
-      if ((full.body?.contentType || '').toLowerCase() === 'text')
-        bodyHtml = `<pre style="white-space:pre-wrap;font-family:Segoe UI,sans-serif">${escapeHtml(raw)}</pre>`;
-      else
-        bodyHtml = raw || bodyHtml;
-      loaded = Boolean(raw);
-    } catch {
-      /* try EWS MIME below */
-    }
-    if (!loaded && meta.mimeBase64) {
-      const fromMime = bodyFromMimeBase64(meta.mimeBase64);
-      if (fromMime.html)
-        bodyHtml = fromMime.html;
-      else if (fromMime.text)
-        bodyHtml = `<pre style="white-space:pre-wrap;font-family:Segoe UI,sans-serif">${escapeHtml(fromMime.text)}</pre>`;
-    }
-
-    blocks.push(`
-      <section style="border:1px solid #d8dee6;border-radius:10px;padding:14px 16px;margin:0 0 14px;background:#fff">
-        <div style="font-size:12px;color:#64748b;margin-bottom:8px">
-          <div><strong>From:</strong> ${fromLabel}</div>
-          ${to ? `<div><strong>To:</strong> ${to}</div>` : ''}
-          ${cc ? `<div><strong>Cc:</strong> ${cc}</div>` : ''}
-          <div><strong>Date:</strong> ${escapeHtml(received)}</div>
-          <div><strong>Subject:</strong> ${escapeHtml(subject)}</div>
-        </div>
-        <div style="font-size:13px;color:#0f172a;line-height:1.45">${bodyHtml}</div>
-      </section>
-    `);
-  }
+  let done = 0;
+  const blocks = await mapWithConcurrency(messages, BODY_FETCH_CONCURRENCY, async (meta) => {
+    const block = await renderMessageBlock(meta, token);
+    done += 1;
+    onProgress?.(done, messages.length);
+    return block;
+  });
 
   const title = messages[0]?.subject || 'Conversation';
   const html = `<!DOCTYPE html>
