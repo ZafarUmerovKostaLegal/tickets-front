@@ -23,7 +23,7 @@ body[data-theme='dark'] .tile-festive {
   position: absolute;
   top: 0;
   /* Clear of the drag handle and the badges in the top-right corner */
-  right: calc(5.25rem + var(--tf-x, 0rem));
+  right: 3.5rem;
   display: block;
   line-height: 0;
   transform-origin: 50% 0;
@@ -67,8 +67,8 @@ body[data-theme='dark'] .tile-festive {
 
 .tile-festive__sprig {
   position: absolute;
-  right: -8px;
-  bottom: -8px;
+  right: 4px;
+  bottom: 4px;
   filter: drop-shadow(0 2px 2px rgba(15, 40, 25, 0.22));
   transform-origin: 100% 100%;
   animation: tile-festive-sprig-in 0.8s ease-out both;
@@ -86,7 +86,7 @@ body[data-theme='dark'] .tile-festive {
 
 @media (max-width: 640px) {
   .tile-festive__bauble {
-    right: calc(4.25rem + var(--tf-x, 0rem) * 0.5);
+    right: 3rem;
     scale: 0.85;
   }
 

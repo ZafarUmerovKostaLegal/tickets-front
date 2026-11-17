@@ -64,7 +64,7 @@ function Snowflake({ cx, cy, r, color }: { cx: number; cy: number; r: number; co
 function Bauble({ seed, uid }: { seed: number; uid: string }) {
     const p = PALETTES[Math.floor(rand(seed, 2) * PALETTES.length)];
     const kind = KINDS[Math.floor(rand(seed, 3) * KINDS.length)];
-    const thread = Math.round(14 + rand(seed, 4) * 22);
+    const thread = Math.round(16 + rand(seed, 4) * 8);
 
     const capY = thread + 3;
     const cx = B_W / 2;
@@ -118,7 +118,6 @@ function Bauble({ seed, uid }: { seed: number; uid: string }) {
     const style = {
         '--tf-swing-dur': `${(4.2 + rand(seed, 5) * 2.4).toFixed(2)}s`,
         '--tf-swing-delay': `${(-rand(seed, 6) * 6).toFixed(2)}s`,
-        '--tf-x': `${(rand(seed, 7) * 2.2).toFixed(2)}rem`,
     } as CSSProperties;
 
     return (
@@ -205,11 +204,13 @@ function branchNeedles(seed: number, salt: number, a: Pt, c: Pt, b: Pt, maxLen: 
 
 function FirSprig({ seed }: { seed: number }) {
     const branches = useMemo(() => {
-        const main: [Pt, Pt, Pt] = [[78, 52], [52, 44], [16, 30]];
-        const upper: [Pt, Pt, Pt] = [[74, 50], [64, 32], [54, 10]];
+        // Both branches start at the corner: one lies along the bottom edge,
+        // the other rises diagonally — they stay inside the tile.
+        const main: [Pt, Pt, Pt] = [[74, 46], [48, 46], [14, 38]];
+        const upper: [Pt, Pt, Pt] = [[72, 44], [64, 30], [50, 16]];
         return [
-            { path: main, needles: branchNeedles(seed, 100, ...main, 10) },
-            { path: upper, needles: branchNeedles(seed, 300, ...upper, 8.5) },
+            { path: upper, needles: branchNeedles(seed, 300, ...upper, 7) },
+            { path: main, needles: branchNeedles(seed, 100, ...main, 8) },
         ];
     }, [seed]);
 
@@ -232,7 +233,7 @@ function FirSprig({ seed }: { seed: number }) {
             ))}
 
             {/* Pine cone */}
-            <g transform="translate(43 37) rotate(-32)">
+            <g transform="translate(44 39) rotate(-70) scale(0.9)">
                 <ellipse cx="0" cy="0" rx="4.4" ry="7" fill="#7a4a26" />
                 {[-4, -1.2, 1.6, 4.4].map((y) => (
                     <path key={y} d={`M -4 ${y} Q 0 ${y + 2.4} 4 ${y}`} stroke="#4a2b14" strokeWidth="0.8" />
@@ -242,7 +243,7 @@ function FirSprig({ seed }: { seed: number }) {
             </g>
 
             {/* Velvet bow */}
-            <g transform="translate(62 41)">
+            <g transform="translate(66 38) scale(0.9)">
                 <path d="M 0 0 C -6 -7 -13 -3 -10 2 C -8 5 -3 3 0 0 Z" fill="#c62828" />
                 <path d="M 0 0 C 6 -7 13 -3 10 2 C 8 5 3 3 0 0 Z" fill="#b71c1c" />
                 <path d="M -1 1 L -5 10 L -2.6 8.6 L -1.6 11 Z" fill="#a01818" />
