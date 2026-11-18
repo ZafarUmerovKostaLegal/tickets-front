@@ -1,7 +1,7 @@
 {
   "name": "kosta-outlook-file-addin",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,8 +14,16 @@
   },
   "devDependencies": {
     "@types/office-js": "^1.0.504",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^4.7.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.2",
     "vite-plugin-mkcert": "^1.17.8"
+  },
+  "dependencies": {
+    "@azure/msal-browser": "^4.26.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   }
 }

@@ -13,7 +13,7 @@
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="{{DISPLAY_NAME}}" />
-  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Закрепите панель булавкой, чтобы она оставалась открытой." />
+  <Description DefaultValue="Сохранение писем и вложений в matters Kosta: подсказки папок, дерево клиентов и matters, поиск и вложение документов. Закрепите панель булавкой." />
   <IconUrl DefaultValue="{{ADDIN_BASE}}assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="{{ADDIN_BASE}}assets/icon-80.png" />
   <SupportUrl DefaultValue="{{ADDIN_BASE}}" />

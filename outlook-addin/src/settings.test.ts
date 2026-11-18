@@ -47,7 +47,7 @@ describe('parseSettings', () => {
       ],
     });
     expect(s.rules).toEqual([
-      { id: 'r1', match: '@a.com', matterId: 'm1', matterName: '', clientName: '', autoFile: true, enabled: true },
+      { id: 'r1', match: '@a.com', matterId: 'm1', matterName: '', clientName: '', folderId: null, folderPath: [], autoFile: true, enabled: true },
     ]);
   });
 

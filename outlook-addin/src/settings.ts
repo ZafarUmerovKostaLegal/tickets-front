@@ -4,8 +4,23 @@ export type FilingRule = {
   matterId: string;
   matterName: string;
   clientName: string;
+  /** Target folder; empty means Correspondence/Emails of the matter (older rules). */
+  folderId?: string | null;
+  folderPath?: Array<{ id: string; name: string }>;
   autoFile: boolean;
   enabled: boolean;
+};
+
+/** A filing location remembered on this device (MacroView "recent locations"). */
+export type RecentTarget = {
+  matterId: string;
+  matterName: string;
+  matterCode: string;
+  clientId: string;
+  clientName: string;
+  folderId: string | null;
+  folderPath: Array<{ id: string; name: string }>;
+  usedAt: string;
 };
 
 export type ConversationDocRef = {
@@ -25,6 +40,7 @@ export type AddinSettings = {
   conversationDocs: Record<string, ConversationDocRef>;
   /** User dismissed the “pin the pane” tip after pinning once. */
   pinTipDismissed: boolean;
+  recentTargets: RecentTarget[];
 };
 
 const KEY = 'kosta.file.addin.settings';
@@ -55,7 +71,10 @@ const defaults: AddinSettings = {
   filedMessageIds: [],
   conversationDocs: {},
   pinTipDismissed: false,
+  recentTargets: [],
 };
+
+export const MAX_RECENT_TARGETS = 12;
 
 export function isAllowedApiBase(value: string): boolean {
   try {
@@ -86,6 +105,14 @@ function isRule(value: unknown): value is FilingRule {
   return typeof r.id === 'string' && typeof r.match === 'string' && typeof r.matterId === 'string';
 }
 
+function normalizeCrumbs(value: unknown): Array<{ id: string; name: string }> {
+  if (!Array.isArray(value))
+    return [];
+  return value
+    .filter((c): c is { id: string; name: string } => Boolean(c) && typeof c.id === 'string' && typeof c.name === 'string')
+    .map((c) => ({ id: c.id, name: c.name }));
+}
+
 function normalizeRules(value: unknown): FilingRule[] {
   if (!Array.isArray(value))
     return [];
@@ -95,9 +122,40 @@ function normalizeRules(value: unknown): FilingRule[] {
     matterId: r.matterId,
     matterName: String(r.matterName ?? ''),
     clientName: String(r.clientName ?? ''),
+    folderId: typeof r.folderId === 'string' && r.folderId ? r.folderId : null,
+    folderPath: normalizeCrumbs(r.folderPath),
     autoFile: r.autoFile !== false,
     enabled: r.enabled !== false,
   }));
+}
+
+export function normalizeRecentTargets(value: unknown): RecentTarget[] {
+  if (!Array.isArray(value))
+    return [];
+  const seen = new Set<string>();
+  const out: RecentTarget[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object' || typeof raw.matterId !== 'string' || !raw.matterId)
+      continue;
+    const folderId = typeof raw.folderId === 'string' && raw.folderId ? raw.folderId : null;
+    const key = `${raw.matterId}|${folderId ?? ''}`;
+    if (seen.has(key))
+      continue;
+    seen.add(key);
+    out.push({
+      matterId: raw.matterId,
+      matterName: String(raw.matterName ?? ''),
+      matterCode: String(raw.matterCode ?? ''),
+      clientId: String(raw.clientId ?? ''),
+      clientName: String(raw.clientName ?? ''),
+      folderId,
+      folderPath: normalizeCrumbs(raw.folderPath),
+      usedAt: String(raw.usedAt ?? ''),
+    });
+    if (out.length >= MAX_RECENT_TARGETS)
+      break;
+  }
+  return out;
 }
 
 function normalizeFiled(value: unknown, limit: number): string[] {
@@ -143,6 +201,7 @@ export function parseSettings(raw: unknown, fallback: AddinSettings = defaults):
       ? trimConversationDocs(parsed.conversationDocs as Record<string, ConversationDocRef>, MAX_CONVERSATION_DOCS)
       : fallback.conversationDocs,
     pinTipDismissed: typeof parsed.pinTipDismissed === 'boolean' ? parsed.pinTipDismissed : fallback.pinTipDismissed,
+    recentTargets: Array.isArray(parsed.recentTargets) ? normalizeRecentTargets(parsed.recentTargets) : fallback.recentTargets,
   };
 }
 
@@ -246,6 +305,13 @@ export function setConversationDoc(storageKey: string, ref: ConversationDocRef):
       ...cache.conversationDocs,
       [storageKey]: ref,
     },
+  });
+}
+
+/** Put a location on top of the recent list (most recent first, no duplicates). */
+export function rememberTarget(target: Omit<RecentTarget, 'usedAt'>): void {
+  saveSettings({
+    recentTargets: normalizeRecentTargets([{ ...target, usedAt: new Date().toISOString() }, ...cache.recentTargets]),
   });
 }
 

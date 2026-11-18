@@ -16,16 +16,96 @@ export type FolderRow = {
   name: string;
 };
 
-type ClientsResponse = {
-  clients: Array<{
+export type DocRow = {
+  id: string;
+  docNumber: string;
+  name: string;
+  kind: string;
+  version: number;
+  sizeBytes: number;
+  folderId: string | null;
+  matterId: string;
+  matterName: string;
+  matterCode: string;
+  clientId: string;
+  clientName: string;
+  updatedAt: string | null;
+  updatedBy: string;
+  checkedOutBy: string | null;
+};
+
+export type BrowseFolder = FolderRow & { documents: number; favorite?: boolean };
+
+export type BrowseResponse = {
+  matter: { id: string; name: string; code: string; closed: boolean; level: string; favorite?: boolean };
+  client: { id: string; name: string };
+  folderId: string | null;
+  folders: BrowseFolder[];
+  documents: DocRow[];
+};
+
+export type Crumb = { id: string; name: string };
+
+/** A place in FM: the matter root (folderId null) or a folder inside it. */
+export type Location = {
+  matterId: string;
+  matterName: string;
+  matterCode: string;
+  clientId: string;
+  clientName: string;
+  folderId: string | null;
+  folderPath: Crumb[];
+};
+
+export type FilingKind = 'email' | 'attachment' | 'thread';
+
+export type Filing = Location & {
+  messageId: string;
+  conversationId: string;
+  sameMessage: boolean;
+  kind: FilingKind;
+  documentId: string;
+  documentName: string;
+  version: number;
+  filedBy: string;
+  filedAt: string | null;
+};
+
+export type SuggestionReason = 'conversation' | 'sender' | 'domain' | 'recent';
+
+export type Suggestion = Location & {
+  reason: SuggestionReason;
+  count: number;
+  lastFiledAt: string | null;
+};
+
+export type ClientNode = {
+  id: string;
+  name: string;
+  archived: boolean;
+  favorite: boolean;
+  matters: Array<{
     id: string;
     name: string;
-    matters: Array<{ id: string; name: string; code: string; closed: boolean; level: string }>;
+    code: string;
+    closed: boolean;
+    level: string;
+    favorite: boolean;
+    documents: number;
   }>;
 };
 
-type BrowseResponse = {
-  folders: FolderRow[];
+/** Sent with an upload so the server remembers where this message was filed. */
+export type MailLink = {
+  messageId: string;
+  conversationId: string;
+  fromEmail: string;
+  subject: string;
+  kind: FilingKind;
+};
+
+type ClientsResponse = {
+  clients: ClientNode[];
 };
 
 export class ApiError extends Error {
@@ -39,6 +119,7 @@ export class ApiError extends Error {
 const MATTERS_TTL_MS = 10 * 60_000;
 
 let mattersCache: { at: number; base: string; rows: MatterOption[] } | null = null;
+let clientsCache: { at: number; base: string; rows: ClientNode[] } | null = null;
 /** `${apiBase}|${matterId}|${subfolder}` → folder id */
 const folderCache = new Map<string, string>();
 
@@ -51,15 +132,30 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** Re-authenticates silently after a 401 (set by the UI); resolves true when a retry makes sense. */
+let unauthorizedHandler: (() => Promise<boolean>) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => Promise<boolean>) | null): void {
+  unauthorizedHandler = handler;
+}
+
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const root = baseUrl();
   if (!root)
     throw new Error('Укажите URL API файлового менеджера');
-  const response = await fetch(`${root}${path}`, {
+  const go = () => fetch(`${root}${path}`, {
     ...init,
     headers: { ...authHeaders(), ...(init?.headers as Record<string, string> | undefined) },
     credentials: 'include',
   });
+  let response = await go();
+  if (response.status === 401 && unauthorizedHandler && await unauthorizedHandler())
+    response = await go();
+  return response;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await send(path, init);
   if (!response.ok) {
     let detail = `HTTP ${response.status}`;
     try {
@@ -90,6 +186,18 @@ export function mapClientsToMatters(data: ClientsResponse): MatterOption[] {
     .sort((a, b) => a.clientName.localeCompare(b.clientName, 'ru') || a.name.localeCompare(b.name, 'ru'));
 }
 
+/** Clients → matters the viewer can see (cached; also refreshes the writable-matters list). */
+export async function listClients(options: { force?: boolean } = {}): Promise<ClientNode[]> {
+  const base = baseUrl();
+  if (!options.force && clientsCache && clientsCache.base === base && Date.now() - clientsCache.at < MATTERS_TTL_MS)
+    return clientsCache.rows;
+  const data = await request<ClientsResponse>('/clients');
+  const rows = data.clients ?? [];
+  clientsCache = { at: Date.now(), base, rows };
+  mattersCache = { at: Date.now(), base, rows: mapClientsToMatters(data) };
+  return rows;
+}
+
 export async function listMatters(options: { force?: boolean } = {}): Promise<MatterOption[]> {
   const base = baseUrl();
   if (!options.force && mattersCache && mattersCache.base === base && Date.now() - mattersCache.at < MATTERS_TTL_MS)
@@ -99,12 +207,13 @@ export async function listMatters(options: { force?: boolean } = {}): Promise<Ma
   return rows;
 }
 
-async function browse(matterId: string, folderId: string | null = null): Promise<BrowseResponse> {
+/** All folders of the matter plus the documents of `folderId` (matter root when null). */
+export function browse(matterId: string, folderId: string | null = null): Promise<BrowseResponse> {
   const qs = folderId ? `?folderId=${encodeURIComponent(folderId)}` : '';
   return request<BrowseResponse>(`/matters/${encodeURIComponent(matterId)}/browse${qs}`);
 }
 
-async function createFolder(matterId: string, name: string, parentId: string | null): Promise<{ id: string }> {
+export async function createFolder(matterId: string, name: string, parentId: string | null): Promise<{ id: string }> {
   return request<{ id: string }>(`/matters/${encodeURIComponent(matterId)}/folders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -114,7 +223,7 @@ async function createFolder(matterId: string, name: string, parentId: string | n
 
 async function findOrCreateFolder(matterId: string, name: string, parentId: string | null): Promise<string> {
   const listing = await browse(matterId, parentId);
-  const existing = listing.folders.find((folder) => folder.name.toLowerCase() === name.toLowerCase());
+  const existing = listing.folders.find((folder) => (folder.parentId ?? null) === parentId && folder.name.toLowerCase() === name.toLowerCase());
   if (existing)
     return existing.id;
   return (await createFolder(matterId, name, parentId)).id;
@@ -144,14 +253,23 @@ export function ensureDocumentsFolder(matterId: string): Promise<string> {
 export type UploadedDocument = {
   id: string;
   name?: string;
+  version?: number;
 };
 
-function uploadRequest(matterId: string, folderId: string, file: File, comment: string) {
+function uploadRequest(matterId: string, folderId: string | null, file: File, comment: string, mail?: MailLink) {
   const body = new FormData();
   body.append('files', file);
-  body.append('folderId', folderId);
+  if (folderId)
+    body.append('folderId', folderId);
   if (comment)
     body.append('comment', comment);
+  if (mail) {
+    body.append('mailMessageId', mail.messageId);
+    body.append('mailConversationId', mail.conversationId);
+    body.append('mailFrom', mail.fromEmail);
+    body.append('mailSubject', mail.subject.slice(0, 2000));
+    body.append('mailKind', mail.kind);
+  }
   return request<{ documents: UploadedDocument[] }>(
     `/matters/${encodeURIComponent(matterId)}/documents`,
     { method: 'POST', body },
@@ -167,18 +285,31 @@ export async function uploadToCorrespondence(
   subfolder: 'Emails' | 'Documents',
   file: File,
   comment = '',
+  mail?: MailLink,
 ): Promise<UploadedDocument[]> {
   let folderId = await ensureCorrespondenceFolder(matterId, subfolder);
   let data: { documents: UploadedDocument[] };
   try {
-    data = await uploadRequest(matterId, folderId, file, comment);
+    data = await uploadRequest(matterId, folderId, file, comment, mail);
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 404)
       throw error;
     folderCache.delete(`${baseUrl()}|${matterId}|${subfolder}`);
     folderId = await ensureCorrespondenceFolder(matterId, subfolder);
-    data = await uploadRequest(matterId, folderId, file, comment);
+    data = await uploadRequest(matterId, folderId, file, comment, mail);
   }
+  return Array.isArray(data.documents) ? data.documents : [];
+}
+
+/** Upload into an explicit folder (or the matter root). */
+export async function uploadToFolder(
+  matterId: string,
+  folderId: string | null,
+  file: File,
+  comment = '',
+  mail?: MailLink,
+): Promise<UploadedDocument[]> {
+  const data = await uploadRequest(matterId, folderId, file, comment, mail);
   return Array.isArray(data.documents) ? data.documents : [];
 }
 
@@ -201,6 +332,64 @@ export async function checkinDocument(documentId: string, file: File, comment = 
   });
 }
 
+export async function searchDocuments(q: string, matterId = ''): Promise<DocRow[]> {
+  const qs = new URLSearchParams({ q });
+  if (matterId)
+    qs.set('matterId', matterId);
+  const data = await request<{ documents: DocRow[] }>(`/search?${qs.toString()}`);
+  return data.documents ?? [];
+}
+
+export async function recentDocuments(): Promise<DocRow[]> {
+  return (await request<{ documents: DocRow[] }>('/recent')).documents ?? [];
+}
+
+export type Favorites = {
+  matters: Array<{ id: string; name: string; code: string; clientId: string; clientName: string; level: string }>;
+  folders: Array<{ id: string; name: string; matterId: string; matterName: string }>;
+};
+
+export async function listFavorites(): Promise<Favorites> {
+  const data = await request<Partial<Favorites>>('/favorites');
+  return { matters: data.matters ?? [], folders: data.folders ?? [] };
+}
+
+export async function setFavorite(kind: 'matter' | 'folder', targetId: string, matterId: string, on: boolean): Promise<void> {
+  if (on) {
+    await request('/favorites', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, targetId, matterId }),
+    });
+    return;
+  }
+  await request(`/favorites/${kind}/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+}
+
+/** Where these messages (and their thread) were filed — only matters the viewer can read. */
+export async function lookupFilings(messageIds: string[], conversationId = ''): Promise<Filing[]> {
+  const data = await request<{ filings: Filing[] }>('/mail/lookup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messageIds: messageIds.slice(0, 100), conversationId }),
+  });
+  return data.filings ?? [];
+}
+
+/** Ranked filing locations: this thread → this sender → sender's company → my recent places. */
+export async function filingSuggestions(fromEmail: string, conversationId = ''): Promise<Suggestion[]> {
+  const qs = new URLSearchParams({ fromEmail, conversationId });
+  return (await request<{ locations: Suggestion[] }>(`/mail/suggestions?${qs.toString()}`)).locations ?? [];
+}
+
+/** Raw document bytes (to attach a filed document to a draft). */
+export async function documentContent(documentId: string): Promise<Blob> {
+  const response = await send(`/documents/${encodeURIComponent(documentId)}/content`);
+  if (!response.ok)
+    throw new ApiError(response.status === 401 ? 'Сессия Hub истекла — войдите снова' : `HTTP ${response.status}`, response.status);
+  return response.blob();
+}
+
 export async function pingApi(): Promise<string> {
   const data = await request<{ clients?: unknown[] }>('/clients');
   const count = Array.isArray(data.clients) ? data.clients.length : 0;
@@ -209,5 +398,6 @@ export async function pingApi(): Promise<string> {
 
 export function clearApiCaches(): void {
   mattersCache = null;
+  clientsCache = null;
   folderCache.clear();
 }

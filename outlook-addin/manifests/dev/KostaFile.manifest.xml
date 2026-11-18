@@ -9,11 +9,11 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a1e-6b4d-4e9a-9c71-0000000000d1</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.1.0.0</Version>
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="Kosta File (dev)" />
-  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Закрепите панель булавкой, чтобы она оставалась открытой." />
+  <Description DefaultValue="Сохранение писем и вложений в matters Kosta: подсказки папок, дерево клиентов и matters, поиск и вложение документов. Закрепите панель булавкой." />
   <IconUrl DefaultValue="https://localhost:3001/outlook-addin/assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://localhost:3001/outlook-addin/assets/icon-80.png" />
   <SupportUrl DefaultValue="https://localhost:3001/outlook-addin/" />

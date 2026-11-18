@@ -1,8 +1,10 @@
+import { naaTokenInteractive, naaTokenSilent, type AzureAppInfo } from './naa';
 import { createPkcePair, randomState } from './pkce';
 import {
   clearSession,
   isAuthenticated,
   markAuthenticated,
+  readAzureAccessToken,
   readHubAccessToken,
   setProfile,
   storeAzureAccessToken,
@@ -121,46 +123,165 @@ export async function logoutHub(): Promise<void> {
   clearSession();
 }
 
+const AZURE_APP_KEY = 'kosta.addin.azureApp';
+
+function readCachedAzureApp(): AzureAppInfo | null {
+  try {
+    const raw = localStorage.getItem(AZURE_APP_KEY);
+    const parsed = raw ? JSON.parse(raw) as Partial<AzureAppInfo> : null;
+    return parsed?.clientId && parsed.tenantId ? { clientId: parsed.clientId, tenantId: parsed.tenantId } : null;
+  } catch {
+    return null;
+  }
+}
+
+type LoginMeta = { authorizeUrl: string; clientId?: string; tenantId?: string };
+
+async function fetchLoginMeta(params: Record<string, string>): Promise<LoginMeta> {
+  const qs = new URLSearchParams({ redirect_uri: oauthRedirectUri(), ...params });
+  const response = await fetch(`${loginUrlEndpoint()}?${qs.toString()}`);
+  if (!response.ok)
+    throw new Error('Не удалось получить URL входа Azure');
+  return await response.json() as LoginMeta;
+}
+
+function appFromMeta(meta: LoginMeta): AzureAppInfo {
+  const authorize = new URL(meta.authorizeUrl);
+  const clientId = meta.clientId || authorize.searchParams.get('client_id') || '';
+  const tenantId = meta.tenantId || authorize.pathname.split('/')[1] || '';
+  if (!clientId || !tenantId)
+    throw new Error('В ответе login-url нет clientId/tenantId — задеплойте back');
+  return { clientId, tenantId };
+}
+
+/** Client / tenant ids of the Kosta Azure app (public values, cached between sessions). */
+async function azureApp(): Promise<AzureAppInfo> {
+  const cached = readCachedAzureApp();
+  if (cached)
+    return cached;
+  const app = appFromMeta(await fetchLoginMeta({ state: 'naa' }));
+  try {
+    localStorage.setItem(AZURE_APP_KEY, JSON.stringify(app));
+  } catch {
+    /* ignore */
+  }
+  return app;
+}
+
+/** Exchange Azure tokens (already redeemed in the browser / by Outlook) for a Hub session. */
+async function bootstrapHub(accessToken: string, idToken: string, expiresInSec: number): Promise<AuthProfile> {
+  const response = await fetch(azureBootstrapUrl(), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ accessToken, idToken }),
+  });
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json() as { detail?: string };
+      if (body.detail)
+        detail = body.detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(response.status === 403 ? 'Учётная запись заблокирована в Kosta Hub' : detail);
+  }
+  const pair = await response.json() as { access_token?: string };
+  if (!pair.access_token)
+    throw new Error('Пустой ответ bootstrap');
+  storeHubAccessToken(pair.access_token);
+  storeAzureAccessToken(accessToken, expiresInSec);
+  return fetchHubMe();
+}
+
+function secondsLeft(expiresOn: Date | null | undefined): number {
+  return expiresOn ? Math.max(60, Math.round((expiresOn.getTime() - Date.now()) / 1000)) : 3600;
+}
+
+let silentInFlight: Promise<AuthProfile | null> | null = null;
+
 /**
- * Interactive Microsoft login in Outlook WebView.
- * Silent prompt=none does not work here (AADSTS50058 — no Azure cookies in this WebView).
- * login_hint only pre-fills the Outlook mailbox address.
+ * No-click sign-in: reuse the stored Hub token, otherwise ask Outlook for the signed-in account (NAA).
+ * `force` skips the stored token (it was just rejected with 401).
+ */
+export function signInSilently(options: { force?: boolean } = {}): Promise<AuthProfile | null> {
+  if (silentInFlight)
+    return silentInFlight;
+  silentInFlight = (async () => {
+    if (!options.force && readHubAccessToken()) {
+      try {
+        return await fetchHubMe();
+      } catch {
+        /* expired — try NAA */
+      }
+    }
+    if (!gatewayOrigin())
+      return null;
+    try {
+      const result = await naaTokenSilent(await azureApp());
+      if (!result)
+        return null;
+      return await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+    } catch {
+      return null;
+    }
+  })().finally(() => {
+    silentInFlight = null;
+  });
+  return silentInFlight;
+}
+
+/** Graph token for reading the whole thread: memory first, then a silent NAA refresh. */
+export async function getGraphToken(): Promise<string | null> {
+  const cached = readAzureAccessToken();
+  if (cached)
+    return cached;
+  try {
+    const result = await naaTokenSilent(await azureApp());
+    if (!result)
+      return null;
+    storeAzureAccessToken(result.accessToken, secondsLeft(result.expiresOn));
+    return result.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Interactive sign-in. Outlook's own account prompt (NAA) comes first; the Kosta dialog with
+ * Microsoft login is the fallback for clients without NAA.
  */
 export async function loginWithHub(): Promise<AuthProfile> {
   if (!gatewayOrigin())
     throw new Error('Укажите File Manager API в настройках');
+  try {
+    const result = await naaTokenInteractive(await azureApp());
+    if (result)
+      return await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+  } catch {
+    /* fall back to the dialog */
+  }
+  return loginWithDialog();
+}
 
+/**
+ * Microsoft login in an Office dialog.
+ * Silent prompt=none does not work here (AADSTS50058 — no Azure cookies in this WebView).
+ * login_hint only pre-fills the Outlook mailbox address.
+ */
+async function loginWithDialog(): Promise<AuthProfile> {
   const { verifier, challenge } = await createPkcePair();
   const state = randomState();
   const redirectUri = oauthRedirectUri();
   const hint = outlookEmailHint();
 
-  const qs = new URLSearchParams({
-    redirect_uri: redirectUri,
-    state,
-  });
-  if (hint)
-    qs.set('login_hint', hint);
-
-  const metaRes = await fetch(`${loginUrlEndpoint()}?${qs.toString()}`);
-  if (!metaRes.ok)
-    throw new Error('Не удалось получить URL входа Azure');
-  const meta = await metaRes.json() as {
-    authorizeUrl: string;
-    clientId?: string;
-    tenantId?: string;
-  };
+  const meta = await fetchLoginMeta(hint ? { state, login_hint: hint } : { state });
+  const { clientId, tenantId } = appFromMeta(meta);
   const authorize = new URL(meta.authorizeUrl);
   authorize.searchParams.set('code_challenge', challenge);
   authorize.searchParams.set('code_challenge_method', 'S256');
   // Never use prompt=none in Outlook WebView — it causes AADSTS50058
-
-  const clientId = meta.clientId || authorize.searchParams.get('client_id') || '';
-  const tenantId = meta.tenantId
-    || authorize.pathname.split('/')[1]
-    || '';
-  if (!clientId || !tenantId)
-    throw new Error('В ответе login-url нет clientId/tenantId — задеплойте back');
 
   const code = await openOAuthDialog(authorize.toString(), state);
 
@@ -172,32 +293,9 @@ export async function loginWithHub(): Promise<AuthProfile> {
     redirectUri,
     codeVerifier: verifier,
   });
-  const bootstrapRes = await fetch(azureBootstrapUrl(), {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({
-      accessToken: azureTokens.access_token,
-      idToken: azureTokens.id_token,
-    }),
-  });
-  if (!bootstrapRes.ok) {
-    let detail = `HTTP ${bootstrapRes.status}`;
-    try {
-      const body = await bootstrapRes.json() as { detail?: string };
-      if (body.detail)
-        detail = body.detail;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail);
-  }
-  const pair = await bootstrapRes.json() as { access_token?: string };
-  if (!pair.access_token)
-    throw new Error('Пустой ответ bootstrap');
-  storeHubAccessToken(pair.access_token);
-  storeAzureAccessToken(azureTokens.access_token, azureTokens.expires_in || 3600);
-  return fetchHubMe();
+  if (!azureTokens.id_token)
+    throw new Error('Microsoft не вернул id_token — войдите снова');
+  return bootstrapHub(azureTokens.access_token, azureTokens.id_token, azureTokens.expires_in || 3600);
 }
 
 const AZURE_SCOPES = 'openid profile email offline_access User.Read Mail.Read';

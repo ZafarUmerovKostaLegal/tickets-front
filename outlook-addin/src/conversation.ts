@@ -250,12 +250,12 @@ function listViaEws(conversationId: string): Promise<ConversationMessageMeta[]> 
  * List all messages in the current Outlook conversation.
  * Tries Graph (several shapes), then EWS GetConversationItems.
  */
-export async function listConversationMessages(): Promise<{
+export async function listConversationMessages(graphToken?: string | null): Promise<{
   conversationId: string;
   messages: ConversationMessageMeta[];
 }> {
   const officeConversationId = currentConversationId();
-  const token = readAzureAccessToken();
+  const token = graphToken ?? readAzureAccessToken();
   let messages: ConversationMessageMeta[] = [];
   let conversationId = officeConversationId;
   let lastError: Error | null = null;

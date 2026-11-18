@@ -177,8 +177,9 @@ export async function buildConversationEml(
   conversationId: string,
   messages: ConversationMessageMeta[],
   onProgress?: (index: number, total: number) => void,
+  graphToken?: string | null,
 ): Promise<{ file: File; storageKey: string }> {
-  const token = readAzureAccessToken();
+  const token = graphToken ?? readAzureAccessToken();
   if (!token)
     throw new Error('Нет Azure-токена для Graph. Войдите снова.');
 

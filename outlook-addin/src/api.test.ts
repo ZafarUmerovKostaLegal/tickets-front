@@ -85,7 +85,7 @@ describe('uploadToCorrespondence', () => {
     const calls = mockFetch((url) => {
       if (url.includes('/browse')) {
         const isRoot = !url.includes('folderId');
-        return { body: { folders: isRoot ? [{ id: 'corr', name: 'Correspondence' }] : [{ id: `emails${uploads}`, name: 'emails' }] } };
+        return { body: { folders: isRoot ? [{ id: 'corr', name: 'Correspondence' }] : [{ id: 'corr', name: 'Correspondence' }, { id: `emails${uploads}`, name: 'emails', parentId: 'corr' }] } };
       }
       uploads += 1;
       return uploads === 2 ? { status: 404, body: { detail: 'folder not found' } } : { body: { documents: [{ id: `d${uploads}` }] } };
