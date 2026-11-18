@@ -1,0 +1,590 @@
+/*
+ * Disk explorer layer (navigation pane, selection, drag-and-drop, search).
+ * Loaded on top of FileManagerPage.css; every rule is scoped to .fm-disk-x.
+ */
+
+.fm-disk-x {
+  height: 100%;
+  min-height: 0;
+}
+
+.fm-disk-x .fm-disk__main {
+  min-height: 0;
+  height: 100%;
+}
+
+/* ---------- Address bar ---------- */
+.fm-disk-x .fm-disk__crumbs {
+  flex-wrap: nowrap;
+  gap: 0.15rem;
+}
+
+.fm-disk-x .fm-disk-x__fwd .fm-ico {
+  transform: rotate(180deg);
+}
+
+.fm-disk-x__crumbs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  background: var(--fm-surface);
+  scrollbar-width: none;
+}
+
+.fm-disk-x__crumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.fm-disk-x .fm-disk-x__crumbs button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 0;
+  max-width: 16rem;
+  padding: 0.22rem 0.45rem;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fm-disk-x .fm-disk-x__crumbs button .fm-ico {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--fm-muted);
+}
+
+.fm-disk-x .fm-disk-x__crumbs button.is-on {
+  font-weight: 650;
+}
+
+.fm-disk-x__crumb {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.fm-disk-x .fm-disk-x__crumb-sep {
+  width: 0.7rem;
+  height: 0.7rem;
+  color: var(--fm-muted);
+  opacity: 0.7;
+}
+
+/* ---------- Search ---------- */
+.fm-disk-x .fm-disk-x__search {
+  min-width: 12rem;
+  max-width: 20rem;
+  flex: 0 1 18rem;
+}
+
+.fm-disk-x .fm-disk-x__search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.fm-disk-x .fm-disk-x__search:focus-within {
+  border-color: var(--fm-accent-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fm-accent) 14%, transparent);
+}
+
+.fm-disk-x .fm-disk-x__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fm-muted);
+  cursor: pointer;
+}
+
+.fm-disk-x .fm-disk-x__clear .fm-ico {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.fm-disk-x__banner {
+  margin: 0;
+  padding: 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--fm-border);
+  background: var(--fm-accent-soft);
+  color: var(--fm-text);
+  font-size: 0.82rem;
+}
+
+/* ---------- Navigation pane + content ---------- */
+.fm-disk-x__split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.fm-disk-x__tree {
+  flex: 0 0 15rem;
+  min-width: 0;
+  padding: 0.4rem 0.3rem 1rem;
+  overflow: auto;
+  border-right: 1px solid var(--fm-border);
+  background: color-mix(in srgb, var(--fm-surface) 94%, var(--fm-soft));
+}
+
+.fm-disk-x__tree-group {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-disk-x__tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.05rem;
+  min-height: 1.85rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.fm-disk-x__tree-row:hover {
+  background: var(--fm-hover);
+}
+
+.fm-disk-x__tree-row.is-current {
+  background: var(--fm-select);
+}
+
+.fm-disk-x__tree-row.is-drop {
+  border-color: var(--fm-accent);
+  background: var(--fm-accent-soft);
+}
+
+.fm-disk-x__tree-row.is-hidden {
+  opacity: 0.55;
+}
+
+.fm-disk-x__tree-root {
+  padding-left: 0.35rem;
+}
+
+.fm-disk-x .fm-disk-x__tree-twisty {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fm-muted);
+  cursor: pointer;
+}
+
+.fm-disk-x .fm-disk-x__tree-twisty:disabled {
+  cursor: default;
+}
+
+.fm-disk-x .fm-disk-x__tree-twisty .fm-ico {
+  width: 0.7rem;
+  height: 0.7rem;
+  transition: transform 0.12s ease;
+}
+
+.fm-disk-x .fm-disk-x__tree-twisty .fm-ico.is-open {
+  transform: rotate(90deg);
+}
+
+.fm-disk-x .fm-disk-x__tree-label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.25rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.83rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fm-disk-x .fm-disk-x__tree-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-disk-x .fm-disk-x__tree-label .fm-ico {
+  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.fm-disk-x .fm-disk__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- Items: selection, hidden, cut, drop target ---------- */
+.fm-disk-x .fm-ex__tile {
+  border-radius: 6px;
+  user-select: none;
+}
+
+.fm-disk-x .fm-ex__tile:focus-visible,
+.fm-disk-x .fm-disk-x__row:focus-visible {
+  outline: 2px solid var(--fm-accent);
+  outline-offset: -2px;
+}
+
+.fm-disk-x .fm-ex__tile.is-hidden,
+.fm-disk-x .fm-disk-x__row.is-hidden td,
+.fm-disk-x .fm-ex__tile.is-cut,
+.fm-disk-x .fm-disk-x__row.is-cut td {
+  opacity: 0.5;
+}
+
+.fm-disk-x .fm-ex__tile.is-drop {
+  border-color: var(--fm-accent);
+  background: var(--fm-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--fm-accent);
+}
+
+.fm-disk-x .fm-disk-x__row {
+  user-select: none;
+}
+
+.fm-disk-x .fm-disk-x__row td {
+  white-space: nowrap;
+}
+
+.fm-disk-x .fm-disk-x__row td:first-child {
+  max-width: 26rem;
+}
+
+.fm-disk-x .fm-disk-x__row .fm-table__name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-disk-x .fm-disk-x__th {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fm-disk-x .fm-disk-x__th .fm-ico {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.fm-disk-x .fm-disk-x__th .fm-ico.is-asc {
+  transform: rotate(-90deg);
+}
+
+.fm-disk-x .fm-disk-x__th .fm-ico.is-desc {
+  transform: rotate(90deg);
+}
+
+.fm-disk-x .fm-disk-x__loc button {
+  max-width: 20rem;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--fm-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fm-disk-x .fm-disk-x__loc button:hover {
+  text-decoration: underline;
+}
+
+.fm-disk-x__tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--fm-soft);
+  color: var(--fm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.fm-disk-x .fm-ex__empty small {
+  color: var(--fm-muted);
+  font-size: 0.78rem;
+}
+
+/* ---------- Drop zone for files from the computer ---------- */
+.fm-disk-x .fm-tiles__content {
+  position: relative;
+}
+
+.fm-disk-x__dropzone {
+  position: absolute;
+  inset: 0.6rem;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px dashed var(--fm-accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--fm-accent-soft) 85%, transparent);
+  color: var(--fm-accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.fm-disk-x__dropzone .fm-ico {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.fm-disk-x__ghost {
+  position: fixed;
+  top: -100px;
+  left: -100px;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  background: var(--fm-accent);
+  color: #fff;
+  font: 600 0.8rem var(--app-font-family, sans-serif);
+}
+
+/* ---------- Context menu ---------- */
+.fm-disk-x .fm-disk-x__menu {
+  z-index: 20;
+  min-width: 14rem;
+  padding: 0.3rem;
+  border-radius: 8px;
+}
+
+.fm-disk-x .fm-disk-x__menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 0;
+  padding: 0.38rem 0.55rem;
+}
+
+.fm-disk-x .fm-disk-x__menu button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.fm-disk-x .fm-disk-x__menu button .fm-ico,
+.fm-disk-x__menu-pad {
+  flex-shrink: 0;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--fm-muted);
+}
+
+.fm-disk-x .fm-disk-x__menu button.is-danger .fm-ico {
+  color: currentColor;
+}
+
+.fm-disk-x .fm-disk-x__menu kbd {
+  margin-left: auto;
+  padding-left: 1rem;
+  color: var(--fm-muted);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.fm-disk-x__menu-sep {
+  display: block;
+  height: 1px;
+  margin: 0.25rem 0.35rem;
+  background: var(--fm-border);
+}
+
+/* ---------- Status bar ---------- */
+.fm-disk-x .fm-disk__status {
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  padding: 0.45rem 1.25rem;
+}
+
+.fm-disk-x__busy {
+  color: var(--fm-accent);
+  font-weight: 600;
+}
+
+.fm-disk-x__clip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.25rem 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+  font-weight: 600;
+}
+
+.fm-disk-x__clip .fm-ico {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.fm-disk-x .fm-disk-x__clip button {
+  display: inline-flex;
+  min-height: 0;
+  padding: 0.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fm-disk-x__error {
+  margin: 0.4rem 0 0;
+  color: var(--app-error, #e11d48);
+  font-size: 0.8rem;
+}
+
+.fm-disk-x__keys {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.fm-disk-x__keys li {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.fm-disk-x__keys kbd {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 5px;
+  background: var(--fm-soft);
+  font: 600 0.76rem var(--app-font-family, sans-serif);
+  white-space: nowrap;
+}
+
+/* ---------- Tablet / phone ---------- */
+@media (max-width: 900px) {
+  .fm-disk-x__tree,
+  .fm-disk-x .fm-disk-x__only-wide {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The page scrolls as a whole on phones: let the list take its natural height. */
+  .fm-disk-x,
+  .fm-disk-x .fm-disk__main {
+    height: auto;
+  }
+
+  .fm-disk-x__split {
+    min-height: 55vh;
+  }
+
+  .fm-disk-x .fm-tiles__content {
+    overflow: visible;
+  }
+
+  .fm-disk-x .fm-disk-cmd {
+    gap: 0.15rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  /* Icon-only commands (labels stay as aria-label / tooltip). */
+  .fm-disk-x .fm-disk-cmd__btn--text > span,
+  .fm-disk-x .fm-disk-cmd__caret {
+    display: none;
+  }
+
+  .fm-disk-x .fm-disk-cmd__sep {
+    margin: 0 0.1rem;
+  }
+
+  .fm-disk-x .fm-disk-cmd__btn {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .fm-disk-x .fm-disk-cmd__spacer {
+    display: none;
+  }
+
+  .fm-disk-x .fm-disk-x__search {
+    flex: 1 1 100%;
+    max-width: none;
+    order: 10;
+  }
+
+  .fm-disk-x .fm-disk-x__search input {
+    font-size: 16px;
+  }
+
+  .fm-disk-x .fm-disk__crumbs {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .fm-disk-x .fm-disk__nav-btn {
+    min-height: 0;
+  }
+
+  .fm-disk-x .fm-disk__tiles {
+    padding: 0.6rem 0.5rem 1rem;
+  }
+
+  .fm-disk-x .fm-ex__tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fm-disk-x .fm-disk__status {
+    padding: 0.45rem 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-disk-x .fm-disk-x__tree-twisty .fm-ico {
+    transition: none;
+  }
+}

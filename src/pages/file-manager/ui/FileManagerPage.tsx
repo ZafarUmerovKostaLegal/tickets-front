@@ -67,7 +67,7 @@ function FileManagerWorkspace() {
     const [badgeTick, setBadgeTick] = useState(0);
     const clients = useLoad(() => filesApi.clients(), []);
 
-    const canManage = clients.data?.viewer.canManage ?? false;
+    const canManage = clients.data?.viewer?.canManage ?? false;
     const matterId = params.get('matter');
     const folderId = params.get('folder');
     const docId = params.get('doc');

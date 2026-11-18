@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!-- Outlook: Classic Windows, New Outlook, OWA, Mac, Mobile -->
-<!-- Pinning (📌): once pinned, task pane stays open when switching / clearing selection. -->
+<!-- Pinning: once pinned, task pane stays open when switching / clearing selection. -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -13,7 +13,7 @@
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="{{DISPLAY_NAME}}" />
-  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Закрепите панель (📌), чтобы она оставалась открытой как MacroView." />
+  <Description DefaultValue="Загрузка писем в matters файлового менеджера Kosta. Закрепите панель булавкой, чтобы она оставалась открытой." />
   <IconUrl DefaultValue="{{ADDIN_BASE}}assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="{{ADDIN_BASE}}assets/icon-80.png" />
   <SupportUrl DefaultValue="{{ADDIN_BASE}}" />
@@ -227,7 +227,7 @@
         </bt:ShortStrings>
         <bt:LongStrings>
           <bt:String id="openTip" DefaultValue="Открыть Kosta File" />
-          <bt:String id="openTipPin" DefaultValue="Открыть Kosta File. Нажмите 📌 в шапке панели один раз — панель останется при смене и закрытии письма (как MacroView)." />
+          <bt:String id="openTipPin" DefaultValue="Открыть Kosta File. Закрепите панель булавкой в её шапке — она останется открытой при смене письма." />
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>

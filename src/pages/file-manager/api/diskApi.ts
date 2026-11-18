@@ -4,10 +4,17 @@ import { FilesApiError } from './filesApi';
 
 const BASE = '/api/v1/legal-hub/drive';
 
+export type DiskCrumb = { id: string; name: string };
+
 export type DiskFolder = {
     id: string;
     name: string;
     createdAt: string | null;
+    updatedAt?: string | null;
+    hidden?: boolean;
+    itemCount?: number;
+    parentId?: string | null;
+    path?: DiskCrumb[];
 };
 
 export type DiskFile = {
@@ -17,17 +24,33 @@ export type DiskFile = {
     size: string;
     sizeBytes?: number;
     createdAt: string | null;
+    updatedAt?: string | null;
+    hidden?: boolean;
+    folderId?: string | null;
+    path?: DiskCrumb[];
 };
 
 export type DiskBrowse = {
-    path: Array<{ id: string; name: string }>;
+    path: DiskCrumb[];
     folderId: string | null;
     level: AclLevel | 'none' | string;
     canEdit: boolean;
     canManage: boolean;
     folders: DiskFolder[];
     files: DiskFile[];
+    createdId?: string | null;
 };
+
+export type DiskTreeRow = { id: string; parentId: string | null; name: string; hidden: boolean };
+
+export type DiskSearch = {
+    query: string;
+    folders: DiskFolder[];
+    files: DiskFile[];
+    truncated: boolean;
+};
+
+export type DiskSelection = { folderIds: string[]; fileIds: string[] };
 
 export type DiskAclRow = {
     folderId: string | null;
@@ -58,10 +81,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return await response.json() as T;
 }
 
-function query(params: Record<string, string | number | null | undefined>): string {
+function query(params: Record<string, string | number | boolean | null | undefined>): string {
     const qs = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
-        if (value === null || value === undefined || value === '')
+        if (value === null || value === undefined || value === '' || value === false)
             continue;
         qs.set(key, String(value));
     }
@@ -69,22 +92,47 @@ function query(params: Record<string, string | number | null | undefined>): stri
     return text ? `?${text}` : '';
 }
 
+function json(method: string, body: unknown): RequestInit {
+    return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
 export const diskApi = {
-    browse: (folderId: string | null) =>
-        request<DiskBrowse>(`${query({ parentId: folderId })}`),
-    createFolder: (name: string, parentId: string | null) =>
-        request<DiskBrowse>('/folders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, parentId }),
-        }),
-    upload: (files: File[], parentId: string | null) => {
+    browse: (folderId: string | null, showHidden = false) =>
+        request<DiskBrowse>(query({ parentId: folderId, showHidden })),
+    tree: (showHidden = false) =>
+        request<{ folders: DiskTreeRow[] }>(`/tree${query({ showHidden })}`),
+    search: (q: string, folderId: string | null, showHidden = false) =>
+        request<DiskSearch>(`/search${query({ q, folderId, showHidden })}`),
+    createFolder: (name: string, parentId: string | null, showHidden = false) =>
+        request<DiskBrowse>(`/folders${query({ showHidden })}`, json('POST', { name, parentId })),
+    upload: (files: File[], parentId: string | null, options: { paths?: string[]; showHidden?: boolean } = {}) => {
         const body = new FormData();
-        for (const file of files)
+        files.forEach((file, index) => {
             body.append('files', file);
+            if (options.paths)
+                body.append('paths', options.paths[index] ?? file.name);
+        });
         if (parentId)
             body.append('parentId', parentId);
-        return request<DiskBrowse>('/files', { method: 'POST', body });
+        return request<DiskBrowse>(`/files${query({ showHidden: options.showHidden })}`, { method: 'POST', body });
+    },
+    renameFolder: (folderId: string, name: string, showHidden = false) =>
+        request<DiskBrowse>(`/folders/${encodeURIComponent(folderId)}${query({ showHidden })}`, json('PATCH', { name })),
+    renameFile: (fileId: string, name: string, showHidden = false) =>
+        request<DiskBrowse>(`/files/${encodeURIComponent(fileId)}${query({ showHidden })}`, json('PATCH', { name })),
+    move: (selection: DiskSelection, targetId: string | null) =>
+        request<{ moved: number; targetId: string | null }>('/move', json('POST', { ...selection, targetId })),
+    copy: (selection: DiskSelection, targetId: string | null) =>
+        request<{ copied: number; targetId: string | null }>('/copy', json('POST', { ...selection, targetId })),
+    hide: (selection: DiskSelection, hidden: boolean) =>
+        request<{ updated: number }>('/hide', json('POST', { ...selection, hidden })),
+    remove: (selection: DiskSelection) =>
+        request<{ deleted: number }>('/delete', json('POST', selection)),
+    zipBlob: async (selection: DiskSelection) => {
+        const response = await apiFetch(`${BASE}/zip`, json('POST', selection));
+        if (!response.ok)
+            await fail(response);
+        return await response.blob();
     },
     deleteFile: (fileId: string) =>
         request<DiskBrowse>(`/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' }),
@@ -99,11 +147,7 @@ export const diskApi = {
     security: (folderId: string | null) =>
         request<{ folderId: string | null; acl: DiskAclRow[] }>(`/security${query({ folderId })}`),
     setAcl: (folderId: string | null, body: { userId: number; userName: string; level: AclLevel; note?: string }) =>
-        request<{ acl: DiskAclRow }>(`/security${query({ folderId })}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        }),
+        request<{ acl: DiskAclRow }>(`/security${query({ folderId })}`, json('PUT', body)),
     removeAcl: (folderId: string | null, userId: number) =>
         request<{ ok: true }>(`/security/${userId}${query({ folderId })}`, { method: 'DELETE' }),
 };
