@@ -79,6 +79,11 @@ Microsoft 365 Admin → Settings → Integrated apps → Upload custom apps → 
 Internet Explorer надстройку не запустит — панель покажет об этом сообщение. Если панель показывает
 «Kosta File не запустился», в ней будет текст ошибки — его достаточно прислать администратору.
 
+**Сеть:** панели нужны `https://appsforoffice.microsoft.com` (office.js) и `https://ajax.aspnetcdn.com`
+(MicrosoftAjax.js — его грузит office.js в настольных Outlook / Word / Excel / PowerPoint). Оба адреса
+разрешены в CSP `nginx.conf`; если их режет прокси или фаервол, панель покажет «Not able to load MicrosoftAjax.js»
+или «Не загрузилась библиотека Office».
+
 ## Что умеет панель (Outlook)
 
 | Блок | Что делает |
