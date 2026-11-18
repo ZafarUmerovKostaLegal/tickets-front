@@ -1638,6 +1638,9 @@ export function InvoiceRegistryPanel({
                     return;
                 setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: value } : item)));
                 void patchInvoice(invoiceId, { internalNote: value.trim() ? value : null })
+                    .then((saved) => {
+                        setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: saved.internalNote ?? '' } : item)));
+                    })
                     .catch((error: unknown) => {
                         setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: previous } : item)));
                         showToast({
@@ -2180,6 +2183,10 @@ export function InvoiceRegistryPanel({
                                                         return;
                                                     void patchInvoice(draft.invoiceId, {
                                                         internalNote: draft.value.trim() ? draft.value : null,
+                                                    }).then((saved) => {
+                                                        setRows((prev) => prev.map((item) => (
+                                                            item.id === draft.rowId ? { ...item, details: saved.internalNote ?? '' } : item
+                                                        )));
                                                     }).catch((error: unknown) => {
                                                         setRows((prev) => prev.map((item) => (
                                                             item.id === draft.rowId ? { ...item, details: draft.previous } : item
