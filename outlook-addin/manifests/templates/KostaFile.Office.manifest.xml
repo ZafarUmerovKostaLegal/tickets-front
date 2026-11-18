@@ -12,7 +12,7 @@
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="{{DISPLAY_NAME}}" />
-  <Description DefaultValue="Загрузка текущего документа Word/Excel/PowerPoint в matter файлового менеджера Kosta." />
+  <Description DefaultValue="Сохранение текущего документа Word, Excel или PowerPoint в нужную папку matter Kosta." />
   <IconUrl DefaultValue="{{ADDIN_BASE}}assets/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="{{ADDIN_BASE}}assets/icon-80.png" />
   <SupportUrl DefaultValue="{{ADDIN_BASE}}" />
@@ -40,7 +40,7 @@
             <Description resid="getStartedDesc" />
             <LearnMoreUrl resid="learnMoreUrl" />
           </GetStarted>
-          <FunctionFile resid="taskpaneUrl" />
+          <FunctionFile resid="commandsUrl" />
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="kostaFileDocGroup">
@@ -78,7 +78,7 @@
             <Description resid="getStartedDesc" />
             <LearnMoreUrl resid="learnMoreUrl" />
           </GetStarted>
-          <FunctionFile resid="taskpaneUrl" />
+          <FunctionFile resid="commandsUrl" />
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="kostaFileXlsGroup">
@@ -116,7 +116,7 @@
             <Description resid="getStartedDesc" />
             <LearnMoreUrl resid="learnMoreUrl" />
           </GetStarted>
-          <FunctionFile resid="taskpaneUrl" />
+          <FunctionFile resid="commandsUrl" />
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="kostaFilePptGroup">
@@ -156,6 +156,7 @@
       </bt:Images>
       <bt:Urls>
         <bt:Url id="taskpaneUrl" DefaultValue="{{ADDIN_BASE}}index.html" />
+        <bt:Url id="commandsUrl" DefaultValue="{{ADDIN_BASE}}commands.html" />
         <bt:Url id="learnMoreUrl" DefaultValue="{{ADDIN_BASE}}" />
       </bt:Urls>
       <bt:ShortStrings>

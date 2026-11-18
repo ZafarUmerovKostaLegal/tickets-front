@@ -3146,3 +3146,239 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 .fm-disk__acl .fm-btn {
   justify-self: end;
 }
+
+/* ── Matter view: date filter bar, letter subject ── */
+.fm-datebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1.5rem 0;
+}
+
+.fm-datebar__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.fm-datebar__chip {
+  min-height: 1.9rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 999px;
+  background: var(--fm-surface);
+  color: var(--fm-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fm-datebar__chip.is-on {
+  border-color: var(--fm-accent-border);
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+}
+
+@media (hover: hover) {
+  .fm-datebar__chip:not(.is-on):hover {
+    background: var(--fm-hover);
+    color: var(--fm-text);
+  }
+}
+
+.fm-datebar__range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.fm-datebar__range label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--fm-muted);
+  font-size: 0.78rem;
+}
+
+.fm-datebar__range input {
+  min-height: 1.9rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  background: var(--fm-surface);
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.fm-datebar__count {
+  color: var(--fm-muted);
+  font-size: 0.78rem;
+}
+
+.fm-datebar .fm-datebar__organize {
+  margin-left: auto;
+  min-height: 1.9rem;
+  font-size: 0.78rem;
+}
+
+.fm-datebar__organize .fm-ico {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fm-datebar__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  color: var(--fm-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.fm-datebar__empty p {
+  margin: 0;
+}
+
+.fm-ex__tile-subject {
+  overflow: hidden;
+  color: var(--fm-text);
+  font-size: 0.78rem;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .fm-datebar {
+    padding: 0.6rem 0.75rem 0;
+  }
+
+  .fm-datebar__presets {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .fm-datebar .fm-datebar__chip,
+  .fm-datebar .fm-datebar__organize {
+    min-height: 2.25rem;
+    flex: none;
+  }
+
+  .fm-datebar .fm-datebar__range input {
+    min-height: 2.5rem;
+    font-size: 16px;
+  }
+
+  .fm-datebar .fm-datebar__organize {
+    margin-left: 0;
+  }
+}
+
+/* ── Duplicates report ── */
+.fm-datebar .fm-datebar__dups {
+  min-height: 1.9rem;
+  font-size: 0.78rem;
+}
+
+.fm-dups__hint,
+.fm-dups__empty {
+  margin: 0 0 0.75rem;
+  color: var(--fm-muted);
+  font-size: 0.84rem;
+}
+
+.fm-dups {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-dups__group {
+  border: 1px solid var(--fm-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fm-dups__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--fm-soft);
+}
+
+.fm-dups__reason {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--fm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fm-dups__docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-dups__doc {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--fm-border);
+}
+
+.fm-dups__doc:first-child { border-top: 0; }
+
+.fm-dups__name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fm-dups__name strong,
+.fm-dups__name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-dups__name strong { font-size: 0.86rem; color: var(--fm-text); }
+.fm-dups__name small { font-size: 0.74rem; color: var(--fm-muted); }
+
+.fm-dups__tag {
+  flex: none;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.fm-dups__doc .fm-link { flex: none; }
+
+@media (max-width: 600px) {
+  .fm-dups__head { flex-wrap: wrap; }
+  .fm-dups .fm-btn,
+  .fm-dups__doc .fm-link { min-height: 44px; }
+}

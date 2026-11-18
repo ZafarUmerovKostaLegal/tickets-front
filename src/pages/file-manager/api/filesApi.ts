@@ -77,6 +77,20 @@ export type DocumentRow = {
     lastActivityAt?: string | null;
 };
 
+/** What the server did with one uploaded file (versions instead of copies). */
+export type UploadStatus = 'created' | 'version' | 'unchanged' | 'exists' | 'duplicate';
+
+export type UploadResponse = {
+    documents: DocumentRow[];
+    results?: Array<{ status: UploadStatus; document: DocumentRow }>;
+};
+
+export type DuplicateGroup = {
+    reason: 'content' | 'message';
+    key: string;
+    documents: Array<DocumentRow & { folderPath: Array<{ id: string; name: string }> }>;
+};
+
 export type FolderRow = {
     id: string;
     parentId: string | null;
@@ -255,7 +269,10 @@ export const filesApi = {
     updateFolder: (folderId: string, patch: { name?: string; parentId?: string; moveToRoot?: boolean }) =>
         request<{ id: string }>(`/folders/${encodeURIComponent(folderId)}`, json('PATCH', patch)),
     deleteFolder: (folderId: string) => request<{ ok: true }>(`/folders/${encodeURIComponent(folderId)}`, { method: 'DELETE' }),
-    upload: (matterId: string, folderId: string | null, files: File[], comment = '') => {
+    /** Sort loose letters of a folder into per-person subfolders and fill subjects. */
+    organizeMail: (matterId: string, folderId: string) =>
+        request<{ moved: number; folders: string[]; subjects: number }>(`/matters/${encodeURIComponent(matterId)}/mail/organize`, json('POST', { folderId })),
+    upload: (matterId: string, folderId: string | null, files: File[], comment = '', options: { allowDuplicate?: boolean } = {}) => {
         const body = new FormData();
         for (const file of files)
             body.append('files', file);
@@ -263,8 +280,13 @@ export const filesApi = {
             body.append('folderId', folderId);
         if (comment)
             body.append('comment', comment);
-        return request<{ documents: DocumentRow[] }>(`/matters/${encodeURIComponent(matterId)}/documents`, { method: 'POST', body });
+        if (options.allowDuplicate)
+            body.append('allowDuplicate', 'true');
+        return request<UploadResponse>(`/matters/${encodeURIComponent(matterId)}/documents`, { method: 'POST', body });
     },
+    /** Copies inside a matter: identical files and the same letter filed twice (oldest first). */
+    duplicates: (matterId: string) =>
+        request<{ groups: DuplicateGroup[]; total: number }>(`/matters/${encodeURIComponent(matterId)}/duplicates`),
     document: (documentId: string) => request<DocumentDetail>(`/documents/${encodeURIComponent(documentId)}`),
     updateDocument: (documentId: string, patch: { name?: string; docType?: string; description?: string; folderId?: string; moveToRoot?: boolean }) =>
         request<{ document: DocumentRow }>(`/documents/${encodeURIComponent(documentId)}`, json('PATCH', patch)),

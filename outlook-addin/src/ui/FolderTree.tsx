@@ -1,6 +1,7 @@
 import { useState, type DragEvent, type KeyboardEvent } from 'react';
 import type { BrowseFolder, ClientNode, Location } from '../api';
 import { buildFolderTree, folderPath, locationKey, type FolderNode } from '../explorer';
+import { locationLabel } from '../naming';
 import { Icon } from './icons';
 
 export type FolderState = BrowseFolder[] | 'loading' | { error: string };
@@ -136,7 +137,7 @@ export function FolderTree(props: Props) {
           >
             {node.children.length ? <Icon name="chevron" size={12} className={open ? 'is-open' : ''} /> : null}
           </button>
-          <button type="button" role="treeitem" aria-selected={selected} className="kf-tree__label" onClick={() => props.onSelect(location)}>
+          <button type="button" role="treeitem" aria-selected={selected} className="kf-tree__label" title={locationLabel(location)} onClick={() => props.onSelect(location)}>
             <Icon name={open ? 'folderOpen' : 'folder'} className="kf-tree__glyph kf-tree__glyph--folder" />
             <span className="kf-tree__name">{node.name}</span>
             {node.documents ? <span className="kf-tree__count">{node.documents}</span> : null}
@@ -201,6 +202,7 @@ export function FolderTree(props: Props) {
             role="treeitem"
             aria-selected={selected}
             className="kf-tree__label"
+            title={[`${matter.code ? `${matter.code} · ` : ''}${matter.name}`, client.name, matter.closed ? 'Закрыт' : ''].filter(Boolean).join('\n')}
             onClick={() => props.onSelect(location)}
           >
             <Icon name="matter" className="kf-tree__glyph kf-tree__glyph--matter" />
@@ -257,7 +259,7 @@ export function FolderTree(props: Props) {
               <button type="button" className="kf-tree__twist" aria-label={open ? 'Свернуть клиента' : 'Развернуть клиента'} aria-expanded={open} onClick={() => props.onToggle(key)}>
                 <Icon name="chevron" size={12} className={open ? 'is-open' : ''} />
               </button>
-              <button type="button" role="treeitem" aria-expanded={open} className="kf-tree__label" onClick={() => props.onToggle(key)}>
+              <button type="button" role="treeitem" aria-expanded={open} className="kf-tree__label" title={`${client.name}\nMatters: ${client.matters.length}`} onClick={() => props.onToggle(key)}>
                 <Icon name="client" className="kf-tree__glyph kf-tree__glyph--client" />
                 <span className="kf-tree__name">{client.name}</span>
                 <span className="kf-tree__count">{client.matters.length}</span>

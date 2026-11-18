@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { FolderRow } from '../api/filesApi';
 import {
     buildFolderTree,
+    dateRange,
+    documentDay,
+    inDateRange,
+    isMailName,
+    summarizeUpload,
     canEdit,
     fmt,
     folderAncestors,
@@ -73,5 +78,45 @@ describe('parseTemplate', () => {
             'Correspondence/Emails',
             'Drafts',
         ]);
+    });
+});
+
+describe('document dates', () => {
+    const today = new Date(2026, 10, 18, 12);
+
+    it('takes the letter date from the file name, otherwise the upload date', () => {
+        expect(documentDay({ name: '2026-11-03_01_klennesh.eml', createdAt: '2026-11-17T10:00:00Z' })).toBe('2026-11-03');
+        expect(documentDay({ name: '2026-11-04 Ivan - RE Follow [ab12cd].eml', createdAt: null })).toBe('2026-11-04');
+        expect(documentDay({ name: 'SPA.docx', createdAt: '2026-11-17T10:00:00' })).toBe('2026-11-17');
+        expect(documentDay({ name: '2026-11-033.docx', createdAt: null })).toBe('');
+    });
+
+    it('builds inclusive ranges for presets', () => {
+        expect(dateRange({ preset: 'today', from: '', to: '' }, today)).toEqual({ from: '2026-11-18', to: '2026-11-18' });
+        expect(dateRange({ preset: 'week', from: '', to: '' }, today)).toEqual({ from: '2026-11-12', to: '2026-11-18' });
+        expect(dateRange({ preset: 'thisMonth', from: '', to: '' }, today)).toEqual({ from: '2026-11-01', to: '2026-11-18' });
+        expect(dateRange({ preset: 'custom', from: '2026-11-10', to: '2026-11-01' }, today)).toEqual({ from: '2026-11-01', to: '2026-11-10' });
+    });
+
+    it('filters by day; open bounds pass', () => {
+        expect(inDateRange('2026-11-03', { from: '2026-11-01', to: '2026-11-03' })).toBe(true);
+        expect(inDateRange('2026-11-04', { from: '2026-11-01', to: '2026-11-03' })).toBe(false);
+        expect(inDateRange('2026-11-04', { from: '2026-11-04', to: '' })).toBe(true);
+        expect(inDateRange('', { from: '', to: '' })).toBe(true);
+        expect(inDateRange('', { from: '2026-11-01', to: '' })).toBe(false);
+    });
+
+    it('recognises letters', () => {
+        expect(isMailName('a.EML')).toBe(true);
+        expect(isMailName('a.msg')).toBe(true);
+        expect(isMailName('a.pdf')).toBe(false);
+    });
+});
+
+describe('summarizeUpload', () => {
+    it('counts statuses and treats old responses as new files', () => {
+        expect(summarizeUpload({ documents: [1, 2], results: [{ status: 'version' }, { status: 'duplicate' }, { status: 'odd' }] }))
+            .toEqual({ created: 0, version: 1, unchanged: 0, exists: 0, duplicate: 1 });
+        expect(summarizeUpload({ documents: [1, 2] }).created).toBe(2);
     });
 });

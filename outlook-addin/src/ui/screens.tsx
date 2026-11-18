@@ -24,7 +24,7 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
       <Brand />
       <h1>Войдите один раз</h1>
       <p>
-        Kosta File сохраняет письма и вложения в matters файлового менеджера.
+        Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера.
         Вход выполняется той же учётной записью Microsoft, что и Outlook, и запоминается.
       </p>
       <button type="button" className="kf-btn kf-btn--primary kf-btn--wide" disabled={busy} onClick={onSignIn}>

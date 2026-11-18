@@ -5,9 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kosta File</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+      .kf-fatal { font: 13px/1.45 "Segoe UI", system-ui, sans-serif; color: #1f1d1b; padding: 20px 16px; }
+      .kf-fatal h1 { font-size: 15px; margin: 0 0 8px; color: #8b2635; }
+      .kf-fatal p { margin: 0 0 8px; }
+      .kf-fatal code { font-size: 11px; word-break: break-all; color: #5f5a55; }
+    </style>
   </head>
   <body>
     <div id="app"></div>
+    <!--
+      Never leave a blank pane: old Office builds (Internet Explorer engine) cannot run the app,
+      office.js may be blocked, or start-up may throw. Plain ES5 on purpose.
+    -->
+    <script>
+      (function () {
+        function show(title, text, detail) {
+          if (window.__kfStarted && !detail)
+            return;
+          var app = document.getElementById('app');
+          if (!app)
+            return;
+          app.innerHTML = '<div class="kf-fatal" role="alert"><h1></h1><p></p><code></code></div>';
+          app.querySelector('h1').textContent = title;
+          app.querySelector('p').textContent = text;
+          app.querySelector('code').textContent = detail || '';
+        }
+        window.__kfFatal = show;
+        window.addEventListener('error', function (event) {
+          if (window.__kfStarted)
+            return;
+          show('Kosta File не запустился', 'Обновите панель. Если ошибка повторяется, пришлите текст ниже администратору.',
+            (event && event.message ? event.message : 'error') + ' · ' + navigator.userAgent);
+        });
+        setTimeout(function () {
+          if (window.__kfStarted)
+            return;
+          if (typeof Office === 'undefined')
+            show('Не загрузилась библиотека Office', 'Панель не смогла загрузить office.js с appsforoffice.microsoft.com. Проверьте доступ в интернет или прокси и откройте панель снова.');
+          else
+            show('Kosta File не запустился', 'Office не ответил вовремя. Закройте и снова откройте панель.', navigator.userAgent);
+        }, 15000);
+      })();
+    </script>
+    <script nomodule>
+      document.getElementById('app').innerHTML = '<div class="kf-fatal" role="alert"><h1>Этот Office слишком старый</h1>'
+        + '<p>Kosta File работает в Microsoft 365 (Office 2021 и новее), в новом Outlook и в Office в браузере.</p>'
+        + '<p>Эта версия Office использует движок Internet Explorer. Обновите Office или откройте документ в Office в браузере.</p></div>';
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

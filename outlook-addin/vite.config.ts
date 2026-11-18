@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => ({
     https: true,
   },
   build: {
+    // Office desktop runs task panes in its own WebView (Safari 13+ on Mac, older Edge on some Windows builds).
+    target: ['es2019', 'safari13', 'edge88'],
     outDir: 'dist',
     emptyOutDir: true,
   },

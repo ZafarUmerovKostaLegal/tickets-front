@@ -301,16 +301,30 @@ export async function uploadToCorrespondence(
   return Array.isArray(data.documents) ? data.documents : [];
 }
 
-/** Upload into an explicit folder (or the matter root). */
+/** What the server did with the file: it keeps versions instead of piling up copies. */
+export type UploadStatus = 'created' | 'version' | 'unchanged' | 'exists' | 'duplicate';
+
+export type UploadOutcome = { status: UploadStatus; document: UploadedDocument };
+
+/** Upload one file into an explicit folder (or the matter root). */
 export async function uploadToFolder(
   matterId: string,
   folderId: string | null,
   file: File,
   comment = '',
   mail?: MailLink,
-): Promise<UploadedDocument[]> {
-  const data = await uploadRequest(matterId, folderId, file, comment, mail);
-  return Array.isArray(data.documents) ? data.documents : [];
+): Promise<UploadOutcome> {
+  const data = await uploadRequest(matterId, folderId, file, comment, mail) as {
+    documents: UploadedDocument[];
+    results?: UploadOutcome[];
+  };
+  const result = data.results?.[0];
+  if (result)
+    return result;
+  const document = data.documents?.[0];
+  if (!document)
+    throw new Error('Сервер не вернул документ');
+  return { status: 'created', document };
 }
 
 /** Upload a new version into an existing FM document (thread update). */

@@ -31,7 +31,7 @@ import { matchRule } from '../rules';
 import { getSettings, loadRoamingSettings, newRuleId, saveSettings, wasFiled, type FilingRule } from '../settings';
 import { FolderTree, type FolderState } from './FolderTree';
 import { Icon } from './icons';
-import { DocList, FileBar, MailCard, PlaceList, recentToPlaces, Section, Suggestions, type FileOptions } from './panels';
+import { DocList, FileBar, MailCard, PlaceList, recentToPlaces, Section, Suggestions, Toast, type FileOptions } from './panels';
 import { Brand, SettingsSheet, SignInScreen } from './screens';
 
 type Phase = 'boot' | 'signin' | 'ready';
@@ -72,10 +72,15 @@ function errorText(error: unknown): string {
 function resultText(result: FileResult, target: Location): Status {
   if (!result.saved.length)
     return { text: result.failed.join('\n') || 'Ничего не сохранено', kind: 'error' };
-  const head = `Сохранено в ${locationLabel(target)}`;
-  const files = result.saved.length === 1 ? result.saved[0] : `${result.saved.length} файла(ов)`;
-  const failed = result.failed.length ? `\nНе удалось: ${result.failed.join('; ')}` : '';
-  return { text: `${head}\n${files}${failed}`, kind: result.failed.length ? 'error' : 'ok' };
+  // First line is the toast title, the rest is the detail (full text stays in the tooltip).
+  const where = [target.matterCode || target.matterName, ...target.folderPath.map((crumb) => crumb.name)].filter(Boolean).join(' › ');
+  const files = result.saved.join(' · ');
+  if (result.failed.length)
+    return { text: `Сохранено частично\n${where}\nНе удалось: ${result.failed.join('; ')}`, kind: 'error' };
+  // Nothing new written: the letter / file is already in Kosta, no copy was made.
+  if (!result.fresh)
+    return { text: `Уже есть в Kosta — копия не создана\n${files}`, kind: 'ok' };
+  return { text: `Сохранено в ${where || locationLabel(target)}\n${files}`, kind: 'ok' };
 }
 
 function defaultOptions(): FileOptions {
@@ -614,7 +619,8 @@ export function App({ host }: { host: Office.HostType | null }) {
     ...favorites.matters.map((m) => `matter:${m.id}`),
     ...favorites.folders.map((f) => `folder:${f.id}`),
   ]);
-  const alreadyHere = Boolean(target && filings.some((f) => f.sameMessage && f.kind === 'email' && locationKey(f) === locationKey(target)));
+  // The server keeps one copy of a letter per matter, wherever it was filed.
+  const alreadyHere = Boolean(target && filings.some((f) => f.sameMessage && f.kind === 'email' && f.matterId === target.matterId));
   const sub = isDocument ? hostLabel(host ?? undefined) : compose ? 'Новое письмо' : item ? 'Письмо' : 'Выберите письмо';
 
   const favoritePlaces = [
@@ -796,12 +802,7 @@ export function App({ host }: { host: Office.HostType | null }) {
         ) : null}
       </main>
 
-      {status ? (
-        <div className={`kf-status${status.kind ? ` is-${status.kind}` : ''}`} role="status" aria-live="polite">
-          <p>{status.text}</p>
-          {!busy ? <button type="button" className="kf-iconbtn" aria-label="Скрыть" onClick={() => setStatus(null)}><Icon name="close" size={13} /></button> : <span className="kf-spinner kf-spinner--small" aria-hidden="true" />}
-        </div>
-      ) : null}
+      <Toast status={status} busy={busy} onClose={() => setStatus(null)} />
 
       {item?.mode === 'read' ? (
         <FileBar

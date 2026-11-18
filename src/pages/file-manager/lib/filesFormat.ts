@@ -115,3 +115,80 @@ export function parseTemplate(text: string): string[] {
     }
     return out;
 }
+
+export type DatePreset = 'all' | 'today' | 'week' | 'month' | 'thisMonth' | 'custom';
+export type DateFilter = { preset: DatePreset; from: string; to: string };
+
+const NAME_DATE = /^(\d{4})-(\d{2})-(\d{2})(?=[\s_.-]|$)/;
+
+function localDay(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * The date that matters to people: letters filed from Outlook start with the letter's date
+ * (`2026-11-03_…` / `2026-11-03 …`), everything else uses the upload date. Returns `YYYY-MM-DD`.
+ */
+export function documentDay(doc: { name: string; createdAt: string | null }): string {
+    const fromName = NAME_DATE.exec(doc.name);
+    if (fromName)
+        return `${fromName[1]}-${fromName[2]}-${fromName[3]}`;
+    if (!doc.createdAt)
+        return '';
+    const created = new Date(doc.createdAt);
+    return Number.isNaN(created.getTime()) ? '' : localDay(created);
+}
+
+/** Inclusive `[from, to]` day range for a filter; empty bounds are open. */
+export function dateRange(filter: DateFilter, today: Date = new Date()): { from: string; to: string } {
+    const shift = (days: number) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() - days);
+        return localDay(date);
+    };
+    switch (filter.preset) {
+        case 'today':
+            return { from: localDay(today), to: localDay(today) };
+        case 'week':
+            return { from: shift(6), to: localDay(today) };
+        case 'month':
+            return { from: shift(29), to: localDay(today) };
+        case 'thisMonth':
+            return { from: localDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: localDay(today) };
+        case 'custom': {
+            const [from, to] = filter.from && filter.to && filter.from > filter.to ? [filter.to, filter.from] : [filter.from, filter.to];
+            return { from, to };
+        }
+        default:
+            return { from: '', to: '' };
+    }
+}
+
+export function inDateRange(day: string, range: { from: string; to: string }): boolean {
+    if (!range.from && !range.to)
+        return true;
+    if (!day)
+        return false;
+    return (!range.from || day >= range.from) && (!range.to || day <= range.to);
+}
+
+export function isMailName(name: string): boolean {
+    return /\.(eml|msg)$/i.test(name);
+}
+
+export type UploadSummary = Record<'created' | 'version' | 'unchanged' | 'exists' | 'duplicate', number>;
+
+/** Count what the server did with each uploaded file (older servers send no `results`: all new). */
+export function summarizeUpload(response: { documents: unknown[]; results?: Array<{ status: string }> }): UploadSummary {
+    const out: UploadSummary = { created: 0, version: 0, unchanged: 0, exists: 0, duplicate: 0 };
+    if (!response.results) {
+        out.created = response.documents.length;
+        return out;
+    }
+    for (const row of response.results) {
+        if (row.status in out)
+            out[row.status as keyof UploadSummary] += 1;
+    }
+    return out;
+}

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { DocRow, Filing, Location } from '../api';
 import type { SuggestedLocation } from '../explorer';
 import { filedSummary, reasonLabel } from '../explorer';
@@ -77,7 +77,7 @@ export function MailCard({ item, filings, loading, onOpen }: {
         </span>
         <span className="kf-mail__date">{formatDate(item.received)}</span>
       </div>
-      <p className="kf-mail__subject">{item.subject}</p>
+      <p className="kf-mail__subject" title={item.subject}>{item.subject}</p>
       <p className="kf-mail__from">{item.fromName}{item.fromEmail && item.fromEmail !== item.fromName ? <span> · {item.fromEmail}</span> : null}</p>
       {rows.length ? (
         <ul className="kf-filed">
@@ -278,7 +278,7 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
       <div className="kf-filebar__actions">
         <button type="button" className="kf-btn kf-btn--primary kf-btn--wide" disabled={!target || busy || nothing} onClick={onSave}>
           <Icon name="upload" size={15} />
-          {busy ? 'Сохраняем…' : alreadyHere && options.message && !options.thread ? 'Сохранить ещё раз' : count > 1 ? `Сохранить (${count})` : 'Сохранить'}
+          {busy ? 'Сохраняем…' : count > 1 ? `Сохранить (${count})` : 'Сохранить'}
         </button>
         <button type="button" className={`kf-iconbtn kf-iconbtn--box${more ? ' is-on' : ''}`} aria-label="Комментарий" title="Комментарий" aria-pressed={more} onClick={() => setMore(!more)}>
           <Icon name="doc" size={15} />
@@ -297,7 +297,7 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
           </button>
         ) : null}
       </div>
-      {alreadyHere ? <p className="kf-filebar__note">Письмо уже есть в этой папке — повторное сохранение создаст новую версию.</p> : null}
+      {alreadyHere ? <p className="kf-filebar__note">Это письмо уже есть в этом matter — копию Kosta не создаст. Можно сохранить вложения или всю переписку (она обновится новой версией).</p> : null}
     </div>
   );
 }
@@ -367,4 +367,66 @@ export function PlaceList({ places, selectedKey, onPick, empty }: {
 
 export function recentToPlaces(rows: RecentTarget[]) {
   return rows.map((row) => ({ ...row, key: `r:${row.matterId}|${row.folderId ?? ''}`, icon: 'clock' as IconName, meta: formatDate(row.usedAt) }));
+}
+
+type ToastStatus = { text: string; kind: '' | 'ok' | 'error' } | null;
+
+const TOAST_MS = { ok: 4500, error: 9000, '': 4500 } as const;
+
+/**
+ * Toast at the top of the pane: the first line is the title, the rest a short detail.
+ * Success hides itself, errors stay longer, progress stays while work is running; hover pauses the timer.
+ */
+export function Toast({ status, busy, onClose }: { status: ToastStatus; busy: boolean; onClose: () => void }) {
+  const [hover, setHover] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => setLeaving(false), [status]);
+
+  useEffect(() => {
+    if (!status || hover || (busy && status.kind === ''))
+      return;
+    const timer = window.setTimeout(() => setLeaving(true), TOAST_MS[status.kind]);
+    return () => window.clearTimeout(timer);
+  }, [status, hover, busy]);
+
+  useEffect(() => {
+    if (!leaving)
+      return;
+    const timer = window.setTimeout(() => closeRef.current(), 180);
+    return () => window.clearTimeout(timer);
+  }, [leaving]);
+
+  if (!status)
+    return null;
+  const [title, ...rest] = status.text.split('\n');
+  const progress = busy && status.kind === '';
+  return (
+    <div className="kf-toasts" aria-live={status.kind === 'error' ? 'assertive' : 'polite'}>
+      <div
+        className={`kf-toast is-${status.kind || 'info'}${leaving ? ' is-leaving' : ''}`}
+        role={status.kind === 'error' ? 'alert' : 'status'}
+        title={status.text}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onFocus={() => setHover(true)}
+        onBlur={() => setHover(false)}
+      >
+        <span className="kf-toast__icon" aria-hidden="true">
+          {progress ? <span className="kf-spinner kf-spinner--small" /> : <Icon name={status.kind === 'error' ? 'close' : status.kind === 'ok' ? 'check' : 'spark'} size={14} />}
+        </span>
+        <div className="kf-toast__body">
+          <p className="kf-toast__title">{title}</p>
+          {rest.length ? <p className="kf-toast__detail">{rest.join(' · ')}</p> : null}
+        </div>
+        {!progress ? (
+          <button type="button" className="kf-iconbtn" aria-label="Скрыть уведомление" onClick={() => setLeaving(true)}>
+            <Icon name="close" size={13} />
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
 }

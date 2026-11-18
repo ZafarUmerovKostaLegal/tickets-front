@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { filesApi, type DocumentRow, type FolderRow } from '../api/filesApi';
-import { canEdit, canManage, formatBytes } from '../lib/filesFormat';
+import { canEdit, canManage, dateRange, documentDay, formatBytes, inDateRange, isMailName, summarizeUpload, type DateFilter, type DatePreset } from '../lib/filesFormat';
+import { DuplicatesModal } from './DuplicatesModal';
 import { DOC_DRAG_TYPE } from './DocumentTable';
 import { DocumentPane } from './DocumentPane';
 import { ConfirmModal, FileBadge, Icon, Modal, StateBlock, useAction, useFm, useLoad, useNotify } from './fmShared';
@@ -63,6 +64,43 @@ function FolderNameModal({ title, initial, onClose, onSubmit }: {
     );
 }
 
+const DATE_FILTER_KEY = 'fm.matter.dateFilter';
+const DATE_PRESETS: DatePreset[] = ['all', 'today', 'week', 'month', 'thisMonth', 'custom'];
+const PRESET_LABEL: Record<DatePreset, string> = {
+    all: 'browser.dateAll',
+    today: 'browser.dateToday',
+    week: 'browser.dateWeek',
+    month: 'browser.dateMonth',
+    thisMonth: 'browser.dateThisMonth',
+    custom: 'browser.dateCustom',
+};
+
+function readDateFilter(): DateFilter {
+    try {
+        const raw = JSON.parse(localStorage.getItem(DATE_FILTER_KEY) || '{}') as Partial<DateFilter>;
+        const preset = DATE_PRESETS.includes(raw.preset as DatePreset) ? raw.preset as DatePreset : 'all';
+        const day = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
+        return { preset, from: day(raw.from), to: day(raw.to) };
+    } catch {
+        return { preset: 'all', from: '', to: '' };
+    }
+}
+
+function formatDay(day: string, locale: string): string {
+    if (!day)
+        return '';
+    const [y, m, d] = day.split('-').map(Number);
+    return new Date(y!, m! - 1, d!).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/** `Correspondence/Emails` of the matter template: letters there are sorted per colleague. */
+function isEmailsFolder(folder: FolderRow | null, folders: readonly FolderRow[]): boolean {
+    if (!folder || folder.name.trim().toLowerCase() !== 'emails')
+        return false;
+    const parent = folders.find((row) => row.id === folder.parentId);
+    return parent?.name.trim().toLowerCase() === 'correspondence';
+}
+
 function kindLabel(kind: DocumentRow['kind'], tr: (key: string) => string): string {
     const key = `kinds.${kind}`;
     const label = tr(key);
@@ -90,8 +128,20 @@ export function MatterWorkspace({
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const [clipboard, setClipboard] = useState<{ documentId: string; fromFolderId: string | null } | null>(null);
     const [menu, setMenu] = useState<CtxMenu | null>(null);
+    const [dateFilter, setDateFilter] = useState<DateFilter>(readDateFilter);
+    const [organizing, setOrganizing] = useState(false);
+    const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+    const [copyPrompt, setCopyPrompt] = useState<{ files: File[]; text: string } | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(DATE_FILTER_KEY, JSON.stringify(dateFilter));
+        } catch {
+            /* private mode */
+        }
+    }, [dateFilter]);
 
     const browse = useLoad(() => filesApi.browse(matterId, folderId), [matterId, folderId]);
     const data = browse.data && browse.data.matter.id === matterId ? browse.data : null;
@@ -109,6 +159,29 @@ export function MatterWorkspace({
         () => [...(data?.documents ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
         [data],
     );
+
+    const range = useMemo(() => dateRange(dateFilter), [dateFilter]);
+    const dateActive = Boolean(range.from || range.to);
+    const shownDocuments = useMemo(
+        () => (dateActive ? documents.filter((doc) => inDateRange(documentDay(doc), range)) : documents),
+        [documents, range, dateActive],
+    );
+    const looseLetters = useMemo(() => documents.filter((doc) => isMailName(doc.name)).length, [documents]);
+    const canOrganize = editable && looseLetters > 0 && isEmailsFolder(currentFolder, folders);
+
+    const organize = async () => {
+        if (!folderId)
+            return;
+        setOrganizing(true);
+        const result = await act(() => filesApi.organizeMail(matterId, folderId));
+        setOrganizing(false);
+        if (!result)
+            return;
+        notify(result.moved
+            ? tr('browser.organizeDone', { moved: result.moved, folders: result.folders.join(', ') })
+            : tr('browser.organizeNothing'));
+        browse.reload();
+    };
 
     useEffect(() => {
         setSelectedFolderId(null);
@@ -140,17 +213,40 @@ export function MatterWorkspace({
 
     const goFolder = (next: string | null) => onNavigate({ matterId, folderId: next, docId: null });
 
-    const upload = async (files: File[]) => {
-        if (files.length === 0)
+    const upload = async (files: File[], allowDuplicate = false) => {
+        const sent = files.filter((file) => file.size > 0);
+        if (sent.length === 0)
             return;
-        const result = await act(() => filesApi.upload(matterId, folderId, files));
-        if (result) {
-            notify(tr('browser.uploaded', { count: result.documents.length }));
+        const result = await act(() => filesApi.upload(matterId, folderId, sent, '', { allowDuplicate }));
+        if (!result)
+            return;
+        const summary = summarizeUpload(result);
+        const parts = [
+            summary.created ? tr('browser.uploaded', { count: summary.created }) : '',
+            summary.version ? tr('browser.uploadVersions', { count: summary.version }) : '',
+            summary.unchanged ? tr('browser.uploadUnchanged', { count: summary.unchanged }) : '',
+            summary.exists ? tr('browser.uploadExists', { count: summary.exists }) : '',
+        ].filter(Boolean);
+        if (parts.length)
+            notify(parts.join(' · '));
+        const duplicates = (result.results ?? [])
+            .map((row, index) => ({ row, file: sent[index] }))
+            .filter((pair): pair is { row: typeof pair.row; file: File } => pair.row.status === 'duplicate' && Boolean(pair.file));
+        if (duplicates.length) {
+            setCopyPrompt({
+                files: duplicates.map((pair) => pair.file),
+                text: tr('browser.uploadDuplicateAsk', {
+                    list: duplicates.map((pair) => `«${pair.file.name}» = «${pair.row.document.name}»`).join(', '),
+                }),
+            });
+        }
+        if (summary.created || summary.version) {
             browse.reload();
             onClientsStale();
-            if (result.documents.length === 1)
-                onNavigate({ matterId, folderId, docId: result.documents[0].id });
         }
+        const changed = (result.results ?? []).filter((row) => row.status === 'created' || row.status === 'version');
+        if (sent.length === 1 && (changed.length === 1 || !result.results) && result.documents[0])
+            onNavigate({ matterId, folderId, docId: result.documents[0].id });
     };
 
     const patchDoc = (doc: DocumentRow) => {
@@ -206,6 +302,7 @@ export function MatterWorkspace({
     };
 
     const empty = subfolders.length === 0 && documents.length === 0;
+    const filteredOut = !empty && dateActive && documents.length > 0 && shownDocuments.length === 0;
 
     return (
         <div className="fm-split">
@@ -223,6 +320,50 @@ export function MatterWorkspace({
                 }}
                 onDrop={onDrop}
             >
+                {data ? (
+                    <div className="fm-datebar" role="toolbar" aria-label={tr('browser.dateFilter')}>
+                        <div className="fm-datebar__presets" role="group" title={tr('browser.dateHint')}>
+                            {DATE_PRESETS.map((preset) => (
+                                <button key={preset} type="button"
+                                    className={dateFilter.preset === preset ? 'fm-datebar__chip is-on' : 'fm-datebar__chip'}
+                                    aria-pressed={dateFilter.preset === preset}
+                                    onClick={() => setDateFilter((prev) => ({ ...prev, preset }))}>
+                                    {tr(PRESET_LABEL[preset])}
+                                </button>
+                            ))}
+                        </div>
+                        {dateFilter.preset === 'custom' ? (
+                            <div className="fm-datebar__range">
+                                <label>
+                                    <span>{tr('browser.dateFrom')}</span>
+                                    <input type="date" value={dateFilter.from} max={dateFilter.to || undefined}
+                                        onChange={(event) => setDateFilter((prev) => ({ ...prev, from: event.target.value }))} />
+                                </label>
+                                <label>
+                                    <span>{tr('browser.dateTo')}</span>
+                                    <input type="date" value={dateFilter.to} min={dateFilter.from || undefined}
+                                        onChange={(event) => setDateFilter((prev) => ({ ...prev, to: event.target.value }))} />
+                                </label>
+                            </div>
+                        ) : null}
+                        {dateActive ? (
+                            <span className="fm-datebar__count">
+                                {tr('browser.dateShown', { shown: shownDocuments.length, total: documents.length })}
+                            </span>
+                        ) : null}
+                        <button type="button" className="fm-btn fm-datebar__dups" onClick={() => setDuplicatesOpen(true)}
+                            title={tr('browser.duplicatesHint')}>
+                            {tr('browser.duplicates')}
+                        </button>
+                        {canOrganize ? (
+                            <button type="button" className="fm-btn fm-datebar__organize" disabled={organizing}
+                                title={tr('browser.organizeMailHint')} onClick={() => void organize()}>
+                                <Icon name="folder" />
+                                {tr('browser.organizeMail')}
+                            </button>
+                        ) : null}
+                    </div>
+                ) : null}
                 <StateBlock loading={browse.loading && !data} error={browse.error} onRetry={browse.reload}>
                     {data ? (
                         <div
@@ -294,7 +435,9 @@ export function MatterWorkspace({
                                             </span>
                                         </button>
                                     ))}
-                                    {documents.map((doc) => {
+                                    {shownDocuments.map((doc) => {
+                                        const day = documentDay(doc);
+                                        const subject = isMailName(doc.name) ? doc.description.trim() : '';
                                         const lockedByOther = doc.checkedOutById !== null && doc.checkedOutById !== viewerId;
                                         return (
                                             <button key={doc.id} type="button"
@@ -317,10 +460,13 @@ export function MatterWorkspace({
                                                 <span className="fm-ex__tile-ico" aria-hidden>
                                                     <FileBadge kind={doc.kind} />
                                                 </span>
-                                                <span className="fm-ex__tile-meta">
-                                                    <strong title={doc.name}>{doc.name}</strong>
+                                                <span className="fm-ex__tile-meta" title={[doc.name, subject].filter(Boolean).join('\n')}>
+                                                    <strong>{doc.name}</strong>
+                                                    {subject ? <span className="fm-ex__tile-subject">{subject}</span> : null}
                                                     <small>
                                                         {kindLabel(doc.kind, tr)} · {formatBytes(doc.sizeBytes, locale)}
+                                                        {day ? ` · ${formatDay(day, locale)}` : ''}
+                                                        {doc.version > 1 ? ` · v${doc.version}` : ''}
                                                         {doc.checkedOutById ? ` · ${lockedByOther ? tr('table.checkedOutBy', { name: doc.checkedOutBy ?? '' }) : tr('table.checkedOutMe')}` : ''}
                                                     </small>
                                                 </span>
@@ -329,6 +475,15 @@ export function MatterWorkspace({
                                     })}
                                 </div>
                             )}
+                            {filteredOut ? (
+                                <div className="fm-datebar__empty">
+                                    <p>{tr('browser.dateEmpty')}</p>
+                                    <button type="button" className="fm-btn" onClick={(event) => {
+                                        event.stopPropagation();
+                                        setDateFilter({ preset: 'all', from: '', to: '' });
+                                    }}>{tr('browser.dateReset')}</button>
+                                </div>
+                            ) : null}
 
                             {menu ? (
                                 <div className="fm-ex__menu" style={{ left: menu.x, top: menu.y }} role="menu" onClick={(event) => event.stopPropagation()}>
@@ -448,6 +603,34 @@ export function MatterWorkspace({
                 />
             ) : null}
 
+            {duplicatesOpen ? (
+                <DuplicatesModal
+                    matterId={matterId}
+                    editable={editable}
+                    onClose={() => setDuplicatesOpen(false)}
+                    onOpen={(doc) => {
+                        setDuplicatesOpen(false);
+                        onNavigate({ matterId, folderId: doc.folderId, docId: doc.id });
+                    }}
+                    onChanged={() => {
+                        browse.reload();
+                        onClientsStale();
+                    }}
+                />
+            ) : null}
+            {copyPrompt ? (
+                <ConfirmModal
+                    title={tr('browser.uploadDuplicateTitle')}
+                    text={copyPrompt.text}
+                    confirmLabel={tr('browser.uploadDuplicateConfirm')}
+                    onClose={() => setCopyPrompt(null)}
+                    onConfirm={async () => {
+                        const files = copyPrompt.files;
+                        setCopyPrompt(null);
+                        await upload(files, true);
+                    }}
+                />
+            ) : null}
             {folderModal ? (
                 <FolderNameModal
                     title={folderModal === 'create' ? tr('browser.newFolder') : tr('browser.renameFolder')}
