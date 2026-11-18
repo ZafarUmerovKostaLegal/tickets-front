@@ -47,6 +47,13 @@ import {
 import { fetchCbuParsedForDate, peekCachedCbuParsedForDate, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import { exportInvoiceRegistryExcel } from '@entities/time-tracking/lib/exportInvoiceRegistryExcel';
 import { buildExistingInvoicePdfFile } from '../lib/invoicePageShared';
+import {
+    readInvoiceRegistryFilters,
+    readInvoiceRegistryScroll,
+    writeInvoiceRegistryFilters,
+    writeInvoiceRegistryScroll,
+    type InvoiceRegistryFilters,
+} from '../lib/invoiceRegistryViewState';
 import { useI18n } from '@shared/i18n';
 import { useAppDialog } from '@shared/ui';
 import { DatePicker } from '@shared/ui/DatePicker';
@@ -1153,7 +1160,7 @@ const REGISTRY_YEARS = new Set<InvoiceRegistryYearId>([
 
 function readRegistryYear(): InvoiceRegistryYearId {
     try {
-        const saved = window.sessionStorage.getItem(REGISTRY_YEAR_KEY);
+        const saved = window.localStorage.getItem(REGISTRY_YEAR_KEY) ?? window.sessionStorage.getItem(REGISTRY_YEAR_KEY);
         if (saved && REGISTRY_YEARS.has(saved as InvoiceRegistryYearId))
             return saved as InvoiceRegistryYearId;
     }
@@ -1186,15 +1193,20 @@ export function InvoiceRegistryPanel({
     const [loading, setLoading] = useState(true);
     const [dirty, setDirty] = useState(false);
     const [focus, setFocus] = useState<FocusCell>(null);
-    const [search, setSearch] = useState('');
-    const [partners, setPartners] = useState<Set<string>>(() => new Set());
-    const [clients, setClients] = useState<Set<string>>(() => new Set());
-    const [currencies, setCurrencies] = useState<Set<string>>(() => new Set());
-    const [statuses, setStatuses] = useState<Set<string>>(() => new Set());
-    const [numberQuery, setNumberQuery] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
-    const [months, setMonths] = useState<Set<number>>(() => new Set());
+    const [initialFilters] = useState(() => readInvoiceRegistryFilters(year));
+    const [search, setSearch] = useState(initialFilters.search);
+    const [partners, setPartners] = useState<Set<string>>(() => new Set(initialFilters.partners));
+    const [clients, setClients] = useState<Set<string>>(() => new Set(initialFilters.clients));
+    const [currencies, setCurrencies] = useState<Set<string>>(() => new Set(initialFilters.currencies));
+    const [statuses, setStatuses] = useState<Set<string>>(() => new Set(initialFilters.statuses));
+    const [numberQuery, setNumberQuery] = useState(initialFilters.numberQuery);
+    const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
+    const [dateTo, setDateTo] = useState(initialFilters.dateTo);
+    const [months, setMonths] = useState<Set<number>>(() => new Set(initialFilters.months));
+    // Year whose saved filters are in state: until they are applied nothing is written back.
+    const filtersYearRef = useRef<InvoiceRegistryYearId>(year);
+    const tableWrapRef = useRef<HTMLDivElement | null>(null);
+    const scrollSaveFrame = useRef<number | null>(null);
     const [fullscreen, setFullscreen] = useState(false);
     const [exportBusy, setExportBusy] = useState(false);
     const sheet = useMemo(() => getInvoiceRegistrySheet(year), [year]);
@@ -1326,15 +1338,18 @@ export function InvoiceRegistryPanel({
         let cancelled = false;
         setLoading(true);
         setFocus(null);
-        setSearch('');
-        setPartners(new Set());
-        setClients(new Set());
-        setCurrencies(new Set());
-        setStatuses(new Set());
-        setNumberQuery('');
-        setDateFrom('');
-        setDateTo('');
-        setMonths(new Set());
+        if (filtersYearRef.current !== year) {
+            const saved = readInvoiceRegistryFilters(year);
+            setSearch(saved.search);
+            setPartners(new Set(saved.partners));
+            setClients(new Set(saved.clients));
+            setCurrencies(new Set(saved.currencies));
+            setStatuses(new Set(saved.statuses));
+            setNumberQuery(saved.numberQuery);
+            setDateFrom(saved.dateFrom);
+            setDateTo(saved.dateTo);
+            setMonths(new Set(saved.months));
+        }
 
         const loadSheet = async () => {
             try {
@@ -1429,6 +1444,53 @@ export function InvoiceRegistryPanel({
             cancelled = true;
         };
     }, [year, t, readOnly, refreshYears]);
+
+    useEffect(() => {
+        if (filtersYearRef.current !== year) {
+            // This commit still holds the previous sheet's filters; the saved ones arrive next render.
+            filtersYearRef.current = year;
+            return;
+        }
+        const filters: InvoiceRegistryFilters = {
+            search,
+            partners: [...partners],
+            clients: [...clients],
+            currencies: [...currencies],
+            statuses: [...statuses],
+            numberQuery,
+            dateFrom,
+            dateTo,
+            months: [...months],
+        };
+        writeInvoiceRegistryFilters(year, filters);
+    }, [year, search, partners, clients, currencies, statuses, numberQuery, dateFrom, dateTo, months]);
+
+    useLayoutEffect(() => {
+        if (loading)
+            return;
+        const wrap = tableWrapRef.current;
+        const saved = readInvoiceRegistryScroll(year);
+        if (!wrap || !saved)
+            return;
+        wrap.scrollTop = saved.top;
+        wrap.scrollLeft = saved.left;
+    }, [loading, year]);
+
+    useEffect(() => () => {
+        if (scrollSaveFrame.current !== null)
+            window.cancelAnimationFrame(scrollSaveFrame.current);
+    }, []);
+
+    const onTableScroll = useCallback(() => {
+        if (scrollSaveFrame.current !== null)
+            return;
+        scrollSaveFrame.current = window.requestAnimationFrame(() => {
+            scrollSaveFrame.current = null;
+            const wrap = tableWrapRef.current;
+            if (wrap)
+                writeInvoiceRegistryScroll(year, { top: wrap.scrollTop, left: wrap.scrollLeft });
+        });
+    }, [year]);
 
     const statusChoices = useMemo(() => {
         if (year === '2026-system')
@@ -1804,7 +1866,7 @@ export function InvoiceRegistryPanel({
                             onClick={() => {
                                 setYear(s.id);
                                 try {
-                                    window.sessionStorage.setItem(REGISTRY_YEAR_KEY, s.id);
+                                    window.localStorage.setItem(REGISTRY_YEAR_KEY, s.id);
                                 }
                                 catch {
                                 }
@@ -2018,7 +2080,7 @@ export function InvoiceRegistryPanel({
             {loading ? (
                 <p className="tt-tm-hint" role="status">{t('timeTrackingPage.common.loading')}</p>
             ) : (
-                <div className="tt-inv-reg__table-wrap">
+                <div className="tt-inv-reg__table-wrap" ref={tableWrapRef} onScroll={onTableScroll}>
                     <table className={`tt-inv-reg__table${canEditYear ? ' tt-inv-reg__table--editable' : ''}`} role="grid">
                         <thead>
                             <tr>
