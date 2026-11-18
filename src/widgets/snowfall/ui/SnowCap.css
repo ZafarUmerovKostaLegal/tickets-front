@@ -1,10 +1,14 @@
 .snow-cap {
   --snow-cap-top: #ffffff;
-  --snow-cap-mid: #eef5fc;
-  --snow-cap-base: #c5d6ea;
-  --snow-cap-edge: rgba(50, 78, 118, 0.42);
-  --snow-cap-rim: rgba(100, 132, 175, 0.65);
+  --snow-cap-mid: #f6f9fd;
+  --snow-cap-low: #e4edf8;
+  --snow-cap-base: #cddcee;
+  --snow-cap-shadow: rgba(60, 90, 135, 0.28);
+  --snow-cap-rim: rgba(255, 255, 255, 0.95);
+  --snow-cap-grain: rgba(160, 186, 220, 0.22);
   --snow-cap-drop: rgba(110, 155, 210, 0.9);
+  --snow-cap-flake: #ffffff;
+  --snow-cap-flake-edge: rgba(120, 155, 200, 0.55);
   position: absolute;
   left: 0;
   right: 0;
@@ -15,16 +19,19 @@
   transition: translate 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.home-nav-tiles__item:hover>.snow-cap {
+.home-nav-tiles__item:hover > .snow-cap {
   translate: 0 -2px;
 }
 
 body[data-theme='dark'] .snow-cap {
-  --snow-cap-mid: #eef3fa;
-  --snow-cap-base: #c3d2e6;
-  --snow-cap-edge: rgba(0, 0, 0, 0.5);
-  --snow-cap-rim: rgba(255, 255, 255, 0.35);
+  --snow-cap-mid: #f1f5fb;
+  --snow-cap-low: #dce6f3;
+  --snow-cap-base: #bccde4;
+  --snow-cap-shadow: rgba(0, 0, 0, 0.55);
+  --snow-cap-rim: rgba(255, 255, 255, 0.85);
+  --snow-cap-grain: rgba(150, 176, 212, 0.26);
   --snow-cap-drop: rgba(190, 215, 245, 0.9);
+  --snow-cap-flake-edge: rgba(200, 220, 250, 0.6);
 }
 
 .snow-cap__svg {
@@ -40,15 +47,33 @@ body[data-theme='dark'] .snow-cap {
   animation: snow-cap-settle 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
 
-.snow-cap__body {
-  filter:
-    drop-shadow(0 1.5px 1px var(--snow-cap-edge)) drop-shadow(0 4px 8px color-mix(in srgb, var(--snow-cap-edge) 55%, transparent));
+/* Separate group so the press "shiver" never replays the settle-in animation. */
+.snow-cap__poke {
+  transform-box: view-box;
+  transform-origin: 50% 22px;
 }
 
+.snow-cap__poke--on {
+  animation: snow-cap-poke 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+/* Soft volume instead of a hard outline: contact shadow on the tile + a long soft one. */
+.snow-cap__body {
+  filter:
+    drop-shadow(0 1px 0.6px var(--snow-cap-shadow))
+    drop-shadow(0 5px 9px color-mix(in srgb, var(--snow-cap-shadow) 55%, transparent));
+}
+
+/* Bright, slightly translucent crest catching the light. */
 .snow-cap__rim {
   fill: none;
   stroke: var(--snow-cap-rim);
-  stroke-width: 1;
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+
+.snow-cap__grain {
+  fill: var(--snow-cap-grain);
 }
 
 .snow-cap__shine {
@@ -64,7 +89,11 @@ body[data-theme='dark'] .snow-cap {
 }
 
 body:not([data-theme='dark']) .snow-cap__sparkle {
-  fill: #a9c1e0;
+  fill: #9fbadf;
+}
+
+.home-nav-tiles__item:hover .snow-cap__sparkle {
+  animation-duration: 2.2s;
 }
 
 .snow-cap__drop {
@@ -73,6 +102,61 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
   transform-box: fill-box;
   transform-origin: 50% 0;
   animation: snow-cap-drip 7s cubic-bezier(0.55, 0, 0.9, 0.4) infinite;
+}
+
+/* Crumbs of snow knocked off by the pointer. */
+.snow-cap__flakes {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.snow-cap__flake {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--snow-cap-flake) 0%, var(--snow-cap-flake) 55%, var(--snow-cap-flake-edge) 100%);
+  box-shadow: 0 0 0 0.5px var(--snow-cap-flake-edge);
+  will-change: transform, opacity;
+  animation: snow-cap-flake 1.2s cubic-bezier(0.25, 0.6, 0.45, 1) forwards;
+}
+
+@keyframes snow-cap-flake {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  30% {
+    transform: translate(calc(-50% + var(--dx) * 0.4), var(--rise)) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), var(--fall)) scale(0.7) rotate(120deg);
+  }
+}
+
+@keyframes snow-cap-poke {
+  0% {
+    transform: scale(1, 1);
+  }
+
+  30% {
+    transform: scale(1.012, 0.86);
+  }
+
+  65% {
+    transform: scale(0.996, 1.05);
+  }
+
+  100% {
+    transform: scale(1, 1);
+  }
 }
 
 @keyframes snow-cap-settle {
@@ -92,7 +176,6 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
 }
 
 @keyframes snow-cap-shine {
-
   0%,
   60% {
     transform: translateX(0);
@@ -104,7 +187,6 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
 }
 
 @keyframes snow-cap-sparkle {
-
   0%,
   70%,
   100% {
@@ -146,11 +228,16 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .snow-cap__drift,
+  .snow-cap__poke--on,
   .snow-cap__shine,
   .snow-cap__sparkle,
-  .snow-cap__drop {
+  .snow-cap__drop,
+  .snow-cap__flake {
     animation: none;
+  }
+
+  .snow-cap__flakes {
+    display: none;
   }
 }
