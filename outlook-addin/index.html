@@ -4,51 +4,101 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kosta File</title>
-    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-    <style>
-      .kf-fatal { font: 13px/1.45 "Segoe UI", system-ui, sans-serif; color: #1f1d1b; padding: 20px 16px; }
-      .kf-fatal h1 { font-size: 15px; margin: 0 0 8px; color: #8b2635; }
-      .kf-fatal p { margin: 0 0 8px; }
-      .kf-fatal code { font-size: 11px; word-break: break-all; color: #5f5a55; }
-    </style>
-  </head>
-  <body>
-    <div id="app"></div>
     <!--
-      Never leave a blank pane: old Office builds (Internet Explorer engine) cannot run the app,
-      office.js may be blocked, or start-up may throw. Plain ES5 on purpose.
+      Start-up diagnostics, before anything else loads (plain ES5 on purpose).
+      Never leave a blank pane: if Office does not get ready, show the stage, blocked resources and
+      CSP violations so the cause is visible on the user's machine.
     -->
     <script>
       (function () {
-        function show(title, text, detail) {
-          if (window.__kfStarted && !detail)
+        var issues = [];
+        window.__kfStage = 'html';
+        window.__kfIssues = issues;
+        function note(text) {
+          if (issues.length < 12 && issues.indexOf(text) < 0)
+            issues.push(text);
+        }
+        document.addEventListener('securitypolicyviolation', function (event) {
+          note('CSP ' + event.violatedDirective + ': ' + (event.blockedURI || 'inline'));
+        });
+        window.addEventListener('error', function (event) {
+          var target = event && event.target;
+          if (target && target !== window && (target.src || target.href)) {
+            note('Не загрузилось: ' + (target.src || target.href));
             return;
+          }
+          note('Ошибка: ' + (event && event.message ? event.message : 'error'));
+          if (!window.__kfStarted)
+            window.__kfFatal('Kosta File не запустился', 'Обновите панель. Если ошибка повторяется, пришлите этот текст администратору.');
+        }, true);
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event && event.reason;
+          note('Promise: ' + (reason && reason.message ? reason.message : String(reason)));
+        });
+
+        function hostInfo() {
+          var match = /[?&]_host_Info=([^&#]*)/i.exec(location.search) || /_host_Info=([^&#]*)/i.exec(location.hash);
+          var info = match ? decodeURIComponent(match[1]) : '';
+          try {
+            if (!info && window.sessionStorage)
+              info = sessionStorage.getItem('hostInfoValue') || '';
+          } catch (e) {
+            info = info || '';
+          }
+          return info || 'нет (_host_Info не передан)';
+        }
+
+        window.__kfDiagnostics = function () {
+          return [
+            'Этап: ' + window.__kfStage,
+            'office.js: ' + (typeof Office === 'undefined' ? 'не загружен' : 'загружен'),
+            'Хост: ' + hostInfo(),
+            'WebView2: ' + (window.chrome && window.chrome.webview ? 'да' : 'нет'),
+            'Адрес: ' + location.href.split('#')[0].slice(0, 300),
+            'Браузер: ' + navigator.userAgent
+          ].concat(issues).join('\n');
+        };
+
+        window.__kfFatal = function (title, text) {
           var app = document.getElementById('app');
-          if (!app)
+          if (!app || window.__kfStarted)
             return;
-          app.innerHTML = '<div class="kf-fatal" role="alert"><h1></h1><p></p><code></code></div>';
+          app.innerHTML = '<div class="kf-fatal" role="alert"><h1></h1><p></p><pre></pre>'
+            + '<p><button type="button" class="kf-fatal__btn">Перезапустить</button></p></div>';
           app.querySelector('h1').textContent = title;
           app.querySelector('p').textContent = text;
-          app.querySelector('code').textContent = detail || '';
-        }
-        window.__kfFatal = show;
-        window.addEventListener('error', function (event) {
-          if (window.__kfStarted)
-            return;
-          show('Kosta File не запустился', 'Обновите панель. Если ошибка повторяется, пришлите текст ниже администратору.',
-            (event && event.message ? event.message : 'error') + ' · ' + navigator.userAgent);
-        });
+          app.querySelector('pre').textContent = window.__kfDiagnostics();
+          app.querySelector('button').onclick = function () { location.reload(); };
+        };
+
+        // Office may be slow on the first start: warn after 20 s but keep waiting — the pane still
+        // opens by itself if Office answers later.
         setTimeout(function () {
           if (window.__kfStarted)
             return;
           if (typeof Office === 'undefined')
-            show('Не загрузилась библиотека Office', 'Панель не смогла загрузить office.js с appsforoffice.microsoft.com. Проверьте доступ в интернет или прокси и откройте панель снова.');
+            window.__kfFatal('Не загрузилась библиотека Office', 'Панель не смогла загрузить office.js с appsforoffice.microsoft.com. Проверьте доступ в интернет или прокси.');
           else
-            show('Kosta File не запустился', 'Office не ответил вовремя. Закройте и снова откройте панель.', navigator.userAgent);
-        }, 15000);
+            window.__kfFatal('Office не отвечает', 'Панель ждёт ответа от Office и откроется сама, если он придёт. Если ничего не меняется, пришлите этот текст администратору.');
+        }, 20000);
       })();
     </script>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script>
+      window.__kfStage = typeof Office === 'undefined' ? 'office.js не загрузился' : 'office.js загружен';
+    </script>
+    <style>
+      .kf-fatal { font: 13px/1.45 "Segoe UI", system-ui, sans-serif; color: #1f1d1b; padding: 20px 16px; }
+      .kf-fatal h1 { font-size: 15px; margin: 0 0 8px; color: #8b2635; }
+      .kf-fatal p { margin: 0 0 8px; }
+      .kf-fatal pre { font: 11px/1.4 Consolas, monospace; white-space: pre-wrap; word-break: break-all; color: #5f5a55; margin: 0 0 10px; user-select: text; }
+      .kf-fatal__btn { font: inherit; padding: 6px 12px; border: 1px solid #cfcac5; border-radius: 8px; background: #fff; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
     <script nomodule>
+      window.__kfStarted = true;
       document.getElementById('app').innerHTML = '<div class="kf-fatal" role="alert"><h1>Этот Office слишком старый</h1>'
         + '<p>Kosta File работает в Microsoft 365 (Office 2021 и новее), в новом Outlook и в Office в браузере.</p>'
         + '<p>Эта версия Office использует движок Internet Explorer. Обновите Office или откройте документ в Office в браузере.</p></div>';

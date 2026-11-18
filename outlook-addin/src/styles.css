@@ -900,3 +900,9 @@ body[data-theme='dark'] .kf-toast { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); 
   .kf-toast,
   .kf-toast.is-leaving { animation-duration: 0.01s; }
 }
+
+/* Start-up failure screen (also rendered by the inline script in index.html). */
+.kf-fatal { padding: 20px 16px; color: var(--text); }
+.kf-fatal h1 { margin: 0 0 8px; font-size: 15px; color: var(--accent); }
+.kf-fatal p { margin: 0 0 8px; color: var(--text-dim); }
+.kf-fatal pre { margin: 0 0 10px; font: 11px/1.4 Consolas, monospace; white-space: pre-wrap; word-break: break-all; color: var(--text-faint); user-select: text; }

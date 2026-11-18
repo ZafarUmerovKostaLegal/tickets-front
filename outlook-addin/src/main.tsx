@@ -6,7 +6,9 @@ import { App } from './ui/App';
 declare global {
   interface Window {
     __kfStarted?: boolean;
-    __kfFatal?: (title: string, text: string, detail?: string) => void;
+    __kfStage?: string;
+    __kfFatal?: (title: string, text: string) => void;
+    __kfDiagnostics?: () => string;
   }
 }
 
@@ -45,12 +47,15 @@ class CrashGuard extends Component<{ children: ReactNode }, { error: Error | nul
       <div className="kf-fatal" role="alert">
         <h1>Kosta File не запустился</h1>
         <p>Закройте и снова откройте панель. Если ошибка повторяется, пришлите текст ниже администратору.</p>
-        <code>{`${this.state.error.message} · ${navigator.userAgent}`}</code>
+        <pre>{`${this.state.error.message}
+${window.__kfDiagnostics?.() ?? navigator.userAgent}`}</pre>
         <p><button type="button" className="kf-btn" onClick={() => window.location.reload()}>Перезапустить</button></p>
       </div>
     );
   }
 }
+
+window.__kfStage = 'приложение загружено, ждём Office.onReady';
 
 const container = document.getElementById('app');
 if (!container)
@@ -59,13 +64,17 @@ const root = createRoot(container);
 
 function start(host: Office.HostType | null): void {
   window.__kfStarted = true;
+  window.__kfStage = `запущено (${host ?? 'без хоста'})`;
+  // Drop the start-up warning if Office answered after it was shown.
+  container!.replaceChildren();
   applyTheme();
   root.render(<CrashGuard><App host={host} /></CrashGuard>);
 }
 
 if (typeof Office !== 'undefined' && typeof Office.onReady === 'function') {
   Office.onReady((info) => start(info.host ?? null)).catch((error: unknown) => {
-    window.__kfFatal?.('Office не готов', 'Office не смог запустить надстройку. Закройте и снова откройте панель.', String(error));
+    window.__kfStage = `Office.onReady отклонён: ${String(error)}`;
+    window.__kfFatal?.('Office не готов', 'Office не смог запустить надстройку. Закройте и снова откройте панель.');
   });
 } else if (import.meta.env.DEV) {
   start(null);
