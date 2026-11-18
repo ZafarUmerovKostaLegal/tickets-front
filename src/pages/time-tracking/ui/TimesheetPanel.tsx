@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, } from 'react';
 import './TimesheetPanel.css';
+import './TimesheetResponsive.css';
 import { createPortal } from 'react-dom';
 import { TimesheetGrantUnlockConfirm, TimesheetDeleteConfirm } from './TimesheetModals';
 import { EntryModal } from './TimesheetEntryModal';

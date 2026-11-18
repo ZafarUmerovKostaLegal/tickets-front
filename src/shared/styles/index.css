@@ -37,6 +37,8 @@ img.twemoji {
   --app-bg-soft: #f1f5f9;
   --app-surface: #ffffff;
   --app-surface-soft: #f8fafc;
+  /* Alias used by older styles; must exist in both themes or they fall back to light colours. */
+  --app-surface-muted: var(--app-surface-soft);
   --app-surface-blur: rgba(255, 255, 255, 0.92);
   --app-border: #e2e8f0;
   --app-border-hover: #cbd5e1;
@@ -159,6 +161,7 @@ body[data-theme='dark'] {
   --app-bg-soft: #1e293b;
   --app-surface: #1a2332;
   --app-surface-soft: #1e293b;
+  --app-surface-muted: var(--app-surface-soft);
   --app-surface-blur: rgba(26, 35, 50, 0.92);
   --app-border: #334155;
   --app-border-hover: #475569;

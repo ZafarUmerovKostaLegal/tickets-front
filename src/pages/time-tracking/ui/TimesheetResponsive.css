@@ -1,0 +1,426 @@
+/*
+ * Timesheet (Расписание · Время) — tablet & phone layout.
+ * Loaded after TimesheetPanel.css. Desktop (> 860px) is untouched.
+ */
+
+/* ---------- Tablet: keep entries + day side panel side by side ---------- */
+@media (min-width: 641px) and (max-width: 860px) {
+  .tsp__body--day {
+    grid-template-columns: minmax(0, 1fr) 264px;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .tsp__body--day .tsp__content {
+    grid-row: 1;
+  }
+
+  .tsp__body--day .tsp-side {
+    grid-row: 1;
+    max-height: none;
+    border-bottom: 0;
+    border-left: 1px solid var(--app-border, #e5e7eb);
+  }
+
+  .tsp__body--day.tsp__body--side-collapsed {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .tsp__body--day.tsp__body--side-collapsed .tsp-side {
+    flex-direction: column;
+  }
+
+  .tsp-side--collapsed .tsp-side__bar {
+    flex-direction: column;
+    width: auto;
+    padding: 0.5rem 0;
+  }
+
+  .tsp-side--collapsed .tsp-side__bar-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 640px) {
+  /* Toolbar: day title + "today" / arrows around the date / view switch. */
+  .tsp .tsp__top {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'head head ret'
+      'prev date next'
+      'seg  seg  seg'
+      'cal  cal  cal';
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem 0.75rem;
+  }
+
+  .tsp .tsp__top-l,
+  .tsp .tsp__top-r {
+    display: contents;
+  }
+
+  .tsp .tsp__heading {
+    grid-area: head;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.0625rem;
+  }
+
+  .tsp .tsp__return {
+    grid-area: ret;
+    justify-self: end;
+    min-height: 0;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--app-accent-border, #c7d2fe);
+    border-radius: 999px;
+    background: var(--app-accent-light-bg, #eef2ff);
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 1;
+  }
+
+  /* On today there is nothing to return to — hide the passive label. */
+  .tsp .tsp__return--passive {
+    visibility: hidden;
+  }
+
+  .tsp .tsp__arr {
+    width: 38px;
+    height: 38px;
+    min-height: 0;
+    border-radius: 10px;
+  }
+
+  .tsp .tsp__top-l > .tsp__arr:first-child {
+    grid-area: prev;
+  }
+
+  .tsp .tsp__top-l > .tsp__arr:nth-child(2) {
+    grid-area: next;
+  }
+
+  .tsp .tsp__date-jump-wrap {
+    grid-area: date;
+    min-width: 0;
+  }
+
+  .tsp .tsp__date-jump-wrap .tsp__date-jump-btn {
+    width: 100%;
+    height: 38px;
+    min-height: 0;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 0.875rem;
+  }
+
+  /* Arrows + date only make sense in the week heading too: keep the row compact there. */
+  .tsp .tsp__top:not(:has(.tsp__date-jump-wrap)) {
+    grid-template-areas:
+      'head head head'
+      'prev ret next'
+      'seg  seg  seg'
+      'cal  cal  cal';
+  }
+
+  .tsp .tsp__top:not(:has(.tsp__date-jump-wrap)) .tsp__return {
+    justify-self: center;
+  }
+
+  .tsp .tsp__seg {
+    grid-area: seg;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-radius: 10px;
+  }
+
+  .tsp .tsp__seg .tsp__seg-btn {
+    min-height: 0;
+    height: 36px;
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+  }
+
+  .tsp .tsp__cal-outlook {
+    grid-area: cal;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  /* "Add time" becomes a floating action button above the content. */
+  .tsp .tsp__top-add {
+    position: fixed;
+    right: max(1rem, var(--mob-safe-right, 0px));
+    bottom: calc(1rem + var(--mob-safe-bottom, 0px));
+    z-index: 40;
+    width: 56px;
+    height: 56px;
+    min-height: 0;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    border-radius: 50%;
+    font-size: 0;
+    box-shadow:
+      0 6px 16px -4px color-mix(in srgb, var(--app-accent, #4f46e5) 55%, transparent),
+      0 2px 6px rgba(15, 23, 42, 0.18);
+  }
+
+  .tsp .tsp__top-add svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .tsp .tsp__top-add:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  .tsp .tsp__top-add:disabled {
+    opacity: 0.55;
+  }
+
+  /* Week strip: tap a day to open it, adding is the FAB — no per-day "+" buttons. */
+  .tsp .tsp__day .tsp__day-quick {
+    display: none;
+  }
+
+  .tsp .tsp__strip:not(.tsp__strip--calendar) > .tsp__day {
+    gap: 0.15rem;
+    min-height: 0;
+    padding: 0.5rem 0.125rem 0.45rem;
+  }
+
+  .tsp .tsp__day-wk {
+    font-size: 0.625rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tsp .tsp__day-n {
+    font-size: 0.9375rem;
+  }
+
+  .tsp .tsp__day-h {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+  }
+
+  .tsp .tsp__day-bar-wrap {
+    width: 70%;
+  }
+
+  /* Week total in one line with a thin progress bar. */
+  .tsp .tsp__strip:not(.tsp__strip--calendar) > .tsp__wtotal {
+    align-items: center;
+    gap: 0.15rem 0.5rem;
+    padding: 0.45rem 0.75rem 0.55rem;
+    border-top-width: 1px;
+  }
+
+  .tsp .tsp__wtotal-lbl {
+    font-size: 0.6875rem;
+  }
+
+  .tsp .tsp__wtotal-n {
+    font-size: 1rem;
+  }
+
+  .tsp .tsp__wtotal-cap {
+    font-size: 0.75rem;
+  }
+
+  /* Entries first; the side panel only shows Outlook events (the month grid duplicates the strip). */
+  .tsp .tsp__body--day,
+  .tsp .tsp__body--day.tsp__body--side-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .tsp .tsp__body--day .tsp__content {
+    grid-row: 1;
+  }
+
+  .tsp .tsp__body--day .tsp-side {
+    grid-row: 2;
+    max-height: 34vh;
+    border-top: 1px solid var(--app-border, #e5e7eb);
+    border-bottom: 0;
+  }
+
+  .tsp .tsp-side .tsp-mini,
+  .tsp .tsp-side .tsp-side__bar {
+    display: none;
+  }
+
+  .tsp .tsp__body--day .tsp-side:not(:has(.tsp-side__ev)) {
+    display: none;
+  }
+
+  .tsp .tsp-side .tsp-side__list {
+    overflow-y: auto;
+    padding-bottom: calc(5rem + var(--mob-safe-bottom, 0px));
+  }
+
+  /* Room for the FAB under the last entry. */
+  .tsp .tsp__content {
+    padding-bottom: calc(5rem + var(--mob-safe-bottom, 0px));
+  }
+
+  /* The day footer "+ Add time" duplicates the FAB. */
+  .tsp .tsp__body--day .tsp__day-sum-add {
+    display: none;
+  }
+
+  /* Week total is already in the strip. */
+  .tsp .tsp__foot {
+    display: none;
+  }
+
+  /* Filters: full-width search, chips scroll horizontally instead of wrapping into 4 rows. */
+  .tsp .tsp__filter-bar {
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .tsp .tsp__filter-search {
+    flex: 1 1 100%;
+    min-width: 0;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .tsp .tsp__filter-search input {
+    min-height: 0;
+    font-size: 16px;
+  }
+
+  .tsp .tsp__filter-week {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    gap: 0.375rem;
+    margin: 0 -0.75rem;
+    padding: 0 0.75rem 0.125rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tsp .tsp__filter-week::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tsp .tsp__filter-week-sort,
+  .tsp .tsp__filter-week-days {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0.375rem;
+  }
+
+  .tsp .tsp__filter-chip,
+  .tsp .tsp__filter-day {
+    flex: 0 0 auto;
+    min-height: 0;
+    height: 32px;
+    padding: 0 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .tsp .tsp__filter-reset {
+    min-height: 0;
+    height: 32px;
+  }
+
+  .tsp .tsp__filter-meta {
+    margin-left: auto;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .tsp .tsp__top {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+  }
+
+  .tsp .tsp__heading {
+    font-size: 1rem;
+  }
+
+  .tsp .tsp__day-n {
+    font-size: 0.875rem;
+  }
+
+  .tsp .tsp__row-acts {
+    gap: 0.25rem;
+  }
+}
+
+/* Entry rows on phones and tablets: text on top, compact actions underneath. */
+@media (max-width: 860px) {
+  /* Entry rows: text on top, compact actions underneath. */
+  .tsp .tsp__row {
+    flex-wrap: wrap;
+  }
+
+  .tsp .tsp__row-txt {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.7rem 0.5rem 0.25rem 0.875rem;
+  }
+
+  .tsp .tsp__row-acts {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    padding: 0 0.75rem 0.65rem 0.875rem;
+  }
+
+  .tsp .tsp__row-acts .tsp__row-h {
+    min-width: 0;
+    margin-right: auto;
+    text-align: left;
+    font-size: 1rem;
+  }
+
+  .tsp .tsp__row-acts button {
+    min-height: 0;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .tsp .tsp__row-proj {
+    font-size: 0.9375rem;
+  }
+
+  .tsp .tsp__row-notes,
+  .tsp .tsp__row-task {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .tsp .tsp__row-acts {
+    gap: 0.25rem;
+    padding-right: 0.5rem;
+  }
+
+  .tsp .tsp__row-acts button {
+    padding: 0 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .tsp .tsp__row-acts .tsp__row-copy,
+  .tsp .tsp__row-acts .tsp__row-del {
+    width: 32px;
+    padding: 0;
+  }
+}
