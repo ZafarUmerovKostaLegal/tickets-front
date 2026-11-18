@@ -9,7 +9,7 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a1e-6b4d-4e9a-9c71-0000000000d1</Id>
-  <Version>0.5.1.0</Version>
+  <Version>1.0.0.0</Version>
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="Kosta File (dev)" />
@@ -47,7 +47,6 @@
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
         <SourceLocation DefaultValue="https://localhost:3001/outlook-addin/index.html" />
-        <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
@@ -84,7 +83,6 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />
-                    <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
                   </Action>
                 </Control>
               </Group>
@@ -107,7 +105,6 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />
-                    <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
                   </Action>
                 </Control>
               </Group>
@@ -160,7 +157,6 @@
                     </Icon>
                     <Action xsi:type="ShowTaskpane">
                       <SourceLocation resid="taskpaneUrl" />
-                      <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
                       <SupportsPinning>true</SupportsPinning>
                     </Action>
                   </Control>
@@ -184,7 +180,6 @@
                     </Icon>
                     <Action xsi:type="ShowTaskpane">
                       <SourceLocation resid="taskpaneUrl" />
-                      <TaskpaneId>KostaFile.Taskpane</TaskpaneId>
                       <SupportsPinning>true</SupportsPinning>
                     </Action>
                   </Control>
@@ -199,9 +194,15 @@
                 <Control xsi:type="MobileButton" id="kostaFileMobileOpen">
                   <Label resid="openLabel" />
                   <Icon>
-                    <bt:Image size="25" resid="icon32" />
-                    <bt:Image size="32" resid="icon32" />
-                    <bt:Image size="48" resid="icon80" />
+                    <bt:Image size="25" scale="1" resid="icon32" />
+                    <bt:Image size="25" scale="2" resid="icon80" />
+                    <bt:Image size="25" scale="3" resid="icon80" />
+                    <bt:Image size="32" scale="1" resid="icon32" />
+                    <bt:Image size="32" scale="2" resid="icon80" />
+                    <bt:Image size="32" scale="3" resid="icon80" />
+                    <bt:Image size="48" scale="1" resid="icon80" />
+                    <bt:Image size="48" scale="2" resid="icon80" />
+                    <bt:Image size="48" scale="3" resid="icon80" />
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />

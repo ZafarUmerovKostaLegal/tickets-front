@@ -1,7 +1,7 @@
 {
   "name": "kosta-outlook-file-addin",
   "private": true,
-  "version": "0.5.1",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
