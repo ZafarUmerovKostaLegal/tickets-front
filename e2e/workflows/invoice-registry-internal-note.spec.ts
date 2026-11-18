@@ -38,34 +38,56 @@ async function mockRegistry(page: Page, state: { note: string; patches: unknown[
 async function openNoteCell(page: Page) {
     await page.goto('/time-tracking?tab=invoices&invTab=registry');
     await page.getByText('2026 (система)', { exact: true }).first().click();
-    const cell = page.locator('td[data-registry-edit]').first();
+    const cell = page.locator('td.tt-inv-reg__td--note').last();
     await expect(cell).toBeVisible({ timeout: 20_000 });
     return cell;
 }
 
+const dialog = (page: Page) => page.getByRole('dialog', { name: 'Внутреннее примечание' });
+
 test.describe('@e2e Реестр инвойсов: внутреннее примечание', () => {
-    test('полный многострочный текст редактируется и сохраняется после перезагрузки', async ({ page, loginAs }) => {
+    test('клик по ячейке не открывает счёт, правка — через кнопку и окно', async ({ page, loginAs }) => {
         await loginAs('admin');
         const state = { note: NOTE, patches: [] as unknown[] };
         await mockRegistry(page, state);
 
         const cell = await openNoteCell(page);
         await expect(cell).toContainText('без часов по спору');
-        await cell.click();
+        const url = page.url();
+        await cell.locator('.tt-inv-reg__cell-text').click();
+        await expect(page.locator('textarea')).toHaveCount(0);
+        expect(page.url()).toBe(url);
 
-        const area = page.locator('textarea.tt-inv-reg__input--area');
+        await cell.getByRole('button', { name: /Внутреннее примечание/ }).click();
+        const area = dialog(page).locator('textarea');
         await expect(area).toHaveValue(NOTE);
-        await area.press('End');
+        await area.press('Control+End');
         await area.pressSequentially(', согласовано  ');
-        await area.blur();
+        await dialog(page).getByRole('button', { name: 'Сохранить' }).click();
 
-        await expect.poll(() => state.patches.length).toBe(1);
-        expect(state.patches[0]).toEqual({ internalNote: `${NOTE}, согласовано  ` });
-        await expect(page.locator('td[data-registry-edit]').first()).toContainText('согласовано');
+        await expect(dialog(page)).toBeHidden();
+        expect(state.patches).toEqual([{ internalNote: `${NOTE}, согласовано  ` }]);
+        expect(page.url()).toBe(url);
+        await expect(cell).toContainText('без часов по спору, согласовано');
 
         await page.reload();
         await page.getByText('2026 (система)', { exact: true }).first().click();
-        await expect(page.locator('td[data-registry-edit]').first()).toContainText('без часов по спору, согласовано');
+        await expect(page.locator('td.tt-inv-reg__td--note').last()).toContainText('без часов по спору, согласовано');
+    });
+
+    test('закрытие окна по фону не открывает счёт и ничего не сохраняет', async ({ page, loginAs }) => {
+        await loginAs('admin');
+        const state = { note: NOTE, patches: [] as unknown[] };
+        await mockRegistry(page, state);
+
+        const cell = await openNoteCell(page);
+        const url = page.url();
+        await cell.getByRole('button', { name: /Внутреннее примечание/ }).click();
+        await expect(dialog(page)).toBeVisible();
+        await page.mouse.click(5, 5);
+        await expect(dialog(page)).toBeHidden();
+        expect(page.url()).toBe(url);
+        expect(state.patches).toHaveLength(0);
     });
 
     test('очистка отправляет null, ошибка сервера возвращает прежний текст', async ({ page, loginAs }) => {
@@ -74,13 +96,14 @@ test.describe('@e2e Реестр инвойсов: внутреннее прим
         await mockRegistry(page, state);
 
         const cell = await openNoteCell(page);
-        await cell.click();
-        const area = page.locator('textarea.tt-inv-reg__input--area');
-        await area.fill('');
-        await area.blur();
+        await cell.getByRole('button', { name: /Внутреннее примечание/ }).click();
+        await dialog(page).locator('textarea').fill('');
+        await dialog(page).getByRole('button', { name: 'Сохранить' }).click();
 
         await expect.poll(() => state.patches.length).toBe(1);
         expect(state.patches[0]).toEqual({ internalNote: null });
-        await expect(page.locator('td[data-registry-edit]').first()).toContainText('без часов по спору');
+        await expect(dialog(page)).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(cell).toContainText('без часов по спору');
     });
 });

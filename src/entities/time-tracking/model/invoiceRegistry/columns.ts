@@ -139,7 +139,7 @@ export const INVOICE_REGISTRY_SHEETS: InvoiceRegistrySheetMeta[] = [
                 col.key === INVOICE_REGISTRY_USD_COLUMN ? [PARTNER_NOTE_COLUMN, col] : [col]
             )),
             { key: 'invoicePdf', label: 'PDF', editor: 'pdf' },
-            { key: 'details', label: 'Внутреннее примечание', wide: true },
+            { key: 'details', label: 'Внутреннее примечание', wide: true, editor: 'note' },
         ],
     },
     { year: '2025', sheetName: 'Инвойс 2025', columns: COL_2025 },

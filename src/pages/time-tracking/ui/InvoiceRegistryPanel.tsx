@@ -586,7 +586,17 @@ function PartnerNoteDialog({
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose, saving]);
     return createPortal(
-        <div className="tt-inv-overlay tt-inv-reg-note-overlay" role="presentation" onClick={() => { if (!saving) onClose(); }}>
+        <div
+            className="tt-inv-overlay tt-inv-reg-note-overlay"
+            role="presentation"
+            onClick={(event) => {
+                // React bubbles portal clicks to the table row, which would open the invoice.
+                event.stopPropagation();
+                if (!saving)
+                    onClose();
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+        >
             <div
                 className="tt-inv-dialog tt-inv-reg-note__dialog"
                 role="dialog"
@@ -663,7 +673,7 @@ function RegistryPartnerNoteCell({
     const [open, setOpen] = useState(false);
     const close = useCallback(() => setOpen(false), []);
     return (
-        <td className="tt-inv-reg__td tt-inv-reg__td--wide tt-inv-reg__td--note" title={value || undefined}>
+        <td className="tt-inv-reg__td tt-inv-reg__td--wide tt-inv-reg__td--note" title={value || undefined} data-registry-edit="">
             <div className="tt-inv-reg-note">
                 <span className="tt-inv-reg__cell-text">{value || '\u00a0'}</span>
                 {editable ? (
@@ -1623,35 +1633,13 @@ export function InvoiceRegistryPanel({
         setMonths(new Set());
     };
 
-    const noteDraft = useRef<{ rowId: string; invoiceId: string; value: string; previous: string } | null>(null);
-
     const patchCell = useCallback((rowId: string, key: string, value: string) => {
         const apply = () => {
         if (year === '2026-system') {
-            if (readOnly || (key !== 'statusNote' && key !== 'details'))
+            if (readOnly || key !== 'statusNote')
                 return;
             const row = rows.find((item) => item.id === rowId);
             const invoiceId = row ? systemInvoiceId(row) : '';
-            if (key === 'details') {
-                const previous = String(row?.details ?? '');
-                if (!invoiceId || value === previous)
-                    return;
-                setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: value } : item)));
-                void patchInvoice(invoiceId, { internalNote: value.trim() ? value : null })
-                    .then((saved) => {
-                        setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: saved.internalNote ?? '' } : item)));
-                    })
-                    .catch((error: unknown) => {
-                        setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: previous } : item)));
-                        showToast({
-                            message: error instanceof Error && error.message
-                                ? error.message
-                                : t('timeTrackingPage.invoices.registry.loadFailed'),
-                            variant: 'error',
-                        });
-                    });
-                return;
-            }
             const previous = String(row?.statusNote ?? '');
             if (!invoiceId || value === previous)
                 return;
@@ -2101,8 +2089,7 @@ export function InvoiceRegistryPanel({
                                         const active = focus?.rowId === row.id && focus.key === col.key;
                                         const money = isInvoiceRegistryMoneyColumnKey(col.key);
                                         const systemStatus = year === '2026-system' && col.key === 'statusNote';
-                                        const systemNote = year === '2026-system' && col.key === 'details';
-                                        const canEditCell = !usdColumn && (canEditYear || ((systemStatus || systemNote) && !readOnly));
+                                        const canEditCell = !usdColumn && (canEditYear || (systemStatus && !readOnly));
                                         return (
                                             <RegistryEditableCell
                                                 key={col.key}
@@ -2130,15 +2117,21 @@ export function InvoiceRegistryPanel({
                                                     const previous = val;
                                                     if (!invoiceId || next === previous)
                                                         return;
+                                                    const internal = col.key === 'details';
                                                     setRows((prev) => prev.map((item) => (
-                                                        item.id === row.id ? { ...item, partnerNote: next } : item
+                                                        item.id === row.id ? { ...item, [col.key]: next } : item
                                                     )));
                                                     try {
-                                                        await patchInvoice(invoiceId, { clientNote: next.trim() ? next : null });
+                                                        const value = next.trim() ? next : null;
+                                                        const saved = await patchInvoice(invoiceId, internal ? { internalNote: value } : { clientNote: value });
+                                                        const stored = (internal ? saved.internalNote : saved.clientNote) ?? '';
+                                                        setRows((prev) => prev.map((item) => (
+                                                            item.id === row.id ? { ...item, [col.key]: stored } : item
+                                                        )));
                                                     }
                                                     catch (error: unknown) {
                                                         setRows((prev) => prev.map((item) => (
-                                                            item.id === row.id ? { ...item, partnerNote: previous } : item
+                                                            item.id === row.id ? { ...item, [col.key]: previous } : item
                                                         )));
                                                         showToast({
                                                             message: error instanceof Error && error.message
@@ -2155,50 +2148,8 @@ export function InvoiceRegistryPanel({
                                                     if (canEditCell && col.editor !== 'status')
                                                         setFocus({ rowId: row.id, key: col.key });
                                                 }}
-                                                onChange={(next) => {
-                                                    if (systemNote) {
-                                                        if (!noteDraft.current || noteDraft.current.rowId !== row.id) {
-                                                            noteDraft.current = {
-                                                                rowId: row.id,
-                                                                invoiceId,
-                                                                value: next,
-                                                                previous: val,
-                                                            };
-                                                        }
-                                                        else {
-                                                            noteDraft.current.value = next;
-                                                        }
-                                                        setRows((prev) => prev.map((item) => (
-                                                            item.id === row.id ? { ...item, details: next } : item
-                                                        )));
-                                                        return;
-                                                    }
-                                                    patchCell(row.id, col.key, next);
-                                                }}
-                                                onBlurCommit={() => {
-                                                    const draft = noteDraft.current;
-                                                    noteDraft.current = null;
-                                                    setFocus(null);
-                                                    if (!draft || !draft.invoiceId || draft.value === draft.previous)
-                                                        return;
-                                                    void patchInvoice(draft.invoiceId, {
-                                                        internalNote: draft.value.trim() ? draft.value : null,
-                                                    }).then((saved) => {
-                                                        setRows((prev) => prev.map((item) => (
-                                                            item.id === draft.rowId ? { ...item, details: saved.internalNote ?? '' } : item
-                                                        )));
-                                                    }).catch((error: unknown) => {
-                                                        setRows((prev) => prev.map((item) => (
-                                                            item.id === draft.rowId ? { ...item, details: draft.previous } : item
-                                                        )));
-                                                        showToast({
-                                                            message: error instanceof Error && error.message
-                                                                ? error.message
-                                                                : t('timeTrackingPage.invoices.registry.loadFailed'),
-                                                            variant: 'error',
-                                                        });
-                                                    });
-                                                }}
+                                                onChange={(next) => patchCell(row.id, col.key, next)}
+                                                onBlurCommit={() => setFocus(null)}
                                             />
                                         );
                                     })}
