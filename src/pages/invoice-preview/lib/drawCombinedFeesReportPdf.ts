@@ -8,7 +8,6 @@ import { wrapPdfCellLines } from './invoicePdfCellWrap';
 
 const REPORT_LOGO_H = 42;
 const REPORT_LOGO_W = REPORT_LOGO_H * COVER_LETTERHEAD_LOGO_ASPECT;
-const REPORT_HEADER_CHROME = REPORT_LOGO_H + 18;
 
 const W = 595.28;
 const H = 841.89;
@@ -20,9 +19,6 @@ const INK = rgb(0.1, 0.1, 0.1);
 const MUTED = rgb(0.29, 0.33, 0.39);
 const RED = rgb(232 / 255, 51 / 255, 55 / 255);
 const CELL = 8;
-const STEP = 10;
-const THEAD_H = 16;
-const TITLE_H = 16;
 
 type Logo = Awaited<ReturnType<PDFDocument['embedPng']>> | null;
 
@@ -57,40 +53,17 @@ function clip(text: string, font: PDFFont, size: number, width: number): string 
 
 type Row = { cells: string[]; bold?: boolean };
 
-function colXs(weights: number[]): { widths: number[]; xs: number[] } {
-    const tableW = W - ML - MR;
-    const sum = weights.reduce((a, b) => a + b, 0);
-    const widths = weights.map((w) => (tableW * w) / sum);
-    const xs: number[] = [];
-    let x = ML;
-    for (const width of widths) {
-        xs.push(x);
-        x += width;
-    }
-    return { widths, xs };
-}
-
 function wrapped(text: string, font: PDFFont, width: number): string[] {
     const lines = wrapPdfCellLines(text || '—', Math.max(4, width), (s) => font.widthOfTextAtSize(s, CELL));
     return lines.length ? lines : ['—'];
 }
 
-function rowLayout(cells: string[], weights: number[], right: Set<number>, font: PDFFont): { lines: string[][]; height: number } {
-    const { widths } = colXs(weights);
-    const lines = cells.map((cell, i) => {
-        const width = Math.max(8, widths[i]! - 6);
-        if (right.has(i))
-            return [clip(cell, font, CELL, width)];
-        return wrapped(cell, font, width);
-    });
-    const count = Math.max(1, ...lines.map((line) => line.length));
-    return { lines, height: count * STEP };
-}
+type Block = { title?: string; titleAlign?: 'left' | 'right'; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> };
 
-function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> {
+function blocks(snapshot: CombinedReportSnapshot): Block[] {
     const cur = snapshot.currency || 'USD';
     const invoiced = snapshot.totalFees + snapshot.totalExpenses;
-    const out: Array<{ title?: string; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> = [];
+    const out: Block[] = [];
     const lines = combinedReportDetailLines(snapshot);
     out.push({
         headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', `Amount (${cur})`],
@@ -129,6 +102,7 @@ function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; heade
     });
     out.push({
         title: cur,
+        titleAlign: 'right',
         headers: ['Shared amounts', '', 'Reimbursable expenses', 'TO BE INVOICED:'],
         weights: [36, 14, 25, 25],
         right: new Set([1, 2, 3]),
@@ -152,10 +126,19 @@ const SHEET_GAP = 18;
 const PAD_X = 6;
 const GRID = rgb(0.58, 0.64, 0.72);
 
+type Frame = { left: number; width: number };
+type TableStyle = { title: ReturnType<typeof rgb>; titleSize: number; total: ReturnType<typeof rgb> };
+
+const SHEET_FRAME: Frame = { left: SL, width: W - SL - SR };
+const REPORT_FRAME: Frame = { left: ML, width: W - ML - MR };
+const SHEET_STYLE: TableStyle = { title: RED, titleSize: 10, total: RED };
+const REPORT_STYLE: TableStyle = { title: INK, titleSize: 11, total: INK };
+const TITLE_GAP = 20;
+
 type PageOp =
     | { kind: 'chrome'; title: string | null }
     | { kind: 'gap' }
-    | { kind: 'title'; text: string }
+    | { kind: 'title'; text: string; align: 'left' | 'right' }
     | { kind: 'thead'; headers: string[]; weights: number[]; right: Set<number> }
     | { kind: 'row'; lines: string[][]; weights: number[]; right: Set<number>; height: number; bold: boolean };
 
@@ -171,15 +154,14 @@ function wrapAt(text: string, font: PDFFont, width: number, size: number): strin
 }
 
 function sheetTableW(): number {
-    return W - SL - SR;
+    return SHEET_FRAME.width;
 }
 
-function sheetColXs(weights: number[]): { widths: number[]; xs: number[] } {
-    const tableW = sheetTableW();
+function sheetColXs(weights: number[], frame: Frame = SHEET_FRAME): { widths: number[]; xs: number[] } {
     const sum = weights.reduce((a, b) => a + b, 0);
-    const widths = weights.map((w) => (tableW * w) / sum);
+    const widths = weights.map((w) => (frame.width * w) / sum);
     const xs: number[] = [];
-    let x = SL;
+    let x = frame.left;
     for (const width of widths) {
         xs.push(x);
         x += width;
@@ -187,10 +169,19 @@ function sheetColXs(weights: number[]): { widths: number[]; xs: number[] } {
     return { widths, xs };
 }
 
-function sheetRowLayout(cells: string[], weights: number[], right: Set<number>, font: PDFFont): { lines: string[][]; height: number } {
-    const { widths } = sheetColXs(weights);
+function sheetRowLayout(
+    cells: string[],
+    weights: number[],
+    right: Set<number>,
+    font: PDFFont,
+    frame: Frame = SHEET_FRAME,
+): { lines: string[][]; height: number } {
+    const { widths } = sheetColXs(weights, frame);
     const lines = cells.map((cell, i) => {
         const width = Math.max(8, widths[i]! - PAD_X * 2);
+        // Spacer cells of total rows stay empty, like on the invoice page (no "—" filler).
+        if (!cell.trim())
+            return [''];
         if (right.has(i))
             return [clip(cell, font, CELL, width)];
         return wrapped(cell, font, width);
@@ -244,9 +235,9 @@ function sheetBlocks(
     showTime: boolean,
     showTimeTotal: boolean,
     showSummary: boolean,
-): Array<{ headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> {
+): Block[] {
     const cur = snapshot.currency || 'USD';
-    const out: Array<{ headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> = [];
+    const out: Block[] = [];
     const lines = sortedProjectLines(snapshot, projectIndex);
     if (showTime) {
         const projectHours = lines.reduce((sum, line) => sum + line.hours, 0);
@@ -296,7 +287,7 @@ function expenseSheetBlock(
     from: number,
     to: number,
     showTotal: boolean,
-): { title: string; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> } | null {
+): Block | null {
     if (!showTotal && to <= from)
         return null;
     const cur = snapshot.currency || 'USD';
@@ -346,7 +337,7 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
         const expenseBlock = showExpenses
             ? expenseSheetBlock(snapshot, slice.projectIndex, slice.expensesFrom, slice.expensesTo, slice.showExpensesTotal)
             : null;
-        const blocks: Array<{ title?: string; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> = [
+        const blocks: Block[] = [
             ...sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal),
             ...(expenseBlock ? [expenseBlock] : []),
         ];
@@ -362,7 +353,7 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
             if (block.title) {
                 if (y - 16 < SB)
                     open(null);
-                push({ kind: 'title', text: block.title }, 16);
+                push({ kind: 'title', text: block.title, align: block.titleAlign ?? 'left' }, 16);
             }
             const paintHead = () => {
                 if (y - SHEET_HEAD < SB)
@@ -393,48 +384,14 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
     return pages.filter((page) => page.length > 0);
 }
 
-function drawPlannedOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: PageOp[], startY: number): void {
-    let y = startY;
-    for (const op of ops) {
-        if (op.kind === 'chrome') {
-            y = drawChrome(page, fontBold, op.title);
-            continue;
-        }
-        if (op.kind === 'title') {
-            page.drawText(clip(op.text, fontBold, 10, W - ML - MR), { x: ML, y, size: 10, font: fontBold, color: INK });
-            y -= TITLE_H;
-            continue;
-        }
-        if (op.kind === 'gap') {
-            y -= SHEET_GAP;
-            continue;
-        }
-        if (op.kind === 'thead') {
-            drawThead(page, fontBold, y, op.headers, op.weights, op.right);
-            y -= THEAD_H;
-            continue;
-        }
-        const { widths, xs } = colXs(op.weights);
-        const face = op.bold ? fontBold : font;
-        op.lines.forEach((col, i) => {
-            col.forEach((text, lineIndex) => {
-                const tw = face.widthOfTextAtSize(text, CELL);
-                const dx = op.right.has(i) ? xs[i]! + widths[i]! - 4 - tw : xs[i]! + 3;
-                page.drawText(text, { x: dx, y: y - lineIndex * STEP, size: CELL, font: face, color: INK });
-            });
-        });
-        y -= op.height;
-    }
-}
-
 function leadLines(snapshot: CombinedReportSnapshot, fontBold: PDFFont): string[] {
-    return wrapped(snapshot.feeTitle.toUpperCase(), fontBold, W - ML - MR);
+    return wrapAt(snapshot.feeTitle.toUpperCase(), fontBold, W - ML - MR, 9);
 }
 
 function contentTop(first: boolean, leadCount: number): number {
     if (!first)
-        return H - MT - 16;
-    return H - MT - REPORT_HEADER_CHROME - leadCount * 10 - 6;
+        return H - MT;
+    return H - MT - REPORT_LOGO_H - 14 - leadCount * 11 - 10;
 }
 
 function planPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PDFFont): PageOp[][] {
@@ -448,21 +405,27 @@ function planPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PD
         pages[pages.length - 1]!.push(op);
         y -= height;
     };
+    const layouts = (block: Block) => block.rows.map((row) => ({
+        row,
+        layout: sheetRowLayout(row.cells, block.weights, block.right, row.bold ? fontBold : font, REPORT_FRAME),
+    }));
+    let first = true;
     for (const block of blocks(snapshot)) {
+        const rows = layouts(block);
+        // Title + header + first row stay together; never leave an orphaned heading at the bottom.
+        const lead = (first ? 0 : SHEET_GAP) + (block.title ? TITLE_GAP : 0) + SHEET_HEAD + (rows[0]?.layout.height ?? 0);
+        if (!first && y - lead < MB)
+            nextPage();
+        else if (!first)
+            push({ kind: 'gap' }, SHEET_GAP);
+        first = false;
+        if (block.title)
+            push({ kind: 'title', text: block.title, align: block.titleAlign ?? 'left' }, TITLE_GAP);
         const paintHead = () => {
-            if (y - THEAD_H < MB)
-                nextPage();
-            push({ kind: 'thead', headers: block.headers, weights: block.weights, right: block.right }, THEAD_H);
+            push({ kind: 'thead', headers: block.headers, weights: block.weights, right: block.right }, SHEET_HEAD);
         };
-        if (block.title) {
-            if (y - (TITLE_H + THEAD_H) < MB)
-                nextPage();
-            push({ kind: 'title', text: block.title }, TITLE_H);
-        }
         paintHead();
-        for (const row of block.rows) {
-            const face = row.bold ? fontBold : font;
-            const layout = rowLayout(row.cells, block.weights, block.right, face);
+        for (const { row, layout } of rows) {
             if (y - layout.height < MB) {
                 nextPage();
                 paintHead();
@@ -476,7 +439,6 @@ function planPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PD
                 bold: Boolean(row.bold),
             }, layout.height);
         }
-        y -= 8;
     }
     return pages.filter((page) => page.length > 0);
 }
@@ -488,9 +450,16 @@ export function countCombinedReportPages(snapshot: CombinedReportSnapshot, font:
     return Math.max(1, pages.length);
 }
 
-function drawSheetOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: PageOp[]): void {
-    let y = H - ST;
-    const tableW = sheetTableW();
+function drawSheetOps(
+    page: PDFPage,
+    font: PDFFont,
+    fontBold: PDFFont,
+    ops: PageOp[],
+    { startY = H - ST, frame = SHEET_FRAME, style = SHEET_STYLE }: { startY?: number; frame?: Frame; style?: TableStyle } = {},
+): void {
+    let y = startY;
+    const left = frame.left;
+    const tableW = frame.width;
     for (const op of ops) {
         if (op.kind === 'chrome') {
             y = drawChrome(page, fontBold, op.title);
@@ -501,13 +470,17 @@ function drawSheetOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: Page
             continue;
         }
         if (op.kind === 'title') {
-            page.drawText(op.text, { x: SL, y: y - 11, size: 10, font: fontBold, color: RED });
-            y -= 16;
+            const text = clip(op.text, fontBold, style.titleSize, tableW);
+            const tw = fontBold.widthOfTextAtSize(text, style.titleSize);
+            const x = op.align === 'right' ? left + tableW - tw : left;
+            const step = style === SHEET_STYLE ? 16 : TITLE_GAP;
+            page.drawText(text, { x, y: y - step + 5, size: style.titleSize, font: fontBold, color: style.title });
+            y -= step;
             continue;
         }
         if (op.kind === 'thead') {
-            const { widths, xs } = sheetColXs(op.weights);
-            page.drawRectangle({ x: SL, y: y - SHEET_HEAD, width: tableW, height: SHEET_HEAD, color: RED });
+            const { widths, xs } = sheetColXs(op.weights, frame);
+            page.drawRectangle({ x: left, y: y - SHEET_HEAD, width: tableW, height: SHEET_HEAD, color: RED });
             const textY = y - SHEET_HEAD + 7;
             op.headers.forEach((cell, i) => {
                 if (!cell.trim())
@@ -522,9 +495,9 @@ function drawSheetOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: Page
         }
         if (op.kind !== 'row')
             continue;
-        const { widths, xs } = sheetColXs(op.weights);
+        const { widths, xs } = sheetColXs(op.weights, frame);
         const face = op.bold ? fontBold : font;
-        const color = op.bold ? RED : INK;
+        const color = op.bold ? style.total : INK;
         op.lines.forEach((col, i) => {
             col.forEach((text, lineIndex) => {
                 const tw = face.widthOfTextAtSize(text, CELL);
@@ -534,26 +507,12 @@ function drawSheetOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: Page
         });
         y -= op.height;
         page.drawLine({
-            start: { x: SL, y },
-            end: { x: SL + tableW, y },
+            start: { x: left, y },
+            end: { x: left + tableW, y },
             thickness: op.bold ? 1 : 0.4,
-            color: op.bold ? RED : GRID,
+            color: op.bold ? style.total : GRID,
         });
     }
-}
-
-function drawThead(page: PDFPage, fontBold: PDFFont, y: number, headers: string[], weights: number[], right: Set<number>): void {
-    const { widths, xs } = colXs(weights);
-    const tableW = W - ML - MR;
-    page.drawRectangle({ x: ML, y: y - 4, width: tableW, height: 14, color: RED });
-    headers.forEach((cell, i) => {
-        if (!cell.trim())
-            return;
-        const text = clip(cell, fontBold, CELL, widths[i]! - 6);
-        const tw = fontBold.widthOfTextAtSize(text, CELL);
-        const dx = right.has(i) ? xs[i]! + widths[i]! - 4 - tw : xs[i]! + 3;
-        page.drawText(text, { x: dx, y, size: CELL, font: fontBold, color: rgb(1, 1, 1) });
-    });
 }
 
 export function drawCombinedReportPages(
@@ -584,15 +543,15 @@ export function drawCombinedReportPages(
                 page.drawText(line, { x: W - MR - tw, y: cy, size: 6, font, color: MUTED });
                 cy -= 8;
             }
-            const leadTop = contentTop(true, lead.length) + lead.length * 10 + 6;
+            const leadTop = y - REPORT_LOGO_H - 14 - 8;
             lead.forEach((line, i) => {
-                page.drawText(line, { x: ML, y: leadTop - i * 10, size: 8, font: fontBold, color: RED });
+                page.drawText(line, { x: ML, y: leadTop - i * 11, size: 9, font: fontBold, color: RED });
             });
             y = contentTop(true, lead.length);
         }
         else {
             y = contentTop(false, 0);
         }
-        drawPlannedOps(page, font, fontBold, ops, y);
+        drawSheetOps(page, font, fontBold, ops, { startY: y, frame: REPORT_FRAME, style: REPORT_STYLE });
     });
 }
