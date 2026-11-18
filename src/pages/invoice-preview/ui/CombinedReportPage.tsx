@@ -286,7 +286,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                 ) : null}
                 {showExpenses ? (
                     <div className="tt-inv-tr__table-wrap">
-                        <h2 className="tt-inv-tr__subtitle">Reimbursable Expenses via</h2>
+                        <h2 className="tt-inv-tr__subtitle">Reimbursable Expenses</h2>
                         <table className="tt-inv-tr__table">
                             <thead className="tt-inv-tr__thead">
                                 <tr>
@@ -330,7 +330,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                             {slice.showExpensesTotal ? (
                                 <tfoot className="tt-inv-tr__tfoot">
                                     <tr>
-                                        <td colSpan={2}>Subtotal</td>
+                                        <td colSpan={2}>Subtotal ({cur})</td>
                                         <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">
                                             {formatTimeReportHours(projectExpenseIndexes(report, slice.projectIndex)
                                                 .reduce((sum, index) => sum + (Number(report.expenses[index]?.amount) || 0), 0))}
@@ -551,7 +551,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
             ) : null}
             {showExpenses ? (
                 <section className="tt-inv-creport__block">
-                    <h2>Reimbursable Expenses via</h2>
+                    <h2>Reimbursable Expenses</h2>
                     <table>
                         <thead>
                             <tr>
@@ -587,7 +587,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                         {slice.showExpensesTotal ? (
                             <tfoot>
                                 <tr>
-                                    <td colSpan={2}>Subtotal</td>
+                                    <td colSpan={2}>Subtotal ({cur})</td>
                                     <NumCell
                                         editable={editable}
                                         foot
@@ -605,7 +605,6 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
             ) : null}
             {showShares ? (
                 <section className="tt-inv-creport__block">
-                    <p className="tt-inv-creport__cur">{cur}</p>
                     <table className="tt-inv-creport__shares">
                         <colgroup>
                             <col className="name" />

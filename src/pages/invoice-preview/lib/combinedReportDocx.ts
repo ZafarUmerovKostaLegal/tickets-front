@@ -130,20 +130,19 @@ export function combinedReportDocxChildren(snapshot: CombinedReportSnapshot): (P
             ...snapshot.people.map((person) => [person.initials, person.name, person.title, money(person.rate), person.hours.toFixed(2), money(person.rate), money(person.amount)]),
             ['Total', '', '', '', snapshot.totalHours.toFixed(2), '', money(snapshot.totalFees)],
         ],
-        [8, 18, 16, 14, 10, 16, 18],
+        [10, 18, 16, 13, 9, 16, 18],
         3,
     ));
-    out.push(heading('Reimbursable Expenses via'));
+    out.push(heading('Reimbursable Expenses'));
     out.push(table(
         ['Description', 'Email date', `Amount (${cur})`],
         [
             ...snapshot.expenses.map((line) => [line.description, dateRu(line.date), money(line.amount)]),
-            ['Subtotal', '', money(snapshot.totalExpenses)],
+            [`Subtotal (${cur})`, '', money(snapshot.totalExpenses)],
         ],
         [52, 18, 30],
         2,
     ));
-    out.push(heading(cur));
     out.push(table(
         ['Shared amounts', '', 'Reimbursable expenses', 'TO BE INVOICED:'],
         [

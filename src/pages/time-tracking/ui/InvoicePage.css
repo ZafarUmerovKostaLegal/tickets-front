@@ -546,13 +546,6 @@
   border-top: 1.5px solid #18181b;
 }
 
-.tt-inv-cdoc__cur {
-  margin: 0 0 0.15rem;
-  text-align: right;
-  font-size: 10px;
-  font-weight: 700;
-}
-
 .tt-inv-cdoc__shares {
   table-layout: fixed;
 }

@@ -127,13 +127,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.tt-inv-creport__cur {
-  margin: 0 0 0.15rem;
-  text-align: right;
-  font-size: 10px;
-  font-weight: 700;
-}
-
 .tt-inv-tr {
   box-sizing: border-box;
   position: relative;

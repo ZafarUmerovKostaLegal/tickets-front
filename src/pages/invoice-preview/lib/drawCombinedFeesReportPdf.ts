@@ -79,7 +79,7 @@ function blocks(snapshot: CombinedReportSnapshot): Block[] {
     out.push({
         title: 'Summary of Services',
         headers: ['Initials', 'Name', 'Title', 'Rate', 'Hours', `Rate (${cur})`, 'Amount'],
-        weights: [8, 18, 16, 14, 10, 16, 18],
+        weights: [10, 18, 16, 13, 9, 16, 18],
         right: new Set([3, 4, 5, 6]),
         rows: [
             ...snapshot.people.map((person) => ({
@@ -89,7 +89,7 @@ function blocks(snapshot: CombinedReportSnapshot): Block[] {
         ],
     });
     out.push({
-        title: 'Reimbursable Expenses via',
+        title: 'Reimbursable Expenses',
         headers: ['Description', 'Email date', `Amount (${cur})`],
         weights: [52, 18, 30],
         right: new Set([2]),
@@ -97,12 +97,10 @@ function blocks(snapshot: CombinedReportSnapshot): Block[] {
             ...snapshot.expenses.map((line) => ({
                 cells: [line.description, dateRu(line.date), money(line.amount)],
             })),
-            { bold: true, cells: ['Subtotal', '', money(snapshot.totalExpenses)] },
+            { bold: true, cells: [`Subtotal (${cur})`, '', money(snapshot.totalExpenses)] },
         ],
     });
     out.push({
-        title: cur,
-        titleAlign: 'right',
         headers: ['Shared amounts', '', 'Reimbursable expenses', 'TO BE INVOICED:'],
         weights: [36, 14, 25, 25],
         right: new Set([1, 2, 3]),
@@ -301,12 +299,12 @@ function expenseSheetBlock(
     });
     if (showTotal) {
         const total = refs.reduce((sum, index) => sum + (Number(snapshot.expenses[index]?.amount) || 0), 0);
-        rows.push({ bold: true, cells: ['Subtotal', '', sheetNum(total)] });
+        rows.push({ bold: true, cells: [`Subtotal (${cur})`, '', sheetNum(total)] });
     }
     if (rows.length === 0)
         return null;
     return {
-        title: 'Reimbursable Expenses via',
+        title: 'Reimbursable Expenses',
         headers: ['Description', 'Email date', `Amount (${cur})`],
         weights: [52, 18, 30],
         right: new Set([2]),

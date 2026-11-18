@@ -192,7 +192,7 @@ export function CombinedInvoiceDocument({
                         </section>
                         {projectExpenses.length > 0 ? (
                             <section className="tt-inv-cdoc__block">
-                                <h2>Reimbursable Expenses via</h2>
+                                <h2>Reimbursable Expenses</h2>
                                 <table>
                                     <thead>
                                         <tr>
@@ -212,7 +212,7 @@ export function CombinedInvoiceDocument({
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colSpan={2}>Subtotal</td>
+                                            <td colSpan={2}>Subtotal ({currency})</td>
                                             <td className="num">{money(projectExpTotal)}</td>
                                         </tr>
                                     </tfoot>
@@ -306,7 +306,7 @@ export function CombinedInvoiceDocument({
                     </table>
                 </section>
                 <section className="tt-inv-cdoc__block">
-                    <h2>Reimbursable Expenses via</h2>
+                    <h2>Reimbursable Expenses</h2>
                     <table>
                         <thead>
                             <tr>
@@ -326,14 +326,13 @@ export function CombinedInvoiceDocument({
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colSpan={2}>Subtotal</td>
+                                <td colSpan={2}>Subtotal ({currency})</td>
                                 <td className="num">{money(totalExp)}</td>
                             </tr>
                         </tfoot>
                     </table>
                 </section>
                 <section className="tt-inv-cdoc__block">
-                    <p className="tt-inv-cdoc__cur">{currency}</p>
                     <table className="tt-inv-cdoc__shares">
                         <colgroup>
                             <col className="name" />
