@@ -136,7 +136,7 @@ export const INVOICE_REGISTRY_SHEETS: InvoiceRegistrySheetMeta[] = [
         sheetName: '2026 (система)',
         columns: [
             ...COL_2026.filter((col) => col.key !== 'details').flatMap((col) => (
-                col.key === INVOICE_REGISTRY_USD_COLUMN ? [PARTNER_NOTE_COLUMN, col] : [col]
+                col.key === INVOICE_REGISTRY_USD_COLUMN ? [col, PARTNER_NOTE_COLUMN] : [col]
             )),
             { key: 'invoicePdf', label: 'PDF', editor: 'pdf' },
             { key: 'details', label: 'Внутреннее примечание', wide: true, editor: 'note' },
