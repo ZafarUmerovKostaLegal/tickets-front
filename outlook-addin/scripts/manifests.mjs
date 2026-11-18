@@ -51,6 +51,10 @@ function render(template, env) {
   return out;
 }
 
+function normalize(xml) {
+  return xml.replace(/\s+/g, ' ').replace(/\s*(\/?>)\s*/g, '$1').trim();
+}
+
 const check = process.argv.includes('--check');
 let drift = false;
 
@@ -63,7 +67,8 @@ for (const [name, env] of Object.entries(ENVIRONMENTS)) {
       if (name !== 'prod')
         continue;
       const current = existsSync(target) ? readFileSync(target, 'utf8') : '';
-      if (current !== output) {
+      // Editors re-wrap long XML tags on save: only content matters, not line breaks / indentation.
+      if (normalize(current) !== normalize(output)) {
         drift = true;
         console.error(`✗ ${file} differs from manifests/templates — run "npm run manifests"`);
       }
