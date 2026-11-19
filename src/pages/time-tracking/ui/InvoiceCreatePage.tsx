@@ -148,7 +148,6 @@ export function InvoiceCreatePage() {
   const [customBilledFxLoading, setCustomBilledFxLoading] = useState(false);
   const [customBilledFxError, setCustomBilledFxError] = useState<string | null>(null);
   const [customBilledFxHint, setCustomBilledFxHint] = useState<string | null>(null);
-  const [customFx, setCustomFx] = useState<Awaited<ReturnType<typeof fetchCbuParsedForDate>> | null>(null);
   const [customExpLoading, setCustomExpLoading] = useState(false);
 
   const clientsForCreate = useMemo(
@@ -213,22 +212,52 @@ export function InvoiceCreatePage() {
       .filter((x) => selExp.has(x.id))
       .reduce((s, x) => s + (Number(x.equivalentAmount) || 0), 0);
   }, [unbilledExp, selExp]);
-  /** Selected project expenses in the custom-sum currency (backend converts the same way per expense). */
-  const customExpensesInCcy = useMemo(() => {
-    if (!customBilledEnabled || workedExpUsdTotal <= 0)
-      return 0;
-    const ccy = customBilledCurrency;
-    let value = NaN;
-    if (ccy === 'USD')
-      value = workedExpUsdTotal;
-    else if (customFx && ccy === 'UZS')
-      value = workedExpUsdTotal * customFx.uzsPerUsd;
-    else if (customFx) {
-      const perUsd = foreignUnitsPerUsd(customFx, ccy);
-      value = perUsd != null && perUsd > 0 ? workedExpUsdTotal * perUsd : NaN;
+  /** Selected project expenses in the custom-sum currency — exactly like the server: UZS amount of each expense
+   *  converted by the CBU rate on the expense date (the registry «USD equivalent» uses another rate). */
+  const [customExpensesInCcy, setCustomExpensesInCcy] = useState<number>(0);
+  useEffect(() => {
+    const picked = unbilledExp.filter((x) => selExp.has(x.id));
+    if (!customBilledEnabled || picked.length === 0) {
+      setCustomExpensesInCcy(0);
+      return;
     }
-    return Number.isFinite(value) ? Math.round(value * 100) / 100 : NaN;
-  }, [customBilledEnabled, workedExpUsdTotal, customBilledCurrency, customFx]);
+    const ccy = customBilledCurrency;
+    let cancelled = false;
+    setCustomExpensesInCcy(NaN);
+    void (async () => {
+      const days = [...new Set(picked.map((x) => String(x.expenseDate ?? '').slice(0, 10)).filter(Boolean))];
+      const rates = new Map(await Promise.all(days.map(async (day) => [day, await fetchCbuParsedForDate(day).catch(() => null)] as const)));
+      let total = 0;
+      for (const x of picked) {
+        const uzs = Number(x.amountUzs) || 0;
+        const usd = Number(x.equivalentAmount) || 0;
+        const parsed = rates.get(String(x.expenseDate ?? '').slice(0, 10)) ?? null;
+        let value = NaN;
+        if (uzs > 0 && ccy === 'UZS')
+          value = uzs;
+        else if (uzs > 0 && parsed) {
+          const perUnit = parsed.uzsPerUnit.get(ccy) ?? (ccy === 'USD' ? parsed.uzsPerUsd : undefined);
+          value = perUnit && perUnit > 0 ? uzs / perUnit : NaN;
+        }
+        else if (uzs <= 0 && ccy === 'USD')
+          value = usd;
+        else if (uzs <= 0 && parsed) {
+          const perUsd = foreignUnitsPerUsd(parsed, ccy);
+          value = perUsd && perUsd > 0 ? usd * perUsd : NaN;
+        }
+        if (!Number.isFinite(value)) {
+          total = NaN;
+          break;
+        }
+        total += Math.round(value * 100) / 100;
+      }
+      if (!cancelled)
+        setCustomExpensesInCcy(Number.isFinite(total) ? Math.round(total * 100) / 100 : NaN);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [customBilledEnabled, customBilledCurrency, unbilledExp, selExp]);
   const defaultServiceDescription = useCallback(() => {
     const coverLang: InvoiceCoverLanguage = locale === 'ru' ? 'RU' : 'ENG';
     const periodIso = (unbilledTo || issueDate || todayIso()).slice(0, 10);
@@ -298,7 +327,6 @@ export function InvoiceCreatePage() {
       .then((parsed) => {
         if (cancelled)
           return;
-        setCustomFx(parsed);
         if (ccy === 'USD') {
           const uzs = parsed.uzsPerUsd;
           setCustomBilledFxHint(

@@ -184,6 +184,8 @@ export function InvoicePreviewPage() {
     const timeReportPackRef = useRef(timeReportPack);
     timeReportPackRef.current = timeReportPack;
     const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string; expenses?: number } | null>(null);
+    /** Issued invoice: billed project expenses = its expense lines (invoice FX), whatever was saved in the layout. */
+    const [invoiceExpenses, setInvoiceExpenses] = useState<number | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
@@ -335,6 +337,7 @@ export function InvoicePreviewPage() {
         setShowInitiatorName(false);
         setCombinedReport(null);
         setExistingBilledServices(null);
+        setInvoiceExpenses(null);
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
         (async () => {
@@ -361,6 +364,9 @@ export function InvoicePreviewPage() {
                     invoiceCurrency = String(inv.currency ?? '').trim().toUpperCase() || null;
                     invoiceIssueDate = String(inv.issueDate ?? '').trim().slice(0, 10) || null;
                     const billedOverride = summarizeBilledOverrideLines(invoiceLines, invoiceCurrency);
+                    setInvoiceExpenses(Math.round(invoiceLines
+                        .filter((ln) => invoiceLineKindSlug(ln) === 'expense')
+                        .reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100) / 100);
                     if (billedOverride.isBilledOverride) {
                         const amount = Math.round(
                             billedOverride.visibleLines
@@ -649,7 +655,7 @@ export function InvoicePreviewPage() {
         const base = coverModel ?? fallbackCoverModel();
         if (customBilledOverride) {
             const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
-            const total = Math.round((customBilledOverride.amount + (customBilledOverride.expenses ?? 0) + vat) * 100) / 100;
+            const total = Math.round((customBilledOverride.amount + (invoiceExpenses ?? customBilledOverride.expenses ?? 0) + vat) * 100) / 100;
             return {
                 ...base,
                 servicesAmountFormatted: formatTimeReportAmount(customBilledOverride.amount, customBilledOverride.currency),
@@ -659,13 +665,13 @@ export function InvoicePreviewPage() {
         if (!reportBill)
             return base;
         const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
-        const total = Math.round((reportBill.services + reportBill.expenses + vat) * 100) / 100;
+        const total = Math.round((reportBill.services + (invoiceExpenses ?? reportBill.expenses) + vat) * 100) / 100;
         return {
             ...base,
             servicesAmountFormatted: formatTimeReportAmount(reportBill.services, reportBill.currency),
             totalFormatted: formatTimeReportAmount(total, reportBill.currency),
         };
-    }, [coverModel, reportBill, legalOverrides.vatAmount, customBilledOverride]);
+    }, [coverModel, reportBill, legalOverrides.vatAmount, customBilledOverride, invoiceExpenses]);
     const pricedLegal = useMemo(() => {
         if (customBilledOverride) {
             const formLines = session?.mode === 'create' ? (session.form.customBilledLines ?? []) : [];
@@ -686,7 +692,7 @@ export function InvoicePreviewPage() {
                 : '';
             return {
                 ...legalOverrides,
-                extraExpensesAmount: formatTimeReportAmount(customBilledOverride.expenses ?? 0, customBilledOverride.currency),
+                extraExpensesAmount: formatTimeReportAmount(invoiceExpenses ?? customBilledOverride.expenses ?? 0, customBilledOverride.currency),
                 ...(serviceLinesFromForm.length > 0
                     ? {
                         serviceLines: serviceLinesFromForm,
@@ -710,9 +716,9 @@ export function InvoicePreviewPage() {
             return legalOverrides;
         return {
             ...legalOverrides,
-            extraExpensesAmount: formatTimeReportAmount(reportBill.expenses, reportBill.currency),
+            extraExpensesAmount: formatTimeReportAmount(invoiceExpenses ?? reportBill.expenses, reportBill.currency),
         };
-    }, [legalOverrides, reportBill, customBilledOverride, session]);
+    }, [legalOverrides, reportBill, customBilledOverride, session, invoiceExpenses]);
 
     const combinedReportPages = useMemo(
         () => combinedReport ? Math.max(1, planCombinedReportPreviewPages(combinedReport).length) : 0,
