@@ -288,3 +288,54 @@ button.lh-map__name { cursor: pointer; }
   .lh-map__pipe { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .lh-team__temp .lh-team__temp-x { width: 2.25rem; height: 2.25rem; }
 }
+
+/* ── Board polish ──
+   Empty columns take less room (the board fits without scrolling to "Done"); they widen back while a
+   card is dragged (no `is-empty` then). Long column names wrap to two lines instead of "Ожидание кл…". */
+.lh-my--docket .lh-my__col.is-empty {
+  --lh-col-w: max(12.75rem, calc((100cqi - 2rem - 5 * 0.7rem - 20px) / 6 * 0.7));
+}
+
+.lh-my--docket .lh-my__col-title {
+  align-items: center;
+}
+
+.lh-my--docket .lh-my__col-title strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.2;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: auto;
+}
+
+.lh-my--docket .lh-my__col.is-empty .lh-my__col-title strong {
+  font-size: 0.8rem;
+}
+
+.lh-my--docket .lh-my__col.is-empty .lh-my__empty {
+  border-style: dashed;
+  opacity: 0.75;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 720px) {
+  .lh-bt .lh-bt__actions {
+    flex-wrap: wrap;
+  }
+
+  .lh-bt .lh-bt__actions .lh-bt__new {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+
+  .lh-bt .lh-bt__seg {
+    flex: 1 1 auto;
+  }
+
+  .lh-bt .lh-bt__seg > button {
+    flex: 1 1 0;
+  }
+}

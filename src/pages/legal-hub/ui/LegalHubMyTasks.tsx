@@ -1265,7 +1265,7 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
     }
     return (
         <section
-            className={`lh-my__col lh-my__col--${id}${columnDrag === id ? ' is-col-dragging' : ''}${columnOver || (dragging && droppable) ? ' is-target' : ''}${dragging && !droppable && !columnDrag ? ' is-locked-col' : ''}`}
+            className={`lh-my__col lh-my__col--${id}${cards.length === 0 && !dragging ? ' is-empty' : ''}${columnDrag === id ? ' is-col-dragging' : ''}${columnOver || (dragging && droppable) ? ' is-target' : ''}${dragging && !droppable && !columnDrag ? ' is-locked-col' : ''}`}
             data-col={id}
             aria-label={title}
             onDragOver={onDragOver}
