@@ -125,7 +125,7 @@ test.describe('@e2e Legal Hub: командная работа', () => {
     test('карта проектов и статистика команды', async ({ page, loginAs }) => {
         await loginAs('partner');
         await openHub(page, '/legal-hub?view=projects');
-        const map = page.getByRole('region', { name: 'Карта проектов' });
+        const map = page.getByRole('region', { name: 'Этапы проектов' });
         await expect(map).toBeVisible({ timeout: 30_000 });
         await expect(map.locator('.lh-map__row')).toHaveCount(2);
         await expect(map.locator('.lh-map__row').first().locator('.lh-map__step.is-current')).toContainText('В работе');

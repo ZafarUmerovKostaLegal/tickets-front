@@ -339,3 +339,97 @@ button.lh-map__name { cursor: pointer; }
     flex: 1 1 0;
   }
 }
+
+/* ── Project board: stage strip ── */
+.lh-strip {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.lh-strip__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.9rem; font-size: 0.8rem; color: var(--app-muted); }
+.lh-strip__now strong { color: var(--app-accent); }
+.lh-strip__now strong.is-changes { color: var(--lh-late, #b42318); }
+.lh-strip__now strong.is-done { color: var(--lh-ok, #15803d); }
+.lh-strip__count { font-variant-numeric: tabular-nums; }
+.lh-strip .lh-strip__map {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--app-accent);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lh-strip .lh-strip__map::after { content: ' →'; }
+@media (hover: hover) { .lh-strip .lh-strip__map:hover { text-decoration: underline; } }
+.lh-strip .lh-strip__map:focus-visible { outline: 2px solid var(--app-accent-focus, var(--app-accent)); outline-offset: 2px; border-radius: 4px; }
+.lh-strip__pipe .lh-map__step { flex-direction: row; justify-content: center; gap: 0.35rem; padding: 0.25rem 0.4rem; }
+.lh-strip__pipe .lh-map__step-count { font-size: 0.78rem; }
+
+/* ── Card "⋯" menu button (also the only way to the menu on touch screens) ── */
+.lh-my .lh-my__card { position: relative; }
+.lh-my .lh-my__card .lh-my__card-more {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: var(--app-surface);
+  color: var(--app-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.lh-my .lh-my__card .lh-my__card-more svg { width: 1rem; height: 1rem; }
+.lh-my .lh-my__card:hover .lh-my__card-more,
+.lh-my .lh-my__card:focus-within .lh-my__card-more,
+.lh-my .lh-my__card .lh-my__card-more:focus-visible { opacity: 1; }
+@media (hover: hover) { .lh-my .lh-my__card .lh-my__card-more:hover { background: color-mix(in srgb, var(--app-text) 8%, var(--app-surface)); color: var(--app-text); } }
+.lh-my .lh-my__card .lh-my__card-more:focus-visible { outline: 2px solid var(--app-accent-focus, var(--app-accent)); }
+@media (hover: none) {
+  .lh-my .lh-my__card .lh-my__card-more { opacity: 1; width: 2.25rem; height: 2.25rem; top: 0.15rem; right: 0.15rem; }
+}
+@media (prefers-reduced-motion: reduce) { .lh-my .lh-my__card .lh-my__card-more { transition: none; } }
+.lh-my .lh-my__card > strong { padding-right: 1.4rem; }
+
+.lh-card-menu .lh-card-menu__label {
+  margin: 0.3rem 0.6rem 0.15rem;
+  color: var(--app-meta, var(--app-muted));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.lh-card-menu .lh-card-menu__move { padding-left: 1rem; font-weight: 550; }
+.lh-card-menu .lh-card-menu__flow { margin-top: 0.2rem; border-top: 1px solid var(--app-border-soft, var(--app-border)); border-radius: 0; color: var(--app-accent); }
+@media (max-width: 768px) {
+  .lh-card-menu .lh-card-menu__move,
+  .lh-card-menu .lh-card-menu__flow { min-height: 40px; }
+}
+
+/* Board toolbar: "Project map" shortcut (icon-only on phones) */
+.lh-bt .lh-bt__map svg { width: 1rem; height: 1rem; }
+@media (max-width: 720px) {
+  .lh-bt .lh-bt__map { flex: 0 0 auto; padding-inline: 0.75rem; }
+  .lh-bt .lh-bt__map .lh-bt__map-label { display: none; }
+}
+/* Column titles: break between words only — automatic hyphenation produced "Согласова-ние…" */
+.lh-my--docket .lh-my__col-title strong { hyphens: manual; }
+.lh-strip > .lh-map__pipe,
+.lh-strip > .lh-map__bar { grid-area: auto; }
+@media (max-width: 600px) {
+  .lh-strip { padding: 0.6rem; }
+  .lh-strip .lh-strip__map { margin-left: 0; min-height: 0; }
+}

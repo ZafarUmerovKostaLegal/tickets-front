@@ -83,12 +83,12 @@ export const ruMessages: Messages = {
         sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
-        projects: 'Проекты',
-        projectsHint: 'Откройте проект, чтобы увидеть карту статуса и его доску',
+        projects: 'Карта проектов',
+        projectsHint: 'Этапы всех проектов команды. Нажмите на проект, чтобы открыть его доску',
         projectsEmpty: 'По этим фильтрам проектов нет.',
         projectsBoardEmpty: 'На доске этого проекта пока нет задач.',
         projectsBoard: 'Доска проекта',
-        projectsBack: 'Все проекты',
+        projectsBack: 'Карта проектов',
         projectsMap: 'Карта проекта',
         projectsMapHint: 'Стадии и направления — где сейчас находится работа',
         projectsHealthRisk: 'Под риском',
@@ -334,7 +334,7 @@ export const ruMessages: Messages = {
         actCancel: 'Отмена',
         actOnlyTeam: 'Можно выбрать только сотрудников ваших команд, включая временных.',
         actDone: 'Готово',
-        mapTitle: 'Карта проектов',
+        mapTitle: 'Этапы проектов',
         mapHint: 'Где сейчас каждый проект: этап, где больше всего открытых задач, просрочки и ближайший срок.',
         mapEmpty: 'Пока нет задач в проектах команды',
         mapStageTodo: 'К работе',
@@ -498,6 +498,14 @@ export const ruMessages: Messages = {
         cardBackToWork: 'Вернуть в работу',
         cardRequestChanges: 'На правки',
         cardUndoMove: 'Отменить перенос',
+        cardMoveTo: 'Переместить в',
+        cardWorkflow: 'Проверка и согласование…',
+        cardMenuAria: 'Действия с карточкой',
+        cardMoveFailed: 'Не удалось переместить задачу — карточка возвращена на место',
+        cardMoveLocked: 'На проверку и в «Утверждено» задачи попадают через действия в карточке',
+        boardResetColumns: 'Стандартный порядок колонок',
+        stripTitle: 'Этап проекта',
+        stripOpenMap: 'Все проекты на карте',
         boardShowArchive: 'Архив',
         teamHint: 'Загрузка, статусы и задачи каждого сотрудника',
         viewAsBanner: 'Вы смотрите данные: {name}',
@@ -1694,6 +1702,14 @@ export type Messages = {
         cardBackToWork: string;
         cardRequestChanges: string;
         cardUndoMove: string;
+        cardMoveTo: string;
+        cardWorkflow: string;
+        cardMenuAria: string;
+        cardMoveFailed: string;
+        cardMoveLocked: string;
+        boardResetColumns: string;
+        stripTitle: string;
+        stripOpenMap: string;
         boardShowArchive: string;
         teamHint: string;
         viewAsBanner: string;

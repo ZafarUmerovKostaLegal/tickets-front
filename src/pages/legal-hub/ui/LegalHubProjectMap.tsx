@@ -120,3 +120,55 @@ export function LegalHubProjectMap({ canOpen, onOpen }: { canOpen: (id: string) 
         </div>
     );
 }
+
+/** Same rule as the server: done when nothing is open, otherwise the stage holding most open tasks (ties → earlier). */
+export function currentStage(counts: Partial<Record<ProjectStage, number>>): ProjectStage {
+    const open = PROJECT_STAGES.filter((stage) => stage !== 'done');
+    const best = Math.max(0, ...open.map((stage) => counts[stage] ?? 0));
+    return best === 0 ? 'done' : open.find((stage) => (counts[stage] ?? 0) === best)!;
+}
+
+/** Compact "where is this project" strip shown on top of a project board. */
+export function ProjectStageStrip({ stages, onMap }: { stages: ProjectStage[]; onMap?: () => void }) {
+    const { t } = useI18n();
+    if (stages.length === 0)
+        return null;
+    const counts: Partial<Record<ProjectStage, number>> = {};
+    for (const stage of stages)
+        counts[stage] = (counts[stage] ?? 0) + 1;
+    const now = currentStage(counts);
+    const done = counts.done ?? 0;
+    const progress = Math.round((done / stages.length) * 100);
+    const tasksLabel = fill(t('legalHub.mapTasks'), { done, total: stages.length });
+    return (
+        <section className="lh-strip" aria-label={t('legalHub.stripTitle')}>
+            <div className="lh-strip__head">
+                <span className="lh-strip__now">
+                    {t('legalHub.stripTitle')}
+                    {': '}
+                    <strong className={`is-${now}`}>{t(STAGE_LABEL[now])}</strong>
+                </span>
+                <span className="lh-strip__count">{tasksLabel}</span>
+                {onMap ? <button type="button" className="lh-strip__map" onClick={onMap}>{t('legalHub.stripOpenMap')}</button> : null}
+            </div>
+            <ol className="lh-map__pipe lh-strip__pipe" aria-label={`${t('legalHub.mapNow')}: ${t(STAGE_LABEL[now])}`}>
+                {PROJECT_STAGES.map((stage) => {
+                    const count = counts[stage] ?? 0;
+                    return (
+                        <li
+                            key={stage}
+                            className={`lh-map__step lh-map__step--${stage}${stage === now ? ' is-current' : ''}${count ? ' has-tasks' : ''}`}
+                            aria-current={stage === now ? 'step' : undefined}
+                        >
+                            <span className="lh-map__step-label">{t(STAGE_LABEL[stage])}</span>
+                            <span className="lh-map__step-count">{count}</span>
+                        </li>
+                    );
+                })}
+            </ol>
+            <div className="lh-map__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label={tasksLabel}>
+                <span style={{ width: `${progress}%` }} />
+            </div>
+        </section>
+    );
+}

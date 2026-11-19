@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
-import { DatePicker, SearchableSelect } from '@shared/ui';
+import { DatePicker, SearchableSelect, showToast } from '@shared/ui';
+import { ProjectStageStrip } from './LegalHubProjectMap';
+import type { ProjectStage } from './legalHubTeamApi';
 import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
-import { dueText } from './legalHubShared';
+import { dueText, legalHubSectionUrl } from './legalHubShared';
 import { canAssignLegalHubTask, canSelectLegalHubReviewer } from './legalHubRank';
 import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
 import { createLegalHubTask, patchLegalHubTask } from './legalHubTaskApi';
@@ -103,6 +106,17 @@ function dueColumnOf(task: Pick<MineTask, 'clientOn'>): DueColumn {
         return 'week';
     return 'later';
 }
+
+const COLUMN_STAGE: Record<BoardColumn, ProjectStage> = {
+    todo: 'todo',
+    progress: 'progress',
+    waitClient: 'wait',
+    waitGov: 'wait',
+    associate: 'review',
+    partner: 'review',
+    changes: 'changes',
+    done: 'done',
+};
 
 function isBuiltin(column: string): column is BoardColumn {
     return (COLUMNS as readonly string[]).includes(column);
@@ -329,6 +343,15 @@ export function LegalHubMyTasks({
     const tasks = tasksProp ?? inner;
     const setTasks = (updater: MineTask[] | ((current: MineTask[]) => MineTask[])) => {
         const next = typeof updater === 'function' ? updater(tasks) : updater;
+        if (onTasks)
+            onTasks(next);
+        else
+            setInner(next);
+    };
+    const navigate = useNavigate();
+    const latest = useRef(tasks);
+    latest.current = tasks;
+    const replaceTasks = (next: MineTask[]) => {
         if (onTasks)
             onTasks(next);
         else
@@ -578,8 +601,16 @@ export function LegalHubMyTasks({
         };
     };
     const moveTask = (id: string, column: string, remember = true) => {
+        if (isBuiltin(column) && !DROPPABLE.includes(column)) {
+            showToast({ message: t('legalHub.cardMoveLocked') });
+            setDragging(null);
+            setCardMenu(null);
+            setOpenId(id);
+            return;
+        }
         flip.current = 'cards';
         let changed = false;
+        let before: MineTask | null = null;
         setTasks((current) => current.map((task) => {
             if (task.id !== id)
                 return task;
@@ -587,6 +618,7 @@ export function LegalHubMyTasks({
             if (from === column)
                 return task;
             changed = true;
+            before = task;
             if (remember)
                 moveHistory.current.set(id, from);
             else
@@ -596,10 +628,17 @@ export function LegalHubMyTasks({
         if (!changed)
             return;
         const builtin = isBuiltin(column);
+        const previous = before as MineTask | null;
         void patchLegalHubTask(id, {
             boardColumn: column,
             status: builtin ? statusOf(column) : undefined,
             approval: column === 'done',
+        }).then((ok) => {
+            if (ok || !previous)
+                return;
+            moveHistory.current.delete(id);
+            replaceTasks(latest.current.map((task) => task.id === id ? previous : task));
+            showToast({ message: t('legalHub.cardMoveFailed'), variant: 'error' });
         });
         setDragging(null);
         setCardMenu(null);
@@ -923,7 +962,7 @@ export function LegalHubMyTasks({
                             <span aria-hidden>/</span>
                         </nav>
                     ) : null}
-                    <h1>{shownTitle}</h1>
+                    <h1 title={shownTitle}>{shownTitle}</h1>
                     {headingNote?.trim() ? <span className="lh-bt__client">{headingNote.trim()}</span> : null}
                     <span className="lh-bt__meta">
                         {t(taskCountKey(visible.filter((task) => !task.done).length)).replace('{count}', String(visible.filter((task) => !task.done).length))}
@@ -931,6 +970,15 @@ export function LegalHubMyTasks({
                     </span>
                 </div>
                 <div className="lh-bt__actions">
+                    {scope == null && mode === 'mine' ? (
+                        <button type="button" className="lh-bt__filter lh-bt__map" aria-label={t('legalHub.projects')} title={t('legalHub.projects')} onClick={() => navigate(legalHubSectionUrl('projects'))}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Z" />
+                                <path d="M9 4v13.5M15 6.5V20" />
+                            </svg>
+                            <span className="lh-bt__map-label">{t('legalHub.projects')}</span>
+                        </button>
+                    ) : null}
                     <div className="lh-bt__menu" ref={filtersRef}>
                         <button type="button" className={`lh-bt__filter${filtersOpen || filtersOn ? ' is-on' : ''}`} aria-expanded={filtersOpen} aria-haspopup="dialog" onClick={() => setFiltersOpen((value) => !value)}>
                             <IconFilter />
@@ -961,6 +1009,19 @@ export function LegalHubMyTasks({
                                 <FilterPick label={t('legalHub.taskColWorkstream')} value={streamFilter} items={streamOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStreamFilter} />
                                 <FilterPick label={t('legalHub.taskColOwner')} value={ownerFilter} items={ownerOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setOwnerFilter} />
                                 <FilterPick label={t('legalHub.taskColPriority')} value={priorityFilter} items={priorityOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setPriorityFilter} />
+                                {view === 'board' && mode === 'mine' && columnOrder.join() !== mergeColumnOrder([], customColumns.map((column) => column.id)).join() ? (
+                                    <button
+                                        type="button"
+                                        className="lh-bt__reset"
+                                        onClick={() => {
+                                            flip.current = 'columns';
+                                            columnsTouched.current = true;
+                                            setColumnOrder(mergeColumnOrder([], customColumns.map((column) => column.id)));
+                                        }}
+                                    >
+                                        {t('legalHub.boardResetColumns')}
+                                    </button>
+                                ) : null}
                                 {view === 'board' ? (
                                     <label className={`lh-bt__toggle${hideEmpty ? ' is-on' : ''}`}>
                                         <input type="checkbox" checked={hideEmpty} onChange={(event) => setHideEmpty(event.target.checked)} />
@@ -992,6 +1053,15 @@ export function LegalHubMyTasks({
                     ) : null}
                 </div>
             </div>
+            {scope ? (
+                <ProjectStageStrip
+                    stages={scoped.filter((task) => task.archived !== true).map((task) => {
+                        const column = columnOf(task);
+                        return isBuiltin(column) ? COLUMN_STAGE[column] : 'progress';
+                    })}
+                    onMap={onBack}
+                />
+            ) : null}
         </div>
     );
 
@@ -1023,13 +1093,21 @@ export function LegalHubMyTasks({
         <div
             className="lh-card-menu"
             role="menu"
-            style={{ top: Math.max(8, Math.min(cardMenu.y, window.innerHeight - 280)), left: Math.max(8, Math.min(cardMenu.x, window.innerWidth - 220)) }}
+            style={{ top: Math.max(8, Math.min(cardMenu.y, window.innerHeight - 420)), left: Math.max(8, Math.min(cardMenu.x, window.innerWidth - 230)) }}
             onMouseDown={(event) => event.stopPropagation()}
         >
             <button type="button" role="menuitem" onClick={() => { setOpenId(menuTask.id); setCardMenu(null); }}>{t('legalHub.cardOpen')}</button>
-            <button type="button" role="menuitem" onClick={() => moveTask(menuTask.id, 'associate')}>{t('legalHub.cardReviewAgain')}</button>
-            <button type="button" role="menuitem" onClick={() => moveTask(menuTask.id, 'progress')}>{t('legalHub.cardBackToWork')}</button>
-            <button type="button" role="menuitem" onClick={() => moveTask(menuTask.id, 'changes')}>{t('legalHub.cardRequestChanges')}</button>
+            {menuTask.done ? null : (
+                <>
+                    <p className="lh-card-menu__label">{t('legalHub.cardMoveTo')}</p>
+                    {columns.filter((column) => column.droppable && column.id !== columnOf(menuTask)).map((column) => (
+                        <button key={column.id} type="button" role="menuitem" className="lh-card-menu__move" onClick={() => moveTask(menuTask.id, column.id)}>
+                            {column.label}
+                        </button>
+                    ))}
+                </>
+            )}
+            <button type="button" role="menuitem" className="lh-card-menu__flow" onClick={() => { setOpenId(menuTask.id); setCardMenu(null); }}>{t('legalHub.cardWorkflow')}</button>
             <button type="button" role="menuitem" disabled={!moveHistory.current.has(menuTask.id)} onClick={() => undoMove(menuTask.id)}>{t('legalHub.cardUndoMove')}</button>
             <button type="button" role="menuitem" onClick={() => setArchived(menuTask.id, menuTask.archived !== true)}>
                 {menuTask.archived ? t('legalHub.unarchive') : t('legalHub.archive')}
@@ -1142,7 +1220,7 @@ export function LegalHubMyTasks({
                                 hint={column.hint}
                                 review={column.review}
                                 cards={column.cards}
-                                showProject={project == null}
+                                showProject={project == null && !scope}
                                 collapsed={collapsed.includes(column.id) && dragging == null && columnDrag == null}
                                 onToggleCollapsed={() => toggleCollapsed(column.id)}
                                 droppable={column.droppable}
@@ -1475,6 +1553,22 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
                 <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}${task.done ? ' is-done' : ''}`}>{due}</span>
                 <span className={`lh-tasks__avatar${task.assigneeName ? '' : ` lh-tasks__avatar--${task.owner}`}`} title={reviewer ? `${owner.name} → ${reviewer.name}` : owner.name}>{owner.code}</span>
             </span>
+            <button
+                type="button"
+                className="lh-my__card-more"
+                aria-label={`${t('legalHub.cardMenuAria')}: ${task.title}`}
+                title={t('legalHub.cardMenuAria')}
+                draggable={false}
+                onMouseDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    const box = event.currentTarget.getBoundingClientRect();
+                    onMenu(box.right - 220, box.bottom + 4);
+                }}
+            >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+            </button>
         </li>
     );
 }

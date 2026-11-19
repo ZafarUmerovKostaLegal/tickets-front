@@ -83,6 +83,15 @@ function IconTeam() {
     );
 }
 
+function IconMap() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Z" />
+            <path d="M9 4v13.5M15 6.5V20" />
+        </svg>
+    );
+}
+
 function IconLock() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -875,6 +884,19 @@ function LegalHubPageBody() {
                         </ul>
                     </div>
                     <ul className="lh-side__list lh-side__list--tail">
+                        <li>
+                            <button
+                                type="button"
+                                className={`lh-side__item${navSection === 'projects' && openProjectId == null ? ' lh-side__item--active' : ''}`}
+                                aria-current={navSection === 'projects' && openProjectId == null ? 'page' : undefined}
+                                onClick={() => openSection('projects')}
+                            >
+                                <span className="lh-side__item-icon" aria-hidden>
+                                    <IconMap />
+                                </span>
+                                <span className="lh-side__item-label">{t('legalHub.projects')}</span>
+                            </button>
+                        </li>
                         <li>
                             <button
                                 type="button"
