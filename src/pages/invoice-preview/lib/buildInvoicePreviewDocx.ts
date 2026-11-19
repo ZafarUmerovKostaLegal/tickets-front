@@ -40,6 +40,7 @@ import { ensureMehnatSeparatedPack, fixedFeeScopeText, mergeTimeReportPackPrefer
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
+import { withIssuedInvoiceTotals } from './issuedInvoiceTotals';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { combinedReportDocxChildren } from './combinedReportDocx';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
@@ -1007,7 +1008,8 @@ function legalInvoiceDocxBlocks(
     ];
 }
 
-export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput): Promise<Blob> {
+export async function buildInvoicePreviewDocxBlob(rawInput: InvoicePreviewPackInput): Promise<Blob> {
+    const input = await withIssuedInvoiceTotals(rawInput);
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;
     const coverLogoRuns: ParagraphChild[] = [];
     const legalLogoRuns: ParagraphChild[] = [];

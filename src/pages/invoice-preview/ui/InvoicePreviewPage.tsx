@@ -32,6 +32,7 @@ import {
     type InvoicePreviewPageKey,
 } from '../lib/invoicePreviewPageSlots';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
+import { reconcileWithIssuedInvoice, type IssuedInvoiceFacts } from '../lib/issuedInvoiceTotals';
 import { alignExpenseSlotsToInvoiceLines, resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
 import { getUsers } from '@entities/user';
 import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
@@ -186,6 +187,7 @@ export function InvoicePreviewPage() {
     const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string; expenses?: number } | null>(null);
     /** Issued invoice: billed project expenses = its expense lines (invoice FX), whatever was saved in the layout. */
     const [invoiceExpenses, setInvoiceExpenses] = useState<number | null>(null);
+    const [issuedFacts, setIssuedFacts] = useState<IssuedInvoiceFacts | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
@@ -338,6 +340,7 @@ export function InvoicePreviewPage() {
         setCombinedReport(null);
         setExistingBilledServices(null);
         setInvoiceExpenses(null);
+        setIssuedFacts(null);
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
         (async () => {
@@ -364,6 +367,7 @@ export function InvoicePreviewPage() {
                     invoiceCurrency = String(inv.currency ?? '').trim().toUpperCase() || null;
                     invoiceIssueDate = String(inv.issueDate ?? '').trim().slice(0, 10) || null;
                     const billedOverride = summarizeBilledOverrideLines(invoiceLines, invoiceCurrency);
+                    setIssuedFacts({ currency: String(inv.currency ?? ''), totalAmount: Number(inv.totalAmount), taxAmount: Number(inv.taxAmount), lines: invoiceLines });
                     setInvoiceExpenses(Math.round(invoiceLines
                         .filter((ln) => invoiceLineKindSlug(ln) === 'expense')
                         .reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100) / 100);
@@ -651,7 +655,7 @@ export function InvoicePreviewPage() {
             return existingBilledServices;
         return null;
     }, [session, reportBill?.currency, displayModel, existingBilledServices]);
-    const pricedModel = useMemo(() => {
+    const pricedModelRaw = useMemo(() => {
         const base = coverModel ?? fallbackCoverModel();
         if (customBilledOverride) {
             const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
@@ -672,7 +676,7 @@ export function InvoicePreviewPage() {
             totalFormatted: formatTimeReportAmount(total, reportBill.currency),
         };
     }, [coverModel, reportBill, legalOverrides.vatAmount, customBilledOverride, invoiceExpenses]);
-    const pricedLegal = useMemo(() => {
+    const pricedLegalRaw = useMemo(() => {
         if (customBilledOverride) {
             const formLines = session?.mode === 'create' ? (session.form.customBilledLines ?? []) : [];
             const serviceLinesFromForm = formLines
@@ -719,6 +723,14 @@ export function InvoicePreviewPage() {
             extraExpensesAmount: formatTimeReportAmount(invoiceExpenses ?? reportBill.expenses, reportBill.currency),
         };
     }, [legalOverrides, reportBill, customBilledOverride, session, invoiceExpenses]);
+
+    // Issued invoice: TOTAL / extra expenses / VAT always as in the invoice itself.
+    const reconciled = useMemo(
+        () => (issuedFacts ? reconcileWithIssuedInvoice(pricedModelRaw, pricedLegalRaw, issuedFacts) : { model: pricedModelRaw, legal: pricedLegalRaw }),
+        [issuedFacts, pricedModelRaw, pricedLegalRaw],
+    );
+    const pricedModel = reconciled.model;
+    const pricedLegal = reconciled.legal;
 
     const combinedReportPages = useMemo(
         () => combinedReport ? Math.max(1, planCombinedReportPreviewPages(combinedReport).length) : 0,

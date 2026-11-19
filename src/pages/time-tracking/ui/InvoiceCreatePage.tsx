@@ -212,8 +212,9 @@ export function InvoiceCreatePage() {
       .filter((x) => selExp.has(x.id))
       .reduce((s, x) => s + (Number(x.equivalentAmount) || 0), 0);
   }, [unbilledExp, selExp]);
-  /** Selected project expenses in the custom-sum currency — exactly like the server: UZS amount of each expense
-   *  converted by the CBU rate on the expense date (the registry «USD equivalent» uses another rate). */
+  /** Selected project expenses in the custom-sum currency — exactly like the server and the expense registry:
+   *  USD invoice → the recorded USD amount of each expense (as paid), UZS → the UZS amount,
+   *  other currencies → UZS converted by the CBU rate of the expense date. */
   const [customExpensesInCcy, setCustomExpensesInCcy] = useState<number>(0);
   useEffect(() => {
     const picked = unbilledExp.filter((x) => selExp.has(x.id));
@@ -233,7 +234,9 @@ export function InvoiceCreatePage() {
         const usd = Number(x.equivalentAmount) || 0;
         const parsed = rates.get(String(x.expenseDate ?? '').slice(0, 10)) ?? null;
         let value = NaN;
-        if (uzs > 0 && ccy === 'UZS')
+        if (ccy === 'USD' && usd > 0 && usd < 1_000_000)
+          value = usd;
+        else if (uzs > 0 && ccy === 'UZS')
           value = uzs;
         else if (uzs > 0 && parsed) {
           const perUnit = parsed.uzsPerUnit.get(ccy) ?? (ccy === 'USD' ? parsed.uzsPerUsd : undefined);

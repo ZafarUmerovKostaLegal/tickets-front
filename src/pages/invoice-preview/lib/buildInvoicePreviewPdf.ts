@@ -15,6 +15,7 @@ import {
 } from './invoicePreviewPackShared';
 import { ensureMehnatSeparatedPack, fixedFeeScopeText, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
+import { withIssuedInvoiceTotals } from './issuedInvoiceTotals';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
     legalBillToBankingRows,
@@ -1772,7 +1773,8 @@ function remapPreviewPageSelectionToPdf(
     return out;
 }
 
-export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput): Promise<Blob> {
+export async function buildInvoicePreviewPdfBlob(rawInput: InvoicePreviewPackInput): Promise<Blob> {
+    const input = await withIssuedInvoiceTotals(rawInput);
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
