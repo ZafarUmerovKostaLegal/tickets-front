@@ -3,6 +3,10 @@ import type { MineTask } from './LegalHubMyTasks';
 import type { TaskCheck, TaskComment, TaskFile, TaskHistory, TaskHistoryKind, TaskPriorityId, TaskStatusId } from './legalHubTasks';
 
 type ApiTask = {
+    commentCount?: unknown;
+    fileCount?: unknown;
+    checkTotal?: unknown;
+    checkDone?: unknown;
     id?: unknown;
     title?: unknown;
     status?: unknown;
@@ -77,6 +81,10 @@ export function mineTaskFromApi(row: ApiTask): MineTask | null {
         approval: row.approval === true,
         boardColumn: boardColumn || undefined,
         archived: row.archived === true,
+        commentCount: Number(row.commentCount) || 0,
+        fileCount: Number(row.fileCount) || 0,
+        checkTotal: Number(row.checkTotal) || 0,
+        checkDone: Number(row.checkDone) || 0,
     };
 }
 

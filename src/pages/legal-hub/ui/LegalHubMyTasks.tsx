@@ -39,6 +39,10 @@ export type MineTask = HubTask & {
     approval: boolean;
     boardColumn?: string;
     archived?: boolean;
+    commentCount?: number;
+    fileCount?: number;
+    checkTotal?: number;
+    checkDone?: number;
 };
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes', 'done'];
@@ -323,6 +327,7 @@ export function LegalHubMyTasks({
     headingNote = null,
     scope = null,
     boardOwnerId = null,
+    loading = false,
 }: {
     query: string;
     source?: HubTask[] | null;
@@ -337,6 +342,8 @@ export function LegalHubMyTasks({
     headingNote?: string | null;
     scope?: string | null;
     boardOwnerId?: number | null;
+    /** Tasks are still loading: show the skeleton board instead of empty columns. */
+    loading?: boolean;
 }) {
     const { t, locale } = useI18n();
     const [inner, setInner] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
@@ -964,7 +971,7 @@ export function LegalHubMyTasks({
                     ) : null}
                     <h1 title={shownTitle}>{shownTitle}</h1>
                     {headingNote?.trim() ? <span className="lh-bt__client">{headingNote.trim()}</span> : null}
-                    <span className="lh-bt__meta">
+                    <span className="lh-bt__meta" hidden={loading && tasks.length === 0}>
                         {t(taskCountKey(visible.filter((task) => !task.done).length)).replace('{count}', String(visible.filter((task) => !task.done).length))}
                         {lateCount > 0 ? <em>{t('legalHub.boardLate').replace('{count}', String(lateCount))}</em> : null}
                     </span>
@@ -1210,7 +1217,7 @@ export function LegalHubMyTasks({
         <div className="lh-my lh-my--docket">
             {toolbar}
             <div key={view} className="lh-my__swap">
-                {noMatch ?? (
+                {loading && tasks.length === 0 ? <BoardSkeleton label={t('legalHub.boardLoading')} /> : noMatch ?? (
                     <div className="lh-my__board" ref={boardRef}>
                         {shownColumns.map((column) => (
                             <BoardColumnView
@@ -1508,9 +1515,13 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
     const soon = !task.done && !clientLate && dayDelta(task.clientOn) <= 1;
     const due = `${shortDate(task.clientOn, locale)} · ${task.done ? t('legalHub.taskStageApproved') : dueText(dayDelta(task.clientOn), t)}`;
     const context = [showProject ? taskProjectName(task) : '', task.workstream && task.workstream !== '—' ? task.workstream : ''].filter(Boolean).join(' · ');
+    const stage = columnOf(task);
+    const checks = task.checkTotal ?? 0;
+    const checksDone = task.checkDone ?? 0;
     return (
         <li
             data-card={task.id}
+            data-stage={stage}
             className={`lh-my__card${draggable ? '' : ' is-locked'}${lifting ? ' is-lifting' : ''}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
             title={draggable ? t('legalHub.cardDragHint') : t('legalHub.myTasksLocked')}
             draggable={draggable}
@@ -1544,6 +1555,10 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
                 }
             }}
         >
+            <span className="lh-card__labels" aria-hidden>
+                <i className={`lh-card__label lh-card__label--${isBuiltin(stage) ? stage : 'custom'}`} />
+                {task.priority === 'high' && !task.done ? <i className="lh-card__label lh-card__label--urgent" /> : null}
+            </span>
             <strong>
                 {task.priority === 'high' && !task.done ? <span className="lh-my__hot" title={t('legalHub.myTasksUrgent')}><IconFlag /></span> : null}
                 {task.title}
@@ -1551,6 +1566,26 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
             {context ? <span className="lh-my__context">{context}</span> : null}
             <span className="lh-my__card-foot">
                 <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}${task.done ? ' is-done' : ''}`}>{due}</span>
+                <span className="lh-card__badges">
+                    {task.commentCount ? (
+                        <span className="lh-card__badge" title={t('legalHub.cardBadgeComments')}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                            {task.commentCount}
+                        </span>
+                    ) : null}
+                    {task.fileCount ? (
+                        <span className="lh-card__badge" title={t('legalHub.cardBadgeFiles')}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" /></svg>
+                            {task.fileCount}
+                        </span>
+                    ) : null}
+                    {checks ? (
+                        <span className={`lh-card__badge${checksDone === checks ? ' is-complete' : ''}`} title={t('legalHub.cardBadgeChecks')}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+                            {checksDone}/{checks}
+                        </span>
+                    ) : null}
+                </span>
                 <span className={`lh-tasks__avatar${task.assigneeName ? '' : ` lh-tasks__avatar--${task.owner}`}`} title={reviewer ? `${owner.name} → ${reviewer.name}` : owner.name}>{owner.code}</span>
             </span>
             <button
@@ -1570,6 +1605,28 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
             </button>
         </li>
+    );
+}
+
+/** Loading placeholder shaped like the board: columns with shimmering cards. */
+function BoardSkeleton({ label }: { label: string }) {
+    const shape = [3, 2, 1, 2, 0, 1];
+    return (
+        <div className="lh-skel" role="status" aria-busy="true" aria-label={label}>
+            {shape.map((cards, column) => (
+                <div key={column} className="lh-skel__col" aria-hidden>
+                    <span className="lh-skel__bar lh-skel__bar--head" />
+                    {Array.from({ length: cards }, (_, index) => (
+                        <span key={index} className="lh-skel__card">
+                            <span className="lh-skel__bar lh-skel__bar--label" />
+                            <span className="lh-skel__bar" />
+                            <span className="lh-skel__bar lh-skel__bar--short" />
+                        </span>
+                    ))}
+                    <span className="lh-skel__bar lh-skel__bar--add" />
+                </div>
+            ))}
+        </div>
     );
 }
 

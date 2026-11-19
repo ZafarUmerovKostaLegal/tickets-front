@@ -29,6 +29,7 @@ import {
 } from './legalHubProjectDisplay';
 import './LegalHubPage.css';
 import './LegalHubTeamwork.css';
+import './LegalHubBoard.css';
 
 
 const MINE_ITEMS: { id: 'myTasks' | 'reviewQueue'; labelKey: TranslationKey; icon: ComponentType }[] = [
@@ -242,11 +243,15 @@ function LegalHubPageBody() {
     const openProjectId = openProject?.id ?? null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [hubTasks, setHubTasks] = useState<MineTask[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(true);
     useEffect(() => {
         let cancelled = false;
         void listLegalHubTasks().then((items) => {
             if (!cancelled && items)
                 setHubTasks(items);
+        }).finally(() => {
+            if (!cancelled)
+                setTasksLoading(false);
         });
         return () => {
             cancelled = true;
@@ -1062,6 +1067,7 @@ function LegalHubPageBody() {
                                         layout="board"
                                         tasks={hubTasks}
                                         onTasks={setHubTasks}
+                                        loading={tasksLoading}
                                         boardOwnerId={viewAs?.id ?? userId}
                                     />
                                 ) : null}
@@ -1074,6 +1080,7 @@ function LegalHubPageBody() {
                                         mode="queue"
                                         tasks={hubTasks}
                                         onTasks={setHubTasks}
+                                        loading={tasksLoading}
                                     />
                                 ) : null}
                                 {section === 'projects' && openProject ? (
@@ -1087,6 +1094,7 @@ function LegalHubPageBody() {
                                         onBack={closeProject}
                                         tasks={hubTasks}
                                         onTasks={setHubTasks}
+                                        loading={tasksLoading}
                                     />
                                 ) : null}
                                 {section === 'projects' && !openProject ? (

@@ -498,6 +498,10 @@ export const ruMessages: Messages = {
         cardBackToWork: 'Вернуть в работу',
         cardRequestChanges: 'На правки',
         cardUndoMove: 'Отменить перенос',
+        boardLoading: 'Загружаем задачи…',
+        cardBadgeComments: 'Комментарии',
+        cardBadgeFiles: 'Файлы',
+        cardBadgeChecks: 'Чек-лист',
         cardMoveTo: 'Переместить в',
         cardWorkflow: 'Проверка и согласование…',
         cardMenuAria: 'Действия с карточкой',
@@ -1702,6 +1706,10 @@ export type Messages = {
         cardBackToWork: string;
         cardRequestChanges: string;
         cardUndoMove: string;
+        boardLoading: string;
+        cardBadgeComments: string;
+        cardBadgeFiles: string;
+        cardBadgeChecks: string;
         cardMoveTo: string;
         cardWorkflow: string;
         cardMenuAria: string;
