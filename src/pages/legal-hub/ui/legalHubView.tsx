@@ -7,6 +7,7 @@ import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/us
 import { readProjectParticipantAuthUserIds, readProjectPartnerAuthUserIds } from '@entities/time-tracking/lib/partnerReportProjectScope';
 import { useCurrentUser } from '@shared/hooks';
 import { canAssignLegalHubTask, legalHubPositionRank } from './legalHubRank';
+import { fetchHubTeams } from './legalHubTeamApi';
 
 export type LegalHubPerson = {
     id: number;
@@ -58,6 +59,7 @@ function collectStaff(
     teams: TimeTrackingTeamRow[],
     users: TimeTrackingUserRow[],
     self: { id: number; name: string; position: string; role: string | null; initials?: string | null },
+    mates: readonly number[] = [],
 ): LegalHubPerson[] {
     const usersById = new Map(users.map((row) => [row.id, row]));
     const related = teams.filter((team) => !team.is_archived && (
@@ -72,9 +74,10 @@ function collectStaff(
                 ids.add(id);
         }
     }
-    for (const row of users) {
-        if (legalHubPositionRank(row.position, row.role) <= 1)
-            ids.add(row.id);
+    // Team work is strictly inside the team: own teams + people with temporary access (from the Legal Hub API).
+    for (const id of mates) {
+        if (Number.isFinite(id) && id > 0)
+            ids.add(id);
     }
     const people: LegalHubPerson[] = [];
     for (const id of ids) {
@@ -153,15 +156,16 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         let cancelled = false;
         void (async () => {
             try {
-                const [teams, users, projectRows, clients] = await Promise.all([
+                const [teams, users, projectRows, clients, hubTeams] = await Promise.all([
                     listTimeTrackingTeams().catch(() => [] as TimeTrackingTeamRow[]),
                     listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
                     listAllClientProjectsMerged(false).catch(() => [] as TimeManagerClientProjectRow[]),
                     listAllTimeManagerClientsMerged(false).catch(() => [] as TimeManagerClientRow[]),
+                    fetchHubTeams().catch(() => null),
                 ]);
                 if (cancelled)
                     return;
-                const roster = collectStaff(teams, users, self);
+                const roster = collectStaff(teams, users, self, hubTeams?.mates ?? []);
                 const actor = roster.find((person) => person.id === userId) ?? roster[0] ?? null;
                 const clientNames = new Map(clients.map((client) => [client.id, client.name.trim()]));
                 setStaff(roster);

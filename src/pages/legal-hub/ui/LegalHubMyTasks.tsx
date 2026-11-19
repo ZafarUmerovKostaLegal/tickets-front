@@ -9,7 +9,7 @@ import type { ProjectStage } from './legalHubTeamApi';
 import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText, legalHubSectionUrl } from './legalHubShared';
-import { canAssignLegalHubTask, canSelectLegalHubReviewer } from './legalHubRank';
+import { canSelectLegalHubReviewer } from './legalHubRank';
 import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
 import { createLegalHubTask, patchLegalHubTask } from './legalHubTaskApi';
 import { useLegalHubView } from './legalHubView';
@@ -1638,7 +1638,8 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
     const assignees = useMemo(() => {
         if (me == null)
             return [];
-        return staff.filter((person) => canAssignLegalHubTask(me, person));
+        // Any teammate, whatever the role (the roster is already limited to the team).
+        return staff;
     }, [me, staff]);
     const reviewers = useMemo(() => {
         if (me == null)
