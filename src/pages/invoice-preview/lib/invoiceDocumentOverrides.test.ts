@@ -129,3 +129,25 @@ describe('buildInvoiceDocumentOverridesPayload', () => {
         expect(applied.totalFormatted).toBe(cover.totalFormatted);
     });
 });
+
+describe('manually saved overrides', () => {
+    it('survive a reload untouched by stale-period heuristics', () => {
+        const doc = parseInvoiceDocumentOverrides({
+            v: 1,
+            manual: true,
+            legal: { issueDateDisplay: 'November 2026', serviceDescriptionLine: 'Legal services rendered in November 2026' },
+            cover: { servicesMonthYear: 'November 2026' },
+        });
+        expect(doc?.manual).toBe(true);
+        const scrubbed = scrubStaleBillingPeriodDocumentOverrides(doc, { issueDateIso: '2026-11-19', billingPeriodIso: '2026-10-31' });
+        expect(scrubbed).toBe(doc);
+        expect(scrubbed?.legal?.issueDateDisplay).toBe('November 2026');
+        expect(scrubbed?.cover?.servicesMonthYear).toBe('November 2026');
+    });
+
+    it('are marked manual when built from the editor', () => {
+        const cover = buildInvoiceCoverLetterModel({ issueDateIso: '2026-11-19', clientName: 'Makyol', clientAddress: null, contactName: null, totalAmount: 100, currency: 'USD' });
+        const payload = buildInvoiceDocumentOverridesPayload({ legal: {}, cover, timeReport: { currency: 'USD', detailSlots: [], summarySlots: [] } as never });
+        expect(payload.manual).toBe(true);
+    });
+});

@@ -91,6 +91,8 @@ export function scrubStaleBillingPeriodDocumentOverrides(
 ): InvoiceDocumentOverridesV1 | null {
     if (!doc)
         return null;
+    if (doc.manual)
+        return doc;
     const issue = String(opts.issueDateIso ?? '').trim().slice(0, 10);
     const period = String(opts.billingPeriodIso ?? '').trim().slice(0, 10);
     const monthOnlyRibbon = doc.legal?.issueDateDisplay?.trim()
@@ -160,6 +162,8 @@ export type InvoiceCoverDocumentOverrides = Partial<Pick<
 
 export type InvoiceDocumentOverridesV1 = {
     v: 1;
+    /** Saved by a person from the preview editor: trust every field as typed (no stale-period heuristics). */
+    manual?: true;
     legal?: InvoiceLegalPageOverrides | null;
     cover?: InvoiceCoverDocumentOverrides | null;
     timeReport?: InvoiceTimeReportPack | null;
@@ -194,9 +198,11 @@ export function pickCoverDocumentOverrides(
 export function applyCoverDocumentOverrides(
     model: InvoiceCoverLetterModel,
     cover?: InvoiceCoverDocumentOverrides | null,
+    opts?: { trusted?: boolean },
 ): InvoiceCoverLetterModel {
     if (!cover || typeof cover !== 'object')
         return model;
+    const trusted = opts?.trusted === true;
     const next: InvoiceCoverLetterModel = { ...model };
     if (cover.coverLanguage === 'ENG' || cover.coverLanguage === 'RU')
         next.coverLanguage = cover.coverLanguage;
@@ -217,7 +223,7 @@ export function applyCoverDocumentOverrides(
         next.salutation = cover.salutation;
     if (typeof cover.quotedCompanyName === 'string')
         next.quotedCompanyName = cover.quotedCompanyName;
-    if (typeof cover.servicesMonthYear === 'string' && !isStaleServicesMonthYear(cover.servicesMonthYear, model))
+    if (typeof cover.servicesMonthYear === 'string' && (trusted || !isStaleServicesMonthYear(cover.servicesMonthYear, model)))
         next.servicesMonthYear = cover.servicesMonthYear;
     if (typeof cover.totalFormatted === 'string') {
         const override = cover.totalFormatted.trim();
@@ -244,7 +250,7 @@ export function applyCoverDocumentOverrides(
     if (cover.invoiceParagraphOverride !== undefined) {
         const para = cover.invoiceParagraphOverride;
         const liveMonths = serviceMonthTokenCount(next.servicesMonthYear);
-        if (typeof para === 'string' && liveMonths > 0 && serviceMonthTokenCount(para) > liveMonths)
+        if (!trusted && typeof para === 'string' && liveMonths > 0 && serviceMonthTokenCount(para) > liveMonths)
             next.invoiceParagraphOverride = null;
         else {
             next.invoiceParagraphOverride = typeof para === 'string'
@@ -271,6 +277,8 @@ export function parseInvoiceDocumentOverrides(raw: unknown): InvoiceDocumentOver
     if (o.v !== 1)
         return null;
     const out: InvoiceDocumentOverridesV1 = { v: 1 };
+    if (o.manual === true)
+        out.manual = true;
     if (o.legal != null && typeof o.legal === 'object' && !Array.isArray(o.legal))
         out.legal = o.legal as InvoiceLegalPageOverrides;
     if (o.cover != null && typeof o.cover === 'object' && !Array.isArray(o.cover))
@@ -304,6 +312,7 @@ export function buildInvoiceDocumentOverridesPayload(input: {
     const shouldPersistPages = Boolean(input.persistIncludedPages) || (included != null && included.length > 0);
     return {
         v: 1,
+        manual: true,
         legal: input.legal,
         cover: pickCoverDocumentOverrides(input.cover),
         timeReport: input.timeReport,

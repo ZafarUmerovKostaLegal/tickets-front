@@ -168,6 +168,8 @@ export function InvoicePreviewPage() {
     const skipNextAutosaveRef = useRef(true);
     /** Every manual edit bumps the counter; autosave stores it until `savedRef` catches up. */
     const dirtyRef = useRef(0);
+    /** Time report rows were edited by hand: rebuilds must start from them, not from the loaded snapshot. */
+    const packEditedRef = useRef(false);
     const savedRef = useRef(0);
     const [dirtyTick, setDirtyTick] = useState(0);
     const includedPagesHydratedRef = useRef(false);
@@ -177,6 +179,10 @@ export function InvoicePreviewPage() {
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [showInitiatorName, setShowInitiatorName] = useState(false);
     const [combinedReport, setCombinedReport] = useState<CombinedReportSnapshot | null>(null);
+    const coverModelRef = useRef(coverModel);
+    coverModelRef.current = coverModel;
+    const timeReportPackRef = useRef(timeReportPack);
+    timeReportPackRef.current = timeReportPack;
     const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string; expenses?: number } | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -308,7 +314,7 @@ export function InvoicePreviewPage() {
             invoiceNumber: (doc.legal?.invoiceNumber ?? metaInvoiceNumber ?? prev.invoiceNumber) || null,
         }));
         if (doc.cover) {
-            setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
+            setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover, { trusted: doc.manual === true }) : prev));
         }
         setShowInitiatorName(doc.showServiceInitiatorName === true);
         setCombinedReport(doc.combinedReport ?? null);
@@ -318,6 +324,7 @@ export function InvoicePreviewPage() {
         let cancelled = false;
         userPickedBankRef.current = false;
         savedRef.current = dirtyRef.current;
+        packEditedRef.current = false;
         pendingDocOverridesRef.current = null;
         skipNextAutosaveRef.current = true;
         includedPagesHydratedRef.current = false;
@@ -430,7 +437,7 @@ export function InvoicePreviewPage() {
                     billingPeriodIso: periodIso,
                 })
                 : rawDoc;
-            if (doc?.combinedReport && invoiceLines.length) {
+            if (doc?.combinedReport && invoiceLines.length && !doc.manual) {
                 const hints = await linkedTaskHintsForInvoiceLines(invoiceLines, invoiceClientId, invoiceProjectId);
                 if (cancelled)
                     return;
@@ -509,6 +516,7 @@ export function InvoicePreviewPage() {
         const invNo = (legalOverrides.invoiceNumber ?? session.meta.invoiceNumber ?? '').trim();
 
         if (session.mode === 'create') {
+            pendingDocOverridesRef.current = doc;
             writeInvoicePreviewSession({
                 ...session,
                 form: {
@@ -544,6 +552,7 @@ export function InvoicePreviewPage() {
             if (status === 'draft' && invNo)
                 body.invoiceNumber = invNo;
             const updated = await patchInvoice(session.invoiceId, body);
+            pendingDocOverridesRef.current = doc;
             setInvoiceStatus(String(updated.status ?? status ?? '').toLowerCase() || status);
             writeInvoicePreviewSession({
                 v: 1,
@@ -879,7 +888,7 @@ export function InvoicePreviewPage() {
             if (scrubbed)
                 pendingDocOverridesRef.current = scrubbed;
             const coverSrc = scrubbed?.cover ?? pending?.cover;
-            const withCover = applyCoverDocumentOverrides(m, coverSrc);
+            const withCover = applyCoverDocumentOverrides(m, coverSrc, { trusted: (scrubbed ?? pending)?.manual === true });
             setCoverModel(withCover);
             if (scrubbed?.legal) {
                 setLegalOverrides((prev) => ({
@@ -893,10 +902,18 @@ export function InvoicePreviewPage() {
         };
     }, [session]);
 
+    const coverReady = coverModel != null;
     useEffect(() => {
-        if (!session || coverModel == null)
+        const cover = coverModelRef.current;
+        if (!session || !coverReady || cover == null)
             return;
-        const savedPack = pendingDocOverridesRef.current?.timeReport;
+        const edited = packEditedRef.current ? timeReportPackRef.current : null;
+        const savedPack = edited ?? pendingDocOverridesRef.current?.timeReport;
+        // Edited by hand (now or in a saved version): show exactly what was saved, no live re-merge.
+        if (savedPack && timeReportPackHasContent(savedPack) && (edited != null || pendingDocOverridesRef.current?.manual === true)) {
+            setTimeReportPack(ensureMehnatSeparatedPack(savedPack));
+            return;
+        }
         let cancel = false;
         void (async () => {
             let projectId: string | null = session.mode === 'create'
@@ -914,7 +931,7 @@ export function InvoicePreviewPage() {
             if (cancel)
                 return;
             try {
-                const live = await resolveInvoiceTimeReportPack(session, coverModel, {
+                const live = await resolveInvoiceTimeReportPack(session, cover, {
                     onPartnerConfirmationBlocked(message) {
                         if (!cancel)
                             pushToast({ message, variant: 'warning' });
@@ -963,9 +980,10 @@ export function InvoicePreviewPage() {
         return () => {
             cancel = true;
         };
-    }, [session, coverLanguage, coverModel, pushToast]);
+    }, [session, coverLanguage, coverReady, pushToast]);
 
     const patchDetailRowInChunk = useCallback((chunkIndex: number, rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        packEditedRef.current = true;
         dirtyRef.current += 1;
         setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
@@ -981,6 +999,7 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchSummaryRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportSummaryRow, value: string) => {
+        packEditedRef.current = true;
         dirtyRef.current += 1;
         setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
@@ -994,6 +1013,7 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchExpenseRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        packEditedRef.current = true;
         dirtyRef.current += 1;
         setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
@@ -1007,6 +1027,7 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchMehnatRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        packEditedRef.current = true;
         dirtyRef.current += 1;
         setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
@@ -1020,6 +1041,7 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchFixedFeeRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        packEditedRef.current = true;
         dirtyRef.current += 1;
         setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
@@ -1033,6 +1055,7 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'fixedFeeTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => {
+        packEditedRef.current = true;
         dirtyRef.current += 1;
         setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => ({ ...(prev ?? resolvedTimeReportPack), ...patch }));
