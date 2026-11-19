@@ -129,6 +129,8 @@ export function summarizeBilledOverrideLines(
   closedExpenseCount: number;
   workedAmount: number;
   workedCurrency: string;
+  /** Project expenses billed on top of the custom sum (invoice currency). */
+  expensesAmount: number;
 } {
   const all = lines ?? [];
   const invCcy = String(invoiceCurrency ?? '').trim().toUpperCase() || 'USD';
@@ -141,7 +143,11 @@ export function summarizeBilledOverrideLines(
   const moneyManual = all.filter((ln) => {
     return invoiceLineKindSlug(ln) === 'manual' && Math.abs(Number(ln.lineTotal) || 0) > 1e-9;
   });
-  const isBilledOverride = moneyManual.length > 0 && zeroTimeExpense.length > 0;
+  const moneyExpense = all.filter((ln) => invoiceLineKindSlug(ln) === 'expense' && Math.abs(Number(ln.lineTotal) || 0) > 1e-9);
+  const hasTime = all.some((ln) => invoiceLineKindSlug(ln) === 'time');
+  // Custom sum + project expenses only: no zeroed lines when no time was selected.
+  const isBilledOverride = moneyManual.length > 0 && (zeroTimeExpense.length > 0 || (moneyExpense.length > 0 && !hasTime));
+  const expensesAmount = Math.round(moneyExpense.reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100) / 100;
   if (!isBilledOverride) {
     return {
       isBilledOverride: false,
@@ -150,6 +156,7 @@ export function summarizeBilledOverrideLines(
       closedExpenseCount: 0,
       workedAmount: 0,
       workedCurrency: invCcy,
+      expensesAmount: 0,
     };
   }
   const zeroedNonManual = all.filter((ln) => {
@@ -178,6 +185,7 @@ export function summarizeBilledOverrideLines(
     closedExpenseCount: zeroTimeExpense.filter((ln) => invoiceLineKindSlug(ln) === 'expense').length,
     workedAmount,
     workedCurrency,
+    expensesAmount,
   };
 }
 

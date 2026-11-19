@@ -17,6 +17,8 @@ export type InvoicePreviewFormDraftV1 = {
     customBilledCurrency?: string;
     customBilledDescription?: string;
     customBilledLines?: Array<{ amount: string; description: string }>;
+    /** Selected project expenses converted to the custom-sum currency (preview only). */
+    customBilledExpenses?: string;
 };
 
 export type InvoicePreviewMeta = {
@@ -69,6 +71,7 @@ function isFormDraft(o: unknown): o is InvoicePreviewFormDraftV1 {
         && (r.customBilledAmount === undefined || typeof r.customBilledAmount === 'string')
         && (r.customBilledCurrency === undefined || typeof r.customBilledCurrency === 'string')
         && (r.customBilledDescription === undefined || typeof r.customBilledDescription === 'string')
+        && (r.customBilledExpenses === undefined || typeof r.customBilledExpenses === 'string')
         && (r.customBilledLines === undefined || (
             Array.isArray(r.customBilledLines)
             && r.customBilledLines.every((ln) => (

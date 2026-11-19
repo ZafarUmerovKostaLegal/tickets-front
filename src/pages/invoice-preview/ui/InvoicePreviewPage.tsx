@@ -36,7 +36,7 @@ import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from 
 import { getUsers } from '@entities/user';
 import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { alignCombinedReportToProjectCurrency, applyLinkedTaskNames, applyStoredUserInitials, linkedTaskHintsForInvoiceLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
-import { summarizeBilledOverrideLines } from '@pages/time-tracking/lib/invoicePageShared';
+import { invoiceLineKindSlug, summarizeBilledOverrideLines } from '@pages/time-tracking/lib/invoicePageShared';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { CombinedReportPage } from './CombinedReportPage';
@@ -177,7 +177,7 @@ export function InvoicePreviewPage() {
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [showInitiatorName, setShowInitiatorName] = useState(false);
     const [combinedReport, setCombinedReport] = useState<CombinedReportSnapshot | null>(null);
-    const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string } | null>(null);
+    const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string; expenses?: number } | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
@@ -356,12 +356,15 @@ export function InvoicePreviewPage() {
                     const billedOverride = summarizeBilledOverrideLines(invoiceLines, invoiceCurrency);
                     if (billedOverride.isBilledOverride) {
                         const amount = Math.round(
-                            billedOverride.visibleLines.reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100,
+                            billedOverride.visibleLines
+                                .filter((ln) => invoiceLineKindSlug(ln) === 'manual')
+                                .reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100,
                         ) / 100;
                         if (amount > 0) {
                             setExistingBilledServices({
                                 amount,
                                 currency: invoiceCurrency || billedOverride.workedCurrency || 'USD',
+                                expenses: billedOverride.expensesAmount,
                             });
                         }
                     }
@@ -372,7 +375,7 @@ export function InvoicePreviewPage() {
                         && !(docFromApi?.legal?.serviceLines && docFromApi.legal.serviceLines.length > 0)
                     ) {
                         const ccy = invoiceCurrency || billedOverride.workedCurrency || 'USD';
-                        const serviceLines = billedOverride.visibleLines.map((ln) => ({
+                        const serviceLines = billedOverride.visibleLines.filter((ln) => invoiceLineKindSlug(ln) === 'manual').map((ln) => ({
                             description: String(ln.description ?? '').trim() || 'Legal services',
                             amountFormatted: formatTimeReportAmount(Number(ln.lineTotal) || 0, ccy),
                         }));
@@ -626,7 +629,8 @@ export function InvoicePreviewPage() {
                 })();
             if (!Number.isFinite(amount) || amount <= 0)
                 return null;
-            return { amount, currency };
+            const expenses = Number(session.form.customBilledExpenses ?? 0);
+            return { amount, currency, expenses: Number.isFinite(expenses) && expenses > 0 ? expenses : 0 };
         }
         if (existingBilledServices && existingBilledServices.amount > 0)
             return existingBilledServices;
@@ -636,7 +640,7 @@ export function InvoicePreviewPage() {
         const base = coverModel ?? fallbackCoverModel();
         if (customBilledOverride) {
             const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
-            const total = Math.round((customBilledOverride.amount + vat) * 100) / 100;
+            const total = Math.round((customBilledOverride.amount + (customBilledOverride.expenses ?? 0) + vat) * 100) / 100;
             return {
                 ...base,
                 servicesAmountFormatted: formatTimeReportAmount(customBilledOverride.amount, customBilledOverride.currency),
@@ -673,7 +677,7 @@ export function InvoicePreviewPage() {
                 : '';
             return {
                 ...legalOverrides,
-                extraExpensesAmount: formatTimeReportAmount(0, customBilledOverride.currency),
+                extraExpensesAmount: formatTimeReportAmount(customBilledOverride.expenses ?? 0, customBilledOverride.currency),
                 ...(serviceLinesFromForm.length > 0
                     ? {
                         serviceLines: serviceLinesFromForm,

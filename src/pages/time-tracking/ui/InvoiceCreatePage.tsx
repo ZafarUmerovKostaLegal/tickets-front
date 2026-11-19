@@ -148,6 +148,8 @@ export function InvoiceCreatePage() {
   const [customBilledFxLoading, setCustomBilledFxLoading] = useState(false);
   const [customBilledFxError, setCustomBilledFxError] = useState<string | null>(null);
   const [customBilledFxHint, setCustomBilledFxHint] = useState<string | null>(null);
+  const [customFx, setCustomFx] = useState<Awaited<ReturnType<typeof fetchCbuParsedForDate>> | null>(null);
+  const [customExpLoading, setCustomExpLoading] = useState(false);
 
   const clientsForCreate = useMemo(
     () => clients.filter((c) => clientIdsWithActiveProjects.has(c.id)),
@@ -211,6 +213,22 @@ export function InvoiceCreatePage() {
       .filter((x) => selExp.has(x.id))
       .reduce((s, x) => s + (Number(x.equivalentAmount) || 0), 0);
   }, [unbilledExp, selExp]);
+  /** Selected project expenses in the custom-sum currency (backend converts the same way per expense). */
+  const customExpensesInCcy = useMemo(() => {
+    if (!customBilledEnabled || workedExpUsdTotal <= 0)
+      return 0;
+    const ccy = customBilledCurrency;
+    let value = NaN;
+    if (ccy === 'USD')
+      value = workedExpUsdTotal;
+    else if (customFx && ccy === 'UZS')
+      value = workedExpUsdTotal * customFx.uzsPerUsd;
+    else if (customFx) {
+      const perUsd = foreignUnitsPerUsd(customFx, ccy);
+      value = perUsd != null && perUsd > 0 ? workedExpUsdTotal * perUsd : NaN;
+    }
+    return Number.isFinite(value) ? Math.round(value * 100) / 100 : NaN;
+  }, [customBilledEnabled, workedExpUsdTotal, customBilledCurrency, customFx]);
   const defaultServiceDescription = useCallback(() => {
     const coverLang: InvoiceCoverLanguage = locale === 'ru' ? 'RU' : 'ENG';
     const periodIso = (unbilledTo || issueDate || todayIso()).slice(0, 10);
@@ -280,6 +298,7 @@ export function InvoiceCreatePage() {
       .then((parsed) => {
         if (cancelled)
           return;
+        setCustomFx(parsed);
         if (ccy === 'USD') {
           const uzs = parsed.uzsPerUsd;
           setCustomBilledFxHint(
@@ -567,8 +586,16 @@ export function InvoiceCreatePage() {
       if (!allowed) {
         const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
         setUnbilledTime([]);
-        setUnbilledExp([]);
-        setUnbilledPartnerBlockReason(msg);
+        setSelTime(new Set());
+        if (customBilledEnabled) {
+          const expOnly = await fetchUnbilledExpenses({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo });
+          setUnbilledExp(expOnly);
+          setSelExp(new Set(expOnly.map((r) => r.id)));
+        }
+        else {
+          setUnbilledExp([]);
+          setUnbilledPartnerBlockReason(msg);
+        }
         return;
       }
       const [timeRows, expRows] = await Promise.all([
@@ -633,7 +660,34 @@ export function InvoiceCreatePage() {
     finally {
       setUnbilledLoading(false);
     }
-  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t, skipPartnerGate]);
+  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t, skipPartnerGate, customBilledEnabled]);
+
+  // Custom sum: project expenses for the period load (and are ticked) on their own.
+  useEffect(() => {
+    if (!customBilledEnabled || !createProjectId || !unbilledFrom || !unbilledTo)
+      return;
+    let cancelled = false;
+    setCustomExpLoading(true);
+    void fetchUnbilledExpenses({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo })
+      .then((rows) => {
+        if (cancelled)
+          return;
+        setUnbilledExp(rows);
+        setSelExp((prev) => {
+          const ids = new Set(rows.map((r) => r.id));
+          const kept = [...prev].filter((id) => ids.has(id));
+          return new Set(kept.length > 0 ? kept : ids);
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled)
+          setCustomExpLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customBilledEnabled, createProjectId, unbilledFrom, unbilledTo]);
 
   useEffect(() => {
     if (resumeAppliedRef.current)
@@ -791,7 +845,7 @@ export function InvoiceCreatePage() {
           : {}),
         ...(customDesc ? { serviceDescriptionLine: customDesc } : {}),
         ...(serviceLinesOverride ? { serviceLines: serviceLinesOverride } : {}),
-        extraExpensesAmount: `${customBilledCurrency} 0.00`,
+        extraExpensesAmount: formatBilledAmountDisplay(Number.isFinite(customExpensesInCcy) ? customExpensesInCcy : 0, customBilledCurrency),
       };
       return { ...base, v: 1, cover, legal };
     })();
@@ -814,6 +868,7 @@ export function InvoiceCreatePage() {
             customBilledAmount: String(customAmountNum),
             customBilledCurrency,
             customBilledDescription: customDesc,
+            customBilledExpenses: String(Number.isFinite(customExpensesInCcy) ? customExpensesInCcy : 0),
             customBilledLines: customBilledLines.map((ln) => ({
               amount: ln.amount.trim(),
               description: ln.description.trim(),
@@ -831,7 +886,7 @@ export function InvoiceCreatePage() {
       ...(nextDoc ? { documentOverrides: nextDoc } : {}),
     });
     navigate(routes.timeTrackingInvoicePreview);
-  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledTime, unbilledExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t, customBilledEnabled, customBilledLines, customBilledCurrency]);
+  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledTime, unbilledExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t, customBilledEnabled, customBilledLines, customBilledCurrency, customExpensesInCcy]);
 
   const handleCreate = useCallback(async () => {
     if (!createClientId) {
@@ -904,7 +959,7 @@ export function InvoiceCreatePage() {
       });
       return;
     }
-    if (closingReportLines) {
+    if (closingReportLines && !(customBilledEnabled && selTime.size === 0)) {
       const confirmedAllowed = skipPartnerGate
         || await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
       if (!confirmedAllowed) {
@@ -1408,14 +1463,31 @@ export function InvoiceCreatePage() {
                           >
                             {t('timeTrackingPage.invoices.createDialog.customBilledAddLine')}
                           </button>
+                          {selExp.size > 0 ? (
+                            <>
+                              <p className="tt-inv-custom-billed__total tt-inv-custom-billed__total--part">
+                                <span>{t('timeTrackingPage.invoices.createDialog.customBilledServicesSum')}</span>
+                                <span>{Number.isFinite(customBilledTotal) ? formatBilledAmountDisplay(customBilledTotal, customBilledCurrency) : '—'}</span>
+                              </p>
+                              <p className="tt-inv-custom-billed__total tt-inv-custom-billed__total--part">
+                                <span>{t('timeTrackingPage.invoices.createDialog.customBilledExpensesLine').replace('{count}', String(selExp.size))}</span>
+                                <span>{Number.isFinite(customExpensesInCcy) ? formatBilledAmountDisplay(customExpensesInCcy, customBilledCurrency) : '—'}</span>
+                              </p>
+                            </>
+                          ) : null}
                           <p className="tt-inv-custom-billed__total">
                             <span>{t('timeTrackingPage.invoices.createDialog.customBilledAmount')}</span>
                             <strong>
-                              {Number.isFinite(customBilledTotal)
-                                ? formatBilledAmountDisplay(customBilledTotal, customBilledCurrency)
+                              {Number.isFinite(customBilledTotal) && Number.isFinite(customExpensesInCcy)
+                                ? formatBilledAmountDisplay(Math.round((customBilledTotal + customExpensesInCcy) * 100) / 100, customBilledCurrency)
                                 : '—'}
                             </strong>
                           </p>
+                          {customExpLoading ? (
+                            <p className="tt-inv-page__section-desc" role="status">{t('timeTrackingPage.invoices.createDialog.customBilledExpensesLoading')}</p>
+                          ) : (createProjectId && unbilledExp.length === 0 ? (
+                            <p className="tt-inv-page__section-desc">{t('timeTrackingPage.invoices.createDialog.customBilledExpensesNone')}</p>
+                          ) : null)}
                         </div>
 
                         <p className="tt-inv-page__section-desc" style={{ margin: 0 }} role="status">

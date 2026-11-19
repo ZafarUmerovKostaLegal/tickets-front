@@ -41,4 +41,17 @@ describe('summarizeBilledOverrideLines', () => {
     expect(s.workedAmount).toBe(170);
     expect(s.workedCurrency).toBe('USD');
   });
+  it('custom sum with billed project expenses keeps them as extra expenses', () => {
+    const lines = [
+      line({ id: '1', lineKind: 'time', lineTotal: 0, timeEntryId: 't1', sourceAmount: 100, sourceCurrency: 'USD' }),
+      line({ id: '2', lineKind: 'expense', lineTotal: 120.5, expenseRequestId: 'e1' }),
+      line({ id: '3', lineKind: 'manual', lineTotal: 10000, description: 'Legal opinion' }),
+    ];
+    const s = summarizeBilledOverrideLines(lines, 'USD');
+    expect(s.isBilledOverride).toBe(true);
+    expect(s.expensesAmount).toBe(120.5);
+    const expensesOnly = summarizeBilledOverrideLines([lines[1]!, lines[2]!], 'USD');
+    expect(expensesOnly.isBilledOverride).toBe(true);
+    expect(expensesOnly.expensesAmount).toBe(120.5);
+  });
 });
