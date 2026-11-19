@@ -510,6 +510,7 @@ function normalizeExpenseDesc(raw: string): string {
 export async function overlayExpenseAmountsFromRegistry(
     pack: InvoiceTimeReportPack,
     projectId: string | null | undefined,
+    options: { trustCurrent?: boolean } = {},
 ): Promise<InvoiceTimeReportPack> {
     const pid = (projectId ?? '').trim();
     const slots = trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []);
@@ -537,7 +538,7 @@ export async function overlayExpenseAmountsFromRegistry(
         });
         if (!match)
             return slot;
-        if (cur === 'UZS') {
+        if (cur === 'UZS' && !options.trustCurrent) {
             const uzs = roundMoney2(asExpenseNumber(match.amountUzs));
             if (!(uzs > 0))
                 return slot;
@@ -551,7 +552,8 @@ export async function overlayExpenseAmountsFromRegistry(
         if (locked == null || locked <= 0 || locked >= 1_000_000)
             return slot;
         const current = roundMoney2(parseTimeReportAmountDisplay(slot.amount));
-        if (current > 0 && locked >= current && locked <= current * 2 + 0.05) {
+        // An issued invoice already says what was billed (its own FX); only repair obviously broken amounts.
+        if (!options.trustCurrent && current > 0 && locked >= current && locked <= current * 2 + 0.05) {
             changed = true;
             return { ...slot, amount: formatTimeReportAmount(locked, cur) };
         }
@@ -954,10 +956,44 @@ export async function resolveInvoiceTimeReportPack(
         return overlayExpenseAmountsFromRegistry(
             packFromDetails(details, users, currency, initialsByAuthId),
             inv.projectId,
+            { trustCurrent: true },
         );
     }
     catch (err) {
         console.error('resolveInvoiceTimeReportPack failed', err);
         return empty;
     }
+}
+
+
+/** Expense rows of an issued invoice must show exactly the invoice lines (billed amount, invoice FX).
+ *  Fixes packs saved earlier with amounts recomputed from the expense registry. */
+export function alignExpenseSlotsToInvoiceLines(
+    pack: InvoiceTimeReportPack,
+    lines: ReadonlyArray<{ lineKind?: string | null; lineTotal?: number | string | null; sortOrder?: number }>,
+): InvoiceTimeReportPack {
+    const slots = trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []);
+    const billed = [...lines]
+        .filter((line) => String(line.lineKind ?? '').toLowerCase() === 'expense' && Math.abs(Number(line.lineTotal) || 0) > 1e-9)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((line) => roundMoney2(Number(line.lineTotal) || 0));
+    if (!slots.length || slots.length !== billed.length)
+        return pack;
+    const cur = (pack.currency || 'USD').trim().toUpperCase() || 'USD';
+    let changed = false;
+    const next = slots.map((slot, index) => {
+        const amount = billed[index]!;
+        if (Math.abs(roundMoney2(parseTimeReportAmountDisplay(slot.amount)) - amount) < 0.005)
+            return slot;
+        changed = true;
+        return { ...slot, amount: formatTimeReportAmount(amount, cur) };
+    });
+    if (!changed)
+        return pack;
+    const total = billed.reduce((sum, value) => sum + value, 0);
+    return {
+        ...pack,
+        expenseSlots: finalizeDetailSlots(next),
+        expenseTotalAmountDisplay: formatTimeReportAmount(total, cur),
+    };
 }

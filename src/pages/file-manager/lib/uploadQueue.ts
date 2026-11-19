@@ -9,8 +9,12 @@ import { cancelChunkedUpload, uploadInChunks, UploadError, type UploadResult, ty
 
 export type QueueStatus = 'queued' | 'uploading' | 'paused' | 'done' | 'error' | 'canceled';
 
+export type UploadApi = 'files' | 'drive';
+
 export type QueueItem = {
     id: string;
+    /** files — matter documents (file manager), drive — «Диск». */
+    api: UploadApi;
     file: File;
     target: UploadTarget;
     matterLabel: string;
@@ -25,7 +29,8 @@ export type QueueItem = {
 
 const PARALLEL = 2;
 export const filesSend = (path: string, init: RequestInit) => apiFetch(`/api/v1/files${path}`, { ...init, skipGetDedupe: true });
-const send = filesSend;
+export const driveSend = (path: string, init: RequestInit) => apiFetch(`/api/v1/legal-hub/drive${path}`, { ...init, skipGetDedupe: true });
+const sendFor = (api: UploadApi) => (api === 'drive' ? driveSend : filesSend);
 
 let items: QueueItem[] = [];
 const controllers = new Map<string, AbortController>();
@@ -77,7 +82,7 @@ async function run(id: string): Promise<void> {
     let lastAt = performance.now();
     let lastSent = item.sent;
     try {
-        const result = await uploadInChunks(item.file, item.target, send, {
+        const result = await uploadInChunks(item.file, item.target, sendFor(item.api), {
             signal: controller.signal,
             onRetry: (attempt) => patch(id, { retrying: attempt }),
             onProgress: (sent) => {
@@ -116,9 +121,15 @@ async function run(id: string): Promise<void> {
 }
 
 export function enqueueUploads(files: File[], target: UploadTarget, matterLabel = ''): void {
-    for (const file of files) {
+    enqueueUploadItems(files.map((file) => ({ file, target })), 'files', matterLabel);
+}
+
+/** Each file with its own target (Диск: relative path inside a dropped folder). */
+export function enqueueUploadItems(rows: Array<{ file: File; target: UploadTarget }>, api: UploadApi, matterLabel = ''): void {
+    for (const { file, target } of rows) {
         items.push({
             id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            api,
             file,
             target,
             matterLabel,
@@ -150,7 +161,7 @@ export function cancelUpload(id: string): void {
         return;
     patch(id, { status: 'canceled', speed: 0 });
     controllers.get(id)?.abort();
-    void cancelChunkedUpload(item.file, item.target, send);
+    void cancelChunkedUpload(item.file, item.target, sendFor(item.api));
 }
 
 export function clearFinished(): void {

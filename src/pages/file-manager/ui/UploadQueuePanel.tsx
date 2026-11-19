@@ -96,7 +96,7 @@ export function UploadQueuePanel({ onOpen }: { onOpen?: (item: QueueItem) => voi
                                     {item.status === 'paused' || item.status === 'error' ? (
                                         <button type="button" onClick={() => resumeUpload(item.id)}>{item.status === 'error' ? tr('uploads.retry') : tr('uploads.resume')}</button>
                                     ) : null}
-                                    {item.status === 'done' && result && onOpen ? (
+                                    {item.status === 'done' && result && onOpen && item.api === 'files' ? (
                                         <button type="button" onClick={() => onOpen(item)}>{tr('uploads.open')}</button>
                                     ) : null}
                                     {item.status !== 'done' && item.status !== 'canceled' ? (

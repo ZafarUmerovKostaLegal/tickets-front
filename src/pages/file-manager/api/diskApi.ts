@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { getApiBaseUrl, upgradeUrlToPageSecurity } from '@shared/config';
 import type { AclLevel, FileKind } from './filesApi';
 import { FilesApiError } from './filesApi';
 
@@ -138,6 +139,11 @@ export const diskApi = {
         request<DiskBrowse>(`/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' }),
     deleteFolder: (folderId: string) =>
         request<DiskBrowse>(`/folders/${encodeURIComponent(folderId)}`, { method: 'DELETE' }),
+    /** Short-lived signed URL: the browser downloads big files itself (to disk, resumable). */
+    link: async (fileId: string) => {
+        const body = await request<{ url: string }>(`/files/${encodeURIComponent(fileId)}/link`, { method: 'POST' });
+        return upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`);
+    },
     downloadBlob: async (fileId: string) => {
         const response = await apiFetch(`${BASE}/files/${encodeURIComponent(fileId)}`);
         if (!response.ok)

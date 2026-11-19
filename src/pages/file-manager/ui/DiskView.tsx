@@ -40,6 +40,11 @@ import {
     type SortKey,
 } from '../lib/diskExplorer';
 import { formatBytes, formatDateTime } from '../lib/filesFormat';
+import { CHUNKED_THRESHOLD } from '../lib/chunkedUpload';
+import { enqueueUploadItems, onUploadDone } from '../lib/uploadQueue';
+
+/** Bigger files are not pulled through the page: they download via a signed link straight to disk. */
+const DIRECT_DOWNLOAD_LIMIT = 50 * 1024 * 1024;
 import { FmSelect } from './fmSelect';
 import {
     ConfirmModal,
@@ -587,6 +592,10 @@ export function DiskView() {
         treeLoad.reload();
         setSearchTick((n) => n + 1);
     }, [load, treeLoad]);
+    useEffect(() => onUploadDone((item) => {
+        if (item.api === 'drive')
+            refresh();
+    }), [refresh]);
 
     const navigate = useCallback((next: string | null, mode: 'push' | 'back' | 'forward' = 'push') => {
         if (next === folderId)
@@ -615,6 +624,18 @@ export function DiskView() {
     };
 
     const downloadFile = async (item: DiskFile) => {
+        if ((item.sizeBytes ?? 0) > DIRECT_DOWNLOAD_LIMIT) {
+            const url = await act(() => diskApi.link(item.id));
+            if (url) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.rel = 'noopener';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+            return;
+        }
         await act(async () => {
             const blob = await diskApi.downloadBlob(item.id);
             await saveBlob(blob, item.name);
@@ -638,7 +659,17 @@ export function DiskView() {
             navigate(parent);
     };
 
-    const uploadTo = async (items: DroppedFile[], target: string | null) => {
+    const uploadTo = async (all: DroppedFile[], target: string | null) => {
+        const nestedAll = all.some((row) => row.path.includes('/'));
+        // Large files (up to 2 GB) go to the background queue: chunked, resumable, the page stays usable.
+        const large = all.filter((row) => row.file.size > CHUNKED_THRESHOLD);
+        if (large.length) {
+            enqueueUploadItems(large.map((row) => ({
+                file: row.file,
+                target: { matterId: '', folderId: target, startPath: '/uploads', extra: { parentId: target, path: nestedAll ? row.path : '' } },
+            })), 'drive');
+        }
+        const items = all.filter((row) => row.file.size <= CHUNKED_THRESHOLD);
         if (!items.length)
             return;
         const nested = items.some((row) => row.path.includes('/'));

@@ -1873,7 +1873,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
         }
     }
     const timeReport = ensureMehnatSeparatedPack(
-        await overlayExpenseAmountsFromRegistry(timeReportRaw, projectId),
+        await overlayExpenseAmountsFromRegistry(timeReportRaw, projectId, { trustCurrent: session?.mode === 'existing' }),
     );
     const showInitiatorName = input.showServiceInitiatorName === true;
     const detailPlans = paginateDetailRowsForPdf(timeReport.detailSlots, model, timeReport, font, fontBold, showInitiatorName);

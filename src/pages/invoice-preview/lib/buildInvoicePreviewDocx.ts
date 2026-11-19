@@ -1074,7 +1074,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         }
     }
     const timeReportPack = ensureMehnatSeparatedPack(
-        await overlayExpenseAmountsFromRegistry(timeReportPackRaw, projectId),
+        await overlayExpenseAmountsFromRegistry(timeReportPackRaw, projectId, { trustCurrent: session?.mode === 'existing' }),
     );
     const trChunks = splitDetailRowsForPagedTimeReport(timeReportPack.detailSlots);
     const combinedPreviewPages = input.combinedReport

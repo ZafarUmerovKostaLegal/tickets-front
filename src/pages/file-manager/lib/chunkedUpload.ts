@@ -14,6 +14,9 @@ export type UploadTarget = {
     documentId?: string | null;
     comment?: string;
     allowDuplicate?: boolean;
+    /** Another service (Диск): where the upload starts and what it needs besides name/size/type. */
+    startPath?: string;
+    extra?: Record<string, unknown>;
 };
 
 export type UploadSession = { id: string; size: number; received: number; chunkSize: number };
@@ -42,7 +45,7 @@ const BACKOFF_MS = [1000, 2000, 4000, 8000, 15000, 30000];
 type ResumeRecord = { key: string; id: string; at: number };
 
 export function fileKey(file: Pick<File, 'name' | 'size' | 'lastModified'>, target: UploadTarget): string {
-    return [target.matterId, target.folderId ?? '', target.documentId ?? '', file.name, file.size, file.lastModified].join('|');
+    return [target.startPath ?? '', JSON.stringify(target.extra ?? {}), target.matterId, target.folderId ?? '', target.documentId ?? '', file.name, file.size, file.lastModified].join('|');
 }
 
 function readResume(): ResumeRecord[] {
@@ -141,14 +144,13 @@ export async function uploadInChunks(
             forget(key);
     }
     if (!session) {
-        const started = await retry(() => send(`/matters/${encodeURIComponent(target.matterId)}/uploads`, {
+        const common = { name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' };
+        const started = await retry(() => send(target.startPath ?? `/matters/${encodeURIComponent(target.matterId)}/uploads`, {
             method: 'POST',
             signal,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: file.name,
-                size: file.size,
-                contentType: file.type || 'application/octet-stream',
+            body: JSON.stringify(target.startPath ? { ...common, ...target.extra } : {
+                ...common,
                 folderId: target.folderId,
                 documentId: target.documentId ?? null,
                 comment: target.comment ?? '',
@@ -200,8 +202,10 @@ export async function uploadInChunks(
         throw new UploadError(message, false, done.status);
     }
     forget(key);
-    const body = await done.json() as { results: UploadResult[] };
-    return body.results[0]!;
+    const body = await done.json() as { results?: UploadResult[]; file?: { id: string; name: string } };
+    if (body.results?.length)
+        return body.results[0]!;
+    return { status: 'created', document: { id: body.file?.id ?? '', name: body.file?.name ?? file.name } };
 }
 
 export async function cancelChunkedUpload(file: File, target: UploadTarget, send: Send): Promise<void> {

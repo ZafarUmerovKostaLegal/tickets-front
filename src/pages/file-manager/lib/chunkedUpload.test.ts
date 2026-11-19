@@ -94,3 +94,28 @@ describe('uploadInChunks', () => {
         await expect(uploadInChunks(file(10), target, server.send, { backoff: [] })).rejects.toBeInstanceOf(UploadError);
     });
 });
+
+describe('uploadInChunks for Диск', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('starts at the drive endpoint with parent and relative path, reads the drive reply', async () => {
+        const seen: Array<{ path: string; body?: unknown }> = [];
+        const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+        let received = 0;
+        const send: Send = async (path, init) => {
+            seen.push({ path, body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined });
+            if (path === '/uploads')
+                return json({ id: 'd1', size: 1500, received: 0, chunkSize: 1000 }, 201);
+            if (path.startsWith('/uploads/d1?offset=')) {
+                received += (init.body as Blob).size;
+                return json({ id: 'd1', size: 1500, received, chunkSize: 1000 });
+            }
+            if (path === '/uploads/d1/complete')
+                return json({ file: { id: 'f9', name: 'Video.mp4' }, parentId: 'root' });
+            return json({ detail: 'unexpected' }, 400);
+        };
+        const result = await uploadInChunks(file(1500), { matterId: '', folderId: 'root', startPath: '/uploads', extra: { parentId: 'root', path: 'Shoot/Video.mp4' } }, send);
+        expect(seen[0]).toEqual({ path: '/uploads', body: { name: 'big.bin', size: 1500, contentType: 'application/octet-stream', parentId: 'root', path: 'Shoot/Video.mp4' } });
+        expect(result).toEqual({ status: 'created', document: { id: 'f9', name: 'Video.mp4' } });
+    });
+});

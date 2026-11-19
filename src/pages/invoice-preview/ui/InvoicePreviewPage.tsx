@@ -32,7 +32,7 @@ import {
     type InvoicePreviewPageKey,
 } from '../lib/invoicePreviewPageSlots';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
-import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
+import { alignExpenseSlotsToInvoiceLines, resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
 import { getUsers } from '@entities/user';
 import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { alignCombinedReportToProjectCurrency, applyLinkedTaskNames, applyStoredUserInitials, linkedTaskHintsForInvoiceLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
@@ -912,7 +912,17 @@ export function InvoicePreviewPage() {
         // Edited by hand (now or in a saved version): show exactly what was saved, no live re-merge.
         if (savedPack && timeReportPackHasContent(savedPack) && (edited != null || pendingDocOverridesRef.current?.manual === true)) {
             setTimeReportPack(ensureMehnatSeparatedPack(savedPack));
-            return;
+            if (session.mode !== 'existing')
+                return;
+            // Billed expense amounts are facts of the invoice, not editable text: keep them equal to its lines.
+            let stop = false;
+            void getInvoice(session.invoiceId, false).then((inv) => {
+                if (!stop)
+                    setTimeReportPack((prev) => (prev ? alignExpenseSlotsToInvoiceLines(prev, inv.lines ?? []) : prev));
+            }).catch(() => undefined);
+            return () => {
+                stop = true;
+            };
         }
         let cancel = false;
         void (async () => {
@@ -943,7 +953,7 @@ export function InvoicePreviewPage() {
                     ? mergeTimeReportPackPreferLiveExpenses(savedPack, live)
                     : live;
                 let healed = projectId
-                    ? await overlayExpenseAmountsFromRegistry(merged, projectId)
+                    ? await overlayExpenseAmountsFromRegistry(merged, projectId, { trustCurrent: session.mode === 'existing' })
                     : merged;
                 if (session.mode === 'existing') {
                     try {
@@ -964,7 +974,7 @@ export function InvoicePreviewPage() {
                     return;
                 if (savedPack && timeReportPackHasContent(savedPack)) {
                     const healed = projectId
-                        ? await overlayExpenseAmountsFromRegistry(savedPack, projectId)
+                        ? await overlayExpenseAmountsFromRegistry(savedPack, projectId, { trustCurrent: session.mode === 'existing' })
                         : savedPack;
                     if (!cancel) {
                         setTimeReportPack(ensureMehnatSeparatedPack({

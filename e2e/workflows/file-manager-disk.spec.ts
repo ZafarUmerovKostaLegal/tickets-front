@@ -21,6 +21,7 @@ function makeDrive() {
     ];
     const calls: Calls = { move: [], copy: [], hide: [], remove: [], create: [] };
     let seq = 0;
+    const upload = { start: null as null | { name: string; size: number; parentId: string | null }, chunks: 0, received: 0 };
 
     const crumbs = (id: string | null) => {
         const out: Array<{ id: string; name: string }> = [];
@@ -123,10 +124,25 @@ function makeDrive() {
                 item.name = name;
             return json(browse(item && 'parentId' in item ? item.parentId : (item as File | undefined)?.folderId ?? null, showHidden));
         }
+        if (method === 'POST' && path === '/uploads') {
+            const data = body() as { name: string; size: number; parentId: string | null };
+            upload.start = data;
+            return json({ id: 'up1', name: data.name, size: data.size, received: 0, chunkSize: 8 * 1024 * 1024 }, 201);
+        }
+        if (method === 'PUT' && path === '/uploads/up1') {
+            upload.chunks += 1;
+            upload.received += request.postDataBuffer()?.length ?? 0;
+            return json({ id: 'up1', size: upload.start?.size ?? 0, received: upload.received, chunkSize: 8 * 1024 * 1024 });
+        }
+        if (method === 'POST' && path === '/uploads/up1/complete') {
+            const item: File = { id: 'big', folderId: upload.start?.parentId ?? null, name: upload.start?.name ?? 'file', hidden: false, size: upload.received };
+            files.push(item);
+            return json({ file: fileOut(item), parentId: item.folderId });
+        }
         return json({ detail: 'not mocked' }, 404);
     };
 
-    return { folders, files, calls, handle };
+    return { folders, files, calls, handle, upload };
 }
 
 async function openDisk(page: Page) {
@@ -243,6 +259,19 @@ test.describe('@e2e Файловый менеджер: Диск как пров�
         await expect(page.locator('.fm-disk-x__crumbs')).toContainText('Contracts');
         await expect(tile(page, 'NDA contract.docx')).toHaveClass(/is-on/);
     });
+});
+
+test('@e2e Диск: файл больше 40 МБ загружается частями в фоне и появляется в папке', async ({ page, loginAs }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginAs('admin');
+    const drive = await openDisk(page);
+    await page.locator('.fm-disk-x input[type="file"]:not([webkitdirectory])').first()
+        .setInputFiles({ name: 'Video.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(45 * 1024 * 1024, 1) });
+    const panel = page.getByRole('region', { name: 'Загрузка файлов' });
+    await expect(panel.getByText('Загружено')).toBeVisible({ timeout: 60_000 });
+    expect(drive.upload.start).toEqual({ name: 'Video.mp4', size: 45 * 1024 * 1024, contentType: 'video/mp4', parentId: null, path: '' });
+    expect(drive.upload.chunks).toBe(6);
+    await expect(tile(page, 'Video.mp4')).toBeVisible();
 });
 
 test.describe('@e2e Файловый менеджер: Диск на телефоне', () => {

@@ -215,7 +215,7 @@ export function MatterWorkspace({
 
     const reloadBrowse = browse.reload;
     useEffect(() => onUploadDone((item) => {
-        if (item.target.matterId !== matterId)
+        if (item.api !== 'files' || item.target.matterId !== matterId)
             return;
         if (item.result && (item.result.status === 'created' || item.result.status === 'version')) {
             reloadBrowse();
