@@ -274,36 +274,47 @@ export function InvoiceCoverLetter({
           )}
           <span className="tt-inv-cover__sig-line" aria-hidden/>
           <p className="tt-inv-cover__sig-name">
-            {editable ? (
-              <SearchableSelect<CoverSignatoryPartner>
-                className="tt-inv-cover__partner-select"
-                buttonClassName="tt-inv-cover__field tt-inv-cover__partner-select-btn"
-                value={selectValue}
-                items={partnerItems}
-                getOptionValue={(p) => p.initials}
-                getOptionLabel={(p) => p.displayName}
-                getSearchText={(p) => `${p.displayName} ${p.initials === '__current__' ? '' : p.initials}`}
-                onSelect={(p) => {
-                    if (p.initials === '__current__')
-                        return;
-                    const catalog = findCoverSignatoryPartnerByInitials(p.initials)
-                        ?? findCoverSignatoryPartnerByName(p.displayName);
-                    patch?.({
-                        signatoryName: p.displayName,
-                        signatoryInitials: catalog?.initials ?? '',
-                    });
-                }}
-                placeholder="Выберите партнёра"
-                emptyListText="Нет партнёров"
-                noMatchText="Ничего не найдено"
-                portalDropdown
-                portalZIndex={12000}
-                portalMinWidth={240}
-              />
-            ) : (
-              <span>{model.signatoryName}</span>
-            )}
+            <CoverField
+              editable={editable}
+              value={model.signatoryName}
+              ariaLabel="Имя подписанта (можно на русском)"
+              onChange={(signatoryName) => patch?.({
+                  signatoryName,
+                  // The signature image follows the partner, not the spelling: keep it when the name is retyped (e.g. in Russian).
+                  signatoryInitials: model.signatoryInitials || activePartner?.initials || '',
+              })}
+            />
           </p>
+          {editable ? (
+            <div className="tt-inv-cover__partner-pick">
+              <span className="tt-inv-cover__partner-pick-label">Подпись партнёра</span>
+              <SearchableSelect<CoverSignatoryPartner>
+              className="tt-inv-cover__partner-select"
+              buttonClassName="tt-inv-cover__field tt-inv-cover__partner-select-btn"
+              value={selectValue}
+              items={partnerItems}
+              getOptionValue={(p) => p.initials}
+              getOptionLabel={(p) => p.displayName}
+              getSearchText={(p) => `${p.displayName} ${p.initials === '__current__' ? '' : p.initials}`}
+              onSelect={(p) => {
+                  if (p.initials === '__current__')
+                      return;
+                  const catalog = findCoverSignatoryPartnerByInitials(p.initials)
+                      ?? findCoverSignatoryPartnerByName(p.displayName);
+                  patch?.({
+                      signatoryName: p.displayName,
+                      signatoryInitials: catalog?.initials ?? '',
+                  });
+              }}
+              placeholder="Подпись партнёра"
+              emptyListText="Нет партнёров"
+              noMatchText="Ничего не найдено"
+              portalDropdown
+              portalZIndex={12000}
+              portalMinWidth={240}
+              />
+            </div>
+          ) : null}
           <p className="tt-inv-cover__sig-title">
             <CoverField
               editable={editable}

@@ -221,3 +221,23 @@
   min-width: 10rem;
   display: inline-block;
 }
+
+/* Signature partner picker under the free-text signatory name (editor only). */
+.tt-inv-cover__partner-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0.2rem 0 0.25rem;
+}
+
+.tt-inv-cover__partner-pick-label {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+@media print {
+  .tt-inv-cover__partner-pick {
+    display: none;
+  }
+}
