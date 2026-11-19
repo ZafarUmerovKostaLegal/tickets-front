@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { filesApi, type DocumentDetail, type DocumentRow, type FolderRow } from '../api/filesApi';
-import { canEdit, formatBytes, formatDateTime, previewMode } from '../lib/filesFormat';
+import { canEdit, formatBytes, formatDateTime } from '../lib/filesFormat';
 import { CHUNKED_THRESHOLD, uploadInChunks } from '../lib/chunkedUpload';
 import { filesSend } from '../lib/uploadQueue';
 
 /** Bigger files are not pulled into the page: no auto-preview, downloads go through a signed link. */
 const PREVIEW_LIMIT = 50 * 1024 * 1024;
+import { FilePreview } from './FilePreview';
 import { FmSelect } from './fmSelect';
+import { documentSource } from './previewSources';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, Modal, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 
 export const DOC_TYPES = ['agreement', 'correspondence', 'pleading', 'memo', 'corporate', 'poa', 'evidence', 'invoice', 'other'] as const;
@@ -22,60 +24,6 @@ type Props = {
     onClose: () => void;
     onLocate?: (doc: DocumentRow) => void;
 };
-
-function Preview({ detail }: { detail: DocumentDetail }) {
-    const { tr } = useFm();
-    const doc = detail.document;
-    const tooBig = doc.sizeBytes > PREVIEW_LIMIT;
-    const mode = tooBig ? null : previewMode(doc.kind, doc.contentType);
-    const [url, setUrl] = useState<string | null>(null);
-    const [text, setText] = useState<string | null>(null);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        if (mode === null)
-            return;
-        let alive = true;
-        let objectUrl: string | null = null;
-        setUrl(null);
-        setText(null);
-        setError(false);
-        filesApi.contentBlob(doc.id, { inline: true }).then(async (blob) => {
-            if (!alive)
-                return;
-            if (mode === 'text') {
-                setText((await blob.slice(0, 200_000).text()));
-                return;
-            }
-            objectUrl = URL.createObjectURL(mode === 'pdf' ? new Blob([blob], { type: 'application/pdf' }) : blob);
-            setUrl(objectUrl);
-        }, () => {
-            if (alive)
-                setError(true);
-        });
-        return () => {
-            alive = false;
-            if (objectUrl)
-                URL.revokeObjectURL(objectUrl);
-        };
-    }, [doc.id, doc.version, mode]);
-
-    if (mode === null || error) {
-        return (
-            <div className="fm-preview fm-preview--empty">
-                <FileBadge kind={doc.kind} />
-                <p>{tooBig ? tr('pane.tooBigPreview') : tr('pane.noPreview')}</p>
-            </div>
-        );
-    }
-    if (mode === 'text')
-        return text === null ? <StateBlock loading error={null} /> : <pre className="fm-preview fm-preview--text">{text}</pre>;
-    if (url === null)
-        return <StateBlock loading error={null} />;
-    if (mode === 'image')
-        return <div className="fm-preview fm-preview--image"><img src={url} alt={doc.name} /></div>;
-    return <iframe className="fm-preview fm-preview--pdf" src={url} title={doc.name} />;
-}
 
 function Properties({ detail, folders, editable, onSaved }: {
     detail: DocumentDetail;
@@ -390,7 +338,7 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                             ))}
                         </nav>
                         <div className="fm-pane__body">
-                            {tab === 'preview' ? <Preview detail={data} /> : null}
+                            {tab === 'preview' ? <FilePreview source={documentSource(data.document)} onDownload={() => void download()} /> : null}
                             {tab === 'properties' ? (
                                 <Properties detail={data} folders={folders} editable={editable && (!lockedByOther || canOverride)} onSaved={apply} />
                             ) : null}

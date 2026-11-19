@@ -1,5 +1,6 @@
 import { apiFetch } from '@shared/api';
 import { getApiBaseUrl, upgradeUrlToPageSecurity } from '@shared/config';
+import type { ArchiveListing, EmailPreview } from '../lib/previewKinds';
 
 const BASE = '/api/v1/files';
 
@@ -313,9 +314,32 @@ export const filesApi = {
         return await response.blob();
     },
     /** Short-lived signed URL: the browser itself downloads (to disk, resumable) — for large files. */
-    link: async (documentId: string, options: { version?: number; inline?: boolean } = {}) => {
-        const body = await request<{ url: string }>(`/documents/${encodeURIComponent(documentId)}/link${query({ version: options.version, inline: options.inline })}`, { method: 'POST' });
+    link: async (documentId: string, options: { version?: number; inline?: boolean; entry?: number } = {}) => {
+        const body = await request<{ url: string }>(`/documents/${encodeURIComponent(documentId)}/link${query({ version: options.version, inline: options.inline, entry: options.entry })}`, { method: 'POST' });
         return upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`);
+    },
+    /** First bytes only (Range) — text previews of big files. */
+    headBlob: async (documentId: string, bytes: number, version?: number) => {
+        const response = await apiFetch(`${BASE}/documents/${encodeURIComponent(documentId)}/content${query({ version, inline: true })}`, { headers: { Range: `bytes=0-${bytes - 1}` }, skipGetDedupe: true });
+        if (!response.ok)
+            await fail(response);
+        return (await response.blob()).slice(0, bytes);
+    },
+    archive: (documentId: string, version?: number) =>
+        request<ArchiveListing>(`/documents/${encodeURIComponent(documentId)}/archive${query({ version })}`),
+    archiveEntryBlob: async (documentId: string, index: number, version?: number) => {
+        const response = await apiFetch(`${BASE}/documents/${encodeURIComponent(documentId)}/archive/${index}${query({ version, inline: true })}`);
+        if (!response.ok)
+            await fail(response);
+        return await response.blob();
+    },
+    email: (documentId: string, version?: number) =>
+        request<EmailPreview>(`/documents/${encodeURIComponent(documentId)}/email${query({ version })}`),
+    emailAttachmentBlob: async (documentId: string, index: number, version?: number) => {
+        const response = await apiFetch(`${BASE}/documents/${encodeURIComponent(documentId)}/email/${index}${query({ version })}`);
+        if (!response.ok)
+            await fail(response);
+        return await response.blob();
     },
     recent: () => request<{ documents: DocumentRow[] }>('/recent'),
     search: (params: { q?: string; clientId?: string; matterId?: string; kind?: string }) =>

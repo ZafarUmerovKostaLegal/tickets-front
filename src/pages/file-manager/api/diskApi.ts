@@ -2,6 +2,7 @@ import { apiFetch } from '@shared/api';
 import { getApiBaseUrl, upgradeUrlToPageSecurity } from '@shared/config';
 import type { AclLevel, FileKind } from './filesApi';
 import { FilesApiError } from './filesApi';
+import type { ArchiveListing, EmailPreview } from '../lib/previewKinds';
 
 const BASE = '/api/v1/legal-hub/drive';
 
@@ -140,9 +141,29 @@ export const diskApi = {
     deleteFolder: (folderId: string) =>
         request<DiskBrowse>(`/folders/${encodeURIComponent(folderId)}`, { method: 'DELETE' }),
     /** Short-lived signed URL: the browser downloads big files itself (to disk, resumable). */
-    link: async (fileId: string) => {
-        const body = await request<{ url: string }>(`/files/${encodeURIComponent(fileId)}/link`, { method: 'POST' });
+    link: async (fileId: string, options: { inline?: boolean; entry?: number } = {}) => {
+        const body = await request<{ url: string }>(`/files/${encodeURIComponent(fileId)}/link${query({ inline: options.inline, entry: options.entry })}`, { method: 'POST' });
         return upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`);
+    },
+    headBlob: async (fileId: string, bytes: number) => {
+        const response = await apiFetch(`${BASE}/files/${encodeURIComponent(fileId)}`, { headers: { Range: `bytes=0-${bytes - 1}` }, skipGetDedupe: true });
+        if (!response.ok)
+            await fail(response);
+        return (await response.blob()).slice(0, bytes);
+    },
+    archive: (fileId: string) => request<ArchiveListing>(`/files/${encodeURIComponent(fileId)}/archive`),
+    archiveEntryBlob: async (fileId: string, index: number) => {
+        const response = await apiFetch(`${BASE}/files/${encodeURIComponent(fileId)}/archive/${index}?inline=true`);
+        if (!response.ok)
+            await fail(response);
+        return await response.blob();
+    },
+    email: (fileId: string) => request<EmailPreview>(`/files/${encodeURIComponent(fileId)}/email`),
+    emailAttachmentBlob: async (fileId: string, index: number) => {
+        const response = await apiFetch(`${BASE}/files/${encodeURIComponent(fileId)}/email/${index}`);
+        if (!response.ok)
+            await fail(response);
+        return await response.blob();
     },
     downloadBlob: async (fileId: string) => {
         const response = await apiFetch(`${BASE}/files/${encodeURIComponent(fileId)}`);

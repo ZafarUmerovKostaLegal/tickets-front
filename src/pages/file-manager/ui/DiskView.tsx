@@ -45,7 +45,9 @@ import { enqueueUploadItems, onUploadDone } from '../lib/uploadQueue';
 
 /** Bigger files are not pulled through the page: they download via a signed link straight to disk. */
 const DIRECT_DOWNLOAD_LIMIT = 50 * 1024 * 1024;
+import { FilePreview } from './FilePreview';
 import { FmSelect } from './fmSelect';
+import { diskSource } from './previewSources';
 import {
     ConfirmModal,
     FileBadge,
@@ -442,6 +444,7 @@ export function DiskView() {
     const [selection, setSelection] = useState<Set<ItemKey>>(() => new Set());
     const [anchor, setAnchor] = useState<ItemKey | null>(null);
     const [clipboard, setClipboard] = useState<Clipboard | null>(null);
+    const [previewing, setPreviewing] = useState<DiskFile | null>(null);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<DiskSearch | null>(null);
     const [searching, setSearching] = useState(false);
@@ -647,7 +650,7 @@ export function DiskView() {
         if (entry.kind === 'folder')
             navigate(entry.item.id);
         else
-            void downloadFile(entry.item);
+            setPreviewing(entry.item);
     };
 
     const openLocation = (entry: Entry) => {
@@ -837,7 +840,7 @@ export function DiskView() {
     });
 
     // ---- keyboard ------------------------------------------------------------------------------
-    const modalOpen = createOpen || renaming !== null || purge !== null || helpOpen;
+    const modalOpen = createOpen || renaming !== null || purge !== null || helpOpen || previewing !== null;
     const keyRef = useRef<(event: KeyboardEvent) => void>(() => {});
     keyRef.current = (event: KeyboardEvent) => {
         if (modalOpen)
@@ -1538,6 +1541,23 @@ export function DiskView() {
                         refresh();
                     }}
                 />
+            ) : null}
+            {previewing ? (
+                <Modal
+                    title={previewing.name}
+                    wide
+                    onClose={() => setPreviewing(null)}
+                    footer={(
+                        <>
+                            <button type="button" className="fm-btn" onClick={() => setPreviewing(null)}>{tr('common.close')}</button>
+                            <button type="button" className="fm-btn fm-btn--primary" onClick={() => void downloadFile(previewing)}><Icon name="download" />{tr('preview.download')}</button>
+                        </>
+                    )}
+                >
+                    <div className="fm-pv-modal">
+                        <FilePreview source={diskSource(previewing)} onDownload={() => void downloadFile(previewing)} />
+                    </div>
+                </Modal>
             ) : null}
             {helpOpen ? (
                 <Modal title={tr('disk.shortcuts')} onClose={() => setHelpOpen(false)}>
