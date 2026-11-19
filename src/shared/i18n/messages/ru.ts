@@ -315,6 +315,51 @@ export const ruMessages: Messages = {
         taskHistReview: 'Отправлено на проверку',
         taskHistFile: 'Файл добавлен',
         taskHistComment: 'Комментарий добавлен',
+        taskHistTaken: 'Принята в работу',
+        taskHistSubmitted: 'Отправлена на проверку',
+        taskHistReturned: 'Возвращена на доработку',
+        taskHistApproved: 'Работа принята',
+        taskHistReassigned: 'Передана другому исполнителю',
+        actTake: 'Принять в работу',
+        actSubmit: 'На проверку',
+        actReturn: 'Вернуть на доработку',
+        actApprove: 'Принять работу',
+        actReassign: 'Передать',
+        actReviewer: 'Проверяющий',
+        actAssignee: 'Новый исполнитель',
+        actPickPerson: 'Выберите сотрудника из команды',
+        actReturnPh: 'Что нужно доработать',
+        actCommentPh: 'Комментарий (необязательно)',
+        actConfirm: 'Подтвердить',
+        actCancel: 'Отмена',
+        actOnlyTeam: 'Можно выбрать только сотрудников ваших команд, включая временных.',
+        actDone: 'Готово',
+        mapTitle: 'Карта проектов',
+        mapHint: 'Где сейчас каждый проект: этап, где больше всего открытых задач, просрочки и ближайший срок.',
+        mapEmpty: 'Пока нет задач в проектах команды',
+        mapStageTodo: 'К работе',
+        mapStageProgress: 'В работе',
+        mapStageWait: 'Ожидание',
+        mapStageReview: 'Проверка',
+        mapStageChanges: 'Доработка',
+        mapStageDone: 'Готово',
+        mapNow: 'Сейчас',
+        mapTasks: '{done} из {total} задач готово',
+        mapOverdue: 'Просрочено: {count}',
+        mapNextDue: 'Ближайший срок: {date}',
+        statsTitle: 'Статистика команды',
+        statsOpen: 'Открыто',
+        statsOverdue: 'Просрочено',
+        statsDueWeek: 'Срок на неделе',
+        statsReview: 'На проверке',
+        statsChanges: 'На доработке',
+        statsDone30: 'Готово за 30 дней',
+        statsReturned30: 'Возвратов за 30 дней',
+        tempRevoke: 'Отозвать доступ',
+        tempSaved: 'Временный доступ выдан',
+        tempRevoked: 'Доступ отозван',
+        groupNoProject: 'Без проекта',
+        groupCount: '{count} задач',
         taskHistStatus: 'Статус: {status}',
         myTasksHint: 'Сроки, загрузка и движение задач по проектам',
         myTasksNew: 'Новая задача',
@@ -1466,6 +1511,51 @@ export type Messages = {
         taskHistReview: string;
         taskHistFile: string;
         taskHistComment: string;
+        taskHistTaken: string;
+        taskHistSubmitted: string;
+        taskHistReturned: string;
+        taskHistApproved: string;
+        taskHistReassigned: string;
+        actTake: string;
+        actSubmit: string;
+        actReturn: string;
+        actApprove: string;
+        actReassign: string;
+        actReviewer: string;
+        actAssignee: string;
+        actPickPerson: string;
+        actReturnPh: string;
+        actCommentPh: string;
+        actConfirm: string;
+        actCancel: string;
+        actOnlyTeam: string;
+        actDone: string;
+        mapTitle: string;
+        mapHint: string;
+        mapEmpty: string;
+        mapStageTodo: string;
+        mapStageProgress: string;
+        mapStageWait: string;
+        mapStageReview: string;
+        mapStageChanges: string;
+        mapStageDone: string;
+        mapNow: string;
+        mapTasks: string;
+        mapOverdue: string;
+        mapNextDue: string;
+        statsTitle: string;
+        statsOpen: string;
+        statsOverdue: string;
+        statsDueWeek: string;
+        statsReview: string;
+        statsChanges: string;
+        statsDone30: string;
+        statsReturned30: string;
+        tempRevoke: string;
+        tempSaved: string;
+        tempRevoked: string;
+        groupNoProject: string;
+        groupCount: string;
         taskHistStatus: string;
         myTasksHint: string;
         myTasksNew: string;

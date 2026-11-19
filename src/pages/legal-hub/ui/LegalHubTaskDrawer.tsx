@@ -16,8 +16,10 @@ import {
     patchLegalHubTask,
     uploadLegalHubFiles,
     type LegalHubTaskActivity,
+    type TaskActionId,
 } from './legalHubTaskApi';
 import { LegalHubFilePreview } from './LegalHubFilePreview';
+import { LegalHubTaskActions } from './LegalHubTaskActions';
 import {
     PERSON_LABEL,
     PROJECT_LABEL,
@@ -27,6 +29,7 @@ import {
     type TaskCheck,
     type TaskComment,
     type TaskFile,
+    type TaskHistory,
     type TaskPriorityId,
     type TaskStatusId,
 } from './legalHubTasks';
@@ -42,7 +45,12 @@ const STATUS_LABEL: Record<TaskStatusId, TranslationKey> = {
     todo: 'legalHub.taskStatusTodo',
 };
 
-const HISTORY_LABEL: Record<'created' | 'started' | 'review' | 'file' | 'comment', TranslationKey> = {
+const HISTORY_LABEL: Record<TaskHistory['kind'], TranslationKey> = {
+    taken: 'legalHub.taskHistTaken',
+    submitted: 'legalHub.taskHistSubmitted',
+    returned: 'legalHub.taskHistReturned',
+    approved: 'legalHub.taskHistApproved',
+    reassigned: 'legalHub.taskHistReassigned',
     created: 'legalHub.taskHistCreated',
     started: 'legalHub.taskHistStarted',
     review: 'legalHub.taskHistReview',
@@ -145,7 +153,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     task: HubTask;
     owner: { code: string; name: string } | null;
     onClose: () => void;
-    onReviewed?: (patch: { status?: TaskStatusId; boardColumn: string; reviewerId?: number; done?: boolean; approval?: boolean }) => void;
+    onReviewed?: (patch: { status?: TaskStatusId; boardColumn: string; reviewerId?: number; done?: boolean; approval?: boolean; assigneeId?: number }) => void;
 }) {
     const { t, locale } = useI18n();
     const { userId, staff, me } = useLegalHubView();
@@ -173,6 +181,10 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [history, setHistory] = useState(seed.history);
+    const [actions, setActions] = useState<TaskActionId[]>([]);
+    /** The server answered: the workflow panel replaces the old local review buttons. */
+    const [serverFlow, setServerFlow] = useState(false);
+    const [reviewerNow, setReviewerNow] = useState<number | null>(task.reviewerId ?? null);
     const [commentDraft, setCommentDraft] = useState('');
     const [commentFiles, setCommentFiles] = useState<File[]>([]);
     const [preview, setPreview] = useState<{ id: string; name: string } | null>(null);
@@ -290,6 +302,8 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         setChecks(activity.checks);
         setComments(activity.comments.map((comment) => ({ ...comment, mine: comment.authorUserId === userId })));
         setHistory(activity.history);
+        setActions(activity.actions);
+        setServerFlow(true);
     };
 
     useEffect(() => {
@@ -458,6 +472,26 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                         </button>
                     </div>
                 </div>
+                <LegalHubTaskActions
+                    taskId={task.id}
+                    actions={actions}
+                    reviewerId={reviewerNow}
+                    assigneeId={task.assigneeId ?? null}
+                    onDone={({ task: next, activity }) => {
+                        applyActivity(activity);
+                        if (!next)
+                            return;
+                        setStatus(next.status);
+                        setReviewerNow(next.reviewerId ?? null);
+                        onReviewed?.({
+                            status: next.status,
+                            boardColumn: next.boardColumn ?? next.status,
+                            reviewerId: next.reviewerId,
+                            done: next.done,
+                            assigneeId: next.assigneeId,
+                        });
+                    }}
+                />
                 <div className="lh-drawer__tabs" role="tablist">
                     {tabs.map((item) => (
                         <button
@@ -847,23 +881,27 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
                     ) : null}
                 </div>
                 <footer className="lh-drawer__foot">
-                    <button
-                        type="button"
-                        className={`lh-drawer__send${approved ? ' is-done' : ''}`}
-                        disabled={approved || missingFile || missingReviewer}
-                        onClick={notifyReviewer}
-                    >
-                        {approved ? <IconCheck /> : <IconBell />}
-                        <span>{t(primaryLabel)}</span>
-                    </button>
-                    {missingFile ? <p className="lh-drawer__note">{t('legalHub.taskReviewNeedsFile')}</p> : null}
-                    {!missingFile && missingReviewer ? <p className="lh-drawer__note">{t(needsPartner ? 'legalHub.taskReviewNeedsPartner' : 'legalHub.taskReviewNeedsPerson')}</p> : null}
-                    {reviewError ? <p className="lh-drawer__note">{reviewError}</p> : null}
-                    <div className={`lh-drawer__foot-row${inReview ? '' : ' lh-drawer__foot-row--single'}`}>
+                    {serverFlow ? null : (
+                        <>
+                            <button
+                                type="button"
+                                className={`lh-drawer__send${approved ? ' is-done' : ''}`}
+                                disabled={approved || missingFile || missingReviewer}
+                                onClick={notifyReviewer}
+                            >
+                                {approved ? <IconCheck /> : <IconBell />}
+                                <span>{t(primaryLabel)}</span>
+                            </button>
+                            {missingFile ? <p className="lh-drawer__note">{t('legalHub.taskReviewNeedsFile')}</p> : null}
+                            {!missingFile && missingReviewer ? <p className="lh-drawer__note">{t(needsPartner ? 'legalHub.taskReviewNeedsPartner' : 'legalHub.taskReviewNeedsPerson')}</p> : null}
+                            {reviewError ? <p className="lh-drawer__note">{reviewError}</p> : null}
+                        </>
+                    )}
+                    <div className={`lh-drawer__foot-row${inReview && !serverFlow ? '' : ' lh-drawer__foot-row--single'}`}>
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
-                        {inReview ? <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button> : null}
+                        {inReview && !serverFlow ? <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button> : null}
                     </div>
-                    {status === 'partner' && !approved ? <p className="lh-drawer__note">{t('legalHub.taskReviewerOnly')}</p> : null}
+                    {status === 'partner' && !approved && !serverFlow ? <p className="lh-drawer__note">{t('legalHub.taskReviewerOnly')}</p> : null}
                 </footer>
                 <input
                     ref={fileInputRef}

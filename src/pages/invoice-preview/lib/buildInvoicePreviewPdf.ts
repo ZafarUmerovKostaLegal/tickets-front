@@ -21,6 +21,7 @@ import {
     isBankingPlaceholderValue,
     resolveLegalCaseDetailLine,
     resolveLegalExtraExpensesAmount,
+    resolveLegalExtraExpensesLabel,
     resolveLegalFirmBankingLines,
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
@@ -1713,7 +1714,7 @@ function drawLegalInvoicePdfPage(
 
     drawTotalRow(labels.subtotal, servicesText);
     drawTotalRow(labels.vat, vatAmount);
-    drawTotalRow(labels.extraExpenses, extraExpensesAmount);
+    drawTotalRow(resolveLegalExtraExpensesLabel(legalOverrides?.extraExpensesLabel, labels.extraExpenses), extraExpensesAmount);
     drawTotalRow(labels.totalDueBy(dueBanner), totalText, true);
     y -= DOC_LH * 3.1;
 

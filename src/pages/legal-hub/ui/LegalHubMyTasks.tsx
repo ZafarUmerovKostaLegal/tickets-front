@@ -108,6 +108,25 @@ function isBuiltin(column: string): column is BoardColumn {
     return (COLUMNS as readonly string[]).includes(column);
 }
 
+/** List view: tasks grouped by project (most urgent project first), or one flat group inside a project. */
+export function listGroups(tasks: MineTask[], byProject: boolean): Array<{ key: string; name: string; tasks: MineTask[]; late: number }> {
+    if (!byProject)
+        return [{ key: 'all', name: '', tasks, late: tasks.filter((task) => !task.done && dayDelta(task.clientOn) < 0).length }];
+    const groups = new Map<string, { key: string; name: string; tasks: MineTask[]; late: number }>();
+    for (const task of tasks) {
+        const name = taskProjectName(task) || '—';
+        const key = task.projectId || name;
+        const group = groups.get(key) ?? { key, name, tasks: [], late: 0 };
+        group.tasks.push(task);
+        if (!task.done && dayDelta(task.clientOn) < 0)
+            group.late += 1;
+        groups.set(key, group);
+    }
+    return [...groups.values()].sort((a, b) => b.late - a.late
+        || (a.tasks[0]?.clientOn ?? '').localeCompare(b.tasks[0]?.clientOn ?? '')
+        || a.name.localeCompare(b.name, 'ru'));
+}
+
 export function columnOf(task: Pick<MineTask, 'status' | 'waitingFor' | 'done' | 'boardColumn'>): string {
     if (task.boardColumn)
         return task.boardColumn;
@@ -1040,8 +1059,18 @@ export function LegalHubMyTasks({
                                 <p>{emptyText}</p>
                             </div>
                         ) : (
-                            <ul>
-                                {listed.map((task) => {
+                            <div className="lh-rows__groups">
+                                {listGroups(listed, project == null).map((group) => (
+                                    <section key={group.key} className="lh-rows__group" aria-label={group.name}>
+                                        {project == null ? (
+                                            <header className="lh-rows__group-head">
+                                                <strong title={group.name}>{group.name}</strong>
+                                                <span>{t('legalHub.groupCount').replace('{count}', String(group.tasks.length))}</span>
+                                                {group.late ? <em>{t('legalHub.mapOverdue').replace('{count}', String(group.late))}</em> : null}
+                                            </header>
+                                        ) : null}
+                                        <ul>
+                                            {group.tasks.map((task) => {
                                     const column = columnOf(task);
                                     const owner = taskOwnerLabel(task);
                                     const reviewer = task.reviewer && (TASK_PEOPLE as readonly string[]).includes(task.reviewer) ? PERSON_LABEL[task.reviewer] : null;
@@ -1084,8 +1113,11 @@ export function LegalHubMyTasks({
                                             </button>
                                         </li>
                                     );
-                                })}
-                            </ul>
+                                            })}
+                                        </ul>
+                                    </section>
+                                ))}
+                            </div>
                         ))}
                     </div>
                 </div>

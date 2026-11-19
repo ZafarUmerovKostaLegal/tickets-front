@@ -52,6 +52,7 @@ import {
     isBankingPlaceholderValue,
     resolveLegalCaseDetailLine,
     resolveLegalExtraExpensesAmount,
+    resolveLegalExtraExpensesLabel,
     resolveLegalFirmBankingLines,
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
@@ -955,7 +956,7 @@ function legalInvoiceDocxBlocks(
         rows: [
             mkTotalRow(labels.subtotal, servicesAmount, false, totalsNil),
             mkTotalRow(labels.vat, vatAmount, false, totalsNil),
-            mkTotalRow(labels.extraExpenses, extraExpensesAmount, false, totalsNil),
+            mkTotalRow(resolveLegalExtraExpensesLabel(legalOverrides?.extraExpensesLabel, labels.extraExpenses), extraExpensesAmount, false, totalsNil),
             mkTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true, totalsNil),
         ],
     });

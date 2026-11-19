@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { SearchableSelect } from '@shared/ui';
@@ -15,6 +15,7 @@ import {
     type TaskPersonId,
     type TaskPriorityId,
     type TaskStatusId,
+    taskProjectName,
 } from './legalHubTasks';
 
 type SortKey = 'project' | 'title' | 'workstream' | 'owner' | 'reviewer' | 'status' | 'priority' | 'review' | 'client' | 'minutes';
@@ -264,6 +265,10 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null, titl
             return haystack.includes(needle);
         });
         filtered.sort((a, b) => {
+            // Rows are grouped by project; the chosen sort applies inside each project.
+            const byProject = compareText(taskProjectName(a), taskProjectName(b), 1);
+            if (byProject !== 0)
+                return byProject;
             const left = taskSortValue(a, sort.key, labelOf);
             const right = taskSortValue(b, sort.key, labelOf);
             if (typeof left === 'number' && typeof right === 'number')
@@ -327,8 +332,16 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null, titl
                         </thead>
                         <tbody>
                             {rows.map((task, index) => (
+                                <Fragment key={task.id}>
+                                {index === 0 || taskProjectName(rows[index - 1]!) !== taskProjectName(task) ? (
+                                    <tr className="lh-tasks__group">
+                                        <th colSpan={COLUMNS.length} scope="colgroup">
+                                            {taskProjectName(task)}
+                                            <span>{t('legalHub.groupCount').replace('{count}', String(rows.filter((row) => taskProjectName(row) === taskProjectName(task)).length))}</span>
+                                        </th>
+                                    </tr>
+                                ) : null}
                                 <tr
-                                    key={task.id}
                                     className={openId === task.id ? 'is-open' : ''}
                                     tabIndex={0}
                                     style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
@@ -368,6 +381,7 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null, titl
                                     <td><DeadlineCell iso={task.clientOn} /></td>
                                     <td className="lh-tasks__muted lh-tasks__cell-estimate">{t('legalHub.taskMinutes').replace('{count}', String(task.minutes))}</td>
                                 </tr>
+                                </Fragment>
                             ))}
                         </tbody>
                     </table>

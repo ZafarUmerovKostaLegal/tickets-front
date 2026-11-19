@@ -43,6 +43,8 @@ export type InvoiceLegalPageOverrides = {
     dueDateDisplay?: string | null;
     vatAmount?: string | null;
     extraExpensesAmount?: string | null;
+    /** Own name of the extra expenses row (any language); empty = the default label. */
+    extraExpensesLabel?: string | null;
     firmAddress?: string | null;
     recipientName?: string | null;
     legalAddress?: string | null;
@@ -184,6 +186,11 @@ export function resolveLegalOverrideText(
 ): string {
     const t = override?.trim();
     return t || fallback;
+}
+
+export function resolveLegalExtraExpensesLabel(override: string | null | undefined, fallback: string): string {
+    const own = (override ?? '').trim();
+    return own || fallback;
 }
 
 export function resolveLegalExtraExpensesAmount(

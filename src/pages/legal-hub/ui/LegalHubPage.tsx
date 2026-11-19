@@ -9,6 +9,7 @@ import { LegalHubMyTasks, type MineTask } from './LegalHubMyTasks';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
 import { HUB_TASKS, MOCK_DONE_IDS, tasksForMember } from './legalHubTasks';
+import { LegalHubProjectMap } from './LegalHubProjectMap';
 import { dayDelta, HeadActionsContext, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
 import { LegalHubChromeProvider } from './legalHubChrome';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
@@ -27,6 +28,7 @@ import {
     type ProjectFolder,
 } from './legalHubProjectDisplay';
 import './LegalHubPage.css';
+import './LegalHubTeamwork.css';
 
 
 const MINE_ITEMS: { id: 'myTasks' | 'reviewQueue'; labelKey: TranslationKey; icon: ComponentType }[] = [
@@ -1064,6 +1066,9 @@ function LegalHubPageBody() {
                                         tasks={hubTasks}
                                         onTasks={setHubTasks}
                                     />
+                                ) : null}
+                                {section === 'projects' && !openProject ? (
+                                    <LegalHubProjectMap canOpen={canOpenProject} onOpen={openMatter} />
                                 ) : null}
                                 {section === 'projects' && !openProject ? (
                                     <div className="lh-project-groups">

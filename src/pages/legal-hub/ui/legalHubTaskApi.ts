@@ -26,7 +26,7 @@ type ApiStamp = { createdAt?: unknown };
 
 const STATUSES = new Set(['partner', 'progress', 'wait', 'changes', 'associate', 'todo']);
 const PRIORITIES = new Set(['high', 'normal', 'low']);
-const HISTORY = new Set(['created', 'started', 'review', 'file', 'comment']);
+const HISTORY = new Set(['created', 'started', 'review', 'file', 'comment', 'taken', 'submitted', 'returned', 'approved', 'reassigned']);
 
 function text(value: unknown): string {
     return typeof value === 'string' ? value : '';
@@ -145,7 +145,8 @@ export async function createLegalHubTask(input: {
     }
 }
 
-type ApiDetail = {
+export type ApiDetail = {
+    actions?: unknown;
     comments?: unknown;
     files?: unknown;
     history?: unknown;
@@ -158,7 +159,12 @@ export type LegalHubTaskActivity = {
     files: TaskFile[];
     history: TaskHistory[];
     checks: TaskCheck[];
+    /** Workflow buttons the server allows for the viewer right now. */
+    actions: TaskActionId[];
 };
+
+export type TaskActionId = 'take' | 'submit' | 'return' | 'approve' | 'reassign';
+const ACTIONS = new Set<string>(['take', 'submit', 'return', 'approve', 'reassign']);
 
 function readFile(item: unknown): TaskFile | null {
     const row = item as { id?: unknown; name?: unknown; kind?: unknown; size?: unknown; checkId?: unknown; commentId?: unknown } & ApiStamp;
@@ -178,7 +184,7 @@ function readFile(item: unknown): TaskFile | null {
     };
 }
 
-function readActivity(body: ApiDetail): LegalHubTaskActivity {
+export function readActivity(body: ApiDetail): LegalHubTaskActivity {
     const comments = Array.isArray(body.comments) ? body.comments.flatMap((item): TaskComment[] => {
         const row = item as { id?: unknown; author?: unknown; authorUserId?: unknown; text?: unknown; files?: unknown } & ApiStamp;
         const id = text(row.id);
@@ -240,7 +246,10 @@ function readActivity(body: ApiDetail): LegalHubTaskActivity {
         }) : [];
         return [{ id, label, done: row.done === true, notes, files: checkFiles }];
     }) : [];
-    return { comments, files, history, checks };
+    const actions = Array.isArray(body.actions)
+        ? body.actions.filter((item): item is TaskActionId => typeof item === 'string' && ACTIONS.has(item))
+        : [];
+    return { comments, files, history, checks, actions };
 }
 
 export async function fetchLegalHubTaskActivity(taskId: string): Promise<LegalHubTaskActivity | null> {

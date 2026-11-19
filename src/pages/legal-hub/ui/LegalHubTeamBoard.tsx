@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getLegalHubMemberUrl } from '@shared/config';
-import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
+import { listTimeTrackingUsers } from '@entities/time-tracking';
 import { isWithoutAuthRegistration } from '@entities/time-tracking/model/manualUsers';
 import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
@@ -16,6 +16,8 @@ import { HeadActions } from './legalHubShared';
 import { useLegalHubView } from './legalHubView';
 import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 import type { LegalHubMemberLocationState } from './LegalHubMemberTasks';
+import { fill } from './LegalHubProjectMap';
+import { fetchHubTeams, fetchTeamStats, grantTempAccess, revokeTempAccess, type HubTeams, type TeamStats } from './legalHubTeamApi';
 
 type MemberCard = {
     id: number;
@@ -27,7 +29,41 @@ type MemberCard = {
     accessUntil?: string;
 };
 
-type TempMember = TempMemberDraft & { id: number };
+type TempMember = TempMemberDraft & { id: number; grantId?: string };
+
+/** Legal Hub teams (own teams + temporary ones) in the shape the cards already understand. */
+function teamRows(data: HubTeams): TimeTrackingTeamRow[] {
+    return data.teams.map((team) => ({
+        id: team.id,
+        name: team.name,
+        partner_auth_user_id: team.partnerId,
+        partner_display_name: team.members.find((person) => person.lead)?.name ?? null,
+        member_auth_user_ids: team.memberIds,
+        members: team.members
+            .filter((person) => !person.lead)
+            .map((person) => ({ auth_user_id: person.id, display_name: person.name, email: person.email ?? '' })),
+        is_archived: false,
+        created_at: '',
+        updated_at: '',
+    }) as unknown as TimeTrackingTeamRow);
+}
+
+/** Real load from the server statistics (open tasks by stage). */
+function statsLoad(stats: TeamStats | null, id: number): MemberLoad | null {
+    const row = stats?.people.find((person) => person.userId === id);
+    if (!row)
+        return null;
+    const by = row.byStage;
+    const review = by.review ?? 0;
+    return {
+        tasks: row.open,
+        hoursUsed: 0,
+        hoursCap: 40,
+        percent: 0,
+        statuses: { progress: by.progress ?? 0, wait: by.wait ?? 0, review, changes: by.changes ?? 0, reviewing: row.review },
+        util: { progress: by.progress ?? 0, associate: review, partner: 0, wait: by.wait ?? 0, changes: by.changes ?? 0, todo: by.todo ?? 0 },
+    };
+}
 
 function emptyLoad(): MemberLoad {
     return {
@@ -520,6 +556,10 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
     const { user, loading: userLoading } = useCurrentUser();
     const userId = user?.id ?? null;
     const [teams, setTeams] = useState<TimeTrackingTeamRow[] | null>(null);
+    const [hubTeams, setHubTeams] = useState<HubTeams | null>(null);
+    const [stats, setStats] = useState<TeamStats | null>(null);
+    const [reloadTick, setReloadTick] = useState(0);
+    const [notice, setNotice] = useState('');
     const [users, setUsers] = useState<TimeTrackingUserRow[]>([]);
     const [error, setError] = useState<'forbidden' | 'load' | null>(null);
 
@@ -531,14 +571,17 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         setError(null);
         void (async () => {
             try {
-                const [teamRows, userRows] = await Promise.all([
-                    listTimeTrackingTeams(),
+                const [hub, userRows, teamStatsRow] = await Promise.all([
+                    fetchHubTeams(true),
                     listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
+                    fetchTeamStats().catch(() => null),
                 ]);
                 if (cancelled)
                     return;
                 setUsers(userRows);
-                setTeams(teamRows);
+                setHubTeams(hub);
+                setStats(teamStatsRow);
+                setTeams(teamRows(hub));
             }
             catch (err) {
                 if (cancelled)
@@ -550,19 +593,31 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         return () => {
             cancelled = true;
         };
-    }, [userId, userLoading]);
+    }, [userId, userLoading, reloadTick]);
 
     const { viewAs, memberIds } = useLegalHubView();
     const { publish } = useLegalHubMock();
     const [tempOpen, setTempOpen] = useState(false);
-    const [tempMembers, setTempMembers] = useState<TempMember[]>([]);
+    const tempMembers = useMemo<TempMember[]>(() => (hubTeams?.teams ?? []).flatMap((team) => team.temps.map((grant) => ({
+        id: grant.userId,
+        grantId: grant.id,
+        teamId: team.id,
+        userId: grant.userId,
+        name: grant.name || grant.email,
+        email: grant.email,
+        position: '',
+        accessUntil: grant.expiresOn,
+        canLogTime: false,
+        canComment: true,
+    }))), [hubTeams]);
     const usersById = useMemo(() => new Map(users.map((row) => [row.id, row])), [users]);
     const needle = query.trim().toLowerCase();
     const ledTeams = useMemo(() => {
         if (user == null || teams == null)
             return [];
-        return teams.filter((team) => !team.is_archived && team.partner_auth_user_id === user.id);
-    }, [teams, user]);
+        const managed = new Set((hubTeams?.teams ?? []).filter((team) => team.canManage).map((team) => team.id));
+        return teams.filter((team) => !team.is_archived && managed.has(team.id));
+    }, [teams, user, hubTeams]);
     const visibleTeams = useMemo(() => {
         if (teams == null)
             return [];
@@ -572,15 +627,15 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         const fromTeams = visibleTeams.flatMap((team) => memberCards(team, usersById).map((member) => ({
             id: member.id,
             name: member.name,
-            load: mockMemberLoad(member.id, member.capacity),
+            load: statsLoad(stats, member.id) ?? mockMemberLoad(member.id, member.capacity),
         })));
         const extras = tempMembers.map((member) => ({
             id: member.id,
             name: member.name,
-            load: emptyLoad(),
+            load: statsLoad(stats, member.id) ?? emptyLoad(),
         }));
         return [...fromTeams, ...extras];
-    }, [visibleTeams, usersById, tempMembers]);
+    }, [visibleTeams, usersById, tempMembers, stats]);
     const loadById = useMemo(() => new Map(published.map((row) => [row.id, row.load])), [published]);
     const scopedPublished = useMemo(
         () => (viewAs == null ? published : published.filter((row) => row.id === viewAs.id)),
@@ -649,6 +704,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                 </HeadActions>
             ) : null}
             <div className="lh-board__main">
+                {notice ? <p className="lh-team__notice" role="status">{notice}</p> : null}
                 <TeamStatsStrip stats={teamStats(scopedPublished.map((row) => row.load))} />
                 {visibleTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : (
                     <div className="lh-board__tools">
@@ -706,6 +762,39 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                             <div className="lh-team__head">
                                 <h3 className="lh-team__name">{team.name}</h3>
                             </div>
+                            {(() => {
+                                const hub = hubTeams?.teams.find((row) => row.id === team.id);
+                                if (!hub || hub.temps.length === 0)
+                                    return null;
+                                return (
+                                    <ul className="lh-team__temps" aria-label={t('legalHub.tempTitle')}>
+                                        {hub.temps.map((grant) => (
+                                            <li key={grant.id} className="lh-team__temp">
+                                                <span>{grant.name || grant.email}</span>
+                                                <small>{fill(t('legalHub.tempUntilBadge'), { date: new Date(`${grant.expiresOn}T00:00:00`).toLocaleDateString() })}</small>
+                                                {hub.canManage ? (
+                                                    <button
+                                                        type="button"
+                                                        className="lh-team__temp-x"
+                                                        aria-label={`${t('legalHub.tempRevoke')}: ${grant.name || grant.email}`}
+                                                        title={t('legalHub.tempRevoke')}
+                                                        onClick={() => {
+                                                            void revokeTempAccess(hub.id, grant.id)
+                                                                .then(() => {
+                                                                    setNotice(t('legalHub.tempRevoked'));
+                                                                    setReloadTick((tick) => tick + 1);
+                                                                })
+                                                                .catch((err: unknown) => setNotice(err instanceof Error ? err.message : String(err)));
+                                                        }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                ) : null}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                );
+                            })()}
                             {cards.length === 0 ? (
                                 <p className="lh-team__note">{needle ? t('legalHub.teamNoMatch') : t('legalHub.teamNoMembers')}</p>
                             ) : (
@@ -714,7 +803,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                                         <MemberCardView
                                             key={member.id}
                                             member={member}
-                                            load={member.accessUntil ? emptyLoad() : (loadById.get(member.id) ?? mockMemberLoad(member.id, member.capacity))}
+                                            load={loadById.get(member.id) ?? statsLoad(stats, member.id) ?? emptyLoad()}
                                             tone={index % 4}
                                             enterIndex={index}
                                             selected={false}
@@ -742,12 +831,18 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                     takenByTeam={takenByTeam}
                     onClose={() => setTempOpen(false)}
                     onCreate={(draft) => {
-                        setTempMembers((current) => {
-                            if (current.some((member) => member.id === draft.userId && member.teamId === draft.teamId))
-                                return current;
-                            return [...current, { ...draft, id: draft.userId }];
-                        });
-                        setTempOpen(false);
+                        void grantTempAccess(draft.teamId, {
+                            userId: draft.userId,
+                            userName: draft.name,
+                            userEmail: draft.email,
+                            expiresOn: draft.accessUntil,
+                        })
+                            .then(() => {
+                                setNotice(t('legalHub.tempSaved'));
+                                setTempOpen(false);
+                                setReloadTick((tick) => tick + 1);
+                            })
+                            .catch((err: unknown) => setNotice(err instanceof Error ? err.message : String(err)));
                     }}
                 />
             ) : null}

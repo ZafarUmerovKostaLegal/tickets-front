@@ -19,6 +19,7 @@ import {
   isBankingPlaceholderValue,
   resolveLegalCaseDetailLine,
   resolveLegalExtraExpensesAmount,
+    resolveLegalExtraExpensesLabel,
   resolveLegalOverrideText,
   resolveLegalPaymentDisclaimer,
   resolveLegalServiceLines,
@@ -371,7 +372,15 @@ export function InvoiceLegalInvoicePage({
         </span>
       </div>
       <div className="tt-inv-li__total-line">
-        <span className="tt-inv-li__total-label">{labels.extraExpenses}</span>
+        <span className="tt-inv-li__total-label">
+          <LiField
+            editable={editable}
+            className="tt-inv-li__field--inline"
+            value={resolveLegalExtraExpensesLabel(legalOverrides?.extraExpensesLabel, labels.extraExpenses)}
+            ariaLabel={labels.extraExpenses}
+            onChange={(extraExpensesLabel) => onChangeLegalOverrides?.({ extraExpensesLabel })}
+          />
+        </span>
         <span className="tt-inv-li__total-value">
           <LiField
             editable={editable}
