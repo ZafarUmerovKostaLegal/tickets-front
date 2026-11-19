@@ -107,7 +107,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         correspondentBank: 'Банк корреспондент',
         correspondentAccount: (cur) => (cur === 'RUB' ? 'Счёт (Лоро)' : `Корр. счёт (${cur})`),
         correspondentBik: 'БИК',
-        billToBankName: 'Банк получателя',
+        billToBankName: 'Банк',
         billToAccountNumber: 'Р/с',
         billToCorrespondentAccount: 'Корреспондентский счет',
         billToBik: 'БИК',

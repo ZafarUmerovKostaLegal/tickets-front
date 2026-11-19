@@ -14,6 +14,7 @@ import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
 import { MatterWorkspace, type Location } from './MatterWorkspace';
 import { DiskView } from './DiskView';
+import { UploadQueuePanel } from './UploadQueuePanel';
 import { Icon, StateBlock, ToastHost, useFm, useLoad, type IconName } from './fmShared';
 import './FileManagerPage.css';
 
@@ -238,6 +239,9 @@ function FileManagerWorkspace() {
                         </StateBlock>
                     )}
                 </main>
+                <UploadQueuePanel
+                    onOpen={(item) => item.result && openMatter({ matterId: item.target.matterId, folderId: item.target.folderId, docId: item.result.document.id })}
+                />
             </ViewTransition>
         </div>
     );

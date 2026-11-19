@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { filesApi, type DocumentDetail, type DocumentRow, type FolderRow } from '../api/filesApi';
 import { canEdit, formatBytes, formatDateTime, previewMode } from '../lib/filesFormat';
+import { CHUNKED_THRESHOLD, uploadInChunks } from '../lib/chunkedUpload';
+import { filesSend } from '../lib/uploadQueue';
+
+/** Bigger files are not pulled into the page: no auto-preview, downloads go through a signed link. */
+const PREVIEW_LIMIT = 50 * 1024 * 1024;
 import { FmSelect } from './fmSelect';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, Modal, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 
@@ -21,7 +26,8 @@ type Props = {
 function Preview({ detail }: { detail: DocumentDetail }) {
     const { tr } = useFm();
     const doc = detail.document;
-    const mode = previewMode(doc.kind, doc.contentType);
+    const tooBig = doc.sizeBytes > PREVIEW_LIMIT;
+    const mode = tooBig ? null : previewMode(doc.kind, doc.contentType);
     const [url, setUrl] = useState<string | null>(null);
     const [text, setText] = useState<string | null>(null);
     const [error, setError] = useState(false);
@@ -58,7 +64,7 @@ function Preview({ detail }: { detail: DocumentDetail }) {
         return (
             <div className="fm-preview fm-preview--empty">
                 <FileBadge kind={doc.kind} />
-                <p>{tr('pane.noPreview')}</p>
+                <p>{tooBig ? tr('pane.tooBigPreview') : tr('pane.noPreview')}</p>
             </div>
         );
     }
@@ -196,19 +202,30 @@ function CheckinModal({ doc, onClose, onDone }: { doc: DocumentRow; onClose: () 
     const [file, setFile] = useState<File | null>(null);
     const [comment, setComment] = useState('');
     const [busy, setBusy] = useState(false);
+    const [progress, setProgress] = useState<number | null>(null);
     return (
         <Modal title={tr('pane.checkin')} onClose={onClose} footer={(
             <>
                 <button type="button" className="fm-btn" onClick={onClose}>{tr('common.cancel')}</button>
                 <button type="button" className="fm-btn fm-btn--primary" disabled={busy} onClick={async () => {
                     setBusy(true);
-                    const result = await act(() => filesApi.checkin(doc.id, file, comment), tr('pane.saved'));
+                    const big = file != null && file.size > CHUNKED_THRESHOLD;
+                    const result = await act(async () => {
+                        if (big && file) {
+                            setProgress(0);
+                            await uploadInChunks(file, { matterId: doc.matterId, folderId: doc.folderId ?? null, documentId: doc.id, comment }, filesSend, {
+                                onProgress: (sent, total) => setProgress(Math.floor((sent / total) * 100)),
+                            });
+                        }
+                        return filesApi.checkin(doc.id, big ? null : file, comment);
+                    }, tr('pane.saved'));
                     setBusy(false);
+                    setProgress(null);
                     if (result) {
                         onDone(result.document);
                         onClose();
                     }
-                }}>{file ? tr('pane.checkinWithFile') : tr('pane.checkin')}</button>
+                }}>{progress !== null ? `${progress}%` : file ? tr('pane.checkinWithFile') : tr('pane.checkin')}</button>
             </>
         )}>
             <p className="fm-modal__text"><strong>{doc.name}</strong> · v{doc.version}</p>
@@ -252,6 +269,18 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
     const download = async (version?: number) => {
         if (!doc)
             return;
+        if (doc.sizeBytes > PREVIEW_LIMIT) {
+            const url = await act(() => filesApi.link(doc.id, { version }));
+            if (url) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.rel = 'noopener';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+            return;
+        }
         const blob = await act(() => filesApi.contentBlob(doc.id, { version }));
         if (blob)
             await saveBlob(blob, version && version !== doc.version ? `v${version} ${doc.name}` : doc.name);
@@ -261,6 +290,14 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
         if (!doc)
             return;
         const popup = window.open('', '_blank');
+        if (doc.sizeBytes > PREVIEW_LIMIT) {
+            const url = await act(() => filesApi.link(doc.id, { inline: true }));
+            if (url && popup)
+                popup.location.href = url;
+            else
+                popup?.close();
+            return;
+        }
         const blob = await act(() => filesApi.contentBlob(doc.id, { inline: true }));
         if (!blob || !popup) {
             popup?.close();

@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { getApiBaseUrl, upgradeUrlToPageSecurity } from '@shared/config';
 
 const BASE = '/api/v1/files';
 
@@ -310,6 +311,11 @@ export const filesApi = {
         if (!response.ok)
             await fail(response);
         return await response.blob();
+    },
+    /** Short-lived signed URL: the browser itself downloads (to disk, resumable) — for large files. */
+    link: async (documentId: string, options: { version?: number; inline?: boolean } = {}) => {
+        const body = await request<{ url: string }>(`/documents/${encodeURIComponent(documentId)}/link${query({ version: options.version, inline: options.inline })}`, { method: 'POST' });
+        return upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`);
     },
     recent: () => request<{ documents: DocumentRow[] }>('/recent'),
     search: (params: { q?: string; clientId?: string; matterId?: string; kind?: string }) =>

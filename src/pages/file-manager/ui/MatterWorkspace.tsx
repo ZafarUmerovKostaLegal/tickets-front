@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { filesApi, type DocumentRow, type FolderRow } from '../api/filesApi';
 import { canEdit, canManage, dateRange, documentDay, formatBytes, inDateRange, isMailName, summarizeUpload, type DateFilter, type DatePreset } from '../lib/filesFormat';
+import { CHUNKED_THRESHOLD } from '../lib/chunkedUpload';
+import { enqueueUploads, onUploadDone } from '../lib/uploadQueue';
 import { DuplicatesModal } from './DuplicatesModal';
 import { DOC_DRAG_TYPE } from './DocumentTable';
 import { DocumentPane } from './DocumentPane';
@@ -211,10 +213,26 @@ export function MatterWorkspace({
         };
     }, [menu]);
 
+    const reloadBrowse = browse.reload;
+    useEffect(() => onUploadDone((item) => {
+        if (item.target.matterId !== matterId)
+            return;
+        if (item.result && (item.result.status === 'created' || item.result.status === 'version')) {
+            reloadBrowse();
+            onClientsStale();
+        }
+    }), [matterId, reloadBrowse, onClientsStale]);
+
     const goFolder = (next: string | null) => onNavigate({ matterId, folderId: next, docId: null });
 
     const upload = async (files: File[], allowDuplicate = false) => {
-        const sent = files.filter((file) => file.size > 0);
+        const nonEmpty = files.filter((file) => file.size > 0);
+        // Large files go to the background queue: chunked, resumable, with progress — the page stays usable.
+        const large = nonEmpty.filter((file) => file.size > CHUNKED_THRESHOLD);
+        if (large.length) {
+            enqueueUploads(large, { matterId, folderId, allowDuplicate });
+        }
+        const sent = nonEmpty.filter((file) => file.size <= CHUNKED_THRESHOLD);
         if (sent.length === 0)
             return;
         const result = await act(() => filesApi.upload(matterId, folderId, sent, '', { allowDuplicate }));

@@ -99,7 +99,7 @@ describe('legalBillToBankingRows', () => {
             'billToCorrespondentAccount',
             'billToBik',
         ]);
-        expect(rows[0]?.label).toBe('Банк получателя');
+        expect(rows[0]?.label).toBe('Банк');
         expect(rows[1]?.label).toBe('Р/с');
         expect(rows[2]?.label).toBe('Корреспондентский счет');
         expect(rows[3]?.label).toBe('БИК');
