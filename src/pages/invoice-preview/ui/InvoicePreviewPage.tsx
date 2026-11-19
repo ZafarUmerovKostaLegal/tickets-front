@@ -166,6 +166,10 @@ export function InvoicePreviewPage() {
     const userPickedBankRef = useRef(false);
     const pendingDocOverridesRef = useRef<InvoiceDocumentOverridesV1 | null>(null);
     const skipNextAutosaveRef = useRef(true);
+    /** Every manual edit bumps the counter; autosave stores it until `savedRef` catches up. */
+    const dirtyRef = useRef(0);
+    const savedRef = useRef(0);
+    const [dirtyTick, setDirtyTick] = useState(0);
     const includedPagesHydratedRef = useRef(false);
     const prevTrChunkCountRef = useRef(0);
     const [invoiceStatus, setInvoiceStatus] = useState<string | null>(null);
@@ -244,6 +248,8 @@ export function InvoicePreviewPage() {
     const coverLanguage = displayModel.coverLanguage ?? 'ENG';
 
     const setCoverLanguage = useCallback((lang: InvoiceCoverLanguage) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         const prevLabels = getLegalInvoiceLabels(coverLanguage);
         const period = coverModel?.servicesMonthYear ?? '';
         setCoverModel((prev) => applyCoverLetterLanguage(prev ?? fallbackCoverModel(), lang, issueDateIso));
@@ -267,6 +273,8 @@ export function InvoicePreviewPage() {
     }, [coverLanguage, coverModel?.servicesMonthYear, issueDateIso]);
 
     const patchCoverModel = useCallback((patch: Partial<InvoiceCoverLetterModel>) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setCoverModel((prev) => ({
             ...(prev ?? fallbackCoverModel()),
             ...patch,
@@ -274,12 +282,17 @@ export function InvoicePreviewPage() {
     }, []);
 
     const patchLegalOverrides = useCallback((patch: Partial<InvoiceLegalPageOverrides>) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setLegalOverrides((prev) => ({ ...prev, ...patch }));
     }, []);
 
     const applyBankProfile = useCallback((profile: FirmBankingProfile | null, opts?: { userInitiated?: boolean }) => {
-        if (opts?.userInitiated)
+        if (opts?.userInitiated) {
             userPickedBankRef.current = true;
+            dirtyRef.current += 1;
+            setDirtyTick(dirtyRef.current);
+        }
         setSelectedBankProfileId(profile?.id ?? '');
         setLegalOverrides((prev) => applyFirmBankingProfileToLegalOverrides(prev, profile));
     }, []);
@@ -304,6 +317,7 @@ export function InvoicePreviewPage() {
     useEffect(() => {
         let cancelled = false;
         userPickedBankRef.current = false;
+        savedRef.current = dirtyRef.current;
         pendingDocOverridesRef.current = null;
         skipNextAutosaveRef.current = true;
         includedPagesHydratedRef.current = false;
@@ -440,7 +454,14 @@ export function InvoicePreviewPage() {
             }
 
             const picked = pickFirmBankingProfileForCurrency(profiles, invoiceCurrency);
-            if (picked && !userPickedBankRef.current)
+            const savedBank = Boolean(doc?.legal && (doc.legal.bankName?.trim() || doc.legal.accountNumber?.trim() || doc.legal.recipientName?.trim()));
+            if (savedBank) {
+                // The invoice already carries its (possibly hand-edited) bank details — keep them.
+                userPickedBankRef.current = true;
+                if (picked)
+                    setSelectedBankProfileId(picked.id);
+            }
+            else if (picked && !userPickedBankRef.current)
                 applyBankProfile(picked);
         })();
         return () => {
@@ -565,17 +586,17 @@ export function InvoicePreviewPage() {
     }, [editMode, persistPreviewEdits]);
 
     useEffect(() => {
-        if (!editMode || !session || !coverModel)
+        if (dirtyTick <= savedRef.current || !session || !coverModel)
             return;
-        if (skipNextAutosaveRef.current) {
-            skipNextAutosaveRef.current = false;
-            return;
-        }
+        const tick = dirtyTick;
         const t = window.setTimeout(() => {
-            void persistPreviewEdits({ silent: true });
-        }, 900);
+            void persistPreviewEdits({ silent: true }).then((ok) => {
+                if (ok && savedRef.current < tick)
+                    savedRef.current = tick;
+            });
+        }, 800);
         return () => window.clearTimeout(t);
-    }, [editMode, session, coverModel, legalOverrides, timeReportPack, combinedReport, includedPageKeys, persistPreviewEdits]);
+    }, [dirtyTick, session, coverModel, persistPreviewEdits]);
 
     const editingPage = editMode ? activePage : null;
 
@@ -802,9 +823,18 @@ export function InvoicePreviewPage() {
     const editModeRef = useRef(editMode);
     editModeRef.current = editMode;
 
-    useEffect(() => () => {
-        if (editModeRef.current)
-            void persistPreviewEditsRef.current({ silent: true });
+    useEffect(() => {
+        const flush = () => {
+            if (editModeRef.current || dirtyRef.current > savedRef.current) {
+                savedRef.current = dirtyRef.current;
+                void persistPreviewEditsRef.current({ silent: true });
+            }
+        };
+        window.addEventListener('pagehide', flush);
+        return () => {
+            window.removeEventListener('pagehide', flush);
+            flush();
+        };
     }, []);
 
     useEffect(() => {
@@ -932,6 +962,8 @@ export function InvoicePreviewPage() {
     }, [session, coverLanguage, coverModel, pushToast]);
 
     const patchDetailRowInChunk = useCallback((chunkIndex: number, rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
             const base = prev ?? resolvedTimeReportPack;
             const chunks = splitDetailRowsForPagedTimeReport(base.detailSlots);
@@ -945,6 +977,8 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchSummaryRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportSummaryRow, value: string) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
             const base = prev ?? resolvedTimeReportPack;
             const nextSlots = [...base.summarySlots];
@@ -956,6 +990,8 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchExpenseRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
             const base = prev ?? resolvedTimeReportPack;
             const nextSlots = [...(base.expenseSlots ?? [])];
@@ -967,6 +1003,8 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchMehnatRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
             const base = prev ?? resolvedTimeReportPack;
             const nextSlots = [...(base.mehnatSlots ?? [])];
@@ -978,6 +1016,8 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchFixedFeeRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => {
             const base = prev ?? resolvedTimeReportPack;
             const nextSlots = [...(base.fixedFeeSlots ?? [])];
@@ -989,6 +1029,8 @@ export function InvoicePreviewPage() {
     }, [resolvedTimeReportPack]);
 
     const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'fixedFeeTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => {
+        dirtyRef.current += 1;
+        setDirtyTick(dirtyRef.current);
         setTimeReportPack((prev) => ({ ...(prev ?? resolvedTimeReportPack), ...patch }));
     }, [resolvedTimeReportPack]);
 
@@ -1454,7 +1496,11 @@ export function InvoicePreviewPage() {
                     type="checkbox"
                     checked={showInitiatorName}
                     disabled={!coverModel}
-                    onChange={(e) => setShowInitiatorName(e.target.checked)}
+                    onChange={(e) => {
+                        dirtyRef.current += 1;
+                        setDirtyTick(dirtyRef.current);
+                        setShowInitiatorName(e.target.checked);
+                    }}
                   />
                   Показать имя
                 </label>
@@ -1554,7 +1600,11 @@ export function InvoicePreviewPage() {
                                       pageIndex={slot.chunkIndex}
                                       pageNumber={pageNum}
                                       editable={editingPage === pageNum}
-                                      onChange={setCombinedReport}
+                                      onChange={(next) => {
+                                          dirtyRef.current += 1;
+                                          setDirtyTick(dirtyRef.current);
+                                          setCombinedReport(next);
+                                      }}
                                     />
                                   )
                                 : (
