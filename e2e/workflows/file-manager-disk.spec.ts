@@ -247,6 +247,33 @@ test.describe('@e2e Файловый менеджер: Диск как пров�
         await expect(tile(page, 'OM')).toHaveCount(0);
     });
 
+    test('удалённые файлы не исчезают: список и восстановление', async ({ page, loginAs }) => {
+        await loginAs('admin');
+        const drive = await openDisk(page);
+        const deleted = [
+            { id: 'd1', source: 'drive', name: 'Old contract.pdf', sizeBytes: 81_920, contentType: 'application/pdf', path: 'MAIN FOLDER/Contracts', taskId: null, deletedBy: 'Iroda T', deletedAt: '2026-03-02T09:00:00Z', createdAt: '2025-11-01T09:00:00Z' },
+            { id: 'd2', source: 'task', name: 'scan.jpg', sizeBytes: 20_480, contentType: 'image/jpeg', path: '', taskId: 't1', deletedBy: 'Admin', deletedAt: '2026-04-10T09:00:00Z', createdAt: null },
+        ];
+        let restored = '';
+        await page.route('**/api/v1/legal-hub/drive/deleted**', async (route) => {
+            const url = route.request().url();
+            if (url.endsWith('/restore')) {
+                restored = url.split('/deleted/')[1]!.split('/')[0]!;
+                deleted.splice(deleted.findIndex((row) => row.id === restored), 1);
+                drive.files.push({ id: 'r1', folderId: 'contracts', name: 'Old contract.pdf', hidden: false, size: 81_920 });
+                return route.fulfill({ json: { parentId: 'contracts', file: {} } });
+            }
+            return route.fulfill({ json: { items: deleted } });
+        });
+        await page.getByRole('button', { name: 'Удалённые файлы' }).click();
+        const dialog = page.getByRole('dialog');
+        await expect(dialog.getByText('Old contract.pdf')).toBeVisible();
+        await expect(dialog.getByText(/Вложение задачи/)).toBeVisible();
+        await dialog.getByRole('button', { name: 'Восстановить' }).click();
+        await expect.poll(() => restored).toBe('d1');
+        await expect(dialog.getByText('Old contract.pdf')).toHaveCount(0);
+    });
+
     test('поиск по всем подпапкам с переходом к расположению', async ({ page, loginAs }) => {
         await loginAs('admin');
         await openDisk(page);

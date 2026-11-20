@@ -174,7 +174,7 @@ function FileManagerWorkspace() {
             case 'search':
                 return <SearchView clients={data} viewerId={viewerId} onLocate={openMatter} />;
             case 'trash':
-                return <TrashView onChanged={refreshAll} />;
+                return <TrashView onChanged={refreshAll} superAdmin={Boolean(data?.viewer?.superAdmin)} />;
             case 'disk':
                 return <DiskView />;
             case 'requests':

@@ -98,6 +98,19 @@ function json(method: string, body: unknown): RequestInit {
     return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
 
+export type DiskDeletedRow = {
+    id: string;
+    source: 'drive' | 'task';
+    name: string;
+    sizeBytes: number;
+    contentType: string;
+    path: string;
+    taskId: string | null;
+    deletedBy: string;
+    deletedAt: string | null;
+    createdAt: string | null;
+};
+
 export const diskApi = {
     browse: (folderId: string | null, showHidden = false) =>
         request<DiskBrowse>(query({ parentId: folderId, showHidden })),
@@ -177,4 +190,7 @@ export const diskApi = {
         request<{ acl: DiskAclRow }>(`/security${query({ folderId })}`, json('PUT', body)),
     removeAcl: (folderId: string | null, userId: number) =>
         request<{ ok: true }>(`/security/${userId}${query({ folderId })}`, { method: 'DELETE' }),
+    deleted: () => request<{ items: DiskDeletedRow[] }>('/deleted'),
+    restoreDeleted: (id: string) =>
+        request<{ parentId: string | null }>(`/deleted/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
 };

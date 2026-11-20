@@ -231,18 +231,25 @@ export function FavoritesView({ viewerId, onLocate }: ListProps) {
     );
 }
 
-export function TrashView({ onChanged }: { onChanged: () => void }) {
+export function TrashView({ onChanged, superAdmin = false }: { onChanged: () => void; superAdmin?: boolean }) {
     const { tr, locale } = useFm();
     const act = useAction();
-    const load = useLoad(() => filesApi.trash(), []);
+    const [archived, setArchived] = useState(false);
+    const load = useLoad(() => filesApi.trash(archived), [archived]);
     const [purge, setPurge] = useState<TrashItem | null>(null);
     const items = load.data?.items ?? [];
 
     return (
         <section className="fm-docs fm-docs--padded">
-            <p className="fm-hint">{tr('trash.hint')}</p>
+            {superAdmin ? (
+                <div className="fm-trash__modes" role="tablist">
+                    <button type="button" role="tab" aria-selected={!archived} className={`fm-trash__mode${archived ? '' : ' is-on'}`} onClick={() => setArchived(false)}>{tr('trash.modeTrash')}</button>
+                    <button type="button" role="tab" aria-selected={archived} className={`fm-trash__mode${archived ? ' is-on' : ''}`} onClick={() => setArchived(true)}>{tr('trash.modeArchive')}</button>
+                </div>
+            ) : null}
+            <p className="fm-hint">{tr(archived ? 'trash.archiveHint' : 'trash.hint')}</p>
             <StateBlock loading={load.loading && !load.data} error={load.error} onRetry={load.reload}
-                empty={!load.loading && items.length === 0 ? <><Icon name="trash" /><p>{tr('trash.empty')}</p></> : undefined}>
+                empty={!load.loading && items.length === 0 ? <><Icon name="trash" /><p>{tr(archived ? 'trash.archiveEmpty' : 'trash.empty')}</p></> : undefined}>
                 <div className="fm-table-wrap">
                     <table className="fm-table fm-table--trash">
                         <thead>
@@ -289,7 +296,7 @@ export function TrashView({ onChanged }: { onChanged: () => void }) {
                                                     onChanged();
                                                 }
                                             }}><Icon name="restore" />{tr('trash.restore')}</button>
-                                            {item.canPurge ? (
+                                            {item.canPurge && !archived ? (
                                                 <button type="button" className="fm-btn fm-btn--danger" onClick={() => setPurge(item)}>
                                                     {tr('trash.purge')}
                                                 </button>

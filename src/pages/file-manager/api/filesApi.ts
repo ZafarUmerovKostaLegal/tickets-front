@@ -46,7 +46,7 @@ export type DirectoryStats = {
 };
 
 export type ClientsResponse = {
-    viewer: { userId: number; name: string; canManage: boolean };
+    viewer: { userId: number; name: string; canManage: boolean; superAdmin?: boolean };
     clients: ClientRow[];
     requestable: RequestableMatter[];
     stats?: DirectoryStats;
@@ -371,7 +371,7 @@ export const filesApi = {
         request<{ ok: true }>('/favorites', json('PUT', { kind, targetId, matterId })),
     removeFavorite: (kind: string, targetId: string) =>
         request<{ ok: true }>(`/favorites/${encodeURIComponent(kind)}/${encodeURIComponent(targetId)}`, { method: 'DELETE' }),
-    trash: () => request<{ items: TrashItem[] }>('/trash'),
+    trash: (archived = false) => request<{ items: TrashItem[] }>(archived ? '/trash?archived=true' : '/trash'),
     restoreTrash: (kind: string, id: string) =>
         request<{ ok: true }>(`/trash/${kind}/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
     purgeTrash: (kind: string, id: string) =>

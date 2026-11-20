@@ -192,6 +192,54 @@ function NameModal({ title, initial, label, hint, allowPath, selectStem, onClose
     );
 }
 
+function DeletedFilesModal({ onClose, onRestored }: { onClose: () => void; onRestored: () => void }) {
+    const { tr, locale } = useFm();
+    const act = useAction();
+    const load = useLoad(() => diskApi.deleted(), []);
+    const [filter, setFilter] = useState('');
+    const [busy, setBusy] = useState<string | null>(null);
+    const needle = filter.trim().toLowerCase();
+    const rows = (load.data?.items ?? []).filter((row) => !needle || `${row.name} ${row.path} ${row.deletedBy}`.toLowerCase().includes(needle));
+    return (
+        <Modal title={tr('disk.deletedTitle')} onClose={onClose} wide>
+            <p className="fm-hint">{tr('disk.deletedHint')}</p>
+            <label className="fm-search fm-search--wide fm-deleted__search">
+                <Icon name="search" />
+                <input value={filter} placeholder={tr('disk.deletedSearch')} onChange={(event) => setFilter(event.target.value)} />
+            </label>
+            <StateBlock loading={load.loading && !load.data} error={load.error} onRetry={load.reload}
+                empty={load.data && rows.length === 0 ? tr('disk.deletedEmpty') : undefined}>
+                <ul className="fm-deleted">
+                    {rows.map((row) => (
+                        <li key={row.id}>
+                            <div className="fm-deleted__info">
+                                <strong title={row.name}>{row.name}</strong>
+                                <small>
+                                    {row.source === 'task' ? tr('disk.deletedFromTask') : (row.path || tr('disk.root'))}
+                                    {` · ${formatBytes(row.sizeBytes, locale)} · ${row.deletedBy || '—'} · ${formatDateTime(row.deletedAt, locale)}`}
+                                </small>
+                            </div>
+                            {row.source === 'drive' ? (
+                                <button type="button" className="fm-btn" disabled={busy !== null} onClick={async () => {
+                                    setBusy(row.id);
+                                    const ok = await act(() => diskApi.restoreDeleted(row.id), tr('disk.deletedRestored'));
+                                    setBusy(null);
+                                    if (ok) {
+                                        load.reload();
+                                        onRestored();
+                                    }
+                                }}>
+                                    <Icon name="restore" />{busy === row.id ? tr('common.loading') : tr('trash.restore')}
+                                </button>
+                            ) : null}
+                        </li>
+                    ))}
+                </ul>
+            </StateBlock>
+        </Modal>
+    );
+}
+
 function AccessDrawer({
     folderId,
     folderName,
@@ -456,6 +504,7 @@ export function DiskView() {
     const [renaming, setRenaming] = useState<Entry | null>(null);
     const [purge, setPurge] = useState<Entry[] | null>(null);
     const [accessOpen, setAccessOpen] = useState(false);
+    const [deletedOpen, setDeletedOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [menu, setMenu] = useState<CtxMenu | null>(null);
     const [data, setData] = useState<DiskBrowse | null>(null);
@@ -1243,6 +1292,7 @@ export function DiskView() {
                             <span className="fm-disk-cmd__sep" aria-hidden />
                             <div className="fm-disk-cmd__group">
                                 <CmdButton icon="shield" label={tr('disk.access')} active={accessOpen} onClick={() => setAccessOpen((value) => !value)} />
+                                <CmdButton icon="trash" label={tr('disk.deletedFiles')} active={deletedOpen} onClick={() => setDeletedOpen(true)} />
                             </div>
                         </>
                     ) : null}
@@ -1476,6 +1526,9 @@ export function DiskView() {
             </div>
             {accessOpen && canManage ? (
                 <AccessDrawer folderId={folderId} folderName={currentName} onClose={() => setAccessOpen(false)} />
+            ) : null}
+            {deletedOpen && canManage ? (
+                <DeletedFilesModal onClose={() => setDeletedOpen(false)} onRestored={refresh} />
             ) : null}
             {createOpen ? (
                 <NameModal

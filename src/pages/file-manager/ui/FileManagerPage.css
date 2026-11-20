@@ -1481,12 +1481,12 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 
 .fm-table--trash th:nth-child(1),
 .fm-table--trash td:nth-child(1) {
-  width: 34%;
+  width: auto;
 }
 
 .fm-table--trash th:nth-child(2),
 .fm-table--trash td:nth-child(2) {
-  width: 22%;
+  width: 8rem;
 }
 
 .fm-table--trash th:nth-child(3),
@@ -1501,7 +1501,13 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 
 .fm-table--trash th:nth-child(5),
 .fm-table--trash td:nth-child(5) {
-  width: auto;
+  width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-table--trash .fm-table__actions {
+  width: 12rem;
 }
 
 .fm-more {
@@ -3596,4 +3602,22 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
   .fm-table--addin td:first-child { grid-column: 1 / -1; }
   .fm-table--addin td:first-child::before { content: none; }
   .fm-docs .fm-addin__filter { min-height: 44px; }
+}
+
+/* Trash: «Корзина / Архив удалённого» (chief administrator) */
+.fm-trash__modes { display: inline-flex; gap: 0.2rem; margin-bottom: 0.75rem; padding: 0.2rem; border-radius: 10px; background: var(--fm-soft); }
+.fm-docs .fm-trash__mode { min-height: 2rem; padding: 0.3rem 0.85rem; border: 0; border-radius: 8px; background: transparent; color: var(--fm-muted); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.fm-docs .fm-trash__mode.is-on { background: var(--fm-surface); color: var(--fm-text); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); }
+@media (max-width: 760px) { .fm-docs .fm-trash__mode { min-height: 44px; } }
+
+/* Disk: deleted files (kept forever, managers restore) */
+.fm-deleted__search { margin: 0.5rem 0 0.75rem; }
+.fm-deleted { display: flex; flex-direction: column; gap: 0.35rem; max-height: min(60vh, 32rem); margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.fm-deleted li { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0.7rem; border: 1px solid var(--fm-border); border-radius: 10px; }
+.fm-deleted__info { display: flex; flex: 1; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.fm-deleted__info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-deleted__info small { color: var(--fm-muted); font-size: 0.75rem; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .fm-deleted li { flex-wrap: wrap; }
+  .fm-deleted li .fm-btn { width: 100%; justify-content: center; min-height: 44px; }
 }
