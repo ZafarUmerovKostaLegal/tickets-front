@@ -4,6 +4,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { logout } from '@shared/lib/auth';
 import { isSnowfallUser, useSnowfallPreference } from '@shared/lib/snowfall';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { DevicesDialog } from './DevicesDialog';
 import { LogoutConfirmDialog } from './LogoutConfirmDialog';
 
 const IconUserSimple = () => (<svg className="header-user-menu__user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -50,6 +51,7 @@ export function HeaderUserMenu({ variant = 'default' }: HeaderUserMenuProps) {
     const triggerId = useId();
     const [open, setOpen] = useState(false);
     const [logoutConfirm, setLogoutConfirm] = useState(false);
+    const [devicesOpen, setDevicesOpen] = useState(false);
     const [snowfallOn, setSnowfallOn] = useSnowfallPreference();
     const canToggleSnowfall = !loading && isSnowfallUser(user);
     const rootRef = useRef<HTMLDivElement>(null);
@@ -123,6 +125,18 @@ export function HeaderUserMenu({ variant = 'default' }: HeaderUserMenuProps) {
             role="menuitem"
             onClick={() => {
               close();
+              setDevicesOpen(true);
+            }}
+          >
+            {t('header.devices')}
+          </button>
+          <div className="header-user-menu__dropdown-sep" role="separator" />
+          <button
+            type="button"
+            className="header-user-menu__item"
+            role="menuitem"
+            onClick={() => {
+              close();
               setLogoutConfirm(true);
             }}
           >
@@ -130,6 +144,7 @@ export function HeaderUserMenu({ variant = 'default' }: HeaderUserMenuProps) {
           </button>
         </div>
       )}
+      <DevicesDialog open={devicesOpen} onClose={() => setDevicesOpen(false)} />
       <LogoutConfirmDialog open={logoutConfirm} onCancel={() => setLogoutConfirm(false)} onConfirm={() => {
         setLogoutConfirm(false);
         void logout();

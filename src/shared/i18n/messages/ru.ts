@@ -687,6 +687,18 @@ export const ruMessages: Messages = {
         languageRu: 'Русский',
         languageEn: 'English',
         snowfall: 'Снегопад',
+        devices: 'Устройства',
+        devicesTitle: 'Устройства и сеансы',
+        devicesHint: 'Здесь все устройства, с которых выполнен вход в ваш аккаунт. Число устройств не ограничено. Если устройство вам незнакомо — завершите его сеанс.',
+        devicesCurrent: 'Это устройство',
+        devicesUnknown: 'Неизвестное устройство',
+        devicesLastSeen: 'активность: {when}',
+        devicesSince: 'вход: {when}',
+        devicesNow: 'сейчас',
+        devicesEnd: 'Завершить',
+        devicesEndOthers: 'Завершить все остальные ({count})',
+        devicesClose: 'Закрыть',
+        devicesError: 'Не удалось загрузить список устройств',
         userMenu: 'Меню пользователя',
         logout: 'Выйти',
         logoutTitle: 'Выйти из аккаунта?',
@@ -1864,6 +1876,18 @@ export type Messages = {
         | 'languageRu'
         | 'languageEn'
         | 'snowfall'
+        | 'devices'
+        | 'devicesTitle'
+        | 'devicesHint'
+        | 'devicesCurrent'
+        | 'devicesUnknown'
+        | 'devicesLastSeen'
+        | 'devicesSince'
+        | 'devicesNow'
+        | 'devicesEnd'
+        | 'devicesEndOthers'
+        | 'devicesClose'
+        | 'devicesError'
         | 'userMenu'
         | 'logout'
         | 'logoutTitle'
