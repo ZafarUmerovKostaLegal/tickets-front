@@ -21,6 +21,8 @@
     "desktop:dev": "tauri dev",
     "desktop:dev:clean": "node -e \"try{require('fs').rmSync('node_modules/.vite',{recursive:true})}catch(e){}\" && tauri dev",
     "desktop:build": "tauri build",
+    "kostafile:dev": "cd kosta-file && tauri dev",
+    "kostafile:build": "cd kosta-file && tauri build",
     "android:init": "tauri android init",
     "android:adb:reverse": "adb reverse tcp:5173 tcp:5173 && adb reverse tcp:1234 tcp:1234",
     "android:dev": "npm run android:adb:reverse && tauri android dev --host 127.0.0.1",

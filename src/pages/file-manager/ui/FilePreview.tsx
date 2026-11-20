@@ -15,13 +15,11 @@ import { Icon, saveBlob, useFm } from './fmShared';
 const DocxView = lazy(() => import('./previewOffice').then((m) => ({ default: m.DocxView })));
 const XlsxView = lazy(() => import('./previewOffice').then((m) => ({ default: m.XlsxView })));
 
-/** Where the viewer gets bytes from — a matter document, a Disk file, or a file inside a ZIP. */
 export type PreviewSource = {
     key: string;
     name: string;
     sizeBytes: number;
     contentType: string;
-    /** Signed URL (no auth header needed): iframes, images, video. */
     link: (options: { inline?: boolean }) => Promise<string>;
     blob: () => Promise<Blob>;
     head: (bytes: number) => Promise<Blob>;

@@ -25,6 +25,7 @@ import {
     sendDocumentAttachment,
     sendDocumentLink,
 } from '../model/dmsActions';
+import { canEditInOffice, editInOffice, finishEditing, listEdits, onEditUploaded, startEditSync } from '../api/dmsEdit';
 import { getDmsClipboard, subscribeDmsClipboard } from '../model/dmsClipboard';
 import { DmsRibbon, type DmsMode } from './DmsRibbon';
 import { DmsTree, type TreeSelection } from './DmsTree';
@@ -55,6 +56,8 @@ function DmsExplorerWorkspace() {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [searchQ, setSearchQ] = useState('');
+    const [canEdit, setCanEdit] = useState(false);
+    const [editing, setEditing] = useState<Set<string>>(new Set());
 
     const matterId = tree.kind === 'matter' || tree.kind === 'folder' ? tree.matterId : null;
     const folderId = tree.kind === 'folder' ? tree.folderId : null;
@@ -111,6 +114,33 @@ function DmsExplorerWorkspace() {
         setStatus(text);
         setStatusKind(kind);
     };
+
+    useEffect(() => {
+        let alive = true;
+        void canEditInOffice().then(async (ok) => {
+            if (!alive || !ok)
+                return;
+            setCanEdit(true);
+            await startEditSync();
+            const open = await listEdits();
+            if (alive)
+                setEditing(new Set(open.map((row) => row.documentId)));
+        });
+        const stop = onEditUploaded((result) => {
+            if (result.ok) {
+                setStatus(`Saved to Kosta: ${result.fileName}`);
+                setStatusKind('ok');
+            }
+            else {
+                setStatus(`Not saved to Kosta: ${result.fileName} — ${result.error ?? ''}`);
+                setStatusKind('error');
+            }
+        });
+        return () => {
+            alive = false;
+            stop();
+        };
+    }, []);
 
     const foldersHere = useMemo(() => {
         if (!browse.data || mode !== 'browse')
@@ -275,6 +305,31 @@ function DmsExplorerWorkspace() {
                         await openDocument(selectedDocs[0]);
                     }),
                 },
+                ...(canEdit ? [{
+                    id: 'editOffice',
+                    label: 'Edit in Office',
+                    icon: 'edit' as const,
+                    disabled: !hasDoc,
+                    onClick: () => void run('Opened for editing — every save goes to Kosta', async () => {
+                        const doc = selectedDocs[0];
+                        await editInOffice(doc.id, doc.name);
+                        setEditing((prev) => new Set(prev).add(doc.id));
+                    }),
+                }, {
+                    id: 'finishEdit',
+                    label: 'Finish Editing',
+                    icon: 'check' as const,
+                    disabled: !hasDoc || !editing.has(selectedDocs[0]?.id ?? ''),
+                    onClick: () => void run('Editing finished', async () => {
+                        const doc = selectedDocs[0];
+                        await finishEditing(doc.id);
+                        setEditing((prev) => {
+                            const next = new Set(prev);
+                            next.delete(doc.id);
+                            return next;
+                        });
+                    }),
+                }] : []),
                 {
                     id: 'versions',
                     label: 'Version History',

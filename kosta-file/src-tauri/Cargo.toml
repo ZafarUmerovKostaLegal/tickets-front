@@ -1,0 +1,26 @@
+[package]
+name = "kosta-file"
+version = "1.0.0"
+description = "Kosta File — DMS Kosta Legal для Windows"
+authors = ["Kosta Legal"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "kosta_file_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+base64 = "0.22"
+tauri = { version = "2.12", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = "symbols"

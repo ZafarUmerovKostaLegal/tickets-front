@@ -1,4 +1,5 @@
 mod dms_explorer;
+mod edit_session;
 
 #[cfg(desktop)]
 fn configure_main_window(app: &tauri::App) -> tauri::Result<()> {
@@ -98,6 +99,11 @@ pub fn run() {
       dms_explorer::dms_write_temp_file,
       dms_explorer::dms_open_path,
       dms_explorer::dms_send_outlook_attachment,
+      edit_session::kf_capabilities,
+      edit_session::kf_edit_open,
+      edit_session::kf_read_edit_file,
+      edit_session::kf_edit_close,
+      edit_session::kf_edit_list,
       show_chat_notification,
     ])
     .run(tauri::generate_context!())

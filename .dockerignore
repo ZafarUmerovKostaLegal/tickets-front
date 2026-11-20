@@ -26,6 +26,9 @@ docker-build-debug.log
 # Desktop / mobile native artifacts (can be tens of GB — breaks npm ci with exit 228 / ENOSPC)
 src-tauri
 src-tauri/target
+kosta-file
+**/target
+outlook-addin/installer/out
 gen
 android
 ios
