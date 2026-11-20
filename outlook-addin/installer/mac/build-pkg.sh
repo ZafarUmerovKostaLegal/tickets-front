@@ -1,13 +1,4 @@
 #!/bin/bash
-# Builds KostaFileForOffice.pkg on macOS — for MDM (Intune, Jamf) or a double-click install.
-# The package carries no files: its postinstall runs install-mac.sh as the logged-in user,
-# so Office finds the add-in in that user's containers.
-#
-#   bash installer/mac/build-pkg.sh [version]
-#   SIGN_IDENTITY="Developer ID Installer: Kosta Legal (TEAMID)" bash installer/mac/build-pkg.sh
-#
-# Without a Developer ID Installer signature macOS Gatekeeper blocks a downloaded pkg
-# (MDM-deployed packages are fine).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -20,7 +11,6 @@ mkdir -p "$WORK/scripts" "$OUT"
 cp "$HERE/install-mac.sh" "$WORK/scripts/install-mac.sh"
 cat > "$WORK/scripts/postinstall" <<'POST'
 #!/bin/bash
-# Runs as root: install for the user at the console (the one who opened the pkg / is logged in).
 user="$(stat -f%Su /dev/console)"
 if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "loginwindow" ]; then
   echo "Нет вошедшего пользователя — Kosta File установится при его входе" >&2

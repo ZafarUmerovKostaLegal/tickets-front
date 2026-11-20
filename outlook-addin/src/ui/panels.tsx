@@ -58,11 +58,6 @@ export function LocationText({ location, compact = false, badge }: {
   );
 }
 
-/**
- * Header indicator for the open message: a coloured pill instead of a whole card.
- * Green — saved, amber — only the conversation is in Kosta, red — not saved, grey — checking.
- * Click → where exactly it is filed.
- */
 export function MailStatus({ item, filings, loading, onOpen }: {
   item: ItemInfo;
   filings: Filing[];
@@ -201,7 +196,6 @@ export type FileOptions = {
   comment: string;
 };
 
-/** Sticky bottom bar: chosen location, what to save, Save. */
 export function FileBar({ target, item, options, setOptions, busy, alreadyHere, onSave, onClear, onRule, ruleFor }: {
   target: Location | null;
   item: ItemInfo;
@@ -436,10 +430,6 @@ type ToastStatus = { text: string; kind: '' | 'ok' | 'error' } | null;
 
 const TOAST_MS = { ok: 4500, error: 9000, '': 4500 } as const;
 
-/**
- * Toast at the top of the pane: the first line is the title, the rest a short detail.
- * Success hides itself, errors stay longer, progress stays while work is running; hover pauses the timer.
- */
 export function Toast({ status, busy, onClose }: { status: ToastStatus; busy: boolean; onClose: () => void }) {
   const [hover, setHover] = useState(false);
   const [leaving, setLeaving] = useState(false);

@@ -7,9 +7,7 @@ import {
   isAllowedApiBase,
   normalizeApiBase,
   parseSettings,
-  trimConversationDocs,
   type AddinSettings,
-  type ConversationDocRef,
 } from './settings';
 
 describe('API base allowlist', () => {
@@ -60,14 +58,7 @@ describe('parseSettings', () => {
   });
 });
 
-const doc = (updatedAt: string): ConversationDocRef => ({ documentId: updatedAt, matterId: 'm', fileName: 'f', messageCount: 1, updatedAt });
-
 describe('roaming payload', () => {
-  it('keeps the newest conversation documents', () => {
-    const docs = { a: doc('2026-01-01'), b: doc('2026-03-01'), c: doc('2026-02-01') };
-    expect(Object.keys(trimConversationDocs(docs, 2))).toEqual(['b', 'c']);
-  });
-
   it('stays under the Office 32 KB roaming limit and keeps rules intact', () => {
     const settings: AddinSettings = {
       apiBase: DEFAULT_API_BASE,
@@ -75,7 +66,6 @@ describe('roaming payload', () => {
         id: `r${i}`, match: `@client${i}.com`, matterId: `m${i}`, matterName: `Matter ${i}`, clientName: `Client ${i}`, autoFile: true, enabled: true,
       })),
       filedMessageIds: Array.from({ length: MAX_FILED }, (_, i) => `${'x'.repeat(60)}${i}@mail.example.com`),
-      conversationDocs: Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`conv:${i}`, doc(`2026-01-${String((i % 28) + 1).padStart(2, '0')}T${i}`)])),
       pinTipDismissed: true,
     };
     const payload = buildRoamingPayload(settings);

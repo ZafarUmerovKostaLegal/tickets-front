@@ -104,6 +104,28 @@ export type FolderRow = {
 
 export type Crumb = { id: string; name: string };
 
+export type AddinClient = {
+    clientId: string;
+    userId: number;
+    userName: string;
+    host: 'outlook' | 'word' | 'excel' | 'powerpoint' | 'unknown';
+    platform: 'windows' | 'mac' | 'web' | 'ios' | 'android' | 'unknown';
+    officeVersion: string;
+    addinVersion: string;
+    authMethod: 'token' | 'cookie' | 'sso' | 'dialog' | 'unknown';
+    ssoStatus: 'ok' | 'unsupported' | 'failed' | 'consent' | 'unknown';
+    ssoError: string;
+    ip: string;
+    firstSeen: string | null;
+    lastSeen: string | null;
+    online: boolean;
+};
+
+export type AddinClientsResponse = {
+    clients: AddinClient[];
+    summary: { online: number; onlineUsers: number; users: number; installs: number; ssoProblems: number };
+};
+
 export type BrowseResponse = {
     matter: { id: string; name: string; code: string; closed: boolean; level: AccessLevel; favorite: boolean };
     client: { id: string; name: string };
@@ -368,6 +390,7 @@ export const filesApi = {
     audit: (params: { matterId?: string; userId?: number; action?: string; q?: string; limit?: number; offset?: number }) =>
         request<{ items: AuditRow[]; total: number }>(`/audit${query(params)}`),
     stats: () => request<StatsResponse>('/stats'),
+    addinClients: (days = 30) => request<AddinClientsResponse>(`/admin/addin-clients?days=${days}`),
     template: () => request<{ folders: string[]; canEdit: boolean }>('/settings/template'),
     saveTemplate: (folders: string[]) => request<{ folders: string[] }>('/settings/template', json('PUT', { folders })),
     resetTemplate: () => request<{ folders: string[] }>('/settings/template', { method: 'DELETE' }),

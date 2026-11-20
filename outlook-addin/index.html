@@ -4,11 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kosta File</title>
-    <!--
-      Start-up diagnostics, before anything else loads (plain ES5 on purpose).
-      Never leave a blank pane: if Office does not get ready, show the stage, blocked resources and
-      CSP violations so the cause is visible on the user's machine.
-    -->
     <script>
       (function () {
         var issues = [];
@@ -71,8 +66,6 @@
           app.querySelector('button').onclick = function () { location.reload(); };
         };
 
-        // Office may be slow on the first start: warn after 20 s but keep waiting — the pane still
-        // opens by itself if Office answers later.
         setTimeout(function () {
           if (window.__kfStarted)
             return;

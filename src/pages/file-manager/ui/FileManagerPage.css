@@ -3555,3 +3555,45 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   --fm-soft: var(--app-bg-soft, #f4f6f8);
   --fm-hover: var(--app-surface-soft, #f5f8fc);
 }
+
+/* Kosta File add-in connections */
+.fm-addin__hint { margin: 0 0 0.85rem; font-size: 0.82rem; }
+.fm-addin__filters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 0.7rem; }
+.fm-docs .fm-addin__filter {
+  min-height: 2rem;
+  padding: 0.25rem 0.8rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 999px;
+  background: var(--fm-surface);
+  color: var(--fm-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fm-docs .fm-addin__filter.is-on { border-color: var(--fm-accent-border); background: var(--fm-accent-soft); color: var(--fm-accent); }
+.fm-addin__user { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; }
+.fm-addin__dot { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--fm-muted) 45%, transparent); }
+.fm-addin__dot.is-online { background: var(--app-success, #16a34a); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-success, #16a34a) 18%, transparent); }
+.fm-addin__sub { display: block; margin-top: 0.1rem; font-size: 0.72rem; }
+.fm-addin__sso { color: var(--app-error, #b42318); overflow-wrap: anywhere; }
+.fm-addin__now { color: var(--app-success, #15803d); font-weight: 700; }
+body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(in srgb, var(--app-error, #b42318) 12%, transparent); }
+
+@media (max-width: 760px) {
+  .fm-table--addin thead { display: none; }
+  .fm-table--addin,
+  .fm-table--addin tbody { display: block; }
+  .fm-table--addin tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 0.75rem;
+    padding: 0.7rem 0.2rem;
+    border-bottom: 1px solid var(--fm-border);
+  }
+  .fm-table--addin td { display: flex; flex-direction: column; padding: 0; border: 0; white-space: normal; }
+  .fm-table--addin td::before { content: attr(data-label); color: var(--fm-muted); font-size: 0.68rem; font-weight: 600; }
+  .fm-table--addin td:first-child { grid-column: 1 / -1; }
+  .fm-table--addin td:first-child::before { content: none; }
+  .fm-docs .fm-addin__filter { min-height: 44px; }
+}

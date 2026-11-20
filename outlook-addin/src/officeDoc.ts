@@ -1,5 +1,3 @@
-/** Read the open Word/Excel/PowerPoint file as a Blob for FM upload. */
-
 function fileNameFromUrl(url: string): string {
   try {
     const path = decodeURIComponent(url.split(/[?#]/)[0] || '');
@@ -7,7 +5,6 @@ function fileNameFromUrl(url: string): string {
     if (base && /\.[a-z0-9]{2,8}$/i.test(base))
       return base;
   } catch {
-    /* ignore */
   }
   return '';
 }
@@ -58,7 +55,6 @@ export async function readCurrentOfficeDocument(host: Office.HostType | undefine
     if (fromUrl)
       suggested = fromUrl;
   } catch {
-    /* keep default */
   }
 
   const officeFile = await new Promise<Office.File>((resolve, reject) => {

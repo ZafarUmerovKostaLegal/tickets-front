@@ -1,19 +1,33 @@
-/**
- * Nested App Authentication: Outlook / Office hands us a token for the account already signed in,
- * so the user never sees a separate Microsoft login.
- *
- * Azure app registration needs the SPA redirect URI `brk-multihub://<add-in host>`
- * (e.g. brk-multihub://tickets.kostalegal.com). Without it the silent call fails and the pane
- * falls back to the dialog login button.
- */
 import type { AuthenticationResult, IPublicClientApplication } from '@azure/msal-browser';
 
 export const GRAPH_SCOPES = ['User.Read', 'Mail.Read'];
 
 export type AzureAppInfo = { clientId: string; tenantId: string };
 
+export type SsoStatus = 'ok' | 'unsupported' | 'failed' | 'consent' | 'unknown';
+
 let pcaPromise: Promise<IPublicClientApplication | null> | null = null;
 let pcaKey = '';
+let lastStatus: SsoStatus = 'unknown';
+let lastError = '';
+
+export function ssoState(): { status: SsoStatus; error: string } {
+  return { status: lastStatus, error: lastError };
+}
+
+function remember(status: SsoStatus, error = ''): void {
+  lastStatus = status;
+  lastError = error.slice(0, 300);
+}
+
+function describe(error: unknown): { status: SsoStatus; text: string } {
+  const code = String((error as { errorCode?: unknown })?.errorCode ?? '').trim();
+  const message = String((error as { errorMessage?: unknown; message?: unknown })?.errorMessage
+    ?? (error as { message?: unknown })?.message ?? error ?? '').trim();
+  const text = [code, message].filter(Boolean).join(': ') || 'unknown error';
+  const consent = /interaction_required|consent_required|login_required|no_account|AADSTS65001/i.test(text);
+  return { status: consent ? 'consent' : 'failed', text };
+}
 
 export function naaSupported(): boolean {
   try {
@@ -24,8 +38,10 @@ export function naaSupported(): boolean {
 }
 
 async function getPca(app: AzureAppInfo): Promise<IPublicClientApplication | null> {
-  if (!naaSupported())
+  if (!naaSupported()) {
+    remember('unsupported', 'NestedAppAuth 1.1 is not supported by this Office');
     return null;
+  }
   const key = `${app.tenantId}|${app.clientId}`;
   if (!pcaPromise || pcaKey !== key) {
     pcaKey = key;
@@ -37,7 +53,10 @@ async function getPca(app: AzureAppInfo): Promise<IPublicClientApplication | nul
         },
         cache: { cacheLocation: 'localStorage' },
       }))
-      .catch(() => null);
+      .catch((error: unknown) => {
+        remember('failed', describe(error).text);
+        return null;
+      });
   }
   return pcaPromise;
 }
@@ -46,7 +65,6 @@ function usable(result: AuthenticationResult | null | undefined): result is Auth
   return Boolean(result?.accessToken && result.idToken);
 }
 
-/** Silent token from the Outlook account. Returns null when NAA is unavailable or needs consent. */
 export async function naaTokenSilent(app: AzureAppInfo): Promise<AuthenticationResult | null> {
   const pca = await getPca(app);
   if (!pca)
@@ -56,13 +74,19 @@ export async function naaTokenSilent(app: AzureAppInfo): Promise<AuthenticationR
     const result = await pca.acquireTokenSilent({ scopes: GRAPH_SCOPES, ...(account ? { account } : {}) });
     if (result.account)
       pca.setActiveAccount(result.account);
-    return usable(result) ? result : null;
-  } catch {
+    if (!usable(result)) {
+      remember('failed', 'Empty token from Office');
+      return null;
+    }
+    remember('ok');
+    return result;
+  } catch (error) {
+    const { status, text } = describe(error);
+    remember(status, text);
     return null;
   }
 }
 
-/** Consent / MFA prompt shown by Outlook itself (one click, no extra Kosta dialog). */
 export async function naaTokenInteractive(app: AzureAppInfo): Promise<AuthenticationResult | null> {
   const pca = await getPca(app);
   if (!pca)
@@ -71,8 +95,14 @@ export async function naaTokenInteractive(app: AzureAppInfo): Promise<Authentica
     const result = await pca.acquireTokenPopup({ scopes: GRAPH_SCOPES });
     if (result.account)
       pca.setActiveAccount(result.account);
-    return usable(result) ? result : null;
-  } catch {
+    if (!usable(result)) {
+      remember('failed', 'Empty token from Office');
+      return null;
+    }
+    remember('ok');
+    return result;
+  } catch (error) {
+    remember('failed', describe(error).text);
     return null;
   }
 }

@@ -10,7 +10,6 @@ type Matter = ClientNode['matters'][number];
 
 type Props = {
   clients: ClientNode[];
-  /** While filtering every client is shown open. */
   autoExpand: boolean;
   expanded: ReadonlySet<string>;
   onToggle: (key: string) => void;

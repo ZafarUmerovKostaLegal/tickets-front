@@ -4,14 +4,12 @@ export type FilingRule = {
   matterId: string;
   matterName: string;
   clientName: string;
-  /** Target folder; empty means Correspondence/Emails of the matter (older rules). */
   folderId?: string | null;
   folderPath?: Array<{ id: string; name: string }>;
   autoFile: boolean;
   enabled: boolean;
 };
 
-/** A filing location remembered on this device (MacroView "recent locations"). */
 export type RecentTarget = {
   matterId: string;
   matterName: string;
@@ -23,22 +21,10 @@ export type RecentTarget = {
   usedAt: string;
 };
 
-export type ConversationDocRef = {
-  documentId: string;
-  matterId: string;
-  fileName: string;
-  messageCount: number;
-  updatedAt: string;
-};
-
 export type AddinSettings = {
-  /** File Manager API, e.g. https://ticketsback.kostalegal.com/api/v1/files */
   apiBase: string;
   rules: FilingRule[];
   filedMessageIds: string[];
-  /** conversationStorageKey → FM document (single thread file) */
-  conversationDocs: Record<string, ConversationDocRef>;
-  /** User dismissed the “pin the pane” tip after pinning once. */
   pinTipDismissed: boolean;
   recentTargets: RecentTarget[];
 };
@@ -47,29 +33,20 @@ const KEY = 'kosta.file.addin.settings';
 
 export const DEFAULT_API_BASE = 'https://ticketsback.kostalegal.com/api/v1/files';
 
-/**
- * The Hub bearer token is sent to `apiBase`, so it may only point to our own gateways.
- * Anything else falls back to the default instead of leaking the token.
- */
 const ALLOWED_API_ORIGINS = new Set([
   'https://ticketsback.kostalegal.com',
   ...(import.meta.env.DEV ? ['https://localhost:8000', 'http://localhost:8000', 'http://127.0.0.1:8000'] : []),
 ]);
 
-/** Local history limits (localStorage, ~5 MB). */
 export const MAX_FILED = 400;
-export const MAX_CONVERSATION_DOCS = 200;
 
-/** Office roaming settings are capped at 32 KB per add-in — keep a smaller slice there. */
 const ROAMING_MAX_FILED = 80;
-const ROAMING_MAX_CONVERSATION_DOCS = 40;
 const ROAMING_BUDGET_CHARS = 28_000;
 
 const defaults: AddinSettings = {
   apiBase: DEFAULT_API_BASE,
   rules: [],
   filedMessageIds: [],
-  conversationDocs: {},
   pinTipDismissed: false,
   recentTargets: [],
 };
@@ -89,7 +66,6 @@ export function normalizeApiBase(value: string): string {
   let trimmed = String(value ?? '').trim().replace(/[!\s]+$/g, '').replace(/\/+$/, '');
   if (!trimmed)
     return DEFAULT_API_BASE;
-  // Truncation / typo: .../api/v1/file  →  .../api/v1/files
   trimmed = trimmed.replace(/\/api\/v1\/file$/i, '/api/v1/files');
   return isAllowedApiBase(trimmed) ? trimmed : DEFAULT_API_BASE;
 }
@@ -175,18 +151,6 @@ function normalizeFiled(value: unknown, limit: number): string[] {
   return out;
 }
 
-/** Keep the most recently updated conversation documents. */
-export function trimConversationDocs(
-  docs: Record<string, ConversationDocRef>,
-  limit: number,
-): Record<string, ConversationDocRef> {
-  const entries = Object.entries(docs)
-    .filter(([, ref]) => ref && typeof ref.documentId === 'string')
-    .sort((a, b) => String(b[1].updatedAt).localeCompare(String(a[1].updatedAt)))
-    .slice(0, limit);
-  return Object.fromEntries(entries);
-}
-
 export function parseSettings(raw: unknown, fallback: AddinSettings = defaults): AddinSettings {
   if (!raw || typeof raw !== 'object')
     return { ...fallback };
@@ -197,27 +161,18 @@ export function parseSettings(raw: unknown, fallback: AddinSettings = defaults):
     filedMessageIds: Array.isArray(parsed.filedMessageIds)
       ? normalizeFiled(parsed.filedMessageIds, MAX_FILED)
       : fallback.filedMessageIds,
-    conversationDocs: parsed.conversationDocs && typeof parsed.conversationDocs === 'object'
-      ? trimConversationDocs(parsed.conversationDocs as Record<string, ConversationDocRef>, MAX_CONVERSATION_DOCS)
-      : fallback.conversationDocs,
     pinTipDismissed: typeof parsed.pinTipDismissed === 'boolean' ? parsed.pinTipDismissed : fallback.pinTipDismissed,
     recentTargets: Array.isArray(parsed.recentTargets) ? normalizeRecentTargets(parsed.recentTargets) : fallback.recentTargets,
   };
 }
 
-/**
- * Serialise the roaming copy within the Office 32 KB limit: rules and flags always fit,
- * the dedupe history is trimmed until the payload is small enough.
- */
 export function buildRoamingPayload(settings: AddinSettings): string {
   let filed = settings.filedMessageIds.slice(0, ROAMING_MAX_FILED);
-  let docs = trimConversationDocs(settings.conversationDocs, ROAMING_MAX_CONVERSATION_DOCS);
   for (;;) {
-    const json = JSON.stringify({ ...settings, filedMessageIds: filed, conversationDocs: docs });
-    if (json.length <= ROAMING_BUDGET_CHARS || (filed.length === 0 && Object.keys(docs).length === 0))
+    const json = JSON.stringify({ ...settings, filedMessageIds: filed });
+    if (json.length <= ROAMING_BUDGET_CHARS || filed.length === 0)
       return json;
     filed = filed.slice(0, Math.floor(filed.length / 2));
-    docs = trimConversationDocs(docs, Math.floor(Object.keys(docs).length / 2));
   }
 }
 
@@ -234,7 +189,6 @@ function writeLocal(settings: AddinSettings): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(settings));
   } catch {
-    /* storage full or blocked — roaming copy still works */
   }
 }
 
@@ -254,12 +208,10 @@ export function saveSettings(patch: Partial<AddinSettings>): AddinSettings {
       roaming.saveAsync(() => undefined);
     }
   } catch {
-    /* roaming optional */
   }
   return cache;
 }
 
-/** Merge roaming settings (other devices) into the local copy. */
 export function loadRoamingSettings(): Promise<AddinSettings> {
   try {
     const raw = Office?.context?.roamingSettings?.get(KEY);
@@ -267,14 +219,11 @@ export function loadRoamingSettings(): Promise<AddinSettings> {
       const remote = parseSettings(JSON.parse(raw), cache);
       cache = {
         ...remote,
-        // History is trimmed in roaming — keep the union with the fuller local copy.
         filedMessageIds: normalizeFiled([...remote.filedMessageIds, ...cache.filedMessageIds], MAX_FILED),
-        conversationDocs: trimConversationDocs({ ...cache.conversationDocs, ...remote.conversationDocs }, MAX_CONVERSATION_DOCS),
       };
       writeLocal(cache);
     }
   } catch {
-    /* keep local */
   }
   return Promise.resolve(cache);
 }
@@ -295,20 +244,6 @@ export function wasFiled(messageId: string): boolean {
   return cache.filedMessageIds.includes(id);
 }
 
-export function getConversationDoc(storageKey: string): ConversationDocRef | null {
-  return cache.conversationDocs[storageKey] || null;
-}
-
-export function setConversationDoc(storageKey: string, ref: ConversationDocRef): void {
-  saveSettings({
-    conversationDocs: {
-      ...cache.conversationDocs,
-      [storageKey]: ref,
-    },
-  });
-}
-
-/** Put a location on top of the recent list (most recent first, no duplicates). */
 export function rememberTarget(target: Omit<RecentTarget, 'usedAt'>): void {
   saveSettings({
     recentTargets: normalizeRecentTargets([{ ...target, usedAt: new Date().toISOString() }, ...cache.recentTargets]),

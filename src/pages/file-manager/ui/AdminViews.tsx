@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { filesApi, type AuditRow, type ClientsResponse } from '../api/filesApi';
+import { filesApi, type AddinClient, type AuditRow, type ClientsResponse } from '../api/filesApi';
 import { formatBytes, formatDateTime, parseTemplate } from '../lib/filesFormat';
 import { FmSelect } from './fmSelect';
 import { Icon, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
@@ -197,6 +197,116 @@ export function MonitoringView({ onOpenAudit }: { onOpenAudit: () => void }) {
                                 ) : <p className="fm-muted">{tr('monitoring.noData')}</p>}
                             </div>
                         </div>
+                    </>
+                ) : null}
+            </StateBlock>
+        </section>
+    );
+}
+
+type AddinFilter = 'all' | 'online' | 'problems';
+
+const SSO_PROBLEMS = new Set<AddinClient['ssoStatus']>(['failed', 'unsupported', 'consent']);
+
+export function AddinClientsView() {
+    const { tr, locale } = useFm();
+    const load = useLoad(() => filesApi.addinClients(30), []);
+    const [filter, setFilter] = useState<AddinFilter>('all');
+    const reload = load.reload;
+    useEffect(() => {
+        const timer = window.setInterval(() => {
+            if (!document.hidden)
+                reload();
+        }, 60_000);
+        return () => window.clearInterval(timer);
+    }, [reload]);
+    const data = load.data;
+    const rows = useMemo(() => (data?.clients ?? []).filter((row) => (
+        filter === 'online' ? row.online : filter === 'problems' ? SSO_PROBLEMS.has(row.ssoStatus) : true
+    )), [data, filter]);
+    const filters: { id: AddinFilter; label: string }[] = [
+        { id: 'all', label: tr('addin.filterAll') },
+        { id: 'online', label: tr('addin.filterOnline') },
+        { id: 'problems', label: tr('addin.filterProblems') },
+    ];
+    return (
+        <section className="fm-docs fm-docs--padded">
+            <p className="fm-muted fm-addin__hint">{tr('addin.hint')}</p>
+            <StateBlock loading={load.loading && !data} error={load.error} onRetry={load.reload}>
+                {data ? (
+                    <>
+                        <div className="fm-stats">
+                            <Stat label={tr('addin.online')} value={data.summary.online} />
+                            <Stat label={tr('addin.onlineUsers')} value={data.summary.onlineUsers} />
+                            <Stat label={tr('addin.installs')} value={data.summary.installs} />
+                            <Stat label={tr('addin.problems')} value={data.summary.ssoProblems} tone={data.summary.ssoProblems ? 'alert' : undefined} />
+                        </div>
+                        <div className="fm-addin__filters" role="tablist">
+                            {filters.map((item) => (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={filter === item.id}
+                                    className={`fm-addin__filter${filter === item.id ? ' is-on' : ''}`}
+                                    onClick={() => setFilter(item.id)}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                        {rows.length ? (
+                            <div className="fm-table-wrap">
+                                <table className="fm-table fm-table--addin">
+                                    <thead>
+                                        <tr>
+                                            <th>{tr('addin.user')}</th>
+                                            <th>{tr('addin.app')}</th>
+                                            <th>{tr('addin.version')}</th>
+                                            <th>{tr('addin.signIn')}</th>
+                                            <th>{tr('addin.lastSeen')}</th>
+                                            <th>{tr('addin.ip')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows.map((row) => {
+                                            const problem = SSO_PROBLEMS.has(row.ssoStatus);
+                                            const platform = tr(`addin.platforms.${row.platform}`);
+                                            return (
+                                                <tr key={row.clientId} className={problem ? 'is-denied' : undefined}>
+                                                    <td data-label={tr('addin.user')}>
+                                                        <span className="fm-addin__user">
+                                                            <i className={`fm-addin__dot${row.online ? ' is-online' : ''}`} aria-hidden />
+                                                            {row.userName || `#${row.userId}`}
+                                                        </span>
+                                                    </td>
+                                                    <td data-label={tr('addin.app')}>
+                                                        {tr(`addin.hosts.${row.host}`)}
+                                                        {platform ? <span className="fm-muted"> · {platform}</span> : null}
+                                                    </td>
+                                                    <td data-label={tr('addin.version')} className="fm-nowrap">
+                                                        {row.addinVersion || '—'}
+                                                        {row.officeVersion ? <small className="fm-muted fm-addin__sub">Office {row.officeVersion}</small> : null}
+                                                    </td>
+                                                    <td data-label={tr('addin.signIn')}>
+                                                        {tr(`addin.methods.${row.authMethod}`)}
+                                                        {problem ? (
+                                                            <small className="fm-addin__sub fm-addin__sso" title={row.ssoError || undefined}>
+                                                                {tr(`addin.sso.${row.ssoStatus}`)}{row.ssoError ? `: ${row.ssoError}` : ''}
+                                                            </small>
+                                                        ) : null}
+                                                    </td>
+                                                    <td data-label={tr('addin.lastSeen')} className="fm-nowrap">
+                                                        {row.online ? <strong className="fm-addin__now">{tr('addin.now')}</strong> : formatDateTime(row.lastSeen, locale)}
+                                                    </td>
+                                                    <td data-label={tr('addin.ip')} className="fm-muted fm-nowrap">{row.ip || '—'}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : <p className="fm-muted">{tr('addin.empty')}</p>}
                     </>
                 ) : null}
             </StateBlock>

@@ -1,14 +1,4 @@
 #!/bin/bash
-# Kosta File for Office — macOS (Word, Excel, PowerPoint). Per-user, no administrator rights.
-#
-#   curl -fsSL https://tickets.kostalegal.com/outlook-addin/install-mac.sh | bash            # install
-#   bash ~/Library/Application\ Support/Kosta/KostaFile/kostafile.sh uninstall                  # remove
-#
-# Office for Mac loads add-ins whose manifest sits in each app's container:
-#   ~/Library/Containers/com.microsoft.<App>/Data/Documents/wef/
-# A LaunchAgent re-runs this script at every login: it refreshes the manifest (new versions and
-# buttons arrive by themselves) and picks up Office apps opened for the first time after install.
-# Outlook for Mac takes add-ins from the Exchange mailbox — IT deploys it for the organisation.
 set -euo pipefail
 
 BASE="${KOSTA_FILE_BASE:-https://tickets.kostalegal.com/outlook-addin/}"
@@ -20,10 +10,10 @@ AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$SUPPORT/install.log"
 APPS=("Word:Microsoft Word" "Excel:Microsoft Excel" "Powerpoint:Microsoft PowerPoint")
 MODE="${1:-install}"
-APPS_DIR="${KOSTA_FILE_APPS_DIR:-/Applications}"   # override only for tests
+APPS_DIR="${KOSTA_FILE_APPS_DIR:-/Applications}"
 
 mkdir -p "$SUPPORT"
-log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG" >&2; }  # stderr: stdout carries results
+log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG" >&2; }
 
 valid_manifest() { [ -s "$1" ] && grep -q '<OfficeApp' "$1" && grep -q '<Id>' "$1"; }
 
@@ -43,7 +33,6 @@ fetch_manifest() {
   fi
 }
 
-# The installer itself is kept locally for the login refresh and for uninstall.
 keep_self() {
   if [ -f "${BASH_SOURCE[0]:-}" ] && [ "${BASH_SOURCE[0]}" != "$SELF" ]; then
     cp -f "${BASH_SOURCE[0]}" "$SELF"
@@ -61,7 +50,6 @@ install_manifest() {
     if [ ! -d "$APPS_DIR/$name.app" ] && [ ! -d "$HOME/Applications/$name.app" ]; then
       continue
     fi
-    # macOS creates the container on the app's first launch; never fake it.
     if [ ! -d "$container" ]; then
       log "$name ещё ни разу не открывался — Kosta File добавится после первого запуска и следующего входа"
       continue

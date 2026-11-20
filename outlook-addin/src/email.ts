@@ -1,4 +1,3 @@
-/** Headers of the open message — cheap to read on every ItemChanged. */
 export type MailMeta = {
   messageId: string;
   subject: string;
@@ -14,12 +13,10 @@ export type MailSnapshot = MailMeta & {
   bodyText: string;
 };
 
-/** Stable id for dedupe (Outlook may include or omit &lt;&gt;). */
 export function normalizeMessageId(value: string): string {
   return value.trim().replace(/^<|>$/g, '').toLowerCase();
 }
 
-/** Some hosts put "Name <mail@x>" into emailAddress — keep the bare address for rules. */
 export function bareEmailAddress(raw: string): string {
   const value = (raw || '').trim();
   return (value.match(/<([^>]+)>/)?.[1] || value).trim();
@@ -60,15 +57,10 @@ function readMeta(item: Office.MessageRead): MailMeta {
   };
 }
 
-/** Headers only — no body round-trips. */
 export function readCurrentMailMeta(): MailMeta {
   return readMeta(getItem());
 }
 
-/**
- * Full message with HTML and text bodies (needed only when uploading).
- * Throws if the user switched to another message meanwhile.
- */
 export async function readCurrentMail(expectedMessageId?: string): Promise<MailSnapshot> {
   const item = getItem();
   const meta = readMeta(item);
@@ -102,11 +94,9 @@ export function emlFileName(subject: string, received: string): string {
   return `${received.slice(0, 10)}_${safe}.eml`;
 }
 
-/** RFC 5322 message text: headers, one blank line, then a multipart/alternative body. */
 export function buildEmlText(mail: MailSnapshot, boundary = `kosta_${Date.now().toString(36)}`): string {
   const text = mail.bodyText || mail.bodyHtml.replace(/<[^>]+>/g, ' ');
   const html = mail.bodyHtml || `<pre>${escapeHtml(text)}</pre>`;
-  // An empty line ends the header block, so optional headers must be dropped, not blanked.
   const headers = [
     `From: ${encodeHeader(mail.fromName)} <${mail.fromEmail}>`,
     `To: ${mail.to || 'undisclosed-recipients:;'}`,
@@ -134,7 +124,6 @@ export function buildEmlText(mail: MailSnapshot, boundary = `kosta_${Date.now().
   return `${headers.join('\r\n')}\r\n\r\n${body.join('\r\n')}`;
 }
 
-/** Build a simple .eml for upload into Correspondence/Emails. */
 export function buildEml(mail: MailSnapshot): File {
   const blob = new Blob([buildEmlText(mail)], { type: 'message/rfc822' });
   return new File([blob], emlFileName(mail.subject, mail.received), { type: 'message/rfc822' });

@@ -21,6 +21,7 @@ import {
   type Suggestion,
 } from '../api';
 import { loginWithHub, logoutHub, signInSilently } from '../auth/authApi';
+import { startPresence } from '../presence';
 import { clearLegacyOutlookTokens, type AuthProfile } from '../auth/session';
 import { filterClients, folderPath, hasForeignMatters, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
 import { fileDropped, fileMail, fileOfficeDocument, ruleTarget, type FileResult } from '../filing';
@@ -62,7 +63,6 @@ function writeUi(state: UiState): void {
   try {
     localStorage.setItem(UI_KEY, JSON.stringify(state));
   } catch {
-    /* ignore */
   }
 }
 
@@ -73,19 +73,16 @@ function errorText(error: unknown): string {
 function resultText(result: FileResult, target: Location): Status {
   if (!result.saved.length)
     return { text: result.failed.join('\n') || 'Ничего не сохранено', kind: 'error' };
-  // First line is the toast title, the rest is the detail (full text stays in the tooltip).
   const where = [target.matterCode || target.matterName, ...target.folderPath.map((crumb) => crumb.name)].filter(Boolean).join(' › ');
   const files = result.saved.join(' · ');
   if (result.failed.length)
     return { text: `Сохранено частично\n${where}\nНе удалось: ${result.failed.join('; ')}`, kind: 'error' };
-  // Nothing new written: the letter / file is already in Kosta, no copy was made.
   if (!result.fresh)
     return { text: `Уже есть в Kosta — копия не создана\n${files}`, kind: 'ok' };
   return { text: `Сохранено в ${where || locationLabel(target)}\n${files}`, kind: 'ok' };
 }
 
 function defaultOptions(): FileOptions {
-  // The .eml already contains the attachments; separate files are opt-in (MacroView does the same).
   return { message: true, thread: false, attachments: [], comment: '' };
 }
 
@@ -102,7 +99,6 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [tab, setTab] = useState<Tab>(ui.current.tab);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(ui.current.expanded));
   const [hideClosed, setHideClosed] = useState(ui.current.hideClosed);
-  /** Managers see the whole firm; by default the tree shows only their own matters. */
   const [allMatters, setAllMatters] = useState(ui.current.allMatters);
   const [filter, setFilter] = useState('');
 
@@ -142,12 +138,18 @@ export function App({ host }: { host: Office.HostType | null }) {
     writeUi({ tab, expanded: [...expanded], hideClosed, allMatters });
   }, [tab, expanded, hideClosed, allMatters]);
 
+  const profileId = profile?.id ?? null;
+  useEffect(() => {
+    if (phase !== 'ready' || profileId == null)
+      return;
+    return startPresence();
+  }, [phase, profileId]);
+
   const refreshSettings = useCallback(() => {
     setRules(getSettings().rules);
     setRecent(getSettings().recentTargets);
   }, []);
 
-  // ── Sign-in: stored token or Outlook's own account; the button only when both fail ──
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -198,7 +200,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     setPhase('signin');
   };
 
-  // ── Directory ──
   const loadClients = useCallback(async (force = false) => {
     try {
       setClientsError('');
@@ -212,7 +213,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     try {
       setFavorites(await listFavorites());
     } catch {
-      /* optional */
     }
   }, []);
 
@@ -238,7 +238,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     }
   }, []);
 
-  // Expanded matters restored from the last session need their folders.
   useEffect(() => {
     if (phase !== 'ready')
       return;
@@ -261,7 +260,6 @@ export function App({ host }: { host: Office.HostType | null }) {
       void loadFolders(key.slice(2));
   };
 
-  /** Fill client name / folder path of a location known only by ids (search hit, favourite, rule). */
   const completeLocation = useCallback(async (matterId: string, folderId: string | null, fallback?: Partial<Location>): Promise<Location> => {
     const client = latest.current.clients.find((row) => row.matters.some((m) => m.id === matterId));
     const matter = client?.matters.find((m) => m.id === matterId);
@@ -277,7 +275,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     };
   }, [loadFolders]);
 
-  /** Select a place and reveal it in the tree. */
   const pick = useCallback((location: Location) => {
     setTarget(location);
     setExpanded((prev) => {
@@ -291,7 +288,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     void loadFolders(location.matterId);
   }, [loadFolders]);
 
-  // ── Current Outlook item ──
   const fileWithRule = useCallback(async (info: ItemInfo, found: Filing[]) => {
     const rule = matchRule(info.fromEmail, getSettings().rules);
     if (!rule?.autoFile || info.mode !== 'read' || latest.current.busy)
@@ -356,25 +352,21 @@ export function App({ host }: { host: Office.HostType | null }) {
     refreshItem();
     try {
       Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => {
-        // Surviving ItemChanged means the pane is pinned.
         if (!getSettings().pinTipDismissed)
           saveSettings({ pinTipDismissed: true });
         setPinTip(false);
         refreshItem();
       });
     } catch {
-      /* older clients */
     }
     return () => {
       try {
         Office.context.mailbox.removeHandlerAsync(Office.EventType.ItemChanged);
       } catch {
-        /* ignore */
       }
     };
   }, [phase, isOutlook, refreshItem]);
 
-  // ── Suggested locations (rule → thread → sender → domain → my recent) ──
   const rule = item?.mode === 'read' ? matchRule(item.fromEmail, rules) : null;
   const [ruleLocation, setRuleLocation] = useState<Location | null>(null);
   useEffect(() => {
@@ -395,14 +387,12 @@ export function App({ host }: { host: Office.HostType | null }) {
     filings,
   }), [rule, ruleLocation, server, recent, filings]);
 
-  // Thread or rule match: preselect it, like MacroView's predicted location.
   useEffect(() => {
     const top = suggestions[0];
     if (top && (top.reason === 'conversation' || top.reason === 'rule'))
       setTarget((current) => current ?? top);
   }, [suggestions]);
 
-  // ── Folder contents of the chosen place ──
   useEffect(() => {
     if (!target || phase !== 'ready') {
       setFolderDocs(null);
@@ -418,7 +408,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     };
   }, [target, phase]);
 
-  // ── Search ──
   useEffect(() => {
     const text = query.trim();
     if (text.length < 2) {
@@ -440,7 +429,6 @@ export function App({ host }: { host: Office.HostType | null }) {
       recentDocuments().then(setRecentDocs).catch(() => undefined);
   }, [phase, tab, compose]);
 
-  // ── Actions ──
   const run = async (work: () => Promise<Status>) => {
     setBusy(true);
     try {
@@ -559,7 +547,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     setStatus({ text: `Правило: письма ${match} → ${locationLabel(target)}`, kind: 'ok' });
   };
 
-  // ── Drag & drop from Outlook (new Outlook / web): hit-test the tree row under the pointer ──
   const dropAt = useRef<(x: number, y: number) => Location | null>(() => null);
   dropAt.current = (x, y) => {
     const row = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-drop-matter]');
@@ -603,7 +590,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     });
   }, [phase, isOutlook]);
 
-  // ── Render ──
   if (phase === 'boot') {
     return (
       <main className="kf-boot" aria-busy="true">
@@ -619,7 +605,6 @@ export function App({ host }: { host: Office.HostType | null }) {
   const canSeeForeign = hasForeignMatters(clients);
   const onlyMine = canSeeForeign && !allMatters;
   const filtered = filterClients(clients, filter, { hideClosed, onlyMine });
-  // Searching only my matters: say how many more the firm-wide list would find.
   const foreignHits = onlyMine && filter.trim()
     ? filterClients(clients, filter, { hideClosed }).reduce((n, c) => n + c.matters.length, 0)
       - filtered.reduce((n, c) => n + c.matters.length, 0)
@@ -629,7 +614,6 @@ export function App({ host }: { host: Office.HostType | null }) {
     ...favorites.matters.map((m) => `matter:${m.id}`),
     ...favorites.folders.map((f) => `folder:${f.id}`),
   ]);
-  // The server keeps one copy of a letter per matter, wherever it was filed.
   const alreadyHere = Boolean(target && filings.some((f) => f.sameMessage && f.kind === 'email' && f.matterId === target.matterId));
   const sub = isDocument ? hostLabel(host ?? undefined) : compose ? 'Новое письмо' : item ? 'Письмо' : 'Выберите письмо';
 

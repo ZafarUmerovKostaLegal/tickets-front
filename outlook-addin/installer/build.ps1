@@ -1,16 +1,4 @@
-﻿<#
-  Builds KostaFileForOffice.exe — a self-extracting package made with IExpress (part of Windows).
-  It carries install.ps1 / uninstall.ps1 and the current production manifests (offline fallback;
-  online the installer always takes the newest manifests from the Hub).
-
-    powershell -ExecutionPolicy Bypass -File installer\build.ps1
-    npm run installer
-
-  The name avoids "setup"/"install": Windows would treat such an exe as an installer and ask for
-  administrator rights, and the add-in would then land in the admin's profile instead of the user's.
-  Sign the exe (signtool) before handing it out, otherwise SmartScreen warns about an unknown publisher.
-#>
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([string]$OutDir)
 
 $ErrorActionPreference = 'Stop'
@@ -33,7 +21,6 @@ foreach ($file in $files) {
     if (-not (Test-Path -LiteralPath $file)) { throw "Нет файла $file" }
 }
 
-# IExpress takes one flat source folder and is happiest with short paths.
 $stage = Join-Path $env:TEMP ("kfpkg_" + [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null

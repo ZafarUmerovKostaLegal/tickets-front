@@ -1,12 +1,5 @@
 Windows Registry Editor Version 5.00
 
-; Kosta File: Outlook / Word / Excel / PowerPoint on the web (public Microsoft pages) open the add-in
-; from tickets.kostalegal.com, which inside the office resolves to a private address (192.168.230.222).
-; Chrome / Edge "Local Network Access" blocks that (net::ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS).
-; These policies exempt the Microsoft 365 pages that host the add-in. Apply via GPO / Intune or
-; import on a PC as administrator, then restart the browser and check chrome://policy / edge://policy.
-; Temporary measure until tickets.kostalegal.com is reachable on its public address.
-
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\LocalNetworkAccessAllowedForUrls]
 "1"="https://outlook.office.com"
 "2"="https://outlook.office365.com"

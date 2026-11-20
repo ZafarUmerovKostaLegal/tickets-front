@@ -96,17 +96,6 @@ export async function fetchHubMe(): Promise<AuthProfile> {
   return profile;
 }
 
-/** Cookie / localStorage Hub token already present in this WebView. */
-export async function ensureHubSession(): Promise<boolean> {
-  try {
-    await fetchHubMe();
-    return true;
-  } catch {
-    clearSession();
-    return false;
-  }
-}
-
 export async function logoutHub(): Promise<void> {
   const url = sessionLogoutUrl();
   if (url) {
@@ -117,7 +106,6 @@ export async function logoutHub(): Promise<void> {
         headers: authHeaders(),
       });
     } catch {
-      /* still clear local */
     }
   }
   clearSession();
@@ -154,7 +142,6 @@ function appFromMeta(meta: LoginMeta): AzureAppInfo {
   return { clientId, tenantId };
 }
 
-/** Client / tenant ids of the Kosta Azure app (public values, cached between sessions). */
 async function azureApp(): Promise<AzureAppInfo> {
   const cached = readCachedAzureApp();
   if (cached)
@@ -163,12 +150,10 @@ async function azureApp(): Promise<AzureAppInfo> {
   try {
     localStorage.setItem(AZURE_APP_KEY, JSON.stringify(app));
   } catch {
-    /* ignore */
   }
   return app;
 }
 
-/** Exchange Azure tokens (already redeemed in the browser / by Outlook) for a Hub session. */
 async function bootstrapHub(accessToken: string, idToken: string, expiresInSec: number): Promise<AuthProfile> {
   const response = await fetch(azureBootstrapUrl(), {
     method: 'POST',
@@ -183,7 +168,6 @@ async function bootstrapHub(accessToken: string, idToken: string, expiresInSec: 
       if (body.detail)
         detail = body.detail;
     } catch {
-      /* ignore */
     }
     throw new Error(response.status === 403 ? 'Учётная запись заблокирована в Kosta Hub' : detail);
   }
@@ -199,40 +183,65 @@ function secondsLeft(expiresOn: Date | null | undefined): number {
   return expiresOn ? Math.max(60, Math.round((expiresOn.getTime() - Date.now()) / 1000)) : 3600;
 }
 
+export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'unknown';
+
+let authMethod: AuthMethod = 'unknown';
+
+export function currentAuthMethod(): AuthMethod {
+  return authMethod;
+}
+
+async function hubSession(): Promise<AuthProfile | null> {
+  const hadToken = Boolean(readHubAccessToken());
+  try {
+    const me = await fetchHubMe();
+    authMethod = hadToken ? 'token' : 'cookie';
+    return me;
+  } catch {
+    return null;
+  }
+}
+
+async function officeSso(): Promise<AuthProfile | null> {
+  try {
+    const result = await naaTokenSilent(await azureApp());
+    if (!result)
+      return null;
+    const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+    authMethod = 'sso';
+    return me;
+  } catch {
+    return null;
+  }
+}
+
 let silentInFlight: Promise<AuthProfile | null> | null = null;
 
-/**
- * No-click sign-in: reuse the stored Hub token, otherwise ask Outlook for the signed-in account (NAA).
- * `force` skips the stored token (it was just rejected with 401).
- */
 export function signInSilently(options: { force?: boolean } = {}): Promise<AuthProfile | null> {
   if (silentInFlight)
     return silentInFlight;
   silentInFlight = (async () => {
-    if (!options.force && readHubAccessToken()) {
-      try {
-        return await fetchHubMe();
-      } catch {
-        /* expired — try NAA */
-      }
-    }
     if (!gatewayOrigin())
       return null;
-    try {
-      const result = await naaTokenSilent(await azureApp());
-      if (!result)
-        return null;
-      return await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
-    } catch {
-      return null;
+    if (!options.force) {
+      const me = await hubSession();
+      if (me)
+        return me;
     }
+    const sso = await officeSso();
+    if (sso)
+      return sso;
+    if (options.force) {
+      storeHubAccessToken('');
+      return hubSession();
+    }
+    return null;
   })().finally(() => {
     silentInFlight = null;
   });
   return silentInFlight;
 }
 
-/** Graph token for reading the whole thread: memory first, then a silent NAA refresh. */
 export async function getGraphToken(): Promise<string | null> {
   const cached = readAzureAccessToken();
   if (cached)
@@ -248,28 +257,23 @@ export async function getGraphToken(): Promise<string | null> {
   }
 }
 
-/**
- * Interactive sign-in. Outlook's own account prompt (NAA) comes first; the Kosta dialog with
- * Microsoft login is the fallback for clients without NAA.
- */
 export async function loginWithHub(): Promise<AuthProfile> {
   if (!gatewayOrigin())
     throw new Error('Укажите File Manager API в настройках');
   try {
     const result = await naaTokenInteractive(await azureApp());
-    if (result)
-      return await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+    if (result) {
+      const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+      authMethod = 'sso';
+      return me;
+    }
   } catch {
-    /* fall back to the dialog */
   }
-  return loginWithDialog();
+  const me = await loginWithDialog();
+  authMethod = 'dialog';
+  return me;
 }
 
-/**
- * Microsoft login in an Office dialog.
- * Silent prompt=none does not work here (AADSTS50058 — no Azure cookies in this WebView).
- * login_hint only pre-fills the Outlook mailbox address.
- */
 async function loginWithDialog(): Promise<AuthProfile> {
   const { verifier, challenge } = await createPkcePair();
   const state = randomState();
@@ -281,11 +285,9 @@ async function loginWithDialog(): Promise<AuthProfile> {
   const authorize = new URL(meta.authorizeUrl);
   authorize.searchParams.set('code_challenge', challenge);
   authorize.searchParams.set('code_challenge_method', 'S256');
-  // Never use prompt=none in Outlook WebView — it causes AADSTS50058
 
   const code = await openOAuthDialog(authorize.toString(), state);
 
-  // SPA redirect URIs (AADSTS9002327): redeem the code in the browser, not on the server.
   const azureTokens = await redeemSpaCodeInBrowser({
     tenantId,
     clientId,
@@ -408,7 +410,6 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
           return true;
         }
       } catch {
-        /* fall through */
       }
       return false;
     };
@@ -466,7 +467,6 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       return;
     }
 
-    // Browser fallback: query string is OK outside Office dialog limits
     const popupUrl = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
     const popup = window.open(popupUrl, 'kosta-hub-login', 'width=480,height=680');
     if (!popup) {

@@ -1,5 +1,3 @@
-/** File names for filed mail: readable in FM, unique per message, stable when the same message is filed again. */
-
 const BAD_CHARS = /[<>:"/\\|?*\u0000-\u001f]/g;
 
 export function safeFilePart(value: string, max: number): string {
@@ -15,11 +13,6 @@ export function shortHash(value: string): string {
   return (hash >>> 0).toString(36).padStart(6, '0').slice(-6);
 }
 
-/**
- * `2026-11-18 Ivan Petrov - Subject [k3x9a1].eml`
- * The hash of the Message-ID keeps two letters with the same subject apart, while filing
- * the same letter again lands on the same name (a new version, not a duplicate).
- */
 export function messageFileName(input: { subject: string; received: string; fromName: string; messageId: string }): string {
   const date = /^\d{4}-\d{2}-\d{2}/.test(input.received) ? input.received.slice(0, 10) : '';
   const from = safeFilePart(input.fromName, 40);

@@ -8,7 +8,7 @@ import { isScheduleOnlyAccount, scheduleOnlyLandingPath } from '@shared/lib/sche
 import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
-import { AuditView, MonitoringView, TemplateView } from './AdminViews';
+import { AddinClientsView, AuditView, MonitoringView, TemplateView } from './AdminViews';
 import { MatrixView, RequestsView, SecurityView } from './AccessViews';
 import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
@@ -20,7 +20,7 @@ import './FileManagerPage.css';
 
 type View =
     | 'clients' | 'matters' | 'myMatters' | 'disk' | 'matter' | 'favorites' | 'recent' | 'search' | 'trash' | 'requests'
-    | 'security' | 'matrix' | 'audit' | 'monitoring' | 'templates';
+    | 'security' | 'matrix' | 'audit' | 'monitoring' | 'addin' | 'templates';
 
 type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' };
 
@@ -46,10 +46,11 @@ const ADMIN: NavItem[] = [
     { id: 'matrix', label: 'nav.matrix', icon: 'grid' },
     { id: 'audit', label: 'nav.audit', icon: 'list' },
     { id: 'monitoring', label: 'nav.monitoring', icon: 'pulse' },
+    { id: 'addin', label: 'nav.addin', icon: 'grid' },
     { id: 'templates', label: 'nav.templates', icon: 'template' },
 ];
 
-const ADMIN_VIEWS = new Set<View>(['matrix', 'audit', 'monitoring']);
+const ADMIN_VIEWS = new Set<View>(['matrix', 'audit', 'monitoring', 'addin']);
 const WORKSPACE = [...PRIMARY, ...MORE];
 const MORE_VIEW_IDS = new Set<View>([...MORE.map((item) => item.id), 'matter', 'requests']);
 const ALL_VIEWS = new Set<View>([...WORKSPACE, ...ADMIN, { id: 'matter' as View }].map((item) => item.id));
@@ -186,6 +187,8 @@ function FileManagerWorkspace() {
                 return <AuditView clients={data} initialMatterId={matterId} />;
             case 'monitoring':
                 return <MonitoringView onOpenAudit={() => go('audit')} />;
+            case 'addin':
+                return <AddinClientsView />;
             case 'templates':
                 return <TemplateView />;
         }

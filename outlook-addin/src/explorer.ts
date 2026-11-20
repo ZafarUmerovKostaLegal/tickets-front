@@ -1,4 +1,3 @@
-/** Pure logic of the pane: folder tree, quick filter, suggested locations. No Office.js here. */
 import type { BrowseFolder, ClientNode, Crumb, Filing, Location, Suggestion } from './api';
 import type { FilingRule, RecentTarget } from './settings';
 
@@ -6,7 +5,6 @@ export type FolderNode = BrowseFolder & { children: FolderNode[] };
 
 const collator = new Intl.Collator('ru', { sensitivity: 'base', numeric: true });
 
-/** Matter folders as a tree; "Correspondence" first, like the FM template. */
 export function buildFolderTree(rows: readonly BrowseFolder[]): FolderNode[] {
   const byId = new Map<string, FolderNode>();
   rows.forEach((row) => byId.set(row.id, { ...row, children: [] }));
@@ -46,16 +44,10 @@ function norm(value: string): string {
   return value.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim();
 }
 
-/**
- * Quick filter over clients and matters: every word must hit the client name, matter name or code.
- * A matching client keeps all its matters.
- */
-/** Matter the viewer actually works on (team / explicit access) or pinned to favourites. */
 export function isOwnMatter(matter: ClientNode['matters'][number]): boolean {
   return matter.mine !== false || matter.favorite;
 }
 
-/** Managers get every matter of the firm; only then is there anything to hide. */
 export function hasForeignMatters(clients: readonly ClientNode[]): boolean {
   return clients.some((client) => client.matters.some((m) => m.level !== 'none' && !isOwnMatter(m)));
 }
@@ -96,14 +88,9 @@ export function locationKey(location: Pick<Location, 'matterId' | 'folderId'>): 
 export type SuggestedLocation = Location & {
   reason: Suggestion['reason'] | 'rule' | 'local';
   count: number;
-  /** Message already filed here. */
   filedHere: boolean;
 };
 
-/**
- * One ranked list for the pane: sender rule first, then server suggestions (thread → sender →
- * domain → my recent), then locations used on this device. Duplicates collapse to the best reason.
- */
 export function mergeSuggestions(input: {
   rule: FilingRule | null;
   server: readonly Suggestion[];
@@ -153,7 +140,6 @@ export function reasonLabel(location: SuggestedLocation, sender: string): string
   }
 }
 
-/** Unique filed locations of this message / thread for the status card. */
 export function filedSummary(filings: readonly Filing[]): { message: Filing[]; thread: Filing[] } {
   const message = filings.filter((f) => f.sameMessage);
   const ownDocs = new Set(message.map((f) => f.documentId));

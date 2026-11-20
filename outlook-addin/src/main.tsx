@@ -12,7 +12,6 @@ declare global {
   }
 }
 
-/** Outlook / Office theme → light or dark pane (falls back to the OS setting). */
 function applyTheme(): void {
   let dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   try {
@@ -23,12 +22,10 @@ function applyTheme(): void {
       dark = (0.2126 * r! + 0.7152 * g! + 0.0722 * b!) < 128;
     }
   } catch {
-    /* keep OS preference */
   }
   document.body.dataset.theme = dark ? 'dark' : 'light';
 }
 
-/** A render crash must show what happened instead of an empty pane. */
 class CrashGuard extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
 
@@ -65,7 +62,6 @@ const root = createRoot(container);
 function start(host: Office.HostType | null): void {
   window.__kfStarted = true;
   window.__kfStage = `запущено (${host ?? 'без хоста'})`;
-  // Drop the start-up warning if Office answered after it was shown.
   container!.replaceChildren();
   applyTheme();
   root.render(<CrashGuard><App host={host} /></CrashGuard>);

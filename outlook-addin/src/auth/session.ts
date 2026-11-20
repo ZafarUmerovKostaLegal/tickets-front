@@ -6,14 +6,11 @@ export type AuthProfile = {
 
 const PROFILE_KEY = 'kosta.outlook.profile';
 const LEGACY_REFRESH = 'kosta.outlook.refresh.enc';
-/** Add-in's own token slot — never overwrite or clear the Hub SPA session. */
 const ADDIN_TOKEN_KEY = 'kosta.addin.hubToken';
-/** Hub SPA key on the same origin: read-only fallback (older add-in builds wrote here). */
 const HUB_TOKEN_KEY = 'access_token';
 
 let sessionLive = false;
 let profile: AuthProfile | null = null;
-/** Azure Graph token (Mail.Read) — memory only, for conversation export. */
 let azureAccessToken: string | null = null;
 let azureAccessExpiresAt = 0;
 
@@ -26,12 +23,10 @@ function readStoredProfile(): AuthProfile | null {
   }
 }
 
-/** Drop separate Outlook-token leftovers from older builds. */
 export function clearLegacyOutlookTokens(): void {
   try {
     localStorage.removeItem(LEGACY_REFRESH);
   } catch {
-    /* ignore */
   }
   try {
     const roaming = Office?.context?.roamingSettings;
@@ -40,7 +35,6 @@ export function clearLegacyOutlookTokens(): void {
     roaming.remove(LEGACY_REFRESH);
     roaming.saveAsync(() => undefined);
   } catch {
-    /* ignore */
   }
 }
 
@@ -58,7 +52,6 @@ export function markAuthenticated(next: AuthProfile): void {
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
   } catch {
-    /* ignore */
   }
 }
 
@@ -71,7 +64,6 @@ export function clearSession(): void {
     localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(ADDIN_TOKEN_KEY);
   } catch {
-    /* ignore */
   }
   clearLegacyOutlookTokens();
 }
@@ -92,7 +84,6 @@ export function setProfile(next: AuthProfile): void {
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
   } catch {
-    /* ignore */
   }
 }
 
@@ -109,8 +100,10 @@ export function readHubAccessToken(): string | null {
 
 export function storeHubAccessToken(token: string): void {
   try {
-    localStorage.setItem(ADDIN_TOKEN_KEY, token);
+    if (token)
+      localStorage.setItem(ADDIN_TOKEN_KEY, token);
+    else
+      localStorage.removeItem(ADDIN_TOKEN_KEY);
   } catch {
-    /* ignore */
   }
 }

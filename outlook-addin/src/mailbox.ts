@@ -1,4 +1,3 @@
-/** Office.js mailbox helpers for the pane: current item, full MIME, attachments, draft actions. */
 import { bareEmailAddress, buildEml, normalizeMessageId, readCurrentMail, readCurrentMailMeta } from './email';
 import { attachmentFileName, messageFileName } from './naming';
 
@@ -6,7 +5,6 @@ export type AttachmentInfo = {
   id: string;
   name: string;
   size: number;
-  /** Outlook item attachments (forwarded letters) come as .eml */
   isItem: boolean;
   contentType: string;
 };
@@ -45,10 +43,6 @@ function isCompose(item: Office.Item): boolean {
   return typeof (item as Office.MessageCompose).subject?.getAsync === 'function';
 }
 
-/**
- * What this Outlook lets an add-in read. Outlook on phones and older desktops lack Mailbox 1.8
- * (attachments) and 1.14 (original message file) — the message is then rebuilt from its body.
- */
 export function mailCapabilities(): { attachments: boolean; originalFile: boolean } {
   return { attachments: supports('1.8'), originalFile: supports('1.14') };
 }
@@ -100,10 +94,6 @@ function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/**
- * The open message as an .eml. `getAsFileAsync` (Mailbox 1.14) gives the original MIME with
- * attachments; older clients get a rebuilt message with both bodies.
- */
 export async function readMessageFile(expectedMessageId: string): Promise<File> {
   const item = Office.context.mailbox.item as Office.MessageRead & {
     getAsFileAsync?: (cb: (result: Office.AsyncResult<string>) => void) => void;
@@ -118,7 +108,6 @@ export async function readMessageFile(expectedMessageId: string): Promise<File> 
       if (base64)
         return new File([base64ToBytes(base64)], name, { type: 'message/rfc822' });
     } catch {
-      /* fall back to the rebuilt copy */
     }
   }
   const rebuilt = buildEml(await readCurrentMail(expectedMessageId));
@@ -141,7 +130,6 @@ export async function readAttachmentFile(attachment: AttachmentInfo): Promise<Fi
   throw new Error(`Вложение «${attachment.name}» хранится в облаке — сохраните его вручную`);
 }
 
-/** Attach a filed document to the draft being composed. */
 export async function attachToDraft(name: string, blob: Blob): Promise<void> {
   const item = Office.context.mailbox.item as Office.MessageCompose;
   if (!item || !isCompose(item))
@@ -156,7 +144,6 @@ export async function attachToDraft(name: string, blob: Blob): Promise<void> {
   await asyncResult<string>((cb) => item.addFileAttachmentFromBase64Async(btoa(binary), name, cb));
 }
 
-/** Put a link to the FM document at the cursor in the draft. */
 export async function insertLinkInDraft(url: string, text: string): Promise<void> {
   const item = Office.context.mailbox.item as Office.MessageCompose;
   if (!item || !isCompose(item))
@@ -177,17 +164,12 @@ export function openInBrowser(url: string): void {
       return;
     }
   } catch {
-    /* fall through */
   }
   window.open(url, '_blank', 'noopener');
 }
 
 export { normalizeMessageId };
 
-/**
- * New Outlook / Outlook on the web: messages and files dragged from Outlook into the pane
- * arrive through the DragAndDropEvent (Mailbox 1.15). Returns false where it is not available.
- */
 export function onOutlookDrop(handler: (event: { type: 'dragover' | 'drop'; x: number; y: number; files: File[] }) => void): boolean {
   const eventType = (Office.EventType as unknown as Record<string, string>).DragAndDropEvent;
   if (!eventType || !supports('1.15'))

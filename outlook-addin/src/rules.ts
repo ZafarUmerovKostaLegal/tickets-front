@@ -4,7 +4,6 @@ function normalizeMatch(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** MacroView-style: exact address or domain (`@acme.com` / `acme.com`). */
 export function matchRule(fromEmail: string, rules: FilingRule[]): FilingRule | null {
   const email = normalizeMatch(fromEmail);
   if (!email || !email.includes('@'))

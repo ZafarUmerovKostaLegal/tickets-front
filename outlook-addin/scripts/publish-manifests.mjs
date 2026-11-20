@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Puts what the installers need next to the add-in in dist/, so the Hub serves it at
- * https://tickets.kostalegal.com/outlook-addin/…
- *   manifests/*.xml          — Windows / macOS installers refresh from here; the Outlook
- *                              organisation deployment reads the manifest by URL
- *   install-mac.sh           — curl -fsSL …/install-mac.sh | bash
- *   KostaFileForOffice.exe   — when built beforehand with `npm run installer` (Windows only)
- */
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

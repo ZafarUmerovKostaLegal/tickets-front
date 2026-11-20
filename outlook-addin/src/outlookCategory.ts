@@ -1,4 +1,3 @@
-/** Outlook category shown in the message list after a successful FM upload. */
 export const SAVED_CATEGORY = 'Saved to Kosta';
 
 function asAsync<T>(
@@ -20,7 +19,6 @@ function getReadItem(): Office.MessageRead | null {
   }
 }
 
-/** Ensure the master category exists (once per mailbox). Safe to call repeatedly. */
 export async function ensureSavedMasterCategory(): Promise<void> {
   try {
     const master = Office.context.mailbox.masterCategories;
@@ -42,7 +40,6 @@ export async function ensureSavedMasterCategory(): Promise<void> {
       cb,
     ));
   } catch {
-    /* master list may be read-only in shared/delegate mailboxes */
   }
 }
 
@@ -69,10 +66,6 @@ export async function itemHasSavedCategory(): Promise<boolean> {
   }
 }
 
-/**
- * Mark the currently open message with "Saved to Kosta".
- * Call after a successful File Manager upload.
- */
 export async function markItemSavedToKosta(): Promise<{ ok: boolean; detail?: string }> {
   const item = getReadItem();
   if (!item?.categories)
@@ -87,7 +80,6 @@ export async function markItemSavedToKosta(): Promise<{ ok: boolean; detail?: st
   if (added.status !== Office.AsyncResultStatus.Succeeded) {
     const code = added.error?.code || added.error?.name || 'error';
     const msg = added.error?.message || String(code);
-    // InvalidCategory → master add may have failed (permissions); surface briefly
     return { ok: false, detail: msg };
   }
   return { ok: true };

@@ -1,22 +1,4 @@
-﻿<#
-  Kosta File for Office — per-user installer (no administrator rights needed).
-
-  * Word / Excel / PowerPoint (Windows desktop): registers the add-in manifest in
-    HKCU\Software\Microsoft\Office\16.0\WEF\Developer — after the next start of Office the
-    "Kosta File" button is in the ribbon by itself, like a classic DMS add-in.
-  * A per-user logon entry quietly re-downloads the manifests, so new buttons and versions
-    arrive without reinstalling (the panel itself is a web app and is always current).
-  * Outlook add-ins live in the Exchange mailbox and cannot be registered locally. If IT has
-    deployed Kosta File for the organisation (admin\Deploy-Outlook.ps1) nothing is needed;
-    otherwise the installer offers to add it by hand.
-  * Adds "Kosta File for Office" to Apps & features, with an uninstaller.
-
-  -Quiet      no dialogs (logon refresh, mass deployment)
-  -Update     only refresh the manifests and registration
-  -NoOutlook  skip the Outlook step
-  -DryRun     files go to %TEMP%\KostaFileDryRun, registry changes are only logged
-#>
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$Quiet,
     [switch]$Update,
@@ -64,7 +46,6 @@ function Get-ManifestInfo([string]$Path) {
     return @{ Id = [string]$xml.OfficeApp.Id; Version = [string]$xml.OfficeApp.Version }
 }
 
-# Newest manifest from the Hub; the copy bundled with the installer when offline.
 function Get-Manifest([string]$Name) {
     $target = Join-Path $ManifestDir $Name
     $temp = "$target.download"
@@ -107,7 +88,6 @@ function Set-RegistryValue([string]$Key, [string]$Name, [string]$Value) {
 try {
     New-Item -ItemType Directory -Path $ManifestDir -Force | Out-Null
     if (-not $DryRun) {
-        # Keep the installer next to the manifests: the logon refresh and the uninstaller run from here.
         foreach ($file in @('install.ps1', 'uninstall.ps1')) {
             $source = Join-Path $PSScriptRoot $file
             $dest = Join-Path $AppDir $file
@@ -118,21 +98,17 @@ try {
     }
     Write-Log "=== ${AppName}: $(if ($Update) { 'обновление' } else { 'установка' }) (пользователь $env:USERNAME) ==="
 
-    # 1. Word / Excel / PowerPoint
     $officePath = Get-Manifest $OfficeManifest
     $office = Get-ManifestInfo $officePath
     Set-RegistryValue $DeveloperKey $office.Id $officePath
     Write-Log "Word, Excel, PowerPoint: надстройка $($office.Id) версии $($office.Version) зарегистрирована"
 
-    # 2. Outlook manifest kept locally for "Add from file" / IT.
     $outlookPath = $null
     try { $outlookPath = Get-Manifest $OutlookManifest } catch { Write-Log $_.Exception.Message }
 
-    # 3. Quiet refresh at every logon.
     $self = Join-Path $AppDir 'install.ps1'
     Set-RegistryValue $RunKey 'KostaFileOffice' ("powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$self`" -Quiet -Update")
 
-    # 4. Apps & features entry.
     if (-not $Update) {
         $uninstall = Join-Path $AppDir 'uninstall.ps1'
         Set-RegistryValue $UninstallKey 'DisplayName' $AppName

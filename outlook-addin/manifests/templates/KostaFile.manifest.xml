@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<!-- Outlook: Classic Windows, New Outlook, OWA, Mac, Mobile -->
-<!-- Pinning: once pinned, task pane stays open when switching / clearing selection. -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

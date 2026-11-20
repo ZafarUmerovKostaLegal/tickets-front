@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Generates Office add-in manifests from manifests/templates.
- *
- *   node scripts/manifests.mjs          → prod manifests in the add-in root + dev manifests in manifests/dev
- *   node scripts/manifests.mjs --check  → fails if the committed prod manifests drift from the templates
- *
- * Version comes from package.json ("0.5.0" → "0.5.0.0"), so both manifests always match.
- */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,7 +17,6 @@ const ENVIRONMENTS = {
     OUTLOOK_ID: '8f3c2a1e-6b4d-4e9a-9c71-a1b2c3d4e5f6',
     OFFICE_ID: 'a7e91c2b-4d5f-4a8e-9b01-c2d3e4f5a6b7',
   },
-  // Separate ids: the dev add-in can be sideloaded next to the production one.
   dev: {
     outDir: join(root, 'manifests', 'dev'),
     ADDIN_BASE: 'https://localhost:3001/outlook-addin/',
@@ -67,7 +58,6 @@ for (const [name, env] of Object.entries(ENVIRONMENTS)) {
       if (name !== 'prod')
         continue;
       const current = existsSync(target) ? readFileSync(target, 'utf8') : '';
-      // Editors re-wrap long XML tags on save: only content matters, not line breaks / indentation.
       if (normalize(current) !== normalize(output)) {
         drift = true;
         console.error(`✗ ${file} differs from manifests/templates — run "npm run manifests"`);

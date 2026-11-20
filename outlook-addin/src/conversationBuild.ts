@@ -54,7 +54,6 @@ async function fetchMessageBody(graphId: string, token: string): Promise<GraphBo
   return await response.json() as GraphBodyMessage;
 }
 
-/** Best-effort HTML/text body from raw MIME (EWS IncludeMimeContent). */
 function bodyFromMimeBase64(mimeBase64: string): { html: string; text: string } {
   let raw = '';
   try {
@@ -95,14 +94,8 @@ export function conversationDocumentFileName(conversationId: string, subject: st
   return `Conversation_${shortConversationKey(conversationId)}_${safe}.eml`;
 }
 
-export function conversationStorageKey(conversationId: string): string {
-  return `conv:${shortConversationKey(conversationId)}`;
-}
-
-/** Parallel Graph reads: a 30-message thread no longer waits for 30 sequential round-trips. */
 const BODY_FETCH_CONCURRENCY = 5;
 
-/** Like Promise.all(items.map(fn)) but with at most `limit` calls in flight; keeps input order. */
 export async function mapWithConcurrency<T, R>(items: readonly T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
@@ -145,7 +138,6 @@ async function renderMessageBlock(meta: ConversationMessageMeta, token: string):
       bodyHtml = raw || bodyHtml;
     loaded = Boolean(raw);
   } catch {
-    /* try EWS MIME below */
   }
   if (!loaded && meta.mimeBase64) {
     const fromMime = bodyFromMimeBase64(meta.mimeBase64);
@@ -169,16 +161,12 @@ async function renderMessageBlock(meta: ConversationMessageMeta, token: string):
     `;
 }
 
-/**
- * Build one .eml that contains the full thread as a readable HTML transcript
- * (single document in FM, like one Outlook conversation).
- */
 export async function buildConversationEml(
   conversationId: string,
   messages: ConversationMessageMeta[],
   onProgress?: (index: number, total: number) => void,
   graphToken?: string | null,
-): Promise<{ file: File; storageKey: string }> {
+): Promise<{ file: File }> {
   const token = graphToken ?? readAzureAccessToken();
   if (!token)
     throw new Error('Нет Azure-токена для Graph. Войдите снова.');
@@ -249,5 +237,5 @@ export async function buildConversationEml(
     conversationDocumentFileName(conversationId, title),
     { type: 'message/rfc822' },
   );
-  return { file, storageKey: conversationStorageKey(conversationId) };
+  return { file };
 }

@@ -1,10 +1,42 @@
 import { useEffect, useRef } from 'react';
+import { currentAuthMethod } from '../auth/authApi';
+import { ssoState } from '../auth/naa';
 import type { AuthProfile } from '../auth/session';
 import { describeMatch } from '../rules';
 import type { FilingRule } from '../settings';
 import { Icon } from './icons';
 
 const ASSET_BASE = import.meta.env.BASE_URL || '/';
+
+const METHOD_LABEL: Record<string, string> = {
+  sso: 'через учётную запись Office',
+  cookie: 'по общей сессии Kosta Hub',
+  token: 'по сохранённой сессии',
+  dialog: 'через окно входа',
+};
+
+function SignInInfo() {
+  const method = currentAuthMethod();
+  const sso = ssoState();
+  const single = sso.status === 'ok';
+  const reason = sso.status === 'unsupported'
+    ? 'эта версия Office не поддерживает единый вход — обновите Microsoft 365'
+    : sso.status === 'consent'
+      ? 'нужно один раз подтвердить вход: нажмите «Выйти» и войдите снова'
+      : sso.status === 'failed'
+        ? 'Office не выдал вход — сообщите администратору'
+        : '';
+  return (
+    <div className={`kf-signinfo${single ? ' is-ok' : reason ? ' is-warn' : ''}`}>
+      <span className="kf-signinfo__dot" aria-hidden="true" />
+      <div>
+        <strong>{single ? 'Единый вход работает' : reason ? 'Единый вход не работает' : 'Вход выполнен'}</strong>
+        <span>Вход {METHOD_LABEL[method] ?? 'выполнен'}.{reason ? ` Причина: ${reason}.` : single ? ' Word, Excel, PowerPoint и Outlook входят сами.' : ''}</span>
+        {sso.error && !single ? <code title={sso.error}>{sso.error}</code> : null}
+      </div>
+    </div>
+  );
+}
 
 export function Brand({ sub }: { sub?: string }) {
   return (
@@ -75,6 +107,7 @@ export function SettingsSheet({ profile, rules, onClose, onLogout, onRules, vers
           </div>
           <button type="button" className="kf-btn" onClick={onLogout}><Icon name="logout" size={14} />Выйти</button>
         </div>
+        <SignInInfo />
       </section>
 
       <section className="kf-section">

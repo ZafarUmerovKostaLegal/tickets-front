@@ -1,4 +1,3 @@
-/** Filing operations used by the pane: message, attachments, whole thread, Office document. */
 import { ensureEmailsFolder, uploadToFolder, type Location, type MailLink, type UploadOutcome } from './api';
 import { getGraphToken } from './auth/authApi';
 import { getProfile } from './auth/session';
@@ -7,7 +6,7 @@ import { buildConversationEml } from './conversationBuild';
 import { readAttachmentFile, readMessageFile, type AttachmentInfo, type ItemInfo } from './mailbox';
 import { hostLabel, readCurrentOfficeDocument } from './officeDoc';
 import { markItemSavedToKosta } from './outlookCategory';
-import { markFiled, markFiledMany, rememberTarget, setConversationDoc, type FilingRule } from './settings';
+import { markFiled, markFiledMany, rememberTarget, type FilingRule } from './settings';
 
 export type FileRequest = {
   target: Location;
@@ -17,15 +16,10 @@ export type FileRequest = {
   comment: string;
 };
 
-/**
- * `saved` — one line per file (including "already there"), `fresh` — how many actually wrote
- * something new (a new document or a new version).
- */
 export type FileResult = { saved: string[]; failed: string[]; categoryOk: boolean; fresh: number };
 
 type Progress = (text: string) => void;
 
-/** One readable line per uploaded file: the server never makes a copy of the same letter or file. */
 export function describeOutcome(name: string, outcome: UploadOutcome): string {
   switch (outcome.status) {
     case 'version':
@@ -60,14 +54,13 @@ function commentFor(item: ItemInfo, extra: string): string {
   return extra.trim() ? `${extra.trim()} · ${base}` : base;
 }
 
-/** The whole thread as one document; the server turns a re-save into the next version of that document. */
 async function fileThread(item: ItemInfo, target: Location, comment: string, progress: Progress): Promise<UploadOutcome & { line: string }> {
   const token = await getGraphToken();
   progress('Читаем всю переписку…');
   const { conversationId, messages } = await listConversationMessages(token);
   if (!messages.length)
     throw new Error('В переписке нет писем');
-  const { file, storageKey } = await buildConversationEml(
+  const { file } = await buildConversationEml(
     conversationId,
     messages,
     (index, total) => progress(`Собираем переписку ${index}/${total}…`),
@@ -75,18 +68,10 @@ async function fileThread(item: ItemInfo, target: Location, comment: string, pro
   );
   progress(`Сохраняем переписку (${messages.length} писем)…`);
   const outcome = await uploadToFolder(target.matterId, target.folderId, file, `${comment} · переписка ${messages.length} писем`, mailLink(item, 'thread'));
-  setConversationDoc(storageKey, {
-    documentId: outcome.document.id,
-    matterId: target.matterId,
-    fileName: file.name,
-    messageCount: messages.length,
-    updatedAt: new Date().toISOString(),
-  });
   markFiledMany(messages.map((row) => row.internetMessageId));
   return { ...outcome, line: describeOutcome(`Переписка (${messages.length} писем)`, outcome) };
 }
 
-/** File what the user ticked into the chosen location; one failure does not stop the rest. */
 export async function fileMail(item: ItemInfo, request: FileRequest, progress: Progress): Promise<FileResult> {
   const saved: string[] = [];
   const failed: string[] = [];
@@ -135,7 +120,6 @@ export async function fileMail(item: ItemInfo, request: FileRequest, progress: P
   return { saved, failed, categoryOk, fresh };
 }
 
-/** Legacy rules point at a matter only: they file into its Correspondence/Emails. */
 export async function ruleTarget(rule: FilingRule): Promise<Location> {
   if (rule.folderId) {
     return {
@@ -160,7 +144,6 @@ export async function ruleTarget(rule: FilingRule): Promise<Location> {
   };
 }
 
-/** Files dropped onto a folder (from Outlook or the desktop) — plain uploads. */
 export async function fileDropped(target: Location, files: File[], progress: Progress): Promise<FileResult> {
   const saved: string[] = [];
   const failed: string[] = [];

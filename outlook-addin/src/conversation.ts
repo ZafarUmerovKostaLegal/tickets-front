@@ -8,7 +8,6 @@ export type ConversationMessageMeta = {
   fromEmail: string;
   fromName: string;
   received: string;
-  /** When set, MIME is already available (EWS path) — skip Graph $value. */
   mimeBase64?: string;
 };
 
@@ -48,7 +47,6 @@ async function graphGetJson<T>(url: string, token: string): Promise<T> {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
-      // Prefer immutable ids when available
       Prefer: 'IdType="ImmutableId"',
     },
   });
@@ -61,7 +59,6 @@ async function graphGetJson<T>(url: string, token: string): Promise<T> {
       else if (body.error?.code)
         detail = body.error.code;
     } catch {
-      /* ignore */
     }
     if (response.status === 401 || response.status === 403)
       throw new Error(`${detail}. Выйдите и войдите снова (нужно согласие Mail.Read).`);
@@ -85,8 +82,6 @@ function mapGraphMessages(rows: GraphMessage[]): ConversationMessageMeta[] {
 }
 
 async function listViaGraphFilter(conversationId: string, token: string): Promise<ConversationMessageMeta[]> {
-  // No $orderby / minimal $select — $orderby+conversationId causes "too complex".
-  // Some tenants also reject bare conversationId filter; fallbacks handle that.
   const filter = encodeURIComponent(`conversationId eq '${escapeODataString(conversationId)}'`);
   let url = `https://graph.microsoft.com/v1.0/me/messages?$filter=${filter}&$top=50`;
 
@@ -99,7 +94,6 @@ async function listViaGraphFilter(conversationId: string, token: string): Promis
   return messages;
 }
 
-/** Workaround: put receivedDateTime in both $filter and $orderby. */
 async function listViaGraphFilterOrdered(conversationId: string, token: string): Promise<ConversationMessageMeta[]> {
   const filter = encodeURIComponent(
     `conversationId eq '${escapeODataString(conversationId)}' and receivedDateTime ge 1970-01-01T00:00:00Z`,
@@ -117,9 +111,6 @@ async function listViaGraphFilterOrdered(conversationId: string, token: string):
   return messages;
 }
 
-/**
- * Resolve Graph conversationId from the open item (more reliable than Office.js id alone).
- */
 async function resolveGraphConversationId(token: string): Promise<string> {
   const item = currentItem();
   const ewsId = item.itemId;
@@ -130,7 +121,6 @@ async function resolveGraphConversationId(token: string): Promise<string> {
   try {
     restId = Office.context.mailbox.convertToRestId(ewsId, Office.MailboxEnums.RestVersion.v2_0);
   } catch {
-    /* already rest-shaped on some clients */
   }
 
   try {
@@ -141,7 +131,6 @@ async function resolveGraphConversationId(token: string): Promise<string> {
     if (data.conversationId)
       return data.conversationId;
   } catch {
-    /* fall back to Office conversationId */
   }
   return currentConversationId();
 }
@@ -201,7 +190,6 @@ function listViaEws(conversationId: string): Promise<ConversationMessageMeta[]> 
   return ewsRequest(soap).then((xml) => {
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
     const items = Array.from(doc.getElementsByTagNameNS('*', 'Message'));
-    // Some responses wrap as Item
     const fallbackItems = items.length
       ? items
       : Array.from(doc.getElementsByTagNameNS('*', 'Item'));
@@ -224,7 +212,6 @@ function listViaEws(conversationId: string): Promise<ConversationMessageMeta[]> 
       try {
         graphId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
       } catch {
-        /* keep ews id */
       }
       messages.push({
         graphId,
@@ -246,10 +233,6 @@ function listViaEws(conversationId: string): Promise<ConversationMessageMeta[]> 
   });
 }
 
-/**
- * List all messages in the current Outlook conversation.
- * Tries Graph (several shapes), then EWS GetConversationItems.
- */
 export async function listConversationMessages(graphToken?: string | null): Promise<{
   conversationId: string;
   messages: ConversationMessageMeta[];
