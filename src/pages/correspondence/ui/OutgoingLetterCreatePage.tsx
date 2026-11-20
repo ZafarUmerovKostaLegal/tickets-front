@@ -1013,6 +1013,7 @@ export function OutgoingLetterCreatePage() {
                                             onChange={() => setDirty(true)}
                                             onSaveRequest={() => { void handleSaveDraft(); }}
                                             onNewCommentRequest={beginNewComment}
+                                            onOpenRequest={() => importFileRef.current?.click()}
                                         />
                                     </Suspense>
                                 </OutgoingLetterDocxErrorBoundary>

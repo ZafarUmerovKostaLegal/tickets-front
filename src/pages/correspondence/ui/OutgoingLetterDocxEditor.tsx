@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
     DocxEditor,
+    DocxEditorMenu,
     runToolbarCommand,
     useFonts,
     type DocxEditorRef,
@@ -23,7 +24,23 @@ type Props = {
     onChange?: () => void;
     onSaveRequest?: () => void;
     onNewCommentRequest?: () => void;
+    /** File › Open: the page imports the .docx itself (keeps the draft and attachments in sync). */
+    onOpenRequest?: () => void;
 };
+
+/** Phones and narrow tablets: no rulers — they eat the little room the page has. */
+function useNarrowScreen(): boolean {
+    const query = '(max-width: 768px)';
+    const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+    useEffect(() => {
+        const media = window.matchMedia(query);
+        const sync = () => setNarrow(media.matches);
+        sync();
+        media.addEventListener('change', sync);
+        return () => media.removeEventListener('change', sync);
+    }, []);
+    return narrow;
+}
 
 function useAppColorMode(): 'light' | 'dark' {
     const [mode, setMode] = useState<'light' | 'dark'>(() => (
@@ -157,13 +174,16 @@ function bindLayoutSafeEditorHotkeys(
 
 export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandle, Props>(
     function OutgoingLetterDocxEditor(
-        { documentBytes, title, templateKey, disabled, onReady, onChange, onSaveRequest, onNewCommentRequest },
+        { documentBytes, title, templateKey, disabled, onReady, onChange, onSaveRequest, onNewCommentRequest, onOpenRequest },
         ref,
     ) {
         const rootRef = useRef<HTMLDivElement>(null);
         const innerRef = useRef<DocxEditorRef>(null);
         const fonts = useFonts(outgoingLetterEditorFonts);
         const colorMode = useAppColorMode();
+        const narrow = useNarrowScreen();
+        const onOpenRequestRef = useRef(onOpenRequest);
+        onOpenRequestRef.current = onOpenRequest;
         const onSaveRequestRef = useRef(onSaveRequest);
         onSaveRequestRef.current = onSaveRequest;
         const onNewCommentRequestRef = useRef(onNewCommentRequest);
@@ -263,9 +283,24 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     title={title || 'Исходящее письмо'}
                     chrome
                     colorMode={colorMode}
-                    menu
+                    menu={{
+                        // File · Format · Insert only: Review needs the paid module (every row is
+                        // disabled) and Help only links to the library's own issue tracker.
+                        preset: false,
+                        reportIssue: false,
+                        onSave: () => { onSaveRequestRef.current?.(); },
+                        onOpen: () => { onOpenRequestRef.current?.(); },
+                        children: (
+                            <>
+                                <DocxEditorMenu.File />
+                                <DocxEditorMenu.Format />
+                                <DocxEditorMenu.Insert />
+                            </>
+                        ),
+                    }}
+                    contextMenu
                     navigation={false}
-                    rulers
+                    rulers={!narrow}
                     onReady={() => {
                         requestAnimationFrame(() => {
                             innerRef.current?.focus();

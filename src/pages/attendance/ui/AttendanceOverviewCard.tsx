@@ -9,12 +9,29 @@ import {
     type PeriodAttendanceItem,
 } from '@entities/attendance';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
+import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
-import { isPartnerOrgRole } from '@shared/lib/orgRoles';
+import { isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
 import { formatTime } from '@shared/lib/formatDate';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { useAppToast } from '@shared/ui';
+import {
+    formatDuration as formatWorked,
+    formatMinuteOfDay,
+    relevantPeriodRows,
+    summarizeByEmployee,
+    workedTime,
+} from '../lib/attendancePeriod';
+import { exportAttendancePeriodExcel } from '../lib/exportAttendancePeriodExcel';
+import { AttendanceCameraData } from './AttendanceCameraData';
+
+/** Same roles the gateway lets load camera data (CSV import, re-pull from terminals). */
+const CAMERA_DATA_MANAGER_ROLES = new Set(
+    ['Главный администратор', 'Администратор', 'Партнер', 'Офис менеджер', 'IT отдел'].map(normalizeOrgRoleKey),
+);
+
+type PeriodView = 'summary' | 'days';
 
 export type AttendanceStatusFilter = 'all' | AttendanceStatus;
 
@@ -325,48 +342,6 @@ function parseEventMs(isoOrTime: string | null | undefined): number | null {
     return Number.isNaN(t) ? null : t;
 }
 
-function combineDayAndHm(dayYmd: string, hm: string | null): number | null {
-    if (!hm)
-        return null;
-    const m = hm.match(/^(\d{1,2}):(\d{2})/);
-    if (!m)
-        return parseEventMs(hm);
-    const d = parseYmd(dayYmd);
-    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
-    return d.getTime();
-}
-
-function formatDuration(ms: number): string {
-    if (!Number.isFinite(ms) || ms < 0)
-        return '—';
-    const totalMin = Math.floor(ms / 60_000);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}:${String(m).padStart(2, '0')}`;
-}
-
-function workedHoursLabel(
-    item: DailyAttendanceItem,
-    dayYmd: string,
-    workdayEndHm: string | null,
-): string {
-    const arrivalMs = parseEventMs(item.first_event_time);
-    if (arrivalMs == null)
-        return '—';
-    const lastMs = parseEventMs(item.last_event_time ?? null);
-    let endMs = lastMs != null && lastMs > arrivalMs ? lastMs : null;
-    if (endMs == null) {
-        const today = toYmd(new Date());
-        if (dayYmd === today)
-            endMs = Date.now();
-        else
-            endMs = combineDayAndHm(dayYmd, workdayEndHm ? formatHm(workdayEndHm) : '18:00');
-    }
-    if (endMs == null || endMs < arrivalMs)
-        return '—';
-    return formatDuration(endMs - arrivalMs);
-}
-
 type SegmentTone = 'onTime' | 'late' | 'absent';
 
 function segmentTone(status: AttendanceStatus): SegmentTone {
@@ -417,10 +392,14 @@ export function AttendanceOverviewCard() {
     const [items, setItems] = useState<ListItem[]>([]);
     const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
     const [workdayStart, setWorkdayStart] = useState<string | null>(null);
-    const [workdayEnd, setWorkdayEnd] = useState<string | null>(null);
+    const [, setWorkdayEnd] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [exportBusy, setExportBusy] = useState(false);
+    const [periodView, setPeriodView] = useState<PeriodView>('summary');
+    const [reloadTick, setReloadTick] = useState(0);
+    const { user } = useCurrentUser();
+    const canManageCameraData = CAMERA_DATA_MANAGER_ROLES.has(normalizeOrgRoleKey(user?.role));
 
     const isPeriodMode = periodFrom !== periodTo;
     const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
@@ -523,7 +502,8 @@ export function AttendanceOverviewCard() {
                 setEmployeeOptions((prev) => mergeEmployeeOptions(prev, periodItems));
             }
 
-            setItems(nextItems);
+            // A period lists working days only: weekend without a visit is a day off, future days are empty.
+            setItems(periodFrom === periodTo ? nextItems : relevantPeriodRows(nextItems, toYmd(new Date())));
             setWorkdayStart(nextWorkdayStart);
             setWorkdayEnd(nextWorkdayEnd);
         }
@@ -539,7 +519,7 @@ export function AttendanceOverviewCard() {
             if (!signal?.aborted)
                 setLoading(false);
         }
-    }, [periodFrom, periodTo, selectedEmployeeKey, t]);
+    }, [periodFrom, periodTo, selectedEmployeeKey, t, reloadTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const controller = new AbortController();
@@ -617,7 +597,8 @@ export function AttendanceOverviewCard() {
                 || ''
             ).trim();
             const arrival = item.first_event_time ? formatHm(item.first_event_time) : '—';
-            const departure = item.last_event_time ? formatHm(item.last_event_time) : '—';
+            const worked = workedTime(item);
+            const departure = item.last_event_time && !worked.noExit && !worked.ongoing ? formatHm(item.last_event_time) : '—';
             return {
                 key: `${item.date}-${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
                 date: item.date,
@@ -625,7 +606,9 @@ export function AttendanceOverviewCard() {
                 dept: subtitle,
                 arrival,
                 departure,
-                hours: workedHoursLabel(item, item.date, workdayEnd),
+                hours: formatWorked(worked.ms),
+                ongoing: worked.ongoing,
+                noExit: worked.noExit,
                 status: item.status,
                 statusLabel: item.status === 'late'
                     ? t('attendancePage.arrival.late')
@@ -634,7 +617,45 @@ export function AttendanceOverviewCard() {
                         : null,
             };
         });
-    }, [visibleItems, workdayEnd, locale, isPeriodMode, t]);
+    }, [visibleItems, locale, isPeriodMode, t]);
+
+    const showSummary = isPeriodMode && periodView === 'summary' && selectedEmployeeKey === ALL_EMPLOYEE_KEY;
+
+    const periodSummary = useMemo(() => {
+        if (!isPeriodMode)
+            return null;
+        const people = summarizeByEmployee(visibleItems).sort((a, b) => (
+            b.late + b.absent - (a.late + a.absent) || a.name.localeCompare(b.name, locale === 'en' ? 'en' : 'ru')
+        ));
+        return {
+            people,
+            late: people.reduce((n, p) => n + p.late, 0),
+            absent: people.reduce((n, p) => n + p.absent, 0),
+            workedMs: people.reduce((n, p) => n + p.workedMs, 0),
+        };
+    }, [isPeriodMode, visibleItems, locale]);
+
+    const openEmployeeDays = (key: string) => {
+        if (employeeOptions.some((o) => o.key === key))
+            setSelectedEmployeeKey(key);
+        setPeriodView('days');
+    };
+
+    const handleExportPeriodExcel = async () => {
+        setExportBusy(true);
+        try {
+            await exportAttendancePeriodExcel({ dateFrom: periodFrom, dateTo: periodTo, rows: visibleItems });
+        }
+        catch (e) {
+            pushToast({
+                message: e instanceof Error ? e.message : t('attendancePage.errors.exportFailed'),
+                variant: 'error',
+            });
+        }
+        finally {
+            setExportBusy(false);
+        }
+    };
 
     const dayStartLabel = useMemo(() => {
         const fromEvents = earliestArrival(visibleItems.filter((i) => i.status !== 'absent'));
@@ -797,6 +818,13 @@ export function AttendanceOverviewCard() {
                 </div>
             </header>
 
+            <AttendanceCameraData
+                periodFrom={periodFrom}
+                periodTo={periodTo > today ? today : periodTo}
+                canManage={canManageCameraData}
+                onDataChanged={() => setReloadTick((n) => n + 1)}
+            />
+
             <div className="att-overview__presets" role="group" aria-label={t('attendancePage.quickPeriod')}>
                 {(
                     [
@@ -870,23 +898,33 @@ export function AttendanceOverviewCard() {
                 </div>
                 <div className="att-overview__field att-overview__field--action">
                     <span className="att-overview__field-spacer" aria-hidden>&nbsp;</span>
-                    <button
-                        type="button"
-                        className="att-overview__excel-btn"
-                        disabled={loading || exportBusy || !canExportEmployeePeriod}
-                        title={canExportEmployeePeriod
-                            ? t('attendancePage.export.excelHint')
-                            : t('attendancePage.errors.exportSelectEmployee')}
-                        onClick={() => void handleExportEmployeeExcel()}
-                    >
-                        {exportBusy
-                            ? t('attendancePage.export.excelBusy')
-                            : t('attendancePage.export.excelEmployeePeriod')}
-                    </button>
+                    {canExportEmployeePeriod ? (
+                        <button
+                            type="button"
+                            className="att-overview__excel-btn"
+                            disabled={loading || exportBusy}
+                            title={t('attendancePage.export.excelHint')}
+                            onClick={() => void handleExportEmployeeExcel()}
+                        >
+                            {exportBusy
+                                ? t('attendancePage.export.excelBusy')
+                                : t('attendancePage.export.excelEmployeePeriod')}
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            className="att-overview__excel-btn"
+                            disabled={loading || exportBusy || visibleItems.length === 0}
+                            onClick={() => void handleExportPeriodExcel()}
+                        >
+                            {exportBusy ? t('attendancePage.report.excelBusy') : t('attendancePage.report.excelPeriod')}
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="att-overview__week" aria-label={locale === 'en' ? 'Week' : 'Неделя'}>
+            {/* A period has its own report below — the week strip is for picking a single day. */}
+            <div className="att-overview__week" hidden={isPeriodMode} aria-label={locale === 'en' ? 'Week' : 'Неделя'}>
                 <button
                     type="button"
                     className="att-overview__nav"
@@ -966,10 +1004,48 @@ export function AttendanceOverviewCard() {
                         </div>
                     ) : null}
 
+                    {isPeriodMode && periodSummary ? (
+                        <div className="att-overview__kpis">
+                            <div className="att-overview__kpi">
+                                <span>{t('attendancePage.report.kpiPeople')}</span>
+                                <strong>{loading ? '…' : periodSummary.people.length}</strong>
+                            </div>
+                            <div className="att-overview__kpi att-overview__kpi--late">
+                                <span>{t('attendancePage.report.kpiLate')}</span>
+                                <strong>{loading ? '…' : periodSummary.late}</strong>
+                            </div>
+                            <div className="att-overview__kpi att-overview__kpi--absent">
+                                <span>{t('attendancePage.report.kpiAbsent')}</span>
+                                <strong>{loading ? '…' : periodSummary.absent}</strong>
+                            </div>
+                            <div className="att-overview__kpi">
+                                <span>{t('attendancePage.report.kpiHours')}</span>
+                                <strong>{loading ? '…' : formatWorked(periodSummary.workedMs)}</strong>
+                            </div>
+                        </div>
+                    ) : null}
+
                     <div className="att-overview__meta">
+                        {isPeriodMode && selectedEmployeeKey === ALL_EMPLOYEE_KEY ? (
+                            <div className="att-overview__views" role="tablist" aria-label={t('attendancePage.reportTitle')}>
+                                {(['summary', 'days'] as const).map((view) => (
+                                    <button
+                                        key={view}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={periodView === view}
+                                        className={`att-overview__view${periodView === view ? ' att-overview__view--active' : ''}`}
+                                        onClick={() => setPeriodView(view)}
+                                    >
+                                        {view === 'summary' ? t('attendancePage.report.viewSummary') : t('attendancePage.report.viewDays')}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
                         <span>
                             {loading ? '…' : metaCountLabel}
                         </span>
+                        {isPeriodMode ? <span className="att-overview__note">{t('attendancePage.report.weekendNote')}</span> : null}
                         {!isPeriodMode ? (
                             <span>
                                 {locale === 'en' ? 'Day start — ' : 'Начало дня — '}
@@ -978,7 +1054,70 @@ export function AttendanceOverviewCard() {
                         ) : null}
                     </div>
 
-                    {!loading && listRows.length > 0 ? (
+                    {loading && isPeriodMode ? (
+                        <div className="att-overview__skeleton" aria-busy="true">
+                            {Array.from({ length: 6 }, (_, i) => <span key={i} />)}
+                        </div>
+                    ) : null}
+
+                    {!loading && listRows.length === 0 ? (
+                        <p className="att-overview__empty">{t('attendancePage.report.empty')}</p>
+                    ) : null}
+
+                    {!loading && showSummary && periodSummary && periodSummary.people.length > 0 ? (
+                        <div className="att-overview__list-wrap">
+                            <table className="att-overview__list att-overview__list--summary">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">{t('attendancePage.table.employee')}</th>
+                                        <th scope="col">{t('attendancePage.report.colDays')}</th>
+                                        <th scope="col">{t('attendancePage.report.colLate')}</th>
+                                        <th scope="col">{t('attendancePage.report.colAbsent')}</th>
+                                        <th scope="col">{t('attendancePage.report.colAvgIn')}</th>
+                                        <th scope="col">{t('attendancePage.report.colAvgOut')}</th>
+                                        <th scope="col">{t('attendancePage.report.colHours')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {periodSummary.people.map((p) => (
+                                        <tr
+                                            key={p.key}
+                                            className="att-overview__list-row att-overview__list-row--link"
+                                            tabIndex={0}
+                                            title={t('attendancePage.report.openDays')}
+                                            onClick={() => openEmployeeDays(p.key)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault();
+                                                    openEmployeeDays(p.key);
+                                                }
+                                            }}
+                                        >
+                                            <td data-label={t('attendancePage.table.employee')}>
+                                                <div className="att-overview__person">
+                                                    <span className="att-overview__person-name">{p.name}</span>
+                                                    {p.subtitle ? <span className="att-overview__person-dept">{p.subtitle}</span> : null}
+                                                </div>
+                                            </td>
+                                            <td data-label={t('attendancePage.report.colDays')}>{p.present}/{p.days}</td>
+                                            <td data-label={t('attendancePage.report.colLate')} className={p.late ? 'att-overview__num--late' : 'att-overview__num--zero'}>{p.late}</td>
+                                            <td data-label={t('attendancePage.report.colAbsent')} className={p.absent ? 'att-overview__num--absent' : 'att-overview__num--zero'}>{p.absent}</td>
+                                            <td data-label={t('attendancePage.report.colAvgIn')}>{formatMinuteOfDay(p.avgArrival)}</td>
+                                            <td data-label={t('attendancePage.report.colAvgOut')}>{formatMinuteOfDay(p.avgDeparture)}</td>
+                                            <td data-label={t('attendancePage.report.colHours')}>
+                                                {formatWorked(p.workedMs)}
+                                                {p.noExit
+                                                    ? <small className="att-overview__hint" title={t('attendancePage.report.noExitHint')}>{`${t('attendancePage.report.noExit')}: ${p.noExit}`}</small>
+                                                    : null}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : null}
+
+                    {!loading && !showSummary && listRows.length > 0 ? (
                         <div className="att-overview__list-wrap">
                             <table className={`att-overview__list${isPeriodMode ? ' att-overview__list--period' : ''}`}>
                                 <thead>
@@ -1004,7 +1143,7 @@ export function AttendanceOverviewCard() {
                                                 }`}
                                         >
                                             {isPeriodMode ? (
-                                                <td className="att-overview__date-cell">
+                                                <td className="att-overview__date-cell" data-label={t('attendancePage.table.date')}>
                                                     {formatShortDate(row.date, locale)}
                                                 </td>
                                             ) : null}
@@ -1026,11 +1165,18 @@ export function AttendanceOverviewCard() {
                                                     ) : null}
                                                 </div>
                                             </td>
-                                            <td className={row.status === 'late' ? 'att-overview__arrival' : undefined}>
+                                            <td data-label={t('attendancePage.table.arrival')} className={row.status === 'late' ? 'att-overview__arrival' : undefined}>
                                                 {row.arrival}
                                             </td>
-                                            <td>{row.departure}</td>
-                                            <td>{row.hours}</td>
+                                            <td data-label={t('attendancePage.table.departure')}>
+                                                {row.noExit
+                                                    ? <span className="att-overview__hint" title={t('attendancePage.report.noExitHint')}>{t('attendancePage.report.noExit')}</span>
+                                                    : row.departure}
+                                            </td>
+                                            <td data-label={t('attendancePage.table.hours')}>
+                                                {row.hours}
+                                                {row.ongoing ? <small className="att-overview__hint">{t('attendancePage.report.inOffice')}</small> : null}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

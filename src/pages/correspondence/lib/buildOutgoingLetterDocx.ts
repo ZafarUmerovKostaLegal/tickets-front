@@ -36,25 +36,37 @@ const cellBorderNil = {
     right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
 } as const;
 
-function contactLine(text: string, after = 40): Paragraph {
+/** Line spacing 1.05 (240 = single). Word's default 1.08 + 8pt after made every Enter a gap. */
+const LINE = 252;
+
+function contactLine(text: string, after = 0): Paragraph {
     return new Paragraph({
         alignment: AlignmentType.RIGHT,
-        spacing: { after },
+        spacing: { before: 0, after, line: 240 },
+        run: { font: DOC_FONT, size: 16, color: MUTED },
         children: [new TextRun({ text, font: DOC_FONT, size: 16, color: MUTED })],
     });
 }
 
-function bodyPara(text: string, opts?: { bold?: boolean; before?: number; after?: number; italic?: boolean; color?: string }): Paragraph {
+type BodyOpts = { bold?: boolean; before?: number; after?: number; italic?: boolean; color?: string };
+
+/**
+ * A letter paragraph. An empty line stays truly empty (the old NBSP placeholder became a stray
+ * leading space as soon as someone typed into it), and the paragraph mark carries the same
+ * font, so typing into an empty line and pressing Enter keep Calibri Light 11.
+ */
+function bodyPara(text: string, opts?: BodyOpts): Paragraph {
+    const run = {
+        font: DOC_FONT,
+        size: DOC_SIZE,
+        bold: opts?.bold,
+        italics: opts?.italic,
+        color: opts?.color,
+    };
     return new Paragraph({
-        spacing: { before: opts?.before ?? 0, after: opts?.after ?? 80 },
-        children: [new TextRun({
-            text: text || '\u00a0',
-            font: DOC_FONT,
-            size: DOC_SIZE,
-            bold: opts?.bold,
-            italics: opts?.italic,
-            color: opts?.color,
-        })],
+        spacing: { before: opts?.before ?? 0, after: opts?.after ?? 0, line: LINE },
+        run,
+        children: text ? [new TextRun({ text, ...run })] : [],
     });
 }
 
@@ -100,6 +112,7 @@ export async function buildOutgoingLetterDocxBlob(
                         width: { size: 52, type: WidthType.PERCENTAGE },
                         children: [new Paragraph({
                             alignment: AlignmentType.LEFT,
+                            spacing: { before: 0, after: 0 },
                             children: logoRuns.length
                                 ? logoRuns
                                 : [new TextRun({ text: 'KOSTA LEGAL', bold: true, size: 32, font: DOC_FONT })],
@@ -126,35 +139,38 @@ export async function buildOutgoingLetterDocxBlob(
     const recipient = (model.recipientCompany || '').trim();
     const attention = (model.attentionName || '').trim();
     const bodyText = letterHtmlToPlainText(model.introParagraphOverride ?? '').trim();
-    const bodyLines = bodyText ? bodyText.split(/\n/) : ['', '', ''];
+    // One empty line to type into — three blank lines only left a gap before the closing.
+    // Blank lines in imported text are paragraph breaks already carried by `after`.
+    const bodyLines = bodyText.split(/\n/).map((line) => line.trim()).filter(Boolean);
 
     const children: (Paragraph | Table)[] = [
         headerTable,
-        bodyPara(formatOutgoingRefLine(opts?.registryNumber), { italic: true, color: MUTED, before: 280, after: 40 }),
+        bodyPara(formatOutgoingRefLine(opts?.registryNumber), { italic: true, color: MUTED, before: 280 }),
         bodyPara(`Дата: ${formatOutgoingLetterheadDate(model)}`, { italic: true, color: MUTED, after: 240 }),
     ];
 
     if (recipient && recipient !== 'Company Name') {
-        children.push(bodyPara(recipient, { bold: true, after: 40 }));
+        children.push(bodyPara(recipient, { bold: true }));
         const addr1 = (model.recipientAddressLines[0] || '').trim();
         if (addr1)
-            children.push(bodyPara(addr1, { after: 40 }));
+            children.push(bodyPara(addr1));
         const addr2 = (model.recipientAddressLines[1] || '').trim();
         if (addr2)
-            children.push(bodyPara(addr2, { after: 40 }));
+            children.push(bodyPara(addr2));
     }
 
     if (attention)
-        children.push(bodyPara(`${labels.dear} ${attention},`, { before: 200, after: 160 }));
+        children.push(bodyPara(`${labels.dear} ${attention},`, { before: 200, after: 120 }));
 
-    for (const line of bodyLines)
+    // Body paragraphs: Enter inside them makes a new paragraph with the same 6pt gap.
+    for (const line of bodyLines.length ? bodyLines : [''])
         children.push(bodyPara(line, { after: 120 }));
 
     children.push(
-        bodyPara(labels.closing, { before: 280, after: 200 }),
-        bodyPara('_________________________', { color: '666666', after: 80 }),
-        bodyPara(model.signatoryName || '', { after: 40 }),
-        bodyPara(model.signatoryTitle || '', { after: 0 }),
+        bodyPara(labels.closing, { before: 240, after: 360 }),
+        bodyPara('_________________________', { color: '666666', after: 60 }),
+        bodyPara(model.signatoryName || ''),
+        bodyPara(model.signatoryTitle || ''),
     );
 
     const qrUrl = (opts?.downloadQrUrl ?? '').trim();
@@ -191,6 +207,16 @@ export async function buildOutgoingLetterDocxBlob(
     }
 
     const doc = new Document({
+        // Document defaults = the letter's look. Without them, new and pasted paragraphs fell
+        // back to Word's Normal (plain Calibri, 8pt after, 1.08 lines) — the jumping spacing.
+        styles: {
+            default: {
+                document: {
+                    run: { font: DOC_FONT, size: DOC_SIZE },
+                    paragraph: { spacing: { before: 0, after: 120, line: LINE } },
+                },
+            },
+        },
         sections: [{
             properties: {
                 page: {

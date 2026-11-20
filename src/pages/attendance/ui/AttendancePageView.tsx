@@ -2,6 +2,7 @@ import { useI18n } from '@shared/i18n';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { AttendanceOverviewCard } from './AttendanceOverviewCard';
 import './AttendancePage.css';
+import './AttendanceReport.css';
 
 export function AttendancePageView() {
     const { t } = useI18n();

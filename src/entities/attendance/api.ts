@@ -395,3 +395,79 @@ export async function fetchAttendanceRangeReport(
     }
     return res.json() as Promise<AttendanceRangeReportResponse>;
 }
+
+export type CameraIngestStatus = {
+    events_total: number;
+    min_event_time: string | null;
+    max_event_time: string | null;
+    poller_running?: boolean;
+    last_poll_at?: string | null;
+    last_poll_error?: string | null;
+    last_poll_upserted?: number;
+    backfill_running?: boolean;
+    backfill_started_at?: string | null;
+    backfill_finished_at?: string | null;
+    backfill_result?: { days?: number; fetched?: number; upserted?: number; device_errors?: string[] } | null;
+    backfill_error?: string | null;
+};
+
+export type CameraCsvImportResult = {
+    ok: boolean;
+    filename: string;
+    rows_read: number;
+    rows_mapped: number;
+    rows_unmapped: number;
+    upserted: number;
+    date_min: string | null;
+    date_max: string | null;
+    unmapped_names: Record<string, number>;
+};
+
+async function cameraIngestError(res: Response, fallback: string): Promise<Error> {
+    if (res.status === 403)
+        return new Error('Загружать данные камер могут администраторы, IT и офис-менеджеры.');
+    const text = await res.text().catch(() => '');
+    try {
+        const detail = (JSON.parse(text) as { detail?: unknown }).detail;
+        if (typeof detail === 'string' && detail.trim())
+            return new Error(detail.includes('"detail"') ? fallback : detail);
+    }
+    catch {
+    }
+    return new Error(text.trim() && text.length < 300 ? text : `${fallback} (${res.status})`);
+}
+
+/** What is stored from the door terminals and when the poller last pulled new punches. */
+export async function fetchCameraIngestStatus(signal?: AbortSignal): Promise<CameraIngestStatus> {
+    const res = await attendanceFetch('/api/v1/attendance/hikvision/ingest/status', {
+        signal: signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        skipGetDedupe: true,
+    });
+    if (!res.ok)
+        throw await cameraIngestError(res, 'Не удалось получить состояние загрузки с камер');
+    return res.json() as Promise<CameraIngestStatus>;
+}
+
+/** Pull the period from the door terminals into the database (runs in the background). */
+export async function startCameraBackfill(dateFrom: string, dateTo: string): Promise<void> {
+    const q = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+    const res = await attendanceFetch(`/api/v1/attendance/hikvision/ingest/backfill?${q}`, { method: 'POST' });
+    if (res.status === 409)
+        throw new Error('Загрузка с камер уже идёт — дождитесь окончания.');
+    if (!res.ok)
+        throw await cameraIngestError(res, 'Не удалось запустить загрузку с камер');
+}
+
+/** Hikvision / HCWebControl "Transaction" CSV → attendance database. */
+export async function importAttendanceTransactionCsv(file: File): Promise<CameraCsvImportResult> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const res = await attendanceFetch('/api/v1/attendance/hikvision/ingest/import-csv', {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(300_000),
+    });
+    if (!res.ok)
+        throw await cameraIngestError(res, 'Не удалось импортировать CSV');
+    return res.json() as Promise<CameraCsvImportResult>;
+}

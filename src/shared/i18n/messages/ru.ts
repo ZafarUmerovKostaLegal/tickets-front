@@ -950,6 +950,49 @@ export const ruMessages: Messages = {
             saving: 'Сохранение…',
             saveFailed: 'Не удалось сохранить настройки',
         },
+        report: {
+            viewSummary: 'Сводка',
+            viewDays: 'По дням',
+            colDays: 'Раб. дней',
+            colPresent: 'Пришёл',
+            colLate: 'Опозданий',
+            colAbsent: 'Не пришёл',
+            colAvgIn: 'Ср. приход',
+            colAvgOut: 'Ср. уход',
+            colHours: 'Всего часов',
+            noExit: 'нет ухода',
+            noExitHint: 'Терминал не зафиксировал уход — часы за этот день не считаются',
+            inOffice: 'в офисе',
+            openDays: 'Открыть по дням',
+            excelPeriod: 'Excel за период',
+            excelBusy: 'Готовим Excel…',
+            empty: 'За выбранный период нет данных',
+            weekendNote: 'Выходные без прихода не считаются пропуском',
+            kpiPeople: 'Сотрудников',
+            kpiLate: 'Опозданий',
+            kpiAbsent: 'Пропусков',
+            kpiHours: 'Отработано',
+            records: 'записей',
+        },
+        camera: {
+            title: 'Данные с камер',
+            stored: 'В базе: {count} отметок · {from} — {to}',
+            storedEmpty: 'В базе пока нет отметок',
+            lastPoll: 'Камеры опрошены в {time}',
+            pollerOff: 'Автообновление с камер выключено',
+            pollError: 'Ошибка опроса камер: {error}',
+            refresh: 'Обновить с камер',
+            refreshHint: 'Заново забрать отметки за выбранный период прямо с терминалов',
+            refreshing: 'Загружаем с камер…',
+            refreshDone: 'Отметки с камер загружены: {count}',
+            import: 'Импорт CSV',
+            importHint: 'Отчёт Transaction из HCWebControl / iVMS — история прихода и ухода',
+            importing: 'Импортируем…',
+            importDone: 'Импортировано {count} отметок за {from} — {to}',
+            importUnmapped: 'Не сопоставлены: {names}',
+            importEmpty: 'В файле нет строк с отметками — проверьте, что экспорт завершился',
+            onlyCsv: 'Нужен файл .csv',
+        },
         hikvisionModal: {
             open: 'Привязка пользователей Hikvision',
             openShort: 'Привязка',
@@ -2017,6 +2060,8 @@ export type Messages = {
         >;
         table: Record<'date' | 'employee' | 'arrival' | 'departure' | 'hours' | 'checkpoint' | 'explanation' | 'unmapped' | 'unmappedHint', string>;
         arrival: Record<'absent' | 'late' | 'onTime', string>;
+        report: Record<'viewSummary' | 'viewDays' | 'colDays' | 'colPresent' | 'colLate' | 'colAbsent' | 'colAvgIn' | 'colAvgOut' | 'colHours' | 'noExit' | 'noExitHint' | 'inOffice' | 'openDays' | 'excelPeriod' | 'excelBusy' | 'empty' | 'weekendNote' | 'kpiPeople' | 'kpiLate' | 'kpiAbsent' | 'kpiHours' | 'records', string>;
+        camera: Record<'title' | 'stored' | 'storedEmpty' | 'lastPoll' | 'pollerOff' | 'pollError' | 'refresh' | 'refreshHint' | 'refreshing' | 'refreshDone' | 'import' | 'importHint' | 'importing' | 'importDone' | 'importUnmapped' | 'importEmpty' | 'onlyCsv', string>;
         explain: Record<
             | 'opening'
             | 'openPhoto'

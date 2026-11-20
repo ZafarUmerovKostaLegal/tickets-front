@@ -1989,3 +1989,45 @@ body[data-theme='dark'] .docx-dialog {
   color: #f2f0e9;
   border-color: #3c3c3c;
 }
+/* ── Word chrome clean-up (docx-editor 2.17 has no shell classes) ───────────── */
+
+/* The document title above the menu repeats the "Тема" field right above it. */
+.corr-docx-editor div:has(> .docx-menubar) > span:not([class]) {
+  display: none;
+}
+
+/* Comments come from our own pane; the packaged button is the paid module, always disabled. */
+.corr-docx-editor .docx-toolbar__group:has(> [data-slot='review.comments']),
+.corr-docx-editor .docx-toolbar__separator:has(+ .docx-toolbar__group > [data-slot='review.comments']),
+.corr-docx-editor [data-slot='review.comments'],
+.corr-docx-editor [data-testid='editing-mode-trigger'] {
+  display: none !important;
+}
+
+/* A letter is one page: the vertical ruler only took 20px of the gutter. */
+.corr-docx-editor .docx-vertical-ruler {
+  display: none !important;
+}
+
+.corr-docx-editor .docx-menubar {
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.corr-docx-editor .docx-menubar::-webkit-scrollbar {
+  display: none;
+}
+.corr-docx-editor .docx-menubar__trigger {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .corr-docx-editor .docx-menubar__trigger {
+    min-height: 40px;
+    padding: 0.55rem 0.8rem !important;
+  }
+  .corr-docx-editor .docx-toolbar {
+    padding: 0.35rem 0.5rem !important;
+    min-height: 0 !important;
+  }
+}

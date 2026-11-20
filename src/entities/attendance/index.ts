@@ -18,7 +18,7 @@ export { workdayDtoToSettings, settingsToWorkdayDto } from './lib/workdaySetting
 export { dedupeHikvisionUsers } from './lib/dedupeHikvisionUsers';
 export { exportAttendanceEmployeePeriodExcel } from './lib/exportAttendanceEmployeePeriodExcel';
 export { getAttendanceApiUrl, getAttendanceResolvedBaseUrl } from './lib/config';
-export type { UploadAttendanceExplanationParams, AttendanceRangeMarker, AttendanceRangeReportResponse } from './api';
+export type { UploadAttendanceExplanationParams, AttendanceRangeMarker, AttendanceRangeReportResponse, CameraIngestStatus, CameraCsvImportResult } from './api';
 export {
     fetchAttendance,
     fetchDailyAttendanceReport,
@@ -31,4 +31,7 @@ export {
     listHikvisionMappings,
     upsertHikvisionMapping,
     deleteHikvisionMapping,
+    fetchCameraIngestStatus,
+    startCameraBackfill,
+    importAttendanceTransactionCsv,
 } from './api';

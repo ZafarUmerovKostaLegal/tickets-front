@@ -1,0 +1,208 @@
+/* Attendance — camera data strip, period summary and mobile cards (layer over AttendancePage.css). */
+
+.att-camera {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--app-border-soft, var(--app-border));
+  border-radius: 12px;
+  background: var(--app-surface-soft, var(--app-bg-soft));
+  font-size: 0.8rem;
+}
+
+.att-camera__dot {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--app-muted);
+}
+.att-camera__dot--ok { background: var(--app-success, #16a34a); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-success, #16a34a) 18%, transparent); }
+.att-camera__dot--warn { background: var(--app-warning, #d97706); }
+.att-camera__dot--error { background: var(--app-error, #dc2626); }
+
+.att-camera__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  color: var(--app-muted);
+  line-height: 1.4;
+}
+.att-camera__info strong { color: var(--app-text-strong, var(--app-text)); font-size: 0.82rem; font-weight: 650; }
+.att-camera__poll--error { color: var(--app-error, #dc2626); }
+.att-camera__poll--warn { color: var(--app-warning, #b45309); }
+
+.att-camera__actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.att-camera .att-camera__btn {
+  min-height: 2.1rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.att-camera .att-camera__btn:disabled { opacity: 0.55; cursor: default; }
+.att-camera .att-camera__btn:focus-visible { outline: 2px solid var(--app-accent-focus, var(--app-accent)); outline-offset: 2px; }
+@media (hover: hover) {
+  .att-camera .att-camera__btn:hover:not(:disabled) { border-color: var(--app-accent-border, var(--app-accent)); color: var(--app-accent); }
+}
+
+/* KPIs for a period */
+.att-overview__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0.4rem 0 1rem;
+}
+.att-overview__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--app-border-soft, var(--app-border));
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+.att-overview__kpi span { color: var(--app-muted); font-size: 0.74rem; font-weight: 600; }
+.att-overview__kpi strong { color: var(--app-text-strong, var(--app-text)); font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.att-overview__kpi--late strong { color: var(--app-warning, #c2410c); }
+.att-overview__kpi--absent strong { color: var(--app-error, #b42318); }
+
+/* Summary / by-day switch */
+.att-overview__meta { flex-wrap: wrap; }
+.att-overview__views {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+}
+.att-overview .att-overview__view {
+  min-height: 2rem;
+  padding: 0.3rem 0.85rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.att-overview .att-overview__view--active {
+  background: var(--app-surface);
+  color: var(--app-text-strong, var(--app-text));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+.att-overview__note { margin-left: auto; color: var(--app-muted); font-size: 0.74rem; font-weight: 500; }
+
+.att-overview__hint {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--app-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+span.att-overview__hint { display: inline; color: var(--app-warning, #b45309); }
+
+.att-overview__empty {
+  margin: 1.25rem 0 0.5rem;
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 12px;
+  color: var(--app-muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.att-overview__skeleton { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1.15rem; }
+.att-overview__skeleton span {
+  height: 2.6rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-text) 7%, transparent);
+  animation: att-overview-pulse 1.3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .att-overview__skeleton span { animation: none; } }
+
+/* Summary table */
+.att-overview__list--summary th:nth-child(n + 2),
+.att-overview__list--summary td:nth-child(n + 2) {
+  width: 6.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.att-overview__list--summary th:last-child,
+.att-overview__list--summary td:last-child { width: 7.25rem; }
+.att-overview__num--late { color: var(--app-warning, #c2410c); font-weight: 700 !important; }
+.att-overview__num--absent { color: var(--app-error, #b42318); font-weight: 700 !important; }
+.att-overview__num--zero { color: var(--app-muted) !important; }
+.att-overview__list-row--link { cursor: pointer; }
+.att-overview__list-row--link:focus-visible { outline: 2px solid var(--app-accent-focus, var(--app-accent)); outline-offset: -2px; }
+@media (hover: hover) {
+  .att-overview__list-row--link:hover td { background: color-mix(in srgb, var(--app-accent) 5%, transparent); }
+}
+
+/* Phones: period tables become cards (label · value). */
+@media (max-width: 760px) {
+  .att-camera { flex-wrap: wrap; }
+  .att-camera__actions { width: 100%; }
+  .att-camera .att-camera__btn { flex: 1 1 auto; min-height: 44px; }
+
+  .att-overview__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .att-overview__note { margin-left: 0; width: 100%; }
+
+  .att-overview__list--summary,
+  .att-overview__list--period,
+  .att-overview__list--summary tbody,
+  .att-overview__list--period tbody { display: block; }
+  .att-overview__list--summary thead,
+  .att-overview__list--period thead { display: none; }
+  .att-overview__list--summary tr,
+  .att-overview__list--period tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem 0.75rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+  .att-overview__list--summary td,
+  .att-overview__list--period td {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    width: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+  }
+  .att-overview__list--summary td::before,
+  .att-overview__list--period td::before {
+    content: attr(data-label);
+    color: var(--app-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+  .att-overview__list--summary td:first-child,
+  .att-overview__list--period td:nth-child(2) { grid-column: 1 / -1; }
+  .att-overview__list--summary td:first-child::before,
+  .att-overview__list--period td:nth-child(2)::before { content: none; }
+  .att-overview__list--period td:first-child { grid-column: 1 / -1; }
+  .att-overview__list--period td:first-child::before { content: none; }
+}
+
+/* Specificity over `.att-overview__list td` / `td:first-child` from the base sheet. */
+.att-overview__list td.att-overview__num--late { color: var(--app-warning, #c2410c); }
+.att-overview__list td.att-overview__num--absent { color: var(--app-error, #b42318); }
+.att-overview__list td.att-overview__num--zero { color: var(--app-muted); }
+.att-overview__list.att-overview__list--period th:first-child,
+.att-overview__list.att-overview__list--period td:first-child { width: 6.5rem; }
+.att-overview__week[hidden] { display: none; }
