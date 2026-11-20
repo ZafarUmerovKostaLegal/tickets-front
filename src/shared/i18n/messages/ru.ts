@@ -974,6 +974,13 @@ export const ruMessages: Messages = {
             kpiHours: 'Отработано',
             records: 'записей',
         },
+        multi: {
+            selected: 'Выбрано: {count}',
+            clear: 'Сбросить',
+            search: 'Поиск сотрудника…',
+            everyone: 'Показаны все сотрудники',
+            nothing: 'Никого не найдено',
+        },
         camera: {
             title: 'Данные с камер',
             stored: 'В базе: {count} отметок · {from} — {to}',
@@ -2061,6 +2068,7 @@ export type Messages = {
         table: Record<'date' | 'employee' | 'arrival' | 'departure' | 'hours' | 'checkpoint' | 'explanation' | 'unmapped' | 'unmappedHint', string>;
         arrival: Record<'absent' | 'late' | 'onTime', string>;
         report: Record<'viewSummary' | 'viewDays' | 'colDays' | 'colPresent' | 'colLate' | 'colAbsent' | 'colAvgIn' | 'colAvgOut' | 'colHours' | 'noExit' | 'noExitHint' | 'inOffice' | 'openDays' | 'excelPeriod' | 'excelBusy' | 'empty' | 'weekendNote' | 'kpiPeople' | 'kpiLate' | 'kpiAbsent' | 'kpiHours' | 'records', string>;
+        multi: Record<'selected' | 'clear' | 'search' | 'everyone' | 'nothing', string>;
         camera: Record<'title' | 'stored' | 'storedEmpty' | 'lastPoll' | 'pollerOff' | 'pollError' | 'refresh' | 'refreshHint' | 'refreshing' | 'refreshDone' | 'import' | 'importHint' | 'importing' | 'importDone' | 'importUnmapped' | 'importEmpty' | 'onlyCsv', string>;
         explain: Record<
             | 'opening'

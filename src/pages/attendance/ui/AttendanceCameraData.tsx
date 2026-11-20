@@ -30,10 +30,7 @@ function clock(iso: string | null | undefined, locale: string): string {
     return d.toLocaleTimeString(locale === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
-/**
- * Where attendance comes from: the door terminals are polled automatically; managers can
- * re-pull a period from the cameras or load a Transaction CSV export with older history.
- */
+
 export function AttendanceCameraData({ periodFrom, periodTo, canManage, onDataChanged }: {
     periodFrom: string;
     periodTo: string;

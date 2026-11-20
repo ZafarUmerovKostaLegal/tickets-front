@@ -427,14 +427,40 @@ async function cameraIngestError(res: Response, fallback: string): Promise<Error
     if (res.status === 403)
         return new Error('Загружать данные камер могут администраторы, IT и офис-менеджеры.');
     const text = await res.text().catch(() => '');
+    const reason = upstreamReason(text);
+    return new Error(reason ? `${fallback}: ${reason}` : `${fallback} (${res.status})`);
+}
+
+/**
+ * The gateway forwards the service's body as `detail`, so the reason can be nested JSON
+ * (`{"detail": "{\"detail\": ...}"}`) or FastAPI's 422 list — dig the human text out.
+ */
+export function upstreamReason(text: string, depth = 0): string {
+    const raw = text.trim();
+    if (!raw || depth > 3)
+        return '';
+    let parsed: unknown;
     try {
-        const detail = (JSON.parse(text) as { detail?: unknown }).detail;
-        if (typeof detail === 'string' && detail.trim())
-            return new Error(detail.includes('"detail"') ? fallback : detail);
+        parsed = JSON.parse(raw);
     }
     catch {
+        return raw.length < 300 && !raw.startsWith('<') ? raw : '';
     }
-    return new Error(text.trim() && text.length < 300 ? text : `${fallback} (${res.status})`);
+    const detail = (parsed as { detail?: unknown } | null)?.detail ?? parsed;
+    if (typeof detail === 'string')
+        return upstreamReason(detail, depth + 1) || detail;
+    if (Array.isArray(detail)) {
+        return detail
+            .map((item) => {
+                const msg = (item as { msg?: unknown })?.msg;
+                const loc = (item as { loc?: unknown })?.loc;
+                const field = Array.isArray(loc) ? loc[loc.length - 1] : '';
+                return typeof msg === 'string' ? (field ? `${String(field)}: ${msg}` : msg) : '';
+            })
+            .filter(Boolean)
+            .join('; ');
+    }
+    return '';
 }
 
 /** What is stored from the door terminals and when the poller last pulled new punches. */

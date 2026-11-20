@@ -77,6 +77,29 @@ test.describe('@e2e @flows Attendance period report', () => {
         });
     }
 
+    test('several employees can be picked at once', async ({ page, loginAs }) => {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await loginAs('admin');
+        await mock(page);
+        await page.goto('/attendance');
+        await page.getByRole('button', { name: 'Этот месяц' }).click();
+        const summary = page.locator('.att-overview__list--summary tbody tr');
+        await expect(summary).toHaveCount(people.length, { timeout: 20_000 });
+        await page.locator('.att-multi__button').click();
+        await page.getByRole('option', { name: 'Iroda Tokhirova' }).click();
+        await page.getByRole('option', { name: 'Nigina Begalieva' }).click();
+        await page.getByRole('option', { name: 'Anastasia Sanina' }).click();
+        await page.screenshot({ path: test.info().outputPath('multi-open.png') });
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.att-multi__button')).toContainText('Выбрано: 3');
+        await expect(summary).toHaveCount(3);
+        await expect(page.locator('.att-overview__kpi').first()).toContainText('3');
+        await expect(page.getByRole('button', { name: 'Excel за период' })).toBeEnabled();
+        await page.screenshot({ path: test.info().outputPath('multi-picked.png') });
+        await page.getByRole('button', { name: 'Сбросить' }).first().click();
+        await expect(summary).toHaveCount(people.length);
+    });
+
     test('Transaction CSV import loads punches and reports the range', async ({ page, loginAs }) => {
         await loginAs('admin');
         await mock(page);

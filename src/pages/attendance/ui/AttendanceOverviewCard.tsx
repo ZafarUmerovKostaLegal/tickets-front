@@ -14,7 +14,6 @@ import { useI18n } from '@shared/i18n';
 import { isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
 import { formatTime } from '@shared/lib/formatDate';
 import { DatePicker } from '@shared/ui/DatePicker';
-import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { useAppToast } from '@shared/ui';
 import {
     formatDuration as formatWorked,
@@ -25,6 +24,7 @@ import {
 } from '../lib/attendancePeriod';
 import { exportAttendancePeriodExcel } from '../lib/exportAttendancePeriodExcel';
 import { AttendanceCameraData } from './AttendanceCameraData';
+import { EmployeeMultiSelect } from './EmployeeMultiSelect';
 
 /** Same roles the gateway lets load camera data (CSV import, re-pull from terminals). */
 const CAMERA_DATA_MANAGER_ROLES = new Set(
@@ -387,7 +387,8 @@ export function AttendanceOverviewCard() {
     const [selectedDate, setSelectedDate] = useState(today);
     const [periodFrom, setPeriodFrom] = useState(today);
     const [periodTo, setPeriodTo] = useState(today);
-    const [selectedEmployeeKey, setSelectedEmployeeKey] = useState(ALL_EMPLOYEE_KEY);
+    /** Picked employees; empty = everyone. */
+    const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
     const [filter, setFilter] = useState<AttendanceStatusFilter>('all');
     const [items, setItems] = useState<ListItem[]>([]);
     const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
@@ -403,11 +404,15 @@ export function AttendanceOverviewCard() {
 
     const isPeriodMode = periodFrom !== periodTo;
     const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
-    const selectedEmployee = useMemo(
-        () => employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null,
-        [employeeOptions, selectedEmployeeKey],
+    const selectedEmployees = useMemo(
+        () => selectedKeys.map((key) => employeeOptions.find((o) => o.key === key)).filter((o): o is EmployeeOption => Boolean(o)),
+        [employeeOptions, selectedKeys],
     );
-    const canExportEmployeePeriod = selectedEmployeeKey !== ALL_EMPLOYEE_KEY && Boolean(selectedEmployee);
+    const selectedEmployeeKey = selectedKeys.length === 1 ? selectedKeys[0] : ALL_EMPLOYEE_KEY;
+    const selectedEmployee = selectedKeys.length === 1 ? selectedEmployees[0] ?? null : null;
+    /** One person → their detailed Excel; several or everyone → the period workbook. */
+    const canExportEmployeePeriod = Boolean(selectedEmployee);
+    const singleEmployee = selectedKeys.length === 1;
 
     const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
@@ -453,7 +458,6 @@ export function AttendanceOverviewCard() {
                 setEmployeeOptions((prev) => mergeEmployeeOptions(prev, dayItems));
             }
             else {
-                const selected = employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null;
                 const report = await fetchPeriodAttendanceReport(periodFrom, periodTo, {
                     appUserId: null,
                     signal,
@@ -461,17 +465,11 @@ export function AttendanceOverviewCard() {
                 if (signal?.aborted)
                     return;
                 let periodItems = (report.items as PeriodAttendanceItem[]).filter(isEmployeeItem);
-                if (selectedEmployeeKey !== ALL_EMPLOYEE_KEY) {
-                    periodItems = periodItems.filter((item) => (
-                        matchesEmployeeSelection(item, selectedEmployeeKey, selected)
-                    ));
-                }
 
                 const daysInRange = iterYmdInclusive(periodFrom, periodTo);
                 const missingTimes = periodItems.length > 0
                     && !periodItems.some((item) => Boolean(item.first_event_time));
-                const emptyEmployeePeriod = selectedEmployeeKey !== ALL_EMPLOYEE_KEY && periodItems.length === 0;
-                if ((missingTimes || emptyEmployeePeriod) && daysInRange.length <= 7) {
+                if (missingTimes && daysInRange.length <= 7) {
                     const dailyReports = await Promise.all(
                         daysInRange.map((day) => fetchDailyAttendanceReport(day, signal)),
                     );
@@ -481,7 +479,6 @@ export function AttendanceOverviewCard() {
                         const day = daily.date || periodFrom;
                         return daily.items
                             .filter(isEmployeeItem)
-                            .filter((item) => matchesEmployeeSelection(item, selectedEmployeeKey, selected))
                             .map((item) => ({ ...item, date: day }));
                     });
                     const wd = dailyReports.find((d) => d.workday)?.workday;
@@ -519,7 +516,7 @@ export function AttendanceOverviewCard() {
             if (!signal?.aborted)
                 setLoading(false);
         }
-    }, [periodFrom, periodTo, selectedEmployeeKey, t, reloadTick]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [periodFrom, periodTo, t, reloadTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const controller = new AbortController();
@@ -529,25 +526,13 @@ export function AttendanceOverviewCard() {
 
     const visibleItems = useMemo(() => {
         let rows = items.filter((item) => matchesFilter(item, filter));
-        if (selectedEmployeeKey !== ALL_EMPLOYEE_KEY) {
-            const selected = employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null;
-            rows = rows.filter((item) => matchesEmployeeSelection(item, selectedEmployeeKey, selected));
+        if (selectedKeys.length) {
+            rows = rows.filter((item) => selectedKeys.some((key) => (
+                matchesEmployeeSelection(item, key, employeeOptions.find((o) => o.key === key) ?? null)
+            )));
         }
         return rows;
-    }, [filter, items, selectedEmployeeKey, employeeOptions]);
-
-    const employeeSelectItems = useMemo<EmployeeOption[]>(() => {
-        const allLabel = t('attendancePage.filterAll');
-        return [
-            {
-                key: ALL_EMPLOYEE_KEY,
-                name: allLabel,
-                appUserId: null,
-                cameraEmployeeNo: '',
-            },
-            ...employeeOptions,
-        ];
-    }, [employeeOptions, t]);
+    }, [filter, items, selectedKeys, employeeOptions]);
 
     const segments = useMemo(() => {
         if (isPeriodMode)
@@ -619,7 +604,7 @@ export function AttendanceOverviewCard() {
         });
     }, [visibleItems, locale, isPeriodMode, t]);
 
-    const showSummary = isPeriodMode && periodView === 'summary' && selectedEmployeeKey === ALL_EMPLOYEE_KEY;
+    const showSummary = isPeriodMode && periodView === 'summary' && !singleEmployee;
 
     const periodSummary = useMemo(() => {
         if (!isPeriodMode)
@@ -637,7 +622,7 @@ export function AttendanceOverviewCard() {
 
     const openEmployeeDays = (key: string) => {
         if (employeeOptions.some((o) => o.key === key))
-            setSelectedEmployeeKey(key);
+            setSelectedKeys([key]);
         setPeriodView('days');
     };
 
@@ -878,22 +863,15 @@ export function AttendanceOverviewCard() {
                 </div>
                 <div className="att-overview__field att-overview__field--grow">
                     <span id="att-overview-employee-lbl">{t('attendancePage.table.employee')}</span>
-                    <SearchableSelect<EmployeeOption>
-                        className="att-overview__employee-select"
-                        buttonClassName="att-overview__employee-btn"
-                        portalDropdown
-                        portalZIndex={12000}
-                        portalMinWidth={280}
-                        aria-labelledby="att-overview-employee-lbl"
-                        placeholder={t('attendancePage.selectPlaceholder')}
-                        emptyListText={locale === 'en' ? 'No employees' : 'Нет сотрудников'}
-                        noMatchText={locale === 'en' ? 'Nothing found' : 'Ничего не найдено'}
-                        value={selectedEmployeeKey}
-                        items={employeeSelectItems}
-                        getOptionValue={(o) => o.key}
-                        getOptionLabel={(o) => o.name}
-                        getSearchText={(o) => o.name}
-                        onSelect={(o) => setSelectedEmployeeKey(o.key)}
+                    <EmployeeMultiSelect
+                        labelledBy="att-overview-employee-lbl"
+                        options={employeeOptions}
+                        value={selectedKeys}
+                        onChange={(next) => {
+                            setSelectedKeys(next);
+                            if (next.length !== 1)
+                                setPeriodView('summary');
+                        }}
                     />
                 </div>
                 <div className="att-overview__field att-overview__field--action">
@@ -1026,7 +1004,7 @@ export function AttendanceOverviewCard() {
                     ) : null}
 
                     <div className="att-overview__meta">
-                        {isPeriodMode && selectedEmployeeKey === ALL_EMPLOYEE_KEY ? (
+                        {isPeriodMode && !singleEmployee ? (
                             <div className="att-overview__views" role="tablist" aria-label={t('attendancePage.reportTitle')}>
                                 {(['summary', 'days'] as const).map((view) => (
                                     <button

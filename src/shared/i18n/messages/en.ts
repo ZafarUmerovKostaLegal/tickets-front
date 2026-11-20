@@ -974,6 +974,13 @@ export const enMessages = {
             kpiHours: 'Worked',
             records: 'records',
         },
+        multi: {
+            selected: 'Selected: {count}',
+            clear: 'Clear',
+            search: 'Find employee…',
+            everyone: 'All employees shown',
+            nothing: 'Nobody found',
+        },
         camera: {
             title: 'Camera data',
             stored: 'Stored: {count} punches · {from} — {to}',
