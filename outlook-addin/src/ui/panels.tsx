@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { DocRow, Filing, Location } from '../api';
 import type { SuggestedLocation } from '../explorer';
 import { filedSummary, reasonLabel } from '../explorer';
-import type { AttachmentInfo, ItemInfo } from '../mailbox';
+import { mailCapabilities, type AttachmentInfo, type ItemInfo } from '../mailbox';
 import { locationLabel } from '../naming';
 import type { FilingRule, RecentTarget } from '../settings';
 import { Icon, type IconName } from './icons';
@@ -228,6 +228,8 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
       set.add(attachment.id);
     setOptions({ ...options, attachments: [...set] });
   };
+  const caps = mailCapabilities();
+  const canAttach = caps.attachments;
   const onlyAttachments = !options.message && !options.thread;
   const nothing = !options.message && !options.thread && !options.attachments.length;
   const count = (options.thread || options.message ? 1 : 0) + options.attachments.length;
@@ -255,13 +257,24 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
           <input type="radio" name="kf-what" checked={options.thread} onChange={() => setOptions({ ...options, message: false, thread: true })} />
           <Icon name="thread" size={13} />Вся переписка
         </label>
-        <label className={`kf-chip${!options.message && !options.thread ? ' is-on' : ''}`}>
-          <input type="radio" name="kf-what" checked={!options.message && !options.thread} onChange={() => setOptions({ ...options, message: false, thread: false })} />
-          Только вложения
-        </label>
+        {canAttach ? (
+          <label className={`kf-chip${!options.message && !options.thread ? ' is-on' : ''}`}>
+            <input type="radio" name="kf-what" checked={!options.message && !options.thread} onChange={() => setOptions({ ...options, message: false, thread: false })} />
+            Только вложения
+          </label>
+        ) : null}
       </div>
 
-      {item.attachments.length ? (
+      {item.attachments.length && !canAttach ? (
+        <p className="kf-note">
+          <Icon name="clip" size={13} />
+          {caps.originalFile
+            ? 'Вложения сохранятся внутри письма. Отдельными файлами их можно сохранить с компьютера.'
+            : 'Outlook на этом устройстве не отдаёт вложения надстройкам — письмо сохранится без них. Вложения сохраните с компьютера.'}
+        </p>
+      ) : null}
+
+      {item.attachments.length && canAttach ? (
         <button
           type="button"
           className="kf-attach__toggle"
@@ -274,7 +287,7 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
           <span className="kf-attach__count">{options.attachments.length} из {item.attachments.length}</span>
         </button>
       ) : null}
-      {item.attachments.length && (attachOpen || onlyAttachments) ? (
+      {item.attachments.length && canAttach && (attachOpen || onlyAttachments) ? (
         <ul className="kf-attach" aria-label="Вложения">
           {item.attachments.map((attachment) => (
             <li key={attachment.id}>

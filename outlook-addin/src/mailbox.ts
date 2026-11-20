@@ -45,6 +45,14 @@ function isCompose(item: Office.Item): boolean {
   return typeof (item as Office.MessageCompose).subject?.getAsync === 'function';
 }
 
+/**
+ * What this Outlook lets an add-in read. Outlook on phones and older desktops lack Mailbox 1.8
+ * (attachments) and 1.14 (original message file) — the message is then rebuilt from its body.
+ */
+export function mailCapabilities(): { attachments: boolean; originalFile: boolean } {
+  return { attachments: supports('1.8'), originalFile: supports('1.14') };
+}
+
 export function readItemInfo(): ItemInfo | null {
   const item = Office.context?.mailbox?.item;
   if (!item)

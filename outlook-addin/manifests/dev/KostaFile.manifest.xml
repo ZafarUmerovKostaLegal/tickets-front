@@ -9,7 +9,7 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a1e-6b4d-4e9a-9c71-0000000000d1</Id>
-  <Version>1.1.2.0</Version>
+  <Version>1.2.0.0</Version>
   <ProviderName>Kosta Legal</ProviderName>
   <DefaultLocale>ru-RU</DefaultLocale>
   <DisplayName DefaultValue="Kosta File (dev)" />
@@ -194,15 +194,15 @@
                 <Control xsi:type="MobileButton" id="kostaFileMobileOpen">
                   <Label resid="openLabel" />
                   <Icon>
-                    <bt:Image size="25" scale="1" resid="icon32" />
-                    <bt:Image size="25" scale="2" resid="icon80" />
-                    <bt:Image size="25" scale="3" resid="icon80" />
+                    <bt:Image size="25" scale="1" resid="icon25" />
+                    <bt:Image size="25" scale="2" resid="icon50" />
+                    <bt:Image size="25" scale="3" resid="icon75" />
                     <bt:Image size="32" scale="1" resid="icon32" />
-                    <bt:Image size="32" scale="2" resid="icon80" />
-                    <bt:Image size="32" scale="3" resid="icon80" />
-                    <bt:Image size="48" scale="1" resid="icon80" />
-                    <bt:Image size="48" scale="2" resid="icon80" />
-                    <bt:Image size="48" scale="3" resid="icon80" />
+                    <bt:Image size="32" scale="2" resid="icon64" />
+                    <bt:Image size="32" scale="3" resid="icon96" />
+                    <bt:Image size="48" scale="1" resid="icon48" />
+                    <bt:Image size="48" scale="2" resid="icon96" />
+                    <bt:Image size="48" scale="3" resid="icon144" />
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />
@@ -218,6 +218,13 @@
           <bt:Image id="icon16" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-16.png" />
           <bt:Image id="icon32" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-32.png" />
           <bt:Image id="icon80" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-80.png" />
+          <bt:Image id="icon25" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-25.png" />
+          <bt:Image id="icon48" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-48.png" />
+          <bt:Image id="icon50" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-50.png" />
+          <bt:Image id="icon64" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-64.png" />
+          <bt:Image id="icon75" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-75.png" />
+          <bt:Image id="icon96" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-96.png" />
+          <bt:Image id="icon144" DefaultValue="https://localhost:3001/outlook-addin/assets/icon-144.png" />
         </bt:Images>
         <bt:Urls>
           <bt:Url id="taskpaneUrl" DefaultValue="https://localhost:3001/outlook-addin/index.html" />

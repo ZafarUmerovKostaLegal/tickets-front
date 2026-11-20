@@ -194,15 +194,15 @@
                 <Control xsi:type="MobileButton" id="kostaFileMobileOpen">
                   <Label resid="openLabel" />
                   <Icon>
-                    <bt:Image size="25" scale="1" resid="icon32" />
-                    <bt:Image size="25" scale="2" resid="icon80" />
-                    <bt:Image size="25" scale="3" resid="icon80" />
+                    <bt:Image size="25" scale="1" resid="icon25" />
+                    <bt:Image size="25" scale="2" resid="icon50" />
+                    <bt:Image size="25" scale="3" resid="icon75" />
                     <bt:Image size="32" scale="1" resid="icon32" />
-                    <bt:Image size="32" scale="2" resid="icon80" />
-                    <bt:Image size="32" scale="3" resid="icon80" />
-                    <bt:Image size="48" scale="1" resid="icon80" />
-                    <bt:Image size="48" scale="2" resid="icon80" />
-                    <bt:Image size="48" scale="3" resid="icon80" />
+                    <bt:Image size="32" scale="2" resid="icon64" />
+                    <bt:Image size="32" scale="3" resid="icon96" />
+                    <bt:Image size="48" scale="1" resid="icon48" />
+                    <bt:Image size="48" scale="2" resid="icon96" />
+                    <bt:Image size="48" scale="3" resid="icon144" />
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl" />
@@ -218,6 +218,13 @@
           <bt:Image id="icon16" DefaultValue="{{ADDIN_BASE}}assets/icon-16.png" />
           <bt:Image id="icon32" DefaultValue="{{ADDIN_BASE}}assets/icon-32.png" />
           <bt:Image id="icon80" DefaultValue="{{ADDIN_BASE}}assets/icon-80.png" />
+          <bt:Image id="icon25" DefaultValue="{{ADDIN_BASE}}assets/icon-25.png" />
+          <bt:Image id="icon48" DefaultValue="{{ADDIN_BASE}}assets/icon-48.png" />
+          <bt:Image id="icon50" DefaultValue="{{ADDIN_BASE}}assets/icon-50.png" />
+          <bt:Image id="icon64" DefaultValue="{{ADDIN_BASE}}assets/icon-64.png" />
+          <bt:Image id="icon75" DefaultValue="{{ADDIN_BASE}}assets/icon-75.png" />
+          <bt:Image id="icon96" DefaultValue="{{ADDIN_BASE}}assets/icon-96.png" />
+          <bt:Image id="icon144" DefaultValue="{{ADDIN_BASE}}assets/icon-144.png" />
         </bt:Images>
         <bt:Urls>
           <bt:Url id="taskpaneUrl" DefaultValue="{{ADDIN_BASE}}index.html" />
