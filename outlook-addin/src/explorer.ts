@@ -50,11 +50,29 @@ function norm(value: string): string {
  * Quick filter over clients and matters: every word must hit the client name, matter name or code.
  * A matching client keeps all its matters.
  */
-export function filterClients(clients: readonly ClientNode[], query: string, options: { hideClosed?: boolean } = {}): ClientNode[] {
+/** Matter the viewer actually works on (team / explicit access) or pinned to favourites. */
+export function isOwnMatter(matter: ClientNode['matters'][number]): boolean {
+  return matter.mine !== false || matter.favorite;
+}
+
+/** Managers get every matter of the firm; only then is there anything to hide. */
+export function hasForeignMatters(clients: readonly ClientNode[]): boolean {
+  return clients.some((client) => client.matters.some((m) => m.level !== 'none' && !isOwnMatter(m)));
+}
+
+export function filterClients(
+  clients: readonly ClientNode[],
+  query: string,
+  options: { hideClosed?: boolean; onlyMine?: boolean } = {},
+): ClientNode[] {
   const words = norm(query).split(/\s+/).filter(Boolean);
   const out: ClientNode[] = [];
   for (const client of clients) {
-    const matters = client.matters.filter((m) => m.level !== 'none' && !(options.hideClosed && m.closed));
+    const matters = client.matters.filter((m) => (
+      m.level !== 'none'
+      && !(options.hideClosed && m.closed)
+      && !(options.onlyMine && !isOwnMatter(m))
+    ));
     if (!words.length) {
       if (matters.length)
         out.push({ ...client, matters });

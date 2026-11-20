@@ -90,6 +90,8 @@ export type ClientNode = {
     code: string;
     closed: boolean;
     level: string;
+    /** Viewer is on the matter's team (time tracking) or has explicit access — not just a manager. */
+    mine?: boolean;
     favorite: boolean;
     documents: number;
   }>;

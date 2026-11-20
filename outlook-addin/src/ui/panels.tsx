@@ -58,51 +58,101 @@ export function LocationText({ location, compact = false, badge }: {
   );
 }
 
-/** Current message + where it is already filed. */
-export function MailCard({ item, filings, loading, onOpen }: {
+/**
+ * Header indicator for the open message: a coloured pill instead of a whole card.
+ * Green — saved, amber — only the conversation is in Kosta, red — not saved, grey — checking.
+ * Click → where exactly it is filed.
+ */
+export function MailStatus({ item, filings, loading, onOpen }: {
   item: ItemInfo;
   filings: Filing[];
   loading: boolean;
   onOpen: (filing: Filing) => void;
 }) {
   const { message, thread } = filedSummary(filings);
-  const [showAll, setShowAll] = useState(false);
-  const rows = showAll ? message : message.slice(0, 2);
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const tone = loading ? 'checking' : message.length ? 'filed' : thread.length ? 'thread' : 'new';
+  const label = loading
+    ? 'Проверяем…'
+    : message.length
+      ? `Сохранено${message.length > 1 ? ` · ${message.length}` : ''}`
+      : thread.length ? 'Переписка' : 'Не сохранено';
+  const hint = loading
+    ? 'Проверяем, сохранено ли письмо'
+    : message.length
+      ? `Письмо сохранено (${message.length}) — нажмите, чтобы посмотреть куда`
+      : thread.length
+        ? `Само письмо не сохранено, но переписка уже есть в «${thread[0]!.matterName}»`
+        : 'Письмо ещё не сохранено в Kosta';
+
+  useEffect(() => {
+    setOpen(false);
+  }, [item.messageId]);
+
+  useEffect(() => {
+    if (!open)
+      return;
+    const onDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node))
+        setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape')
+        setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
   return (
-    <section className="kf-mail" aria-label="Текущее письмо">
-      <div className="kf-mail__top">
-        <span className={`kf-badge ${message.length ? 'is-filed' : 'is-new'}`}>
-          <Icon name={message.length ? 'check' : 'mail'} size={12} />
-          {loading ? 'Проверяем…' : message.length ? 'Сохранено' : 'Не сохранено'}
-        </span>
-        <span className="kf-mail__date">{formatDate(item.received)}</span>
-      </div>
-      <p className="kf-mail__subject" title={item.subject}>{item.subject}</p>
-      <p className="kf-mail__from">{item.fromName}{item.fromEmail && item.fromEmail !== item.fromName ? <span> · {item.fromEmail}</span> : null}</p>
-      {rows.length ? (
-        <ul className="kf-filed">
-          {rows.map((filing) => (
-            <li key={`${filing.documentId}-${filing.kind}`}>
-              <button type="button" className="kf-filed__row" onClick={() => onOpen(filing)} title="Открыть в Kosta Hub">
-                <Icon name={filing.kind === 'thread' ? 'thread' : filing.kind === 'attachment' ? 'clip' : 'mail'} size={14} />
-                <LocationText location={filing} compact />
-                <span className="kf-filed__meta">{filing.filedBy} · {formatDate(filing.filedAt)}</span>
-                <Icon name="open" size={13} className="kf-filed__open" />
-              </button>
-            </li>
-          ))}
-          {message.length > 2 ? (
-            <li><button type="button" className="kf-link" onClick={() => setShowAll(!showAll)}>{showAll ? 'Свернуть' : `Ещё ${message.length - 2}`}</button></li>
-          ) : null}
-        </ul>
+    <div className="kf-mailstate" ref={rootRef}>
+      <button
+        type="button"
+        className={`kf-mailstate__pill is-${tone}`}
+        title={`${hint}\n${item.subject}${item.fromName ? `\n${item.fromName}` : ''}`}
+        aria-label={hint}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="kf-mailstate__dot" aria-hidden />
+        <span className="kf-mailstate__text">{label}</span>
+      </button>
+      {open ? (
+        <div className="kf-mailstate__pop" role="dialog" aria-label="Где сохранено письмо">
+          <p className="kf-mailstate__subject" title={item.subject}>{item.subject}</p>
+          <p className="kf-mailstate__from">
+            {item.fromName}{item.fromEmail && item.fromEmail !== item.fromName ? ` · ${item.fromEmail}` : ''}
+            {item.received ? ` · ${formatDate(item.received)}` : ''}
+          </p>
+          {message.length ? (
+            <ul className="kf-filed">
+              {message.map((filing) => (
+                <li key={`${filing.documentId}-${filing.kind}`}>
+                  <button type="button" className="kf-filed__row" onClick={() => onOpen(filing)} title="Открыть в Kosta Hub">
+                    <Icon name={filing.kind === 'thread' ? 'thread' : filing.kind === 'attachment' ? 'clip' : 'mail'} size={14} />
+                    <LocationText location={filing} compact />
+                    <span className="kf-filed__meta">{filing.filedBy} · {formatDate(filing.filedAt)}</span>
+                    <Icon name="open" size={13} className="kf-filed__open" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="kf-mailstate__note">
+              {thread.length
+                ? <>Переписка уже есть в <strong>{thread[0]!.matterName}</strong>{thread.length > 1 ? ` и ещё ${thread.length - 1}` : ''}. Само письмо не сохранено.</>
+                : 'Письмо ещё не сохранено — выберите папку ниже.'}
+            </p>
+          )}
+        </div>
       ) : null}
-      {!message.length && thread.length ? (
-        <p className="kf-mail__thread">
-          <Icon name="thread" size={13} />
-          Переписка уже есть в <strong>{thread[0]!.matterName}</strong>{thread.length > 1 ? ` и ещё ${thread.length - 1}` : ''}
-        </p>
-      ) : null}
-    </section>
+    </div>
   );
 }
 

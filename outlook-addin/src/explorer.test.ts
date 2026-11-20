@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ClientNode, Filing, Suggestion } from './api';
-import { buildFolderTree, filedSummary, filterClients, folderPath, mergeSuggestions, reasonLabel } from './explorer';
+import { buildFolderTree, filedSummary, filterClients, folderPath, hasForeignMatters, mergeSuggestions, reasonLabel } from './explorer';
 import { hubDocumentUrl, locationLabel, messageFileName } from './naming';
 import { normalizeRecentTargets } from './settings';
 
@@ -118,5 +118,38 @@ describe('recent targets', () => {
     const rows = normalizeRecentTargets([{ ...loc('m1', 'e'), usedAt: '2' }, { ...loc('m1', 'e'), usedAt: '1' }, { matterId: '' }, null]);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.usedAt).toBe('2');
+  });
+});
+
+describe('own matters filter', () => {
+  const firm: ClientNode[] = [
+    {
+      id: 'c1', name: 'AGROBANK', archived: false, favorite: false,
+      matters: [
+        { id: 'm1', name: 'Loan review', code: 'KL-1', closed: false, level: 'manage', mine: true, favorite: false, documents: 3 },
+        { id: 'm2', name: 'Bond issue', code: 'KL-2', closed: false, level: 'manage', mine: false, favorite: false, documents: 1 },
+      ],
+    },
+    {
+      id: 'c2', name: 'AKSA', archived: false, favorite: false,
+      matters: [{ id: 'm3', name: 'Energy', code: 'KL-3', closed: false, level: 'manage', mine: false, favorite: true, documents: 0 }],
+    },
+    {
+      id: 'c3', name: 'Allen & Overy', archived: false, favorite: false,
+      matters: [{ id: 'm4', name: 'Advice', code: 'KL-4', closed: false, level: 'manage', mine: false, favorite: false, documents: 0 }],
+    },
+  ];
+
+  it('keeps only team / explicit-access matters and favourites for a manager', () => {
+    const rows = filterClients(firm, '', { onlyMine: true });
+    expect(rows.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(rows[0]!.matters.map((m) => m.id)).toEqual(['m1']);
+    expect(hasForeignMatters(firm)).toBe(true);
+  });
+
+  it('shows the whole firm when asked and has nothing to hide for an employee', () => {
+    expect(filterClients(firm, '').length).toBe(3);
+    const employee = filterClients(firm, '', { onlyMine: true });
+    expect(hasForeignMatters(employee)).toBe(false);
   });
 });

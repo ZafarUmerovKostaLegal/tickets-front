@@ -22,7 +22,7 @@ import {
 } from '../api';
 import { loginWithHub, logoutHub, signInSilently } from '../auth/authApi';
 import { clearLegacyOutlookTokens, type AuthProfile } from '../auth/session';
-import { filterClients, folderPath, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
+import { filterClients, folderPath, hasForeignMatters, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
 import { fileDropped, fileMail, fileOfficeDocument, ruleTarget, type FileResult } from '../filing';
 import { attachToDraft, insertLinkInDraft, onOutlookDrop, openInBrowser, readItemInfo, type ItemInfo } from '../mailbox';
 import { hubDocumentUrl, locationLabel } from '../naming';
@@ -31,7 +31,7 @@ import { matchRule } from '../rules';
 import { getSettings, loadRoamingSettings, newRuleId, saveSettings, wasFiled, type FilingRule } from '../settings';
 import { FolderTree, type FolderState } from './FolderTree';
 import { Icon } from './icons';
-import { DocList, FileBar, MailCard, PlaceList, recentToPlaces, Section, Suggestions, Toast, type FileOptions } from './panels';
+import { DocList, FileBar, MailStatus, PlaceList, recentToPlaces, Section, Suggestions, Toast, type FileOptions } from './panels';
 import { Brand, SettingsSheet, SignInScreen } from './screens';
 
 type Phase = 'boot' | 'signin' | 'ready';
@@ -42,7 +42,7 @@ const HUB_ORIGIN = window.location.origin;
 const UI_KEY = 'kosta.addin.ui';
 const VERSION = import.meta.env.VITE_ADDIN_VERSION || '';
 
-type UiState = { tab: Tab; expanded: string[]; hideClosed: boolean };
+type UiState = { tab: Tab; expanded: string[]; hideClosed: boolean; allMatters: boolean };
 
 function readUi(): UiState {
   try {
@@ -51,9 +51,10 @@ function readUi(): UiState {
       tab: raw.tab === 'search' || raw.tab === 'saved' ? raw.tab : 'tree',
       expanded: Array.isArray(raw.expanded) ? raw.expanded.filter((x) => typeof x === 'string').slice(0, 200) : [],
       hideClosed: raw.hideClosed !== false,
+      allMatters: raw.allMatters === true,
     };
   } catch {
-    return { tab: 'tree', expanded: [], hideClosed: true };
+    return { tab: 'tree', expanded: [], hideClosed: true, allMatters: false };
   }
 }
 
@@ -101,6 +102,8 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [tab, setTab] = useState<Tab>(ui.current.tab);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(ui.current.expanded));
   const [hideClosed, setHideClosed] = useState(ui.current.hideClosed);
+  /** Managers see the whole firm; by default the tree shows only their own matters. */
+  const [allMatters, setAllMatters] = useState(ui.current.allMatters);
   const [filter, setFilter] = useState('');
 
   const [clients, setClients] = useState<ClientNode[]>([]);
@@ -136,8 +139,8 @@ export function App({ host }: { host: Office.HostType | null }) {
   const compose = item?.mode === 'compose';
 
   useEffect(() => {
-    writeUi({ tab, expanded: [...expanded], hideClosed });
-  }, [tab, expanded, hideClosed]);
+    writeUi({ tab, expanded: [...expanded], hideClosed, allMatters });
+  }, [tab, expanded, hideClosed, allMatters]);
 
   const refreshSettings = useCallback(() => {
     setRules(getSettings().rules);
@@ -613,7 +616,14 @@ export function App({ host }: { host: Office.HostType | null }) {
   if (phase === 'signin')
     return <SignInScreen busy={signInBusy} error={signInError} onSignIn={() => void signIn()} />;
 
-  const filtered = filterClients(clients, filter, { hideClosed });
+  const canSeeForeign = hasForeignMatters(clients);
+  const onlyMine = canSeeForeign && !allMatters;
+  const filtered = filterClients(clients, filter, { hideClosed, onlyMine });
+  // Searching only my matters: say how many more the firm-wide list would find.
+  const foreignHits = onlyMine && filter.trim()
+    ? filterClients(clients, filter, { hideClosed }).reduce((n, c) => n + c.matters.length, 0)
+      - filtered.reduce((n, c) => n + c.matters.length, 0)
+    : 0;
   const selectedKey = target ? locationKey(target) : null;
   const favoriteSet = new Set([
     ...favorites.matters.map((m) => `matter:${m.id}`),
@@ -642,6 +652,9 @@ export function App({ host }: { host: Office.HostType | null }) {
     <div className={`kf-app${compose ? ' is-compose' : ''}`}>
       <header className="kf-top">
         <Brand sub={sub} />
+        {item?.mode === 'read' ? (
+          <MailStatus item={item} filings={filings} loading={contextLoading} onOpen={(f) => openDoc(f)} />
+        ) : null}
         <div className="kf-top__tools">
           <button type="button" className="kf-iconbtn" title="Обновить" aria-label="Обновить" onClick={() => {
             clearApiCaches();
@@ -672,9 +685,6 @@ export function App({ host }: { host: Office.HostType | null }) {
         ) : null}
 
         {isOutlook && !item ? <p className="kf-empty kf-empty--card">Выберите письмо в списке — здесь появится, где оно сохранено и куда его можно сохранить.</p> : null}
-        {item?.mode === 'read' ? (
-          <MailCard item={item} filings={filings} loading={contextLoading} onOpen={(f) => openDoc(f)} />
-        ) : null}
         {compose ? <p className="kf-empty kf-empty--card">Выберите документ в Kosta, чтобы вложить его в письмо или вставить ссылку.</p> : null}
 
         {item?.mode === 'read' ? (
@@ -716,6 +726,20 @@ export function App({ host }: { host: Office.HostType | null }) {
               <input type="checkbox" checked={!hideClosed} onChange={(event) => setHideClosed(!event.target.checked)} />
               Показывать закрытые matters
             </label>
+            {canSeeForeign ? (
+              <label className="kf-check kf-check--small" title="Как руководитель вы видите все matters фирмы. По умолчанию показаны только те, где вы в команде или у вас есть доступ.">
+                <input type="checkbox" checked={allMatters} onChange={(event) => setAllMatters(event.target.checked)} />
+                Все matters фирмы
+              </label>
+            ) : null}
+            {foreignHits > 0 ? (
+              <button type="button" className="kf-link kf-more-hits" onClick={() => setAllMatters(true)}>
+                Ещё {foreignHits} в других matters — показать
+              </button>
+            ) : null}
+            {clients.length && !filtered.length && !filter.trim() ? (
+              <p className="kf-empty">У вас пока нет доступных matters. Попросите партнёра добавить вас в команду проекта.</p>
+            ) : null}
             {clientsError ? <p className="kf-alert kf-alert--error">{clientsError}</p> : null}
             {!clients.length && !clientsError ? <p className="kf-empty">Загрузка клиентов…</p> : (
               <FolderTree
