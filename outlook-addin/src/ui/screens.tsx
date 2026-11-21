@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { currentAuthMethod } from '../auth/authApi';
 import { ssoState } from '../auth/naa';
+import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
 import { describeMatch } from '../rules';
 import type { FilingRule } from '../settings';
@@ -68,12 +69,19 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
   );
 }
 
-export function SettingsSheet({ profile, rules, onClose, onLogout, onRules, version, apiBase }: {
+export function SettingsSheet({
+  profile, rules, mailbox, serverReady, hubRulesUrl, onClose, onLogout, onToggleRule, onDeleteRule, onAutofile, version, apiBase,
+}: {
   profile: AuthProfile | null;
   rules: FilingRule[];
+  mailbox: MailboxDto | null;
+  serverReady: boolean;
+  hubRulesUrl: string;
   onClose: () => void;
   onLogout: () => void;
-  onRules: (rules: FilingRule[]) => void;
+  onToggleRule: (rule: FilingRule, enabled: boolean) => void;
+  onDeleteRule: (rule: FilingRule) => void;
+  onAutofile: (enabled: boolean) => void;
   version: string;
   apiBase: string;
 }) {
@@ -87,8 +95,6 @@ export function SettingsSheet({ profile, rules, onClose, onLogout, onRules, vers
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  const patch = (id: string, change: Partial<FilingRule>) => onRules(rules.map((rule) => (rule.id === id ? { ...rule, ...change } : rule)));
 
   return (
     <div className="kf-sheet" role="dialog" aria-modal="true" aria-label="Настройки">
@@ -111,25 +117,49 @@ export function SettingsSheet({ profile, rules, onClose, onLogout, onRules, vers
       </section>
 
       <section className="kf-section">
-        <header className="kf-section__head"><h2>Правила ({rules.length})</h2></header>
+        <header className="kf-section__head"><h2>Автосохранение почты</h2></header>
+        <div className={`kf-autofile${mailbox?.enabled ? ' is-on' : ''}${mailbox?.lastError ? ' is-error' : ''}`}>
+          <label className="kf-check">
+            <input type="checkbox" checked={Boolean(mailbox?.enabled)} onChange={(event) => onAutofile(event.target.checked)} />
+            Сохранять мою почту по правилам автоматически
+          </label>
+          <p className="kf-text kf-text--small">
+            {mailbox?.enabled
+              ? `Сервер проверяет ${mailbox.email} каждые 5 минут, Outlook можно не открывать. Сохранено писем: ${mailbox.filedTotal}.`
+              : 'Сервер не читает вашу почту. Правила срабатывают, только когда письмо открыто здесь.'}
+          </p>
+          {mailbox?.enabled && mailbox.lastError ? <p className="kf-alert kf-alert--error">{mailbox.lastError}</p> : null}
+          {!serverReady ? <p className="kf-alert kf-alert--error">Сервер ещё не настроен для чтения почты — обратитесь к администратору.</p> : null}
+        </div>
+      </section>
+
+      <section className="kf-section">
+        <header className="kf-section__head">
+          <h2>Правила ({rules.length})</h2>
+          <a className="kf-link" href={hubRulesUrl} target="_blank" rel="noreferrer">Все правила в Hub</a>
+        </header>
         {rules.length ? (
           <ul className="kf-rules">
             {rules.map((rule) => (
               <li key={rule.id} className={rule.enabled ? '' : 'is-off'}>
                 <div className="kf-rules__head">
-                  <span className="kf-rules__match">{describeMatch(rule)}</span>
-                  <button type="button" className="kf-iconbtn" aria-label={`Удалить правило ${rule.match}`} onClick={() => onRules(rules.filter((row) => row.id !== rule.id))}>
-                    <Icon name="trash" size={14} />
-                  </button>
+                  <span className="kf-rules__match">
+                    {describeMatch(rule)}
+                    {rule.scope === 'shared' ? <span className="kf-tag">общее</span> : null}
+                  </span>
+                  {rule.canEdit !== false ? (
+                    <button type="button" className="kf-iconbtn" aria-label={`Удалить правило ${rule.match}`} onClick={() => onDeleteRule(rule)}>
+                      <Icon name="trash" size={14} />
+                    </button>
+                  ) : null}
                 </div>
                 <span className="kf-rules__target">
                   {rule.clientName ? `${rule.clientName} › ` : ''}{rule.matterName}
                   {' › '}{rule.folderPath?.length ? rule.folderPath.map((c) => c.name).join(' / ') : 'Correspondence / Emails'}
                 </span>
-                <div className="kf-row">
-                  <label className="kf-check"><input type="checkbox" checked={rule.enabled} onChange={(event) => patch(rule.id, { enabled: event.target.checked })} />Включено</label>
-                  <label className="kf-check"><input type="checkbox" checked={rule.autoFile} onChange={(event) => patch(rule.id, { autoFile: event.target.checked })} />Автосохранение</label>
-                </div>
+                {rule.canEdit !== false ? (
+                  <label className="kf-check"><input type="checkbox" checked={rule.enabled} onChange={(event) => onToggleRule(rule, event.target.checked)} />Включено</label>
+                ) : null}
               </li>
             ))}
           </ul>

@@ -327,3 +327,61 @@ export async function sendHeartbeat(body: Heartbeat): Promise<void> {
     body: JSON.stringify(body),
   });
 }
+
+export type MailRuleDto = {
+  id: string;
+  scope: 'personal' | 'shared';
+  match: string;
+  matterId: string;
+  matterName: string;
+  matterCode: string;
+  clientId: string;
+  clientName: string;
+  folderId: string | null;
+  folderPath: string;
+  enabled: boolean;
+  hits: number;
+  canEdit: boolean;
+};
+
+export type MailboxDto = {
+  email: string;
+  enabled: boolean;
+  filedTotal: number;
+  lastRunAt: string | null;
+  lastError: string | null;
+};
+
+export type MailRulesDto = { rules: MailRuleDto[]; mailbox: MailboxDto | null; canShare: boolean; serverReady: boolean };
+
+export function listMailRules(): Promise<MailRulesDto> {
+  return request<MailRulesDto>('/mail/rules');
+}
+
+export function createMailRule(body: { match: string; matterId: string; folderId: string | null }): Promise<{ rule: MailRuleDto }> {
+  return request<{ rule: MailRuleDto }>('/mail/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, scope: 'personal' }),
+  });
+}
+
+export function updateMailRule(id: string, patch: { enabled: boolean }): Promise<{ rule: MailRuleDto }> {
+  return request<{ rule: MailRuleDto }>(`/mail/rules/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteMailRule(id: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/mail/rules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function setMailAutofile(enabled: boolean): Promise<{ mailbox: MailboxDto | null }> {
+  return request<{ mailbox: MailboxDto | null }>('/mail/autofile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+}

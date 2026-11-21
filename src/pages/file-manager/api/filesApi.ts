@@ -104,6 +104,43 @@ export type FolderRow = {
 
 export type Crumb = { id: string; name: string };
 
+export type MailRule = {
+    id: string;
+    scope: 'personal' | 'shared';
+    match: string;
+    matterId: string;
+    matterName: string;
+    matterCode: string;
+    clientId: string;
+    clientName: string;
+    folderId: string | null;
+    folderPath: string;
+    enabled: boolean;
+    hits: number;
+    lastHitAt: string | null;
+    ownerName: string;
+    mine: boolean;
+    canEdit: boolean;
+    createdAt: string | null;
+};
+
+export type MailboxStatus = {
+    email: string;
+    enabled: boolean;
+    since: string | null;
+    filedTotal: number;
+    lastRunAt: string | null;
+    lastFiledAt: string | null;
+    lastError: string | null;
+};
+
+export type MailRulesResponse = {
+    rules: MailRule[];
+    mailbox: MailboxStatus | null;
+    canShare: boolean;
+    serverReady: boolean;
+};
+
 export type AddinClient = {
     clientId: string;
     userId: number;
@@ -390,6 +427,13 @@ export const filesApi = {
     audit: (params: { matterId?: string; userId?: number; action?: string; q?: string; limit?: number; offset?: number }) =>
         request<{ items: AuditRow[]; total: number }>(`/audit${query(params)}`),
     stats: () => request<StatsResponse>('/stats'),
+    mailRules: () => request<MailRulesResponse>('/mail/rules'),
+    createMailRule: (body: { match: string; matterId: string; folderId?: string | null; scope: 'personal' | 'shared' }) =>
+        request<{ rule: MailRule }>('/mail/rules', json('POST', body)),
+    updateMailRule: (id: string, patch: { enabled?: boolean; match?: string; matterId?: string; folderId?: string | null; clearFolder?: boolean }) =>
+        request<{ rule: MailRule }>(`/mail/rules/${encodeURIComponent(id)}`, json('PATCH', patch)),
+    deleteMailRule: (id: string) => request<{ ok: true }>(`/mail/rules/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    setAutofile: (enabled: boolean) => request<{ mailbox: MailboxStatus | null }>('/mail/autofile', json('PUT', { enabled })),
     addinClients: (days = 30) => request<AddinClientsResponse>(`/admin/addin-clients?days=${days}`),
     template: () => request<{ folders: string[]; canEdit: boolean }>('/settings/template'),
     saveTemplate: (folders: string[]) => request<{ folders: string[] }>('/settings/template', json('PUT', { folders })),

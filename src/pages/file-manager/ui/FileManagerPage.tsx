@@ -9,6 +9,7 @@ import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
 import { AddinClientsView, AuditView, MonitoringView, TemplateView } from './AdminViews';
+import { MailRulesView } from './MailRulesView';
 import { MatrixView, RequestsView, SecurityView } from './AccessViews';
 import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
@@ -20,7 +21,7 @@ import './FileManagerPage.css';
 
 type View =
     | 'clients' | 'matters' | 'myMatters' | 'disk' | 'matter' | 'favorites' | 'recent' | 'search' | 'trash' | 'requests'
-    | 'security' | 'matrix' | 'audit' | 'monitoring' | 'addin' | 'templates';
+    | 'security' | 'matrix' | 'audit' | 'monitoring' | 'addin' | 'templates' | 'mailRules';
 
 type NavItem = { id: View; label: string; icon: IconName; badge?: 'requests' };
 
@@ -36,6 +37,7 @@ const MORE: NavItem[] = [
     { id: 'clients', label: 'nav.clients', icon: 'building' },
     { id: 'matters', label: 'nav.allMatters', icon: 'briefcase' },
     { id: 'recent', label: 'nav.recent', icon: 'clock' },
+    { id: 'mailRules', label: 'nav.mailRules', icon: 'inbox' },
 ];
 
 const EMPLOYEE_EXTRA: NavItem[] = [{ id: 'requests', label: 'nav.myRequests', icon: 'inbox' }];
@@ -189,6 +191,8 @@ function FileManagerWorkspace() {
                 return <MonitoringView onOpenAudit={() => go('audit')} />;
             case 'addin':
                 return <AddinClientsView />;
+            case 'mailRules':
+                return <MailRulesView clients={data} />;
             case 'templates':
                 return <TemplateView />;
         }

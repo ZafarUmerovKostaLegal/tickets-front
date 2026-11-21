@@ -23,13 +23,15 @@ import {
 import { loginWithHub, logoutHub, signInSilently } from '../auth/authApi';
 import { startPresence } from '../presence';
 import { clearLegacyOutlookTokens, type AuthProfile } from '../auth/session';
-import { filterClients, folderPath, hasForeignMatters, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
+import { filterClients, folderPath, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
 import { fileDropped, fileMail, fileOfficeDocument, ruleTarget, type FileResult } from '../filing';
 import { attachToDraft, insertLinkInDraft, onOutlookDrop, openInBrowser, readItemInfo, type ItemInfo } from '../mailbox';
 import { hubDocumentUrl, locationLabel } from '../naming';
 import { hostLabel } from '../officeDoc';
 import { matchRule } from '../rules';
-import { getSettings, loadRoamingSettings, newRuleId, saveSettings, wasFiled, type FilingRule } from '../settings';
+import { getSettings, loadRoamingSettings, saveSettings, wasFiled, type FilingRule } from '../settings';
+import { createMailRule, deleteMailRule, listMailRules, setMailAutofile, updateMailRule, type MailboxDto } from '../api';
+import { migrateLocalRules, toFilingRule } from '../mailRules';
 import { FolderTree, type FolderState } from './FolderTree';
 import { Icon } from './icons';
 import { DocList, FileBar, MailStatus, PlaceList, recentToPlaces, Section, Suggestions, Toast, type FileOptions } from './panels';
@@ -43,7 +45,7 @@ const HUB_ORIGIN = window.location.origin;
 const UI_KEY = 'kosta.addin.ui';
 const VERSION = import.meta.env.VITE_ADDIN_VERSION || '';
 
-type UiState = { tab: Tab; expanded: string[]; hideClosed: boolean; allMatters: boolean };
+type UiState = { tab: Tab; expanded: string[]; hideClosed: boolean };
 
 function readUi(): UiState {
   try {
@@ -52,10 +54,9 @@ function readUi(): UiState {
       tab: raw.tab === 'search' || raw.tab === 'saved' ? raw.tab : 'tree',
       expanded: Array.isArray(raw.expanded) ? raw.expanded.filter((x) => typeof x === 'string').slice(0, 200) : [],
       hideClosed: raw.hideClosed !== false,
-      allMatters: raw.allMatters === true,
     };
   } catch {
-    return { tab: 'tree', expanded: [], hideClosed: true, allMatters: false };
+    return { tab: 'tree', expanded: [], hideClosed: true };
   }
 }
 
@@ -99,7 +100,6 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [tab, setTab] = useState<Tab>(ui.current.tab);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(ui.current.expanded));
   const [hideClosed, setHideClosed] = useState(ui.current.hideClosed);
-  const [allMatters, setAllMatters] = useState(ui.current.allMatters);
   const [filter, setFilter] = useState('');
 
   const [clients, setClients] = useState<ClientNode[]>([]);
@@ -117,7 +117,13 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [rules, setRules] = useState<FilingRule[]>(getSettings().rules);
+  const [rules, setRules] = useState<FilingRule[]>([]);
+  const [mailbox, setMailbox] = useState<MailboxDto | null>(null);
+  const [serverReady, setServerReady] = useState(true);
+  const rulesRef = useRef<FilingRule[]>([]);
+  rulesRef.current = rules;
+  const mailboxRef = useRef<MailboxDto | null>(null);
+  mailboxRef.current = mailbox;
   const [recent, setRecent] = useState(getSettings().recentTargets);
   const [pinTip, setPinTip] = useState(isOutlook && !getSettings().pinTipDismissed);
 
@@ -135,8 +141,8 @@ export function App({ host }: { host: Office.HostType | null }) {
   const compose = item?.mode === 'compose';
 
   useEffect(() => {
-    writeUi({ tab, expanded: [...expanded], hideClosed, allMatters });
-  }, [tab, expanded, hideClosed, allMatters]);
+    writeUi({ tab, expanded: [...expanded], hideClosed });
+  }, [tab, expanded, hideClosed]);
 
   const profileId = profile?.id ?? null;
   useEffect(() => {
@@ -146,9 +152,25 @@ export function App({ host }: { host: Office.HostType | null }) {
   }, [phase, profileId]);
 
   const refreshSettings = useCallback(() => {
-    setRules(getSettings().rules);
     setRecent(getSettings().recentTargets);
   }, []);
+
+  const reloadRules = useCallback(async () => {
+    try {
+      if (getSettings().rules.length)
+        await migrateLocalRules(getSettings().rules);
+      const data = await listMailRules();
+      setRules(data.rules.map(toFilingRule));
+      setMailbox(data.mailbox);
+      setServerReady(data.serverReady);
+    } catch {
+    }
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'ready')
+      void reloadRules();
+  }, [phase, reloadRules]);
 
   useEffect(() => {
     let alive = true;
@@ -289,7 +311,9 @@ export function App({ host }: { host: Office.HostType | null }) {
   }, [loadFolders]);
 
   const fileWithRule = useCallback(async (info: ItemInfo, found: Filing[]) => {
-    const rule = matchRule(info.fromEmail, getSettings().rules);
+    if (mailboxRef.current?.enabled)
+      return;
+    const rule = matchRule(info.fromEmail, rulesRef.current);
     if (!rule?.autoFile || info.mode !== 'read' || latest.current.busy)
       return;
     if (wasFiled(info.messageId) || found.some((f) => f.sameMessage) || autoFiled.current.has(info.messageId))
@@ -528,23 +552,17 @@ export function App({ host }: { host: Office.HostType | null }) {
   const addRule = (match: string, autoFile: boolean) => {
     if (!target)
       return;
-    const next: FilingRule[] = [
-      ...getSettings().rules.filter((row) => row.match.toLowerCase() !== match.toLowerCase()),
-      {
-        id: newRuleId(),
-        match,
-        matterId: target.matterId,
-        matterName: target.matterName,
-        clientName: target.clientName,
-        folderId: target.folderId,
-        folderPath: target.folderPath,
-        autoFile,
-        enabled: true,
-      },
-    ];
-    saveSettings({ rules: next });
-    refreshSettings();
-    setStatus({ text: `Правило: письма ${match} → ${locationLabel(target)}`, kind: 'ok' });
+    const where = target;
+    void run(async () => {
+      await createMailRule({ match, matterId: where.matterId, folderId: where.folderId });
+      if (autoFile && !mailboxRef.current?.enabled)
+        await setMailAutofile(true);
+      await reloadRules();
+      return {
+        text: `Правило: письма ${match} → ${locationLabel(where)}${autoFile ? '\nСервер будет сохранять такие письма сам, даже при закрытом Outlook' : ''}`,
+        kind: 'ok',
+      };
+    });
   };
 
   const dropAt = useRef<(x: number, y: number) => Location | null>(() => null);
@@ -602,13 +620,7 @@ export function App({ host }: { host: Office.HostType | null }) {
   if (phase === 'signin')
     return <SignInScreen busy={signInBusy} error={signInError} onSignIn={() => void signIn()} />;
 
-  const canSeeForeign = hasForeignMatters(clients);
-  const onlyMine = canSeeForeign && !allMatters;
-  const filtered = filterClients(clients, filter, { hideClosed, onlyMine });
-  const foreignHits = onlyMine && filter.trim()
-    ? filterClients(clients, filter, { hideClosed }).reduce((n, c) => n + c.matters.length, 0)
-      - filtered.reduce((n, c) => n + c.matters.length, 0)
-    : 0;
+  const filtered = filterClients(clients, filter, { hideClosed });
   const selectedKey = target ? locationKey(target) : null;
   const favoriteSet = new Set([
     ...favorites.matters.map((m) => `matter:${m.id}`),
@@ -710,17 +722,6 @@ export function App({ host }: { host: Office.HostType | null }) {
               <input type="checkbox" checked={!hideClosed} onChange={(event) => setHideClosed(!event.target.checked)} />
               Показывать закрытые matters
             </label>
-            {canSeeForeign ? (
-              <label className="kf-check kf-check--small" title="Как руководитель вы видите все matters фирмы. По умолчанию показаны только те, где вы в команде или у вас есть доступ.">
-                <input type="checkbox" checked={allMatters} onChange={(event) => setAllMatters(event.target.checked)} />
-                Все matters фирмы
-              </label>
-            ) : null}
-            {foreignHits > 0 ? (
-              <button type="button" className="kf-link kf-more-hits" onClick={() => setAllMatters(true)}>
-                Ещё {foreignHits} в других matters — показать
-              </button>
-            ) : null}
             {clients.length && !filtered.length && !filter.trim() ? (
               <p className="kf-empty">У вас пока нет доступных matters. Попросите партнёра добавить вас в команду проекта.</p>
             ) : null}
@@ -848,10 +849,12 @@ export function App({ host }: { host: Office.HostType | null }) {
           apiBase={getSettings().apiBase}
           onClose={() => setSettingsOpen(false)}
           onLogout={() => void logout()}
-          onRules={(next) => {
-            saveSettings({ rules: next });
-            refreshSettings();
-          }}
+          mailbox={mailbox}
+          serverReady={serverReady}
+          hubRulesUrl={`${HUB_ORIGIN}/files?view=mailRules`}
+          onToggleRule={(rule, enabled) => void updateMailRule(rule.id, { enabled }).then(reloadRules, () => undefined)}
+          onDeleteRule={(rule) => void deleteMailRule(rule.id).then(reloadRules, () => undefined)}
+          onAutofile={(enabled) => void setMailAutofile(enabled).then(reloadRules, () => undefined)}
         />
       ) : null}
     </div>

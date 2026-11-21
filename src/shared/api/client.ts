@@ -242,6 +242,44 @@ function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers, re
     };
 }
 
+const ME_PATH = '/api/v1/users/me';
+const SESSION_CHECK_REUSE_MS = 5_000;
+let sessionCheck: Promise<boolean> | null = null;
+
+/**
+ * One endpoint answering 401 (a service that rejects this user, a stale proxy) is not proof the
+ * sign-in is gone. Ask /users/me once — parallel 401s share the answer — before dropping the session.
+ * Network errors and 5xx keep the session: being offline must never sign anybody out.
+ */
+function sessionStillValid(baseUrl: string, token: string | null): Promise<boolean> {
+    if (!sessionCheck) {
+        sessionCheck = (async () => {
+            try {
+                const headers = new Headers();
+                if (token)
+                    headers.set('Authorization', `Bearer ${token}`);
+                const res = await fetch(upgradeUrlToPageSecurity(`${baseUrl}${ME_PATH}`), { headers, credentials: 'include' });
+                return res.status !== 401;
+            }
+            catch {
+                return true;
+            }
+        })();
+        const done = sessionCheck;
+        void done.finally(() => {
+            setTimeout(() => {
+                if (sessionCheck === done)
+                    sessionCheck = null;
+            }, SESSION_CHECK_REUSE_MS);
+        });
+    }
+    return sessionCheck;
+}
+
+export function resetSessionCheckForTests(): void {
+    sessionCheck = null;
+}
+
 export async function apiFetch(path: string, init: RequestInitAuth = {}): Promise<Response> {
     assertTrustedApiFetchPathOrUrl(path);
     const baseUrl = getApiBaseUrl();
@@ -258,11 +296,9 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
     const headers = new Headers(rest.headers);
     if (rest.body instanceof FormData)
         headers.delete('Content-Type');
-    if (!skipAuth) {
-        const token = getAccessToken();
-        if (token)
-            headers.set('Authorization', `Bearer ${token}`);
-    }
+    const sentToken = skipAuth ? null : getAccessToken();
+    if (sentToken)
+        headers.set('Authorization', `Bearer ${sentToken}`);
     const method = normalizedMethod(rest);
     const startedAt = apiRequestMetricNow();
     let delivery: ApiRequestDelivery = 'network';
@@ -309,6 +345,12 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         throw error;
     }
     if (response.status === 401 && !skipAuth) {
+        const isMe = rel === ME_PATH || url.endsWith(ME_PATH);
+        if (!isMe && await sessionStillValid(baseUrl, sentToken))
+            return response;
+        // Signed in again meanwhile (another tab, re-login): the fresh token is not ours to drop.
+        if (getAccessToken() !== sentToken)
+            return response;
         removeAccessToken();
 
         if (!skipAuthRedirectOn401) {

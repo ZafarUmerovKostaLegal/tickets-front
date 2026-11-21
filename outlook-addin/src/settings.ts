@@ -8,6 +8,8 @@ export type FilingRule = {
   folderPath?: Array<{ id: string; name: string }>;
   autoFile: boolean;
   enabled: boolean;
+  scope?: 'personal' | 'shared';
+  canEdit?: boolean;
 };
 
 export type RecentTarget = {

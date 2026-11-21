@@ -48,14 +48,10 @@ export function isOwnMatter(matter: ClientNode['matters'][number]): boolean {
   return matter.mine !== false || matter.favorite;
 }
 
-export function hasForeignMatters(clients: readonly ClientNode[]): boolean {
-  return clients.some((client) => client.matters.some((m) => m.level !== 'none' && !isOwnMatter(m)));
-}
-
 export function filterClients(
   clients: readonly ClientNode[],
   query: string,
-  options: { hideClosed?: boolean; onlyMine?: boolean } = {},
+  options: { hideClosed?: boolean } = {},
 ): ClientNode[] {
   const words = norm(query).split(/\s+/).filter(Boolean);
   const out: ClientNode[] = [];
@@ -63,7 +59,7 @@ export function filterClients(
     const matters = client.matters.filter((m) => (
       m.level !== 'none'
       && !(options.hideClosed && m.closed)
-      && !(options.onlyMine && !isOwnMatter(m))
+      && isOwnMatter(m)
     ));
     if (!words.length) {
       if (matters.length)

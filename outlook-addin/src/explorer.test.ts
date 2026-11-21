@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ClientNode, Filing, Suggestion } from './api';
-import { buildFolderTree, filedSummary, filterClients, folderPath, hasForeignMatters, mergeSuggestions, reasonLabel } from './explorer';
+import { buildFolderTree, filedSummary, filterClients, folderPath, mergeSuggestions, reasonLabel } from './explorer';
 import { hubDocumentUrl, locationLabel, messageFileName } from './naming';
 import { normalizeRecentTargets } from './settings';
 
@@ -140,16 +140,10 @@ describe('own matters filter', () => {
     },
   ];
 
-  it('keeps only team / explicit-access matters and favourites for a manager', () => {
-    const rows = filterClients(firm, '', { onlyMine: true });
+  it('shows only team / explicit-access matters and favourites — the firm-wide list lives in the Hub', () => {
+    const rows = filterClients(firm, '');
     expect(rows.map((c) => c.id)).toEqual(['c1', 'c2']);
     expect(rows[0]!.matters.map((m) => m.id)).toEqual(['m1']);
-    expect(hasForeignMatters(firm)).toBe(true);
-  });
-
-  it('shows the whole firm when asked and has nothing to hide for an employee', () => {
-    expect(filterClients(firm, '').length).toBe(3);
-    const employee = filterClients(firm, '', { onlyMine: true });
-    expect(hasForeignMatters(employee)).toBe(false);
+    expect(filterClients(firm, 'Advice')).toEqual([]);
   });
 });
