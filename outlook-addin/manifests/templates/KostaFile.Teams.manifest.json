@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "{{TEAMS_VERSION}}",
+  "id": "{{TEAMS_ID}}",
+  "developer": {
+    "name": "Kosta Legal",
+    "websiteUrl": "{{HUB_ORIGIN}}",
+    "privacyUrl": "{{HUB_ORIGIN}}",
+    "termsOfUseUrl": "{{HUB_ORIGIN}}"
+  },
+  "name": {
+    "short": "{{DISPLAY_NAME}}",
+    "full": "{{DISPLAY_NAME}} — записи встреч в matter"
+  },
+  "description": {
+    "short": "Сохраняет запись и расшифровку встречи Teams в папку matter.",
+    "full": "Откройте Kosta File во встрече Teams, выберите matter и папку. После встречи запись и расшифровка автоматически сохранятся в Kosta Hub."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#8B2635",
+  "configurableTabs": [
+    {
+      "configurationUrl": "{{ADDIN_BASE}}teams.html?view=config",
+      "canUpdateConfiguration": true,
+      "scopes": ["groupChat"],
+      "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab"]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["{{ADDIN_HOST}}", "{{API_HOST}}"]
+}

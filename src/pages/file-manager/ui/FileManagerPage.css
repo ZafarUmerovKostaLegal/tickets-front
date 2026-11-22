@@ -3696,3 +3696,4 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
   .fm-mailrules__rule { flex-wrap: wrap; grid-column: 1 / -1; }
   .fm-mailrules__meta { align-items: flex-start; }
 }
+.fm-pv__remote { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: var(--fm-soft); color: var(--fm-muted); font-size: 0.8rem; }

@@ -29,7 +29,15 @@ function describe(error: unknown): { status: SsoStatus; text: string } {
   return { status: consent ? 'consent' : 'failed', text };
 }
 
+let hostBridge = false;
+
+export function enableHostAuthBridge(on: boolean): void {
+  hostBridge = on;
+}
+
 export function naaSupported(): boolean {
+  if (hostBridge)
+    return true;
   try {
     return Boolean(Office?.context?.requirements?.isSetSupported?.('NestedAppAuth', '1.1'));
   } catch {

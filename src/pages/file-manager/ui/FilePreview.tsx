@@ -242,6 +242,9 @@ function EmailView({ source }: { source: PreviewSource }) {
     const { tr, locale } = useFm();
     const { data, error } = useAsync(() => source.email!(), [source.key]);
     const html = useMemo(() => (data?.html ? sanitizeHtml(data.html) : ''), [data]);
+    // Remote images in mail are tracking pixels as often as not: nothing leaves the browser until asked.
+    const [remoteAllowed, setRemoteAllowed] = useState(false);
+    const hasRemote = useMemo(() => /\b(?:src|background)\s*=\s*["']?\s*https?:|url\(\s*["']?\s*https?:/i.test(html), [html]);
     if (error)
         return <Note>{error}</Note>;
     if (!data)
@@ -269,8 +272,21 @@ function EmailView({ source }: { source: PreviewSource }) {
                     ))}
                 </ul>
             ) : null}
+            {html && hasRemote && !remoteAllowed ? (
+                <p className="fm-pv__remote">
+                    {tr('preview.remoteBlocked')}
+                    <button type="button" className="fm-link" onClick={() => setRemoteAllowed(true)}>{tr('preview.showImages')}</button>
+                </p>
+            ) : null}
             {html ? (
-                <iframe className="fm-pv__mail" title={data.subject} sandbox="" srcDoc={`<meta charset="utf-8"><base target="_blank"><style>body{font:14px/1.5 system-ui,sans-serif;margin:12px;color:#111;word-wrap:break-word}img{max-width:100%}</style>${html}`} />
+                <iframe
+                    key={remoteAllowed ? 'remote' : 'local'}
+                    className="fm-pv__mail"
+                    title={data.subject}
+                    sandbox=""
+                    referrerPolicy="no-referrer"
+                    srcDoc={`<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data: cid:${remoteAllowed ? ' https:' : ''}"><base target="_blank"><style>body{font:14px/1.5 system-ui,sans-serif;margin:12px;color:#111;word-wrap:break-word}img{max-width:100%}</style>${html}`}
+                />
             ) : <pre className="fm-pv__mailtext">{data.text}</pre>}
         </div>
     );

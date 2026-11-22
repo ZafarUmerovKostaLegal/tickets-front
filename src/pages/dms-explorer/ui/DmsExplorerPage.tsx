@@ -30,6 +30,7 @@ import { getDmsClipboard, subscribeDmsClipboard } from '../model/dmsClipboard';
 import { DmsRibbon, type DmsMode } from './DmsRibbon';
 import { DmsTree, type TreeSelection } from './DmsTree';
 import './DmsExplorer.css';
+import { inertObjectUrl } from '@shared/lib/inertBlob';
 
 type Selection =
     | { kind: 'document'; doc: DocumentRow }
@@ -96,7 +97,7 @@ function DmsExplorerWorkspace() {
             }
             try {
                 const blob = await filesApi.contentBlob(selected.doc.id, { inline: true });
-                const url = URL.createObjectURL(blob);
+                const url = inertObjectUrl(blob, selected.doc.name);
                 revoked = url;
                 setPreviewUrl(url);
             } catch {

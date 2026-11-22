@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeZip } from './zip.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -16,6 +17,7 @@ const ENVIRONMENTS = {
     DISPLAY_NAME: 'Kosta File',
     OUTLOOK_ID: '8f3c2a1e-6b4d-4e9a-9c71-a1b2c3d4e5f6',
     OFFICE_ID: 'a7e91c2b-4d5f-4a8e-9b01-c2d3e4f5a6b7',
+    TEAMS_ID: 'c41d7e2a-9b3f-4f6e-8a15-d2e3f4a5b6c7',
   },
   dev: {
     outDir: join(root, 'manifests', 'dev'),
@@ -25,13 +27,21 @@ const ENVIRONMENTS = {
     DISPLAY_NAME: 'Kosta File (dev)',
     OUTLOOK_ID: '8f3c2a1e-6b4d-4e9a-9c71-0000000000d1',
     OFFICE_ID: 'a7e91c2b-4d5f-4a8e-9b01-0000000000d2',
+    TEAMS_ID: 'c41d7e2a-9b3f-4f6e-8a15-0000000000d3',
   },
 };
 
-const TEMPLATES = ['KostaFile.manifest.xml', 'KostaFile.Office.manifest.xml'];
+const TEMPLATES = ['KostaFile.manifest.xml', 'KostaFile.Office.manifest.xml', 'KostaFile.Teams.manifest.json'];
+const TEAMS_ICONS = ['color.png', 'outline.png'];
 
 function render(template, env) {
-  const values = { ...env, VERSION: version };
+  const values = {
+    ...env,
+    VERSION: version,
+    TEAMS_VERSION: pkg.version.split('-')[0],
+    ADDIN_HOST: new URL(env.ADDIN_BASE).host,
+    API_HOST: new URL(env.API_ORIGIN).host,
+  };
   const out = template.replace(/\{\{([A-Z_]+)\}\}/g, (match, key) => {
     if (!(key in values))
       throw new Error(`Unknown placeholder ${match}`);
@@ -67,6 +77,14 @@ for (const [name, env] of Object.entries(ENVIRONMENTS)) {
     mkdirSync(env.outDir, { recursive: true });
     writeFileSync(target, output);
     console.log(`✓ ${name}: ${target.replace(root, '.')} (v${version})`);
+  }
+  if (!check) {
+    const zip = join(env.outDir, 'KostaFile.Teams.zip');
+    writeZip(zip, [
+      { name: 'manifest.json', data: Buffer.from(render(readFileSync(join(root, 'manifests', 'templates', 'KostaFile.Teams.manifest.json'), 'utf8'), env)) },
+      ...TEAMS_ICONS.map((icon) => ({ name: icon, data: readFileSync(join(root, 'manifests', 'teams', icon)) })),
+    ]);
+    console.log(`✓ ${name}: ${zip.replace(root, '.')} (Teams app)`);
   }
 }
 

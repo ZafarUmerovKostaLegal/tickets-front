@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.2.0",
+  "id": "c41d7e2a-9b3f-4f6e-8a15-d2e3f4a5b6c7",
+  "developer": {
+    "name": "Kosta Legal",
+    "websiteUrl": "https://tickets.kostalegal.com",
+    "privacyUrl": "https://tickets.kostalegal.com",
+    "termsOfUseUrl": "https://tickets.kostalegal.com"
+  },
+  "name": {
+    "short": "Kosta File",
+    "full": "Kosta File — записи встреч в matter"
+  },
+  "description": {
+    "short": "Сохраняет запись и расшифровку встречи Teams в папку matter.",
+    "full": "Откройте Kosta File во встрече Teams, выберите matter и папку. После встречи запись и расшифровка автоматически сохранятся в Kosta Hub."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#8B2635",
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://tickets.kostalegal.com/outlook-addin/teams.html?view=config",
+      "canUpdateConfiguration": true,
+      "scopes": ["groupChat"],
+      "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab"]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["tickets.kostalegal.com", "ticketsback.kostalegal.com"]
+}

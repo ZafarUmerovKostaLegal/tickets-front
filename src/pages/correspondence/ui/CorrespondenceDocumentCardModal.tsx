@@ -30,6 +30,7 @@ import {
 import { canDeleteCorrespondence } from '../model/permissions';
 import { CorrespondenceRejectModal } from './CorrespondenceRejectModal';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
+import { inertObjectUrl } from '@shared/lib/inertBlob';
 
 export type CorrespondenceDocumentCardModalProps = {
     open: boolean;
@@ -296,7 +297,7 @@ export function CorrespondenceDocumentCardModal({
                 const typedBlob = resolvedKind === 'pdf'
                     ? new Blob([blob], { type: 'application/pdf' })
                     : blob;
-                objectUrl = URL.createObjectURL(typedBlob);
+                objectUrl = inertObjectUrl(typedBlob, file.fileName);
                 setPreviewKind(resolvedKind);
                 setPreviewUrl(objectUrl);
             })

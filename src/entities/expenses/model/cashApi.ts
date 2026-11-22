@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { openBlobInNewTab } from '@shared/lib/inertBlob';
 
 export type CashKind = 'set' | 'expense' | 'topup';
 
@@ -107,13 +108,9 @@ export async function openCashAttachment(movementId: number, attachmentId: strin
         `/api/v1/expenses/cash/movements/${movementId}/attachments/${encodeURIComponent(attachmentId)}/file`,
     ));
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const opened = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!opened) {
-        URL.revokeObjectURL(url);
+    if (!openBlobInNewTab(blob)) {
         throw new Error('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для этого сайта.');
     }
-    window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 
 export async function postCashAction(

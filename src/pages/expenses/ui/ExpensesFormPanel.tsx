@@ -22,6 +22,7 @@ import { useI18n, ttProjectTypeLabel } from '@shared/i18n';
 import { showToast } from '@shared/ui/app-toast';
 import { DatePicker } from '@shared/ui';
 import './ExpensesPage.css';
+import { inertObjectUrl } from '@shared/lib/inertBlob';
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
     if (!text.trim())
@@ -1243,7 +1244,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             return;
         }
         if (attachPreview.localFile) {
-            const u = URL.createObjectURL(attachPreview.localFile);
+            const u = inertObjectUrl(attachPreview.localFile, attachPreview.localFile.name);
             const w = window.open(u, '_blank', 'noopener,noreferrer');
             if (!w) {
                 URL.revokeObjectURL(u);

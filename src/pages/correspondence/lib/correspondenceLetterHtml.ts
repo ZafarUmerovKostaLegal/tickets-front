@@ -9,12 +9,32 @@ const ALLOWED_TAGS = [
 
 const ALLOWED_ATTR = ['href', 'target', 'rel', 'style', 'class'];
 
+const UNSAFE_STYLE_PROP = /^(position|inset|inset-[a-z-]+|top|left|right|bottom|z-index|behavior|-moz-binding)$/i;
+const UNSAFE_STYLE_VALUE = /url\s*\(|expression\s*\(|javascript:|image-set\s*\(|@import/i;
+
+export function safeInlineStyle(style: string): string {
+    return style
+        .split(';')
+        .map((part) => part.trim())
+        .filter((part) => {
+            const colon = part.indexOf(':');
+            if (colon <= 0)
+                return false;
+            const prop = part.slice(0, colon).trim();
+            const value = part.slice(colon + 1);
+            return !UNSAFE_STYLE_PROP.test(prop) && !UNSAFE_STYLE_VALUE.test(value) && !UNSAFE_STYLE_VALUE.test(prop);
+        })
+        .join('; ');
+}
+
 function scrubLockedFontStyles(html: string): string {
     if (typeof document === 'undefined')
         return html;
     const wrap = document.createElement('div');
     wrap.innerHTML = html;
     wrap.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
+        // Letters come from outside: no remote resources (tracking pixels) and no page overlays.
+        el.setAttribute('style', safeInlineStyle(el.getAttribute('style') ?? ''));
         el.style.removeProperty('font-family');
         el.style.removeProperty('font-size');
         el.style.removeProperty('font-weight');
@@ -28,6 +48,9 @@ function scrubLockedFontStyles(html: string): string {
         while (node.firstChild)
             span.appendChild(node.firstChild);
         node.replaceWith(span);
+    });
+    wrap.querySelectorAll('a[target]').forEach((link) => {
+        link.setAttribute('rel', 'noopener noreferrer');
     });
     wrap.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
         const p = document.createElement('p');

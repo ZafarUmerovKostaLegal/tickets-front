@@ -10,6 +10,7 @@ import { FilePreview } from './FilePreview';
 import { FmSelect } from './fmSelect';
 import { documentSource } from './previewSources';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, Modal, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
+import { inertObjectUrl } from '@shared/lib/inertBlob';
 
 export const DOC_TYPES = ['agreement', 'correspondence', 'pleading', 'memo', 'corporate', 'poa', 'evidence', 'invoice', 'other'] as const;
 
@@ -238,6 +239,8 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
         if (!doc)
             return;
         const popup = window.open('', '_blank');
+        if (popup)
+            popup.opener = null;
         if (doc.sizeBytes > PREVIEW_LIMIT) {
             const url = await act(() => filesApi.link(doc.id, { inline: true }));
             if (url && popup)
@@ -251,7 +254,7 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
             popup?.close();
             return;
         }
-        popup.location.href = URL.createObjectURL(blob);
+        popup.location.href = inertObjectUrl(blob, doc.name);
     };
 
     const copyLink = async () => {

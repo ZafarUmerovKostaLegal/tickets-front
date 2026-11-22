@@ -906,3 +906,82 @@ body[data-theme='dark'] .kf-toast { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); 
 .kf-autofile.is-error { background: var(--danger-soft); }
 .kf-text--small { margin: 0; font-size: 12px; color: var(--text-dim); }
 .kf-rules__match .kf-tag { margin-left: 6px; }
+
+.kf-alert--ok { background: var(--ok-soft); color: var(--ok); }
+.kf-btn--danger { color: var(--danger); }
+
+.kf-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100dvh;
+  padding: 12px 14px 16px;
+  box-sizing: border-box;
+}
+.kf-teams .kf-top { padding: 0; border: 0; background: transparent; }
+.kf-teams__topic {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.kf-teams__topic svg { color: var(--danger); flex: none; }
+.kf-teams__card,
+.kf-teams__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.kf-teams__label { margin: 0; font-size: 12px; color: var(--text-dim); }
+.kf-teams__where {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.kf-teams__where svg, .kf-teams__target svg { color: var(--folder); flex: none; margin-top: 1px; }
+.kf-teams__facts {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  display: grid;
+  gap: 3px;
+}
+.kf-teams__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.kf-teams__tree {
+  max-height: min(48dvh, 420px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  background: var(--bg);
+}
+.kf-teams__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.kf-teams__target {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}

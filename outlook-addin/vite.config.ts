@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import mkcert from 'vite-plugin-mkcert';
@@ -26,5 +27,11 @@ export default defineConfig(({ mode }) => ({
     target: ['es2019', 'safari13', 'edge88'],
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        teams: fileURLToPath(new URL('./teams.html', import.meta.url)),
+      },
+    },
   },
 }));

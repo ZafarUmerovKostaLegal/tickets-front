@@ -1,6 +1,7 @@
 import { filesApi, type DocumentRow, type FolderRow } from '@pages/file-manager/api/filesApi';
 import { getDmsClipboard, setDmsClipboard, type DmsClipboardItem } from './dmsClipboard';
 import { canUseDmsDesktop, openBlobInDesktopApp, sendBlobViaOutlook } from '../api/dmsDesktop';
+import { inertObjectUrl, openBlobInNewTab } from '@shared/lib/inertBlob';
 
 export function documentDeepLink(matterId: string, folderId: string | null, docId: string): string {
     const url = new URL('/files', window.location.origin);
@@ -32,13 +33,12 @@ export async function openDocument(doc: DocumentRow): Promise<void> {
         await openBlobInDesktopApp(doc.name, blob);
         return;
     }
-    const href = URL.createObjectURL(blob);
-    window.open(href, '_blank', 'noopener,noreferrer');
+    openBlobInNewTab(blob, doc.name);
 }
 
 export async function printDocument(doc: DocumentRow): Promise<void> {
     const blob = await filesApi.contentBlob(doc.id, { inline: true });
-    const href = URL.createObjectURL(blob);
+    const href = inertObjectUrl(blob, doc.name);
     const popup = window.open(href, '_blank', 'noopener,noreferrer');
     if (!popup)
         throw new Error('Не удалось открыть окно печати');

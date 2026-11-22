@@ -296,6 +296,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         },
     },
     preview: {
+        remoteBlocked: 'Images from the internet are blocked: the sender could learn the message was opened.',
+        showImages: 'Show images',
         download: 'Download',
         none: 'No preview for this file type — download it.',
         tooBig: 'The file is too large to view in the browser — download it.',

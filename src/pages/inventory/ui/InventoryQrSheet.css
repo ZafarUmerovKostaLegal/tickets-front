@@ -71,6 +71,7 @@
   page-break-inside: avoid;
 }
 .inv-qr__mark {
+  display: block;
   width: 32mm;
   height: 32mm;
 }

@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 type IconName =
   | 'chevron' | 'folder' | 'folderOpen' | 'matter' | 'client' | 'star' | 'starOn' | 'plus' | 'search'
   | 'refresh' | 'settings' | 'check' | 'mail' | 'thread' | 'clip' | 'open' | 'close' | 'link' | 'doc'
-  | 'spark' | 'clock' | 'pin' | 'back' | 'upload' | 'logout' | 'rule' | 'trash';
+  | 'spark' | 'clock' | 'pin' | 'back' | 'upload' | 'logout' | 'rule' | 'trash' | 'record';
 
 const PATHS: Record<IconName, ReactElement> = {
   chevron: <path d="M6 4l4 4-4 4" />,
@@ -33,6 +33,7 @@ const PATHS: Record<IconName, ReactElement> = {
   logout: <path d="M6 13.5H3.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1H6M10.5 11l3-3-3-3M13.5 8H6" />,
   rule: <path d="M3 4h10M3 8h6M3 12h4M11 10l1.5 1.5L15 9" />,
   trash: <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8.5" />,
+  record: <><circle cx="8" cy="8" r="5.5" /><circle cx="8" cy="8" r="2.4" fill="currentColor" /></>,
 };
 
 export function Icon({ name, size = 16, className }: { name: IconName; size?: number; className?: string }) {

@@ -21,6 +21,7 @@ const optionalChunkLimits = [
     { prefix: 'pdf-lib-', rawKb: 1150, gzipKb: 520 },
     { prefix: 'exceljs-', rawKb: 560, gzipKb: 175 },
     { prefix: 'recharts-', rawKb: 410, gzipKb: 125 },
+    { prefix: 'docx-editor-', rawKb: 2800, gzipKb: 850 },
     { prefix: 'docx-', rawKb: 380, gzipKb: 115 },
     { prefix: 'OutgoingLetterDocxEditor-', rawKb: 2800, gzipKb: 850 },
 ];

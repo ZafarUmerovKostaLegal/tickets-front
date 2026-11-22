@@ -1,5 +1,6 @@
 import type { Cell, CellRichTextValue } from 'exceljs';
 import { loadExcelJS } from '@shared/lib/exceljsLoader';
+import { inertObjectUrl } from '@shared/lib/inertBlob';
 const MAX_TEXT_CHARS = 120000;
 const MAX_SHEETS = 4;
 const MAX_ROWS = 100;
@@ -111,24 +112,25 @@ export type AttachmentPreviewBuildResult = {
 export async function buildAttachmentPreview(blob: Blob, fileName: string, contentType: string | null): Promise<AttachmentPreviewBuildResult> {
     const ext = fileExt(fileName);
     const mime = normalizeMime(contentType, blob.type);
-    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) {
-        const objectUrl = URL.createObjectURL(blob);
+    // SVG can carry script: it is shown as source text, never as a document of our origin.
+    if ((mime.startsWith('image/') && mime !== 'image/svg+xml') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
+        const objectUrl = inertObjectUrl(blob, fileName);
         return { model: { type: 'image', objectUrl }, objectUrl };
     }
     if (mime === 'application/pdf' || ext === 'pdf') {
-        const objectUrl = URL.createObjectURL(blob);
+        const objectUrl = inertObjectUrl(blob, fileName);
         return { model: { type: 'pdf', objectUrl }, objectUrl };
     }
     if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'm4v'].includes(ext)) {
-        const objectUrl = URL.createObjectURL(blob);
+        const objectUrl = inertObjectUrl(blob, fileName);
         return { model: { type: 'video', objectUrl }, objectUrl };
     }
     if (mime.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'ogg'].includes(ext)) {
-        const objectUrl = URL.createObjectURL(blob);
+        const objectUrl = inertObjectUrl(blob, fileName);
         return { model: { type: 'audio', objectUrl }, objectUrl };
     }
-    if (mime.startsWith('text/') ||
-        ['txt', 'csv', 'log', 'md', 'json', 'xml', 'html', 'htm'].includes(ext)) {
+    if (mime.startsWith('text/') || mime === 'image/svg+xml' ||
+        ['txt', 'csv', 'log', 'md', 'json', 'xml', 'html', 'htm', 'svg'].includes(ext)) {
         let text = await blob.text();
         if (text.length > MAX_TEXT_CHARS) {
             text = `${text.slice(0, MAX_TEXT_CHARS)}\n\n… (${fileName}: обрезано для превью)`;
@@ -147,7 +149,7 @@ export async function buildAttachmentPreview(blob: Blob, fileName: string, conte
             return { model: { type: 'sheets', sheets, truncatedNote }, objectUrl: null };
         }
         catch {
-            const objectUrl = URL.createObjectURL(blob);
+            const objectUrl = inertObjectUrl(blob, fileName);
             return {
                 model: {
                     type: 'unsupported',
@@ -158,7 +160,7 @@ export async function buildAttachmentPreview(blob: Blob, fileName: string, conte
             };
         }
     }
-    const objectUrl = URL.createObjectURL(blob);
+    const objectUrl = inertObjectUrl(blob, fileName);
     return {
         model: {
             type: 'unsupported',

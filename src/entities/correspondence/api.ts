@@ -16,6 +16,7 @@ import type {
     RegisterIncomingBody,
     RegisterOutgoingBody,
 } from './model/types';
+import { openBlobInNewTab } from '@shared/lib/inertBlob';
 
 const PREFIX = '/api/v1/correspondence';
 
@@ -368,13 +369,9 @@ export async function createCorrespondenceComment(
 
 export async function openCorrespondenceAttachmentInNewTab(documentId: string, attachmentId: string): Promise<void> {
     const { blob } = await fetchCorrespondenceAttachmentBlob(documentId, attachmentId);
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!w) {
-        URL.revokeObjectURL(url);
+    if (!openBlobInNewTab(blob)) {
         throw new Error('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для этого сайта.');
     }
-    window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 
 export async function uploadCorrespondenceAttachment(

@@ -3,6 +3,7 @@ import { apiFetch, type RequestInitAuth } from '@shared/api';
 import { createQueryCache } from '@shared/lib/queryCache';
 import { normalizeExpenseRequest } from './coerceExpense';
 import type { ExpenseRequest, ExpenseAttachmentKind, ListParams, ExpenseTypeRef, ProjectRef, } from './types';
+import { openBlobInNewTab } from '@shared/lib/inertBlob';
 interface ListResponse {
     items: ExpenseRequest[];
     total: number;
@@ -265,13 +266,9 @@ export async function fetchExpenseAttachmentBlob(expenseId: string, attachmentId
 }
 export async function openExpenseAttachmentInNewTab(expenseId: string, attachmentId: string): Promise<void> {
     const { blob } = await fetchExpenseAttachmentBlob(expenseId, attachmentId);
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!w) {
-        URL.revokeObjectURL(url);
+    if (!openBlobInNewTab(blob)) {
         throw new Error('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для этого сайта.');
     }
-    window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 export async function fetchExpenseTypes(): Promise<ExpenseTypeRef[]> {
     return expenseTypesCache.fetch('types', async (signal) => {

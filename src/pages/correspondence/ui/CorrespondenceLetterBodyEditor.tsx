@@ -535,6 +535,7 @@ export function CorrespondenceLetterBodyReadonly({ value }: { value: string }) {
     return (
         <div
             className="corr-letter-editor__readonly"
+            // eslint-disable-next-line no-restricted-syntax -- html from normalizeLetterBodyHtml → sanitizeLetterHtml (DOMPurify)
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );

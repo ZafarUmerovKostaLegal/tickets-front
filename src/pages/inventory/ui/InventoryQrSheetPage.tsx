@@ -67,7 +67,7 @@ export function InventoryQrSheetPage({ embedded = false }: { embedded?: boolean 
                         {page.map((code) => (
                             <figure key={code} className="inv-qr__sticker">
                                 {svgs[code]
-                                    ? <div className="inv-qr__mark" dangerouslySetInnerHTML={{ __html: svgs[code] }} />
+                                    ? <img className="inv-qr__mark" alt={code} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgs[code])}`} />
                                     : <div className="inv-qr__mark inv-qr__mark--wait" />}
                                 <figcaption>{code}</figcaption>
                             </figure>

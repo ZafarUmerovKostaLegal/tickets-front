@@ -3,6 +3,7 @@ import { getAccessToken, removeAccessToken, setSessionCookieHint } from '@shared
 import { clearClientSessionSecrets } from '@shared/lib/authSessionCleanup';
 import { assertSafeRelativeApiPath, assertTrustedApiFetchPathOrUrl, } from '@shared/lib/trustedApiFetchUrl';
 import { apiRequestMetricNow, recordApiRequestMetric, type ApiRequestDelivery } from './requestMetrics';
+import { inertObjectUrl } from '@shared/lib/inertBlob';
 export type RequestInitAuth = RequestInit & {
     skipAuth?: boolean;
     skipAuthRedirectOn401?: boolean;
@@ -461,7 +462,7 @@ export async function fetchMediaBlob(mediaPath: string): Promise<string> {
         throw new Error(msg);
     }
     const blob = await res.blob();
-    return URL.createObjectURL(blob);
+    return inertObjectUrl(blob, mediaPath);
 }
 const MEDIA_API_PREFIX = '/api/v1/media/';
 const DESKTOP_BG_STORAGE_PREFIX = '/desktop_backgrounds/';
@@ -533,7 +534,7 @@ async function blobUrlFromApiFetch(pathOrAbsoluteSameOrigin: string): Promise<st
         throw new Error(msg);
     }
     const blob = await res.blob();
-    return URL.createObjectURL(blob);
+    return inertObjectUrl(blob, pathOrAbsoluteSameOrigin);
 }
 export async function createAuthenticatedMediaBlobUrl(urlOrPath: string): Promise<string> {
     const mediaPath = getMediaPathFromMediaUrl(urlOrPath);

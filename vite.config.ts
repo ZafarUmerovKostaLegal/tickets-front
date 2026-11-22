@@ -46,6 +46,8 @@ export default defineConfig(({ mode }) => {
                             return 'pdf-lib';
                         if (/\/node_modules\/docx\//.test(norm) || /\/node_modules\/docx["']?$/.test(norm))
                             return 'docx';
+                        if (norm.includes('/node_modules/@docx-editor.dev/core/') || norm.includes('/node_modules/@docx-editor.dev/react/'))
+                            return 'docx-editor';
                         if (
                             norm.includes('/node_modules/buffer/')
                             || norm.includes('/node_modules/base64-js/')

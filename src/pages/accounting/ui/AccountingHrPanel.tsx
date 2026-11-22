@@ -34,6 +34,7 @@ import { HrPhotoCropDialog } from './HrPhotoCropDialog';
 import { routes } from '@shared/config';
 import { NavLink } from 'react-router-dom';
 import './AccountingHrPanel.css';
+import { openBlobInNewTab } from '@shared/lib/inertBlob';
 
 type DrawerTab = 'profile' | 'documents' | 'equipment' | 'leave';
 type SortKey = 'name' | 'position' | 'newest';
@@ -442,10 +443,7 @@ export function AccountingHrPanel() {
     const openPdf = async (requestId: number) => {
         setDocBusyId(`leave-${requestId}`);
         try {
-            const blob = await fetchVacationLeaveRequestPdfBlob(requestId);
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank', 'noopener,noreferrer');
-            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+            openBlobInNewTab(await fetchVacationLeaveRequestPdfBlob(requestId));
         }
         catch {
         }
@@ -457,10 +455,7 @@ export function AccountingHrPanel() {
     const openManualDoc = async (entryId: number, docId: number) => {
         setDocBusyId(`manual-${entryId}-${docId}`);
         try {
-            const blob = await fetchVacationManualEntryDocumentBlob(entryId, docId);
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank', 'noopener,noreferrer');
-            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+            openBlobInNewTab(await fetchVacationManualEntryDocumentBlob(entryId, docId));
         }
         catch {
         }

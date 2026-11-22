@@ -1,6 +1,12 @@
 const AUTH_RETURN_PATH_KEY = 'auth-return-path';
 
-function isSafeReturnPath(value: string): boolean {
+export function isSafeReturnPath(value: string): boolean {
+    // Browsers read "\" as "/" — "/\evil.com" would leave the Hub (open redirect); so would control chars.
+    for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code === 0x5c || code < 0x20 || code === 0x7f)
+            return false;
+    }
     return value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/auth/');
 }
 

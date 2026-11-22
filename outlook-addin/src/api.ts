@@ -385,3 +385,59 @@ export function setMailAutofile(enabled: boolean): Promise<{ mailbox: MailboxDto
     body: JSON.stringify({ enabled }),
   });
 }
+
+export type MeetingLinkDto = {
+  id: string;
+  chatId: string;
+  topic: string;
+  startsAt: string | null;
+  matterId: string;
+  matterName: string;
+  matterCode: string;
+  clientId: string;
+  clientName: string;
+  folderId: string | null;
+  folderPath: string;
+  includeTranscript: boolean;
+  autoRecord: boolean;
+  enabled: boolean;
+  filedTotal: number;
+  lastRunAt: string | null;
+  lastFiledAt: string | null;
+  lastError: string | null;
+  ownerName: string;
+  mine: boolean;
+  canEdit: boolean;
+};
+
+export type MeetingLinkResponse = { link: MeetingLinkDto | null; serverReady: boolean; warning?: string | null };
+
+function chatQuery(chatId: string): string {
+  return `?chatId=${encodeURIComponent(chatId)}`;
+}
+
+export function getMeetingLink(chatId: string): Promise<MeetingLinkResponse> {
+  return request<MeetingLinkResponse>(`/meetings/link${chatQuery(chatId)}`);
+}
+
+export function saveMeetingLink(body: {
+  chatId: string;
+  matterId: string;
+  folderId: string | null;
+  includeTranscript: boolean;
+  autoRecord: boolean;
+}): Promise<MeetingLinkResponse> {
+  return request<MeetingLinkResponse>('/meetings/link', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteMeetingLink(chatId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/meetings/link${chatQuery(chatId)}`, { method: 'DELETE' });
+}
+
+export function checkMeetingNow(chatId: string): Promise<{ started: boolean }> {
+  return request<{ started: boolean }>(`/meetings/link/check${chatQuery(chatId)}`, { method: 'POST' });
+}
