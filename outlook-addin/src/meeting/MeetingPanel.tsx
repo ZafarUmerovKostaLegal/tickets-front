@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   browse,
-  checkMeetingNow,
   clearApiCaches,
   createFolder,
-  deleteMeetingLink,
-  getMeetingLink,
   listClients,
-  saveMeetingLink,
   setUnauthorizedHandler,
   type BrowseFolder,
   type ClientNode,
   type Location,
   type MeetingLinkDto,
+  type MeetingLinkResponse,
 } from '../api';
 import { loginWithHub, signInSilently } from '../auth/authApi';
 import { filterClients, folderPath, locationKey } from '../explorer';
@@ -23,6 +20,19 @@ import { formatDate } from '../ui/panels';
 import { Brand, SignInScreen } from '../ui/screens';
 
 type Phase = 'boot' | 'signin' | 'ready';
+
+export type MeetingLinkInput = { matterId: string; folderId: string | null; includeTranscript: boolean; autoRecord: boolean };
+
+export type MeetingSource = {
+  app: 'Teams' | 'Zoom';
+  load: () => Promise<MeetingLinkResponse>;
+  save: (body: MeetingLinkInput) => Promise<MeetingLinkResponse>;
+  remove: () => Promise<unknown>;
+  check: () => Promise<unknown>;
+  signIn?: () => Promise<unknown>;
+  autoRecord?: boolean;
+  recordNow?: () => Promise<void>;
+};
 type Notice = { text: string; kind: 'ok' | 'error' } | null;
 
 const NO_FAVORITES: ReadonlySet<string> = new Set();
@@ -43,7 +53,8 @@ function linkLocation(link: MeetingLinkDto): Location {
   };
 }
 
-export function MeetingPanel({ chatId }: { chatId: string | null }) {
+export function MeetingPanel({ source, outside }: { source: MeetingSource | null; outside: string }) {
+  const appName = source?.app ?? 'Teams';
   const [phase, setPhase] = useState<Phase>('boot');
   const [signInBusy, setSignInBusy] = useState(false);
   const [signInError, setSignInError] = useState('');
@@ -83,10 +94,10 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
   }, []);
 
   const loadLink = useCallback(async () => {
-    if (!chatId)
+    if (!source)
       return;
     try {
-      const data = await getMeetingLink(chatId);
+      const data = await source.load();
       setLink(data.link);
       setServerReady(data.serverReady);
       setEditing(!data.link);
@@ -99,7 +110,7 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
     } finally {
       setLoaded(true);
     }
-  }, [chatId]);
+  }, [source]);
 
   useEffect(() => {
     if (phase === 'ready')
@@ -166,7 +177,7 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
     setSignInBusy(true);
     setSignInError('');
     try {
-      await loginWithHub();
+      await (source?.signIn ? source.signIn() : loginWithHub());
       setPhase('ready');
     } catch (error) {
       setSignInError(errorText(error));
@@ -176,17 +187,16 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
   };
 
   const save = async () => {
-    if (!chatId || !target)
+    if (!source || !target)
       return;
     setBusy(true);
     setNotice(null);
     try {
-      const data = await saveMeetingLink({
-        chatId,
+      const data = await source.save({
         matterId: target.matterId,
         folderId: target.folderId,
         includeTranscript: transcript,
-        autoRecord,
+        autoRecord: Boolean(source.autoRecord) && autoRecord,
       });
       setLink(data.link);
       setEditing(false);
@@ -201,11 +211,11 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
   };
 
   const unlink = async () => {
-    if (!chatId)
+    if (!source)
       return;
     setBusy(true);
     try {
-      await deleteMeetingLink(chatId);
+      await source.remove();
       setLink(null);
       setTarget(null);
       setEditing(true);
@@ -218,15 +228,29 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
   };
 
   const checkNow = async () => {
-    if (!chatId)
+    if (!source)
       return;
     setBusy(true);
     try {
-      await checkMeetingNow(chatId);
+      await source.check();
       setNotice({ text: 'Ищем запись. Если встреча уже закончилась, файл появится в папке через минуту.', kind: 'ok' });
       window.setTimeout(() => void loadLink(), 20_000);
     } catch (error) {
       setNotice({ text: errorText(error), kind: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const recordNow = async () => {
+    if (!source?.recordNow)
+      return;
+    setBusy(true);
+    try {
+      await source.recordNow();
+      setNotice({ text: `Запись в облако ${appName} началась.`, kind: 'ok' });
+    } catch (error) {
+      setNotice({ text: `${appName} не начал запись: ${errorText(error)}. Начать запись может организатор или тот, кому он разрешил.`, kind: 'error' });
     } finally {
       setBusy(false);
     }
@@ -256,27 +280,36 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
         </div>
       </header>
 
-      {!chatId ? (
-        <p className="kf-alert kf-alert--error">Откройте Kosta File внутри встречи Teams — вне встречи сохранять нечего.</p>
-      ) : null}
-      {chatId && !serverReady ? (
-        <p className="kf-alert kf-alert--error">Сохранение записей Teams ещё не настроено на сервере. Обратитесь к администратору.</p>
+      {!source ? <p className="kf-alert kf-alert--error">{outside}</p> : null}
+      {source && !serverReady ? (
+        <p className="kf-alert kf-alert--error">Сохранение записей {appName} ещё не настроено на сервере. Обратитесь к администратору.</p>
       ) : null}
 
-      {chatId && link?.topic ? <p className="kf-teams__topic"><Icon name="record" size={14} />{link.topic}</p> : null}
+      {source && link?.topic ? <p className="kf-teams__topic"><Icon name="record" size={14} />{link.topic}</p> : null}
 
-      {chatId && loaded && link && !editing ? (
+      {source && loaded && link?.hidden ? (
+        <section className="kf-teams__card" aria-label="Встреча уже привязана">
+          <p className="kf-teams__label">Запись этой встречи уже сохраняет в Kosta {link.ownerName}.</p>
+        </section>
+      ) : null}
+
+      {source && loaded && link && !link.hidden && !editing ? (
         <section className="kf-teams__card" aria-label="Куда сохраняется запись">
           <p className="kf-teams__label">Запись и расшифровка сохраняются в</p>
           <p className="kf-teams__where"><Icon name="folder" size={15} />{locationLabel(linkLocation(link))}</p>
           <ul className="kf-teams__facts">
             <li>{link.includeTranscript ? 'Запись и расшифровка' : 'Только запись'}</li>
-            {link.autoRecord ? <li>Автозапись включена</li> : <li>Запись запускается кнопкой «Записать» в Teams</li>}
+            {link.autoRecord ? <li>Автозапись включена</li> : <li>Запись запускается кнопкой «Запись» в {appName}{source.recordNow ? ' или кнопкой ниже' : ''}</li>}
             <li>Привязал(а): {link.mine ? 'вы' : link.ownerName}</li>
             {link.filedTotal ? <li>Сохранено файлов: {link.filedTotal}{link.lastFiledAt ? `, последний ${formatDate(link.lastFiledAt)}` : ''}</li> : <li>Файлов пока нет — они появятся через несколько минут после окончания записи</li>}
           </ul>
           {link.lastError ? <p className="kf-alert kf-alert--error">{link.lastError}</p> : null}
           <div className="kf-teams__actions">
+            {source.recordNow ? (
+              <button type="button" className="kf-btn kf-btn--primary" disabled={busy} onClick={() => void recordNow()}>
+                <Icon name="record" size={14} />Запись в облако
+              </button>
+            ) : null}
             <button type="button" className="kf-btn" disabled={busy} onClick={() => void checkNow()}>
               <Icon name="refresh" size={14} />Проверить сейчас
             </button>
@@ -297,7 +330,7 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
         </section>
       ) : null}
 
-      {chatId && loaded && editing ? (
+      {source && loaded && editing ? (
         <section className="kf-teams__pick" aria-label="Выбор папки">
           <p className="kf-teams__label">Выберите matter и папку для записи этой встречи</p>
           <div className="kf-filter">
@@ -332,12 +365,14 @@ export function MeetingPanel({ chatId }: { chatId: string | null }) {
           )}
           <label className="kf-check">
             <input type="checkbox" checked={transcript} onChange={(event) => setTranscript(event.target.checked)} />
-            Сохранять расшифровку (если она включена в Teams)
+            Сохранять расшифровку (если она включена в {appName})
           </label>
-          <label className="kf-check">
-            <input type="checkbox" checked={autoRecord} onChange={(event) => setAutoRecord(event.target.checked)} />
-            Включить автозапись встречи
-          </label>
+          {source.autoRecord ? (
+            <label className="kf-check">
+              <input type="checkbox" checked={autoRecord} onChange={(event) => setAutoRecord(event.target.checked)} />
+              Включить автозапись встречи
+            </label>
+          ) : null}
           <div className="kf-teams__bar">
             <p className="kf-teams__target">
               {target ? <><Icon name="folder" size={14} />{locationLabel(target)}</> : 'Папка не выбрана'}

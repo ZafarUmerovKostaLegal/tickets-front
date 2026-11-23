@@ -12,6 +12,7 @@ const METHOD_LABEL: Record<string, string> = {
   cookie: 'по общей сессии Kosta Hub',
   token: 'по сохранённой сессии',
   dialog: 'через окно входа',
+  zoom: 'через Zoom',
 };
 
 function SignInInfo() {

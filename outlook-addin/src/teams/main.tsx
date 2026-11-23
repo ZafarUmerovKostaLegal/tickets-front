@@ -3,7 +3,8 @@ import { app, nestedAppAuth, pages } from '@microsoft/teams-js';
 import '../styles.css';
 import { enableHostAuthBridge } from '../auth/naa';
 import { Brand } from '../ui/screens';
-import { MeetingPanel } from './MeetingPanel';
+import { checkMeetingNow, deleteMeetingLink, getMeetingLink, saveMeetingLink } from '../api';
+import { MeetingPanel, type MeetingSource } from '../meeting/MeetingPanel';
 
 const container = document.getElementById('app');
 if (!container)
@@ -15,6 +16,21 @@ function applyTheme(theme: string | undefined): void {
   const dark = theme === 'dark' || theme === 'contrast'
     || (!theme && (window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false));
   document.body.dataset.theme = dark ? 'dark' : 'light';
+}
+
+const OUTSIDE = 'Откройте Kosta File внутри встречи Teams — вне встречи сохранять нечего.';
+
+function teamsSource(chatId: string | null): MeetingSource | null {
+  if (!chatId)
+    return null;
+  return {
+    app: 'Teams',
+    autoRecord: true,
+    load: () => getMeetingLink(chatId),
+    save: (body) => saveMeetingLink({ chatId, ...body }),
+    remove: () => deleteMeetingLink(chatId),
+    check: () => checkMeetingNow(chatId),
+  };
 }
 
 function ConfigPage() {
@@ -41,7 +57,7 @@ function OutsideTeams() {
 async function start(): Promise<void> {
   if (import.meta.env.DEV && view === 'demo') {
     applyTheme(new URLSearchParams(window.location.search).get('theme') ?? 'default');
-    root.render(<MeetingPanel chatId="19:meeting_demo@thread.v2" />);
+    root.render(<MeetingPanel source={teamsSource('19:meeting_demo@thread.v2')} outside={OUTSIDE} />);
     return;
   }
   try {
@@ -74,7 +90,7 @@ async function start(): Promise<void> {
   } catch {
     enableHostAuthBridge(false);
   }
-  root.render(<MeetingPanel chatId={context.chat?.id ?? null} />);
+  root.render(<MeetingPanel source={teamsSource(context.chat?.id ?? null)} outside={OUTSIDE} />);
 }
 
 void start();

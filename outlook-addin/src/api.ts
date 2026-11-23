@@ -396,6 +396,7 @@ export type MeetingLinkDto = {
   ownerName: string;
   mine: boolean;
   canEdit: boolean;
+  hidden?: boolean;
 };
 
 export type MeetingLinkResponse = { link: MeetingLinkDto | null; serverReady: boolean; warning?: string | null };
@@ -428,4 +429,34 @@ export function deleteMeetingLink(chatId: string): Promise<{ ok: boolean }> {
 
 export function checkMeetingNow(chatId: string): Promise<{ started: boolean }> {
   return request<{ started: boolean }>(`/meetings/link/check${chatQuery(chatId)}`, { method: 'POST' });
+}
+
+function zoomQuery(uuid: string): string {
+  return `?uuid=${encodeURIComponent(uuid)}`;
+}
+
+export function getZoomLink(uuid: string): Promise<MeetingLinkResponse> {
+  return request<MeetingLinkResponse>(`/meetings/zoom/link${zoomQuery(uuid)}`);
+}
+
+export function saveZoomLink(body: {
+  uuid: string;
+  meetingId: string;
+  matterId: string;
+  folderId: string | null;
+  includeTranscript: boolean;
+}): Promise<MeetingLinkResponse> {
+  return request<MeetingLinkResponse>('/meetings/zoom/link', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteZoomLink(uuid: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/meetings/zoom/link${zoomQuery(uuid)}`, { method: 'DELETE' });
+}
+
+export function checkZoomNow(uuid: string): Promise<{ started: boolean }> {
+  return request<{ started: boolean }>(`/meetings/zoom/link/check${zoomQuery(uuid)}`, { method: 'POST' });
 }

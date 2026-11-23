@@ -25,6 +25,7 @@
   "dependencies": {
     "@azure/msal-browser": "^4.26.0",
     "@microsoft/teams-js": "^2.59.0",
+    "@zoom/appssdk": "^0.16.43",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   }

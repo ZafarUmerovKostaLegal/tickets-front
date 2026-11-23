@@ -183,7 +183,7 @@ function secondsLeft(expiresOn: Date | null | undefined): number {
   return expiresOn ? Math.max(60, Math.round((expiresOn.getTime() - Date.now()) / 1000)) : 3600;
 }
 
-export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'unknown';
+export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'zoom' | 'unknown';
 
 let authMethod: AuthMethod = 'unknown';
 
@@ -240,6 +240,34 @@ export function signInSilently(options: { force?: boolean } = {}): Promise<AuthP
     silentInFlight = null;
   });
   return silentInFlight;
+}
+
+export async function signInWithZoomCode(code: string, codeVerifier: string): Promise<AuthProfile> {
+  const origin = gatewayOrigin();
+  if (!origin)
+    throw new Error('Не задан адрес Kosta Hub');
+  const response = await fetch(`${origin}/api/v1/auth/outlook/zoom/bootstrap`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ code, codeVerifier }),
+  });
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json() as { detail?: string };
+      if (body.detail)
+        detail = body.detail;
+    } catch {
+    }
+    throw new Error(detail);
+  }
+  const pair = await response.json() as { access_token?: string };
+  if (!pair.access_token)
+    throw new Error('Пустой ответ сервера');
+  storeHubAccessToken(pair.access_token);
+  authMethod = 'zoom';
+  return fetchHubMe();
 }
 
 export async function getGraphToken(): Promise<string | null> {

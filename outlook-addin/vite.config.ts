@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => ({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         teams: fileURLToPath(new URL('./teams.html', import.meta.url)),
+        zoom: fileURLToPath(new URL('./zoom.html', import.meta.url)),
       },
     },
   },
