@@ -366,18 +366,6 @@ export function createMailRule(body: { match: string; matterId: string; folderId
   });
 }
 
-export function updateMailRule(id: string, patch: { enabled: boolean }): Promise<{ rule: MailRuleDto }> {
-  return request<{ rule: MailRuleDto }>(`/mail/rules/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(patch),
-  });
-}
-
-export function deleteMailRule(id: string): Promise<{ ok: boolean }> {
-  return request<{ ok: boolean }>(`/mail/rules/${encodeURIComponent(id)}`, { method: 'DELETE' });
-}
-
 export function setMailAutofile(enabled: boolean): Promise<{ mailbox: MailboxDto | null }> {
   return request<{ mailbox: MailboxDto | null }>('/mail/autofile', {
     method: 'PUT',

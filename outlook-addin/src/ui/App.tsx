@@ -30,7 +30,7 @@ import { hubDocumentUrl, locationLabel } from '../naming';
 import { hostLabel } from '../officeDoc';
 import { matchRule } from '../rules';
 import { getSettings, loadRoamingSettings, saveSettings, wasFiled, type FilingRule } from '../settings';
-import { createMailRule, deleteMailRule, listMailRules, setMailAutofile, updateMailRule, type MailboxDto } from '../api';
+import { createMailRule, listMailRules, setMailAutofile, type MailboxDto } from '../api';
 import { migrateLocalRules, toFilingRule } from '../mailRules';
 import { FolderTree, type DocState, type FolderState } from './FolderTree';
 import { Icon } from './icons';
@@ -43,7 +43,6 @@ type Status = { text: string; kind: '' | 'ok' | 'error' } | null;
 
 const HUB_ORIGIN = window.location.origin;
 const UI_KEY = 'kosta.addin.ui';
-const VERSION = import.meta.env.VITE_ADDIN_VERSION || '';
 
 type UiState = { tab: Tab; expanded: string[]; hideClosed: boolean };
 
@@ -861,16 +860,10 @@ export function App({ host }: { host: Office.HostType | null }) {
       {settingsOpen ? (
         <SettingsSheet
           profile={profile}
-          rules={rules}
-          version={VERSION}
-          apiBase={getSettings().apiBase}
           onClose={() => setSettingsOpen(false)}
           onLogout={() => void logout()}
           mailbox={mailbox}
           serverReady={serverReady}
-          hubRulesUrl={`${HUB_ORIGIN}/files?view=mailRules`}
-          onToggleRule={(rule, enabled) => void updateMailRule(rule.id, { enabled }).then(reloadRules, () => undefined)}
-          onDeleteRule={(rule) => void deleteMailRule(rule.id).then(reloadRules, () => undefined)}
           onAutofile={(enabled) => void setMailAutofile(enabled).then(reloadRules, () => undefined)}
         />
       ) : null}

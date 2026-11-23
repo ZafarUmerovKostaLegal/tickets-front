@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeMatch, matchRule } from './rules';
+import { matchRule } from './rules';
 import type { FilingRule } from './settings';
 
 const rule = (p: Partial<FilingRule>): FilingRule => ({
@@ -41,10 +41,5 @@ describe('matchRule', () => {
   it('returns null for invalid sender addresses', () => {
     expect(matchRule('', rules)).toBeNull();
     expect(matchRule('not-an-email', rules)).toBeNull();
-  });
-
-  it('describes the rule for upload comments', () => {
-    expect(describeMatch(rule({ match: 'a@b.c' }))).toBe('отправитель a@b.c');
-    expect(describeMatch(rule({ match: '@b.c' }))).toBe('домен b.c');
   });
 });

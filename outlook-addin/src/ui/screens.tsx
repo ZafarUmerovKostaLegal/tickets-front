@@ -3,8 +3,6 @@ import { currentAuthMethod } from '../auth/authApi';
 import { ssoProblem, ssoState } from '../auth/naa';
 import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
-import { describeMatch } from '../rules';
-import type { FilingRule } from '../settings';
 import { Icon } from './icons';
 
 const ASSET_BASE = import.meta.env.BASE_URL || '/';
@@ -88,20 +86,14 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
 }
 
 export function SettingsSheet({
-  profile, rules, mailbox, serverReady, hubRulesUrl, onClose, onLogout, onToggleRule, onDeleteRule, onAutofile, version, apiBase,
+  profile, mailbox, serverReady, onClose, onLogout, onAutofile,
 }: {
   profile: AuthProfile | null;
-  rules: FilingRule[];
   mailbox: MailboxDto | null;
   serverReady: boolean;
-  hubRulesUrl: string;
   onClose: () => void;
   onLogout: () => void;
-  onToggleRule: (rule: FilingRule, enabled: boolean) => void;
-  onDeleteRule: (rule: FilingRule) => void;
   onAutofile: (enabled: boolean) => void;
-  version: string;
-  apiBase: string;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -151,49 +143,6 @@ export function SettingsSheet({
         </div>
       </section>
 
-      <section className="kf-section">
-        <header className="kf-section__head">
-          <h2>Правила ({rules.length})</h2>
-          <a className="kf-link" href={hubRulesUrl} target="_blank" rel="noreferrer">Все правила в Hub</a>
-        </header>
-        {rules.length ? (
-          <ul className="kf-rules">
-            {rules.map((rule) => (
-              <li key={rule.id} className={rule.enabled ? '' : 'is-off'}>
-                <div className="kf-rules__head">
-                  <span className="kf-rules__match">
-                    {describeMatch(rule)}
-                    {rule.scope === 'shared' ? <span className="kf-tag">общее</span> : null}
-                  </span>
-                  {rule.canEdit !== false ? (
-                    <button type="button" className="kf-iconbtn" aria-label={`Удалить правило ${rule.match}`} onClick={() => onDeleteRule(rule)}>
-                      <Icon name="trash" size={14} />
-                    </button>
-                  ) : null}
-                </div>
-                <span className="kf-rules__target">
-                  {rule.clientName ? `${rule.clientName} › ` : ''}{rule.matterName}
-                  {' › '}{rule.folderPath?.length ? rule.folderPath.map((c) => c.name).join(' / ') : 'Correspondence / Emails'}
-                </span>
-                {rule.canEdit !== false ? (
-                  <label className="kf-check"><input type="checkbox" checked={rule.enabled} onChange={(event) => onToggleRule(rule, event.target.checked)} />Включено</label>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="kf-empty">Правил нет. Выберите папку и нажмите кнопку правила рядом с «Сохранить».</p>
-        )}
-      </section>
-
-      <section className="kf-section">
-        <header className="kf-section__head"><h2>Панель</h2></header>
-        <p className="kf-text">
-          Чтобы панель не закрывалась при переходе между письмами, нажмите <Icon name="pin" size={13} /> в её заголовке.
-          Письма можно перетаскивать прямо на папку в дереве (новый Outlook и Outlook в браузере).
-        </p>
-        <p className="kf-text kf-text--dim">Версия {version} · {apiBase}</p>
-      </section>
     </div>
   );
 }

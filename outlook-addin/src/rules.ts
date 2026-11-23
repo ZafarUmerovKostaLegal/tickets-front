@@ -26,10 +26,3 @@ export function matchRule(fromEmail: string, rules: FilingRule[]): FilingRule | 
   });
   return byDomain ?? null;
 }
-
-export function describeMatch(rule: FilingRule): string {
-  const match = rule.match.trim();
-  if (match.includes('@') && !match.startsWith('@'))
-    return `отправитель ${match}`;
-  return `домен ${match.replace(/^@/, '')}`;
-}
