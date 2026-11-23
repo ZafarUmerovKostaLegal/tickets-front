@@ -1,10 +1,20 @@
-import { useState, type DragEvent, type KeyboardEvent } from 'react';
-import type { BrowseFolder, ClientNode, Location } from '../api';
+import { useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
+import type { BrowseFolder, ClientNode, DocRow, Location } from '../api';
 import { buildFolderTree, folderPath, locationKey, type FolderNode } from '../explorer';
 import { locationLabel } from '../naming';
 import { Icon } from './icons';
 
 export type FolderState = BrowseFolder[] | 'loading' | { error: string };
+
+export type DocState = DocRow[] | 'loading' | { error: string };
+
+export type TreeFiles = {
+  docs: Readonly<Record<string, DocState>>;
+  onLoad: (matterId: string, folderId: string | null) => void;
+  renderDoc: (doc: DocRow) => ReactNode;
+};
+
+const DOC_LIMIT = 50;
 
 type Matter = ClientNode['matters'][number];
 
@@ -21,6 +31,7 @@ type Props = {
   onFavorite: (kind: 'matter' | 'folder', id: string, matterId: string, on: boolean) => void;
   onCreateFolder: (matterId: string, parentId: string | null, name: string) => Promise<void>;
   onDropFiles: (location: Location, files: File[]) => void;
+  files?: TreeFiles;
 };
 
 function canWrite(matter: Matter): boolean {
@@ -108,11 +119,41 @@ export function FolderTree(props: Props) {
     </li>
   );
 
+  const renderDocs = (key: string, depth: number) => {
+    const files = props.files;
+    if (!files)
+      return null;
+    const state = files.docs[key];
+    const pad = { paddingLeft: `${depth * 14 + 26}px` };
+    if (state === undefined || state === 'loading')
+      return <li className="kf-tree__hint" style={pad}>Загрузка файлов…</li>;
+    if (!Array.isArray(state))
+      return <li className="kf-tree__hint is-error" style={pad}>{state.error}</li>;
+    return (
+      <>
+        {state.slice(0, DOC_LIMIT).map((doc) => (
+          <li key={doc.id} role="none" className="kf-tree__doc" style={{ paddingLeft: `${depth * 14 + 4}px` }}>
+            {files.renderDoc(doc)}
+          </li>
+        ))}
+        {state.length > DOC_LIMIT ? <li className="kf-tree__hint" style={pad}>Ещё {state.length - DOC_LIMIT} — откройте папку в Hub</li> : null}
+      </>
+    );
+  };
+
   const renderFolders = (client: ClientNode, matter: Matter, rows: BrowseFolder[], nodes: FolderNode[], depth: number) => nodes.map((node) => {
     const key = `f:${node.id}`;
     const open = props.expanded.has(key);
     const location = matterLocation(client, matter, rows, node.id);
     const lkey = locationKey(location);
+    const hasDocs = Boolean(props.files && node.documents);
+    const expandable = node.children.length > 0 || hasDocs;
+    const toggle = () => {
+      const files = props.files;
+      if (!open && hasDocs && files && files.docs[lkey] === undefined)
+        files.onLoad(matter.id, node.id);
+      props.onToggle(key);
+    };
     const selected = props.selectedKey === lkey;
     const dropping = props.dropKey === lkey || nativeDrop === lkey;
     const writable = canWrite(matter);
@@ -130,13 +171,17 @@ export function FolderTree(props: Props) {
             type="button"
             className="kf-tree__twist"
             aria-label={open ? 'Свернуть' : 'Развернуть'}
-            aria-expanded={node.children.length ? open : undefined}
-            disabled={!node.children.length}
-            onClick={() => props.onToggle(key)}
+            aria-expanded={expandable ? open : undefined}
+            disabled={!expandable}
+            onClick={toggle}
           >
-            {node.children.length ? <Icon name="chevron" size={12} className={open ? 'is-open' : ''} /> : null}
+            {expandable ? <Icon name="chevron" size={12} className={open ? 'is-open' : ''} /> : null}
           </button>
-          <button type="button" role="treeitem" aria-selected={selected} className="kf-tree__label" title={locationLabel(location)} onClick={() => props.onSelect(location)}>
+          <button type="button" role="treeitem" aria-selected={selected} className="kf-tree__label" title={locationLabel(location)} onClick={() => {
+            props.onSelect(location);
+            if (!open && expandable)
+              toggle();
+          }}>
             <Icon name={open ? 'folderOpen' : 'folder'} className="kf-tree__glyph kf-tree__glyph--folder" />
             <span className="kf-tree__name">{node.name}</span>
             {node.documents ? <span className="kf-tree__count">{node.documents}</span> : null}
@@ -168,6 +213,7 @@ export function FolderTree(props: Props) {
           <ul role="group" className="kf-tree__group">
             {creating?.matterId === matter.id && creating.parentId === node.id ? newFolderInput(depth + 1) : null}
             {renderFolders(client, matter, rows, node.children, depth + 1)}
+            {open && hasDocs ? renderDocs(lkey, depth + 1) : null}
           </ul>
         ) : null}
       </li>
@@ -241,6 +287,7 @@ export function FolderTree(props: Props) {
             {state && !Array.isArray(state) && state !== 'loading' ? <li className="kf-tree__hint is-error">{state.error}</li> : null}
             {rows ? renderFolders(client, matter, rows, buildFolderTree(rows), 1) : null}
             {rows && !rows.length ? <li className="kf-tree__hint">Папок нет — сохраните в корень или создайте папку</li> : null}
+            {rows && props.files && Array.isArray(props.files.docs[lkey]) && props.files.docs[lkey].length ? renderDocs(lkey, 1) : null}
           </ul>
         ) : null}
       </li>

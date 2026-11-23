@@ -26,7 +26,6 @@ function parseUser(data: Record<string, unknown>): ExtUser | null {
     };
 }
 
-/** Content scripts share origin localStorage with the page; no MAIN-world injection needed. */
 async function readFromPage(): Promise<BridgeResult> {
     const apiBase = window.location.origin;
     const token = localStorage.getItem(TOKEN_KEY)?.trim() || null;
@@ -62,7 +61,6 @@ function writeTimerToPage(userId: number, payload: TimerPayload | null): void {
         window.dispatchEvent(new CustomEvent('tt:timer-storage-changed', { detail: { authUserId: userId } }));
     }
     catch {
-        // ignore quota / private mode
     }
 }
 

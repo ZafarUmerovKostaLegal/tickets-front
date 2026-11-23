@@ -985,3 +985,7 @@ body[data-theme='dark'] .kf-toast { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); 
   color: var(--text);
   overflow-wrap: anywhere;
 }
+
+.kf-tree__doc { list-style: none; }
+.kf-tree__row--doc .kf-tree__name { font-size: 12.5px; }
+.kf-tree__row--doc .kf-tree__glyph { color: var(--text-dim); }

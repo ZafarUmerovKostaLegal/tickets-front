@@ -79,7 +79,6 @@ export type DocumentRow = {
     lastActivityAt?: string | null;
 };
 
-/** What the server did with one uploaded file (versions instead of copies). */
 export type UploadStatus = 'created' | 'version' | 'unchanged' | 'exists' | 'duplicate';
 
 export type UploadResponse = {
@@ -330,7 +329,6 @@ export const filesApi = {
     updateFolder: (folderId: string, patch: { name?: string; parentId?: string; moveToRoot?: boolean }) =>
         request<{ id: string }>(`/folders/${encodeURIComponent(folderId)}`, json('PATCH', patch)),
     deleteFolder: (folderId: string) => request<{ ok: true }>(`/folders/${encodeURIComponent(folderId)}`, { method: 'DELETE' }),
-    /** Sort loose letters of a folder into per-person subfolders and fill subjects. */
     organizeMail: (matterId: string, folderId: string) =>
         request<{ moved: number; folders: string[]; subjects: number }>(`/matters/${encodeURIComponent(matterId)}/mail/organize`, json('POST', { folderId })),
     upload: (matterId: string, folderId: string | null, files: File[], comment = '', options: { allowDuplicate?: boolean } = {}) => {
@@ -345,7 +343,6 @@ export const filesApi = {
             body.append('allowDuplicate', 'true');
         return request<UploadResponse>(`/matters/${encodeURIComponent(matterId)}/documents`, { method: 'POST', body });
     },
-    /** Copies inside a matter: identical files and the same letter filed twice (oldest first). */
     duplicates: (matterId: string) =>
         request<{ groups: DuplicateGroup[]; total: number }>(`/matters/${encodeURIComponent(matterId)}/duplicates`),
     document: (documentId: string) => request<DocumentDetail>(`/documents/${encodeURIComponent(documentId)}`),
@@ -372,12 +369,10 @@ export const filesApi = {
             await fail(response);
         return await response.blob();
     },
-    /** Short-lived signed URL: the browser itself downloads (to disk, resumable) — for large files. */
     link: async (documentId: string, options: { version?: number; inline?: boolean; entry?: number } = {}) => {
         const body = await request<{ url: string }>(`/documents/${encodeURIComponent(documentId)}/link${query({ version: options.version, inline: options.inline, entry: options.entry })}`, { method: 'POST' });
         return upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`);
     },
-    /** First bytes only (Range) — text previews of big files. */
     headBlob: async (documentId: string, bytes: number, version?: number) => {
         const response = await apiFetch(`${BASE}/documents/${encodeURIComponent(documentId)}/content${query({ version, inline: true })}`, { headers: { Range: `bytes=0-${bytes - 1}` }, skipGetDedupe: true });
         if (!response.ok)

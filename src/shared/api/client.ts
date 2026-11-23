@@ -247,11 +247,6 @@ const ME_PATH = '/api/v1/users/me';
 const SESSION_CHECK_REUSE_MS = 5_000;
 let sessionCheck: Promise<boolean> | null = null;
 
-/**
- * One endpoint answering 401 (a service that rejects this user, a stale proxy) is not proof the
- * sign-in is gone. Ask /users/me once — parallel 401s share the answer — before dropping the session.
- * Network errors and 5xx keep the session: being offline must never sign anybody out.
- */
 function sessionStillValid(baseUrl: string, token: string | null): Promise<boolean> {
     if (!sessionCheck) {
         sessionCheck = (async () => {
@@ -349,7 +344,6 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         const isMe = rel === ME_PATH || url.endsWith(ME_PATH);
         if (!isMe && await sessionStillValid(baseUrl, sentToken))
             return response;
-        // Signed in again meanwhile (another tab, re-login): the fresh token is not ours to drop.
         if (getAccessToken() !== sentToken)
             return response;
         removeAccessToken();

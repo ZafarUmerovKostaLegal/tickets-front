@@ -1,7 +1,3 @@
-/* Legal Hub teamwork layer: task workflow actions, team statistics, project map, grouped lists, temporary access.
-   Imported after LegalHubPage.css. Colours come from app tokens, so light and dark themes follow automatically. */
-
-/* ── Workflow actions in the task drawer ── */
 .lh-act {
   display: grid;
   gap: 0.6rem;
@@ -72,7 +68,6 @@
 
 .lh-act__error { margin: 0; font-size: 0.8rem; color: var(--app-error, #b42318); }
 
-/* ── Team statistics tiles ── */
 .lh-map { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
 .lh-map--loading { min-height: 9rem; border-radius: 14px; background: var(--app-surface-soft, var(--app-surface)); }
 .lh-map__error { color: var(--app-error, #b42318); }
@@ -98,7 +93,6 @@
 .lh-stats__tile.is-warn strong { color: var(--lh-late, var(--app-error, #b42318)); }
 .lh-stats__tile.is-ok strong { color: var(--lh-ok, var(--app-success, #15803d)); }
 
-/* ── Project map ── */
 .lh-map__panel {
   padding: 1rem 1.1rem;
   border: 1px solid var(--app-border);
@@ -197,7 +191,6 @@ button.lh-map__name { cursor: pointer; }
   .lh-map__bar span { transition: none; }
 }
 
-/* ── Lists grouped by project ── */
 .lh-rows__groups { display: grid; gap: 1rem; }
 .lh-rows__group > ul { margin: 0; }
 
@@ -226,7 +219,6 @@ button.lh-map__name { cursor: pointer; }
 
 .lh-tasks__group th span { margin-left: 0.6rem; color: var(--app-muted); font-size: 0.74rem; font-weight: 500; }
 
-/* ── Temporary members of a team ── */
 .lh-team__temps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.75rem; padding: 0; list-style: none; }
 
 .lh-team__temp {
@@ -271,7 +263,6 @@ button.lh-map__name { cursor: pointer; }
   font-size: 0.82rem;
 }
 
-/* ── Tablet / phone ── */
 @media (max-width: 900px) {
   .lh-map__row {
     grid-template-columns: minmax(0, 1fr);
@@ -289,9 +280,6 @@ button.lh-map__name { cursor: pointer; }
   .lh-team__temp .lh-team__temp-x { width: 2.25rem; height: 2.25rem; }
 }
 
-/* ── Board polish ──
-   Empty columns take less room (the board fits without scrolling to "Done"); they widen back while a
-   card is dragged (no `is-empty` then). Long column names wrap to two lines instead of "Ожидание кл…". */
 .lh-my--docket .lh-my__col.is-empty {
   --lh-col-w: max(12.75rem, calc((100cqi - 2rem - 5 * 0.7rem - 20px) / 6 * 0.7));
 }
@@ -340,7 +328,6 @@ button.lh-map__name { cursor: pointer; }
   }
 }
 
-/* ── Project board: stage strip ── */
 .lh-strip {
   display: grid;
   gap: 0.45rem;
@@ -372,7 +359,6 @@ button.lh-map__name { cursor: pointer; }
 .lh-strip__pipe .lh-map__step { flex-direction: row; justify-content: center; gap: 0.35rem; padding: 0.25rem 0.4rem; }
 .lh-strip__pipe .lh-map__step-count { font-size: 0.78rem; }
 
-/* ── Card "⋯" menu button (also the only way to the menu on touch screens) ── */
 .lh-my .lh-my__card { position: relative; }
 .lh-my .lh-my__card .lh-my__card-more {
   position: absolute;
@@ -419,13 +405,11 @@ button.lh-map__name { cursor: pointer; }
   .lh-card-menu .lh-card-menu__flow { min-height: 40px; }
 }
 
-/* Board toolbar: "Project map" shortcut (icon-only on phones) */
 .lh-bt .lh-bt__map svg { width: 1rem; height: 1rem; }
 @media (max-width: 720px) {
   .lh-bt .lh-bt__map { flex: 0 0 auto; padding-inline: 0.75rem; }
   .lh-bt .lh-bt__map .lh-bt__map-label { display: none; }
 }
-/* Column titles: break between words only — automatic hyphenation produced "Согласова-ние…" */
 .lh-my--docket .lh-my__col-title strong { hyphens: manual; }
 .lh-strip > .lh-map__pipe,
 .lh-strip > .lh-map__bar { grid-area: auto; }

@@ -3153,7 +3153,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   justify-self: end;
 }
 
-/* ── Matter view: date filter bar, letter subject ── */
 .fm-datebar {
   display: flex;
   flex-wrap: wrap;
@@ -3287,7 +3286,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   }
 }
 
-/* ── Duplicates report ── */
 .fm-datebar .fm-datebar__dups {
   min-height: 1.9rem;
   font-size: 0.78rem;
@@ -3389,7 +3387,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   .fm-dups__doc .fm-link { min-height: 44px; }
 }
 
-/* ── Background uploads panel (large files) ── */
 .fm-upq {
   position: fixed;
   right: 1.25rem;
@@ -3468,7 +3465,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   .fm-upq__actions > .fm-upq__cancel { width: 2.75rem; height: 2.75rem; }
 }
 
-/* ── Document viewer (matter documents, Disk files, files inside ZIP) ── */
 .fm-pv { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
 .fm-pv-modal { display: flex; flex-direction: column; width: 100%; height: min(72vh, 52rem); overflow: auto; }
 .fm-pv-modal > .fm-pv { flex: 1; }
@@ -3548,7 +3544,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 }
 
 
-/* Modals are portalled to <body>, outside .fm: give them the same palette (primary buttons were white on white). */
 .fm-modal, .fm-upq {
   --fm-accent: var(--app-accent, #1d2a6b);
   --fm-accent-soft: var(--app-accent-light-bg, #eef1fb);
@@ -3562,7 +3557,6 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   --fm-hover: var(--app-surface-soft, #f5f8fc);
 }
 
-/* Kosta File add-in connections */
 .fm-addin__hint { margin: 0 0 0.85rem; font-size: 0.82rem; }
 .fm-addin__filters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 0.7rem; }
 .fm-docs .fm-addin__filter {
@@ -3604,13 +3598,11 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
   .fm-docs .fm-addin__filter { min-height: 44px; }
 }
 
-/* Trash: «Корзина / Архив удалённого» (chief administrator) */
 .fm-trash__modes { display: inline-flex; gap: 0.2rem; margin-bottom: 0.75rem; padding: 0.2rem; border-radius: 10px; background: var(--fm-soft); }
 .fm-docs .fm-trash__mode { min-height: 2rem; padding: 0.3rem 0.85rem; border: 0; border-radius: 8px; background: transparent; color: var(--fm-muted); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
 .fm-docs .fm-trash__mode.is-on { background: var(--fm-surface); color: var(--fm-text); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); }
 @media (max-width: 760px) { .fm-docs .fm-trash__mode { min-height: 44px; } }
 
-/* Disk: deleted files (kept forever, managers restore) */
 .fm-deleted__search { margin: 0.5rem 0 0.75rem; }
 .fm-deleted { display: flex; flex-direction: column; gap: 0.35rem; max-height: min(60vh, 32rem); margin: 0; padding: 0; overflow-y: auto; list-style: none; }
 .fm-deleted li { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0.7rem; border: 1px solid var(--fm-border); border-radius: 10px; }
@@ -3622,7 +3614,6 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
   .fm-deleted li .fm-btn { width: 100%; justify-content: center; min-height: 44px; }
 }
 
-/* Mail rules: server-side auto-filing */
 .fm-mailrules__box {
   display: flex;
   align-items: center;

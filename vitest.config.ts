@@ -41,7 +41,6 @@ export default defineConfig({
         testTimeout: 10_000,
         coverage: {
             provider: 'v8',
-            // All non-UI logic of the app; React components (.tsx) are covered by Playwright e2e.
             include: ['src/**/*.ts'],
             exclude: ['**/*.{test,spec}.{ts,tsx}', '**/index.ts', '**/*.d.ts', '**/*.css'],
             thresholds: {

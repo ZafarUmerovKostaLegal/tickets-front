@@ -41,8 +41,6 @@ export function splitCardBody(raw: string | null | undefined): {
     const text = raw?.trim() ?? '';
     if (!text)
         return { description: '', extras: {} };
-    // Look for the bare token: a body without a description starts with the marker,
-    // and trim() above has already stripped its leading line breaks.
     const idx = text.lastIndexOf(MARKER_TOKEN);
     if (idx < 0)
         return { description: text, extras: {} };

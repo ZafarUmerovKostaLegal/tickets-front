@@ -26,7 +26,6 @@ import { exportAttendancePeriodExcel } from '../lib/exportAttendancePeriodExcel'
 import { AttendanceCameraData } from './AttendanceCameraData';
 import { EmployeeMultiSelect } from './EmployeeMultiSelect';
 
-/** Same roles the gateway lets load camera data (CSV import, re-pull from terminals). */
 const CAMERA_DATA_MANAGER_ROLES = new Set(
     ['Главный администратор', 'Администратор', 'Партнер', 'Офис менеджер', 'IT отдел'].map(normalizeOrgRoleKey),
 );
@@ -387,7 +386,6 @@ export function AttendanceOverviewCard() {
     const [selectedDate, setSelectedDate] = useState(today);
     const [periodFrom, setPeriodFrom] = useState(today);
     const [periodTo, setPeriodTo] = useState(today);
-    /** Picked employees; empty = everyone. */
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
     const [filter, setFilter] = useState<AttendanceStatusFilter>('all');
     const [items, setItems] = useState<ListItem[]>([]);
@@ -410,7 +408,6 @@ export function AttendanceOverviewCard() {
     );
     const selectedEmployeeKey = selectedKeys.length === 1 ? selectedKeys[0] : ALL_EMPLOYEE_KEY;
     const selectedEmployee = selectedKeys.length === 1 ? selectedEmployees[0] ?? null : null;
-    /** One person → their detailed Excel; several or everyone → the period workbook. */
     const canExportEmployeePeriod = Boolean(selectedEmployee);
     const singleEmployee = selectedKeys.length === 1;
 
@@ -499,7 +496,6 @@ export function AttendanceOverviewCard() {
                 setEmployeeOptions((prev) => mergeEmployeeOptions(prev, periodItems));
             }
 
-            // A period lists working days only: weekend without a visit is a day off, future days are empty.
             setItems(periodFrom === periodTo ? nextItems : relevantPeriodRows(nextItems, toYmd(new Date())));
             setWorkdayStart(nextWorkdayStart);
             setWorkdayEnd(nextWorkdayEnd);
@@ -901,7 +897,6 @@ export function AttendanceOverviewCard() {
                 </div>
             </div>
 
-            {/* A period has its own report below — the week strip is for picking a single day. */}
             <div className="att-overview__week" hidden={isPeriodMode} aria-label={locale === 'en' ? 'Week' : 'Неделя'}>
                 <button
                     type="button"

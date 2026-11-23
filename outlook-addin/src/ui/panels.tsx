@@ -399,6 +399,37 @@ export function DocList({ docs, empty, compose, onOpen, onAttach, onLink, onLoca
   );
 }
 
+export function TreeDoc({ doc, compose, busy, onOpen, onAttach, onLink }: {
+  doc: DocRow;
+  compose: boolean;
+  busy: boolean;
+  onOpen: (doc: DocRow) => void;
+  onAttach: (doc: DocRow) => void;
+  onLink: (doc: DocRow) => void;
+}) {
+  const meta = [doc.docNumber, doc.version > 1 ? `v${doc.version}` : '', formatDate(doc.updatedAt), doc.checkedOutBy ? `у ${doc.checkedOutBy}` : '']
+    .filter(Boolean).join(' · ');
+  return (
+    <div className="kf-tree__row kf-tree__row--doc">
+      <span className="kf-tree__twist" aria-hidden="true" />
+      <button type="button" role="treeitem" className="kf-tree__label" title={`${doc.name}\n${meta}\nОткрыть в Kosta Hub`} onClick={() => onOpen(doc)}>
+        <Icon name={doc.kind === 'email' || /\.eml$/i.test(doc.name) ? 'mail' : 'doc'} className="kf-tree__glyph" />
+        <span className="kf-tree__name">{doc.name}</span>
+        {doc.version > 1 ? <span className="kf-tree__count">v{doc.version}</span> : null}
+      </button>
+      <span className="kf-tree__tools">
+        {compose ? (
+          <>
+            <button type="button" className="kf-iconbtn" disabled={busy} title="Вложить в письмо" aria-label={`Вложить ${doc.name}`} onClick={() => onAttach(doc)}><Icon name="clip" size={14} /></button>
+            <button type="button" className="kf-iconbtn" disabled={busy} title="Вставить ссылку" aria-label={`Ссылка на ${doc.name}`} onClick={() => onLink(doc)}><Icon name="link" size={14} /></button>
+          </>
+        ) : null}
+        <button type="button" className="kf-iconbtn" title="Открыть в Kosta Hub" aria-label={`Открыть ${doc.name}`} onClick={() => onOpen(doc)}><Icon name="open" size={14} /></button>
+      </span>
+    </div>
+  );
+}
+
 export function PlaceList({ places, selectedKey, onPick, empty }: {
   places: Array<Location & { key: string; icon: IconName; meta?: string }>;
   selectedKey: string | null;

@@ -11,7 +11,6 @@ const UPLOAD_EVENT = 'kosta:edit-uploaded';
 
 let capability: Promise<boolean> | null = null;
 
-/** True inside Kosta File / the Hub desktop app built with edit-in-Office support. */
 export function canEditInOffice(): Promise<boolean> {
     if (!capability) {
         capability = (async () => {
@@ -75,7 +74,6 @@ async function uploadSaved(event: EditSaved): Promise<void> {
 
 let listening: Promise<void> | null = null;
 
-/** Every Ctrl+S in Word / Excel becomes a new version in Kosta (one listener per window). */
 export function startEditSync(): Promise<void> {
     if (!listening) {
         listening = canEditInOffice().then(async (ok) => {
@@ -95,7 +93,6 @@ export function onEditUploaded(handler: (result: EditUploadResult) => void): () 
     return () => window.removeEventListener(UPLOAD_EVENT, listener);
 }
 
-/** Check out, download and open the document in its Office app; saves sync back by themselves. */
 export async function editInOffice(documentId: string, fileName: string): Promise<EditInfo> {
     await startEditSync();
     await filesApi.checkout(documentId);
@@ -106,7 +103,6 @@ export async function editInOffice(documentId: string, fileName: string): Promis
     });
 }
 
-/** Stop syncing and release the check-out (the last save is already in Kosta). */
 export async function finishEditing(documentId: string): Promise<void> {
     await uploading.get(documentId);
     await invoke('kf_edit_close', { documentId });

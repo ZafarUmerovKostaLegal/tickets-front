@@ -74,7 +74,6 @@ function collectStaff(
                 ids.add(id);
         }
     }
-    // Team work is strictly inside the team: own teams + people with temporary access (from the Legal Hub API).
     for (const id of mates) {
         if (Number.isFinite(id) && id > 0)
             ids.add(id);

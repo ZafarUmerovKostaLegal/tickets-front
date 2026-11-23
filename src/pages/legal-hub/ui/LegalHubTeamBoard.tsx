@@ -31,7 +31,6 @@ type MemberCard = {
 
 type TempMember = TempMemberDraft & { id: number; grantId?: string };
 
-/** Legal Hub teams (own teams + temporary ones) in the shape the cards already understand. */
 function teamRows(data: HubTeams): TimeTrackingTeamRow[] {
     return data.teams.map((team) => ({
         id: team.id,
@@ -48,7 +47,6 @@ function teamRows(data: HubTeams): TimeTrackingTeamRow[] {
     }) as unknown as TimeTrackingTeamRow);
 }
 
-/** Real load from the server statistics (open tasks by stage). */
 function statsLoad(stats: TeamStats | null, id: number): MemberLoad | null {
     const row = stats?.people.find((person) => person.userId === id);
     if (!row)

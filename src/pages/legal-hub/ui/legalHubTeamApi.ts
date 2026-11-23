@@ -52,7 +52,6 @@ export type TeamStats = {
     projects: ProjectMapRow[];
 };
 
-/** Error text from the API (`detail`) so the user sees why an action was refused. */
 async function failure(response: Response): Promise<string> {
     try {
         const body = await response.json() as { detail?: unknown };
@@ -60,7 +59,6 @@ async function failure(response: Response): Promise<string> {
             return body.detail;
     }
     catch {
-        // not JSON
     }
     return `HTTP ${response.status}`;
 }
@@ -85,7 +83,6 @@ async function sendJson<T>(path: string, method: string, payload?: unknown): Pro
 
 let teamsCache: { at: number; value: Promise<HubTeams> } | null = null;
 
-/** Teams of the viewer (cached for a minute: the drawer and the board ask for it often). */
 export function fetchHubTeams(force = false): Promise<HubTeams> {
     if (!force && teamsCache && Date.now() - teamsCache.at < 60_000)
         return teamsCache.value;
@@ -97,7 +94,6 @@ export function fetchHubTeams(force = false): Promise<HubTeams> {
     return value;
 }
 
-/** Everyone the viewer may hand a task to: team members, partners and active temporary members. */
 export function teammates(data: HubTeams): TeamPerson[] {
     const byId = new Map<number, TeamPerson>();
     for (const team of data.teams) {
@@ -129,7 +125,6 @@ export function fetchTeamStats() {
     return getJson<TeamStats>('/stats');
 }
 
-/** Workflow step on a task; returns the updated task and its activity. Throws with the server's reason. */
 export async function runTaskAction(taskId: string, action: TaskActionId, options: { comment?: string; userId?: number } = {}): Promise<{
     task: MineTask | null;
     activity: LegalHubTaskActivity;

@@ -1,4 +1,3 @@
-/** Human-readable device from a User-Agent string (for the profile → Devices list). */
 export type DeviceKind = 'phone' | 'tablet' | 'desktop';
 
 export type DeviceInfo = { browser: string; os: string; kind: DeviceKind };

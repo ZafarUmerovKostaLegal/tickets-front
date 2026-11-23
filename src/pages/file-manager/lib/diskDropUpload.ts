@@ -16,7 +16,6 @@ function readAll(entry: Entry): Promise<Entry[]> {
     if (!reader)
         return Promise.resolve([]);
     const out: Entry[] = [];
-    // readEntries returns results in batches (100 in Chrome) until an empty batch.
     return new Promise((resolve, reject) => {
         const next = () => reader.readEntries((batch) => {
             if (!batch.length) {
@@ -53,10 +52,6 @@ async function walk(entry: Entry, out: DroppedFile[]): Promise<void> {
     }
 }
 
-/**
- * Files and whole folders dropped from the computer (Explorer / Finder), with their relative paths.
- * `webkitGetAsEntry` must be called synchronously inside the drop handler — hence the entries are taken first.
- */
 export async function readDroppedItems(transfer: DataTransfer): Promise<{ files: DroppedFile[]; hasFolders: boolean }> {
     const items = Array.from(transfer.items ?? []);
     const entries = items
@@ -71,7 +66,6 @@ export async function readDroppedItems(transfer: DataTransfer): Promise<{ files:
     return { files: out, hasFolders: (entries as Entry[]).some((entry) => entry.isDirectory) };
 }
 
-/** Files picked with `<input webkitdirectory>` carry their path in `webkitRelativePath`. */
 export function pickedFolderFiles(list: FileList): DroppedFile[] {
     return Array.from(list).map((file) => ({
         file,

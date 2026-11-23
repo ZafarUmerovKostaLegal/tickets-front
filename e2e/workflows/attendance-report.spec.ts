@@ -68,7 +68,6 @@ test.describe('@e2e @flows Attendance period report', () => {
             expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
             await page.getByRole('tab', { name: 'По дням' }).click();
             await expect(page.locator('.att-overview__list--period tbody tr').first()).toBeVisible();
-            // Weekends without a visit are days off, not absences.
             await expect(page.locator('.att-overview__list--period td.att-overview__date-cell', { hasText: /^(7|8) нояб/ })).toHaveCount(0);
             await page.getByRole('tab', { name: 'Сводка' }).click();
             await summary.locator('tbody tr').first().click();

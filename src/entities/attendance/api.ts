@@ -431,10 +431,6 @@ async function cameraIngestError(res: Response, fallback: string): Promise<Error
     return new Error(reason ? `${fallback}: ${reason}` : `${fallback} (${res.status})`);
 }
 
-/**
- * The gateway forwards the service's body as `detail`, so the reason can be nested JSON
- * (`{"detail": "{\"detail\": ...}"}`) or FastAPI's 422 list — dig the human text out.
- */
 export function upstreamReason(text: string, depth = 0): string {
     const raw = text.trim();
     if (!raw || depth > 3)
@@ -463,7 +459,6 @@ export function upstreamReason(text: string, depth = 0): string {
     return '';
 }
 
-/** What is stored from the door terminals and when the poller last pulled new punches. */
 export async function fetchCameraIngestStatus(signal?: AbortSignal): Promise<CameraIngestStatus> {
     const res = await attendanceFetch('/api/v1/attendance/hikvision/ingest/status', {
         signal: signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -474,7 +469,6 @@ export async function fetchCameraIngestStatus(signal?: AbortSignal): Promise<Cam
     return res.json() as Promise<CameraIngestStatus>;
 }
 
-/** Pull the period from the door terminals into the database (runs in the background). */
 export async function startCameraBackfill(dateFrom: string, dateTo: string): Promise<void> {
     const q = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
     const res = await attendanceFetch(`/api/v1/attendance/hikvision/ingest/backfill?${q}`, { method: 'POST' });
@@ -484,7 +478,6 @@ export async function startCameraBackfill(dateFrom: string, dateTo: string): Pro
         throw await cameraIngestError(res, 'Не удалось запустить загрузку с камер');
 }
 
-/** Hikvision / HCWebControl "Transaction" CSV → attendance database. */
 export async function importAttendanceTransactionCsv(file: File): Promise<CameraCsvImportResult> {
     const form = new FormData();
     form.append('file', file, file.name);

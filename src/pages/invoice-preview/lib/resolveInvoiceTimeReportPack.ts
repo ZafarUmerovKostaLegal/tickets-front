@@ -552,7 +552,6 @@ export async function overlayExpenseAmountsFromRegistry(
         if (locked == null || locked <= 0 || locked >= 1_000_000)
             return slot;
         const current = roundMoney2(parseTimeReportAmountDisplay(slot.amount));
-        // An issued invoice already says what was billed (its own FX); only repair obviously broken amounts.
         if (!options.trustCurrent && current > 0 && locked >= current && locked <= current * 2 + 0.05) {
             changed = true;
             return { ...slot, amount: formatTimeReportAmount(locked, cur) };
@@ -966,8 +965,6 @@ export async function resolveInvoiceTimeReportPack(
 }
 
 
-/** Expense rows of an issued invoice must show exactly the invoice lines (billed amount, invoice FX).
- *  Fixes packs saved earlier with amounts recomputed from the expense registry. */
 export function alignExpenseSlotsToInvoiceLines(
     pack: InvoiceTimeReportPack,
     lines: ReadonlyArray<{ lineKind?: string | null; lineTotal?: number | string | null; sortOrder?: number }>,

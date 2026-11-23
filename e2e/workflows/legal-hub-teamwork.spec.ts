@@ -92,7 +92,6 @@ test.describe('@e2e Legal Hub: командная работа', () => {
                 localStorage.setItem('lh-board-view', 'list');
             }
             catch {
-                // ignore
             }
         });
     });

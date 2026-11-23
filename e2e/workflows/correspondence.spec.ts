@@ -26,7 +26,6 @@ test.describe('@e2e @flows Correspondence workflows', () => {
         await page.goto('/correspondence/outgoing/new');
         const paragraphs = page.locator('.corr-docx-editor .layout-paragraph');
         await expect(paragraphs.filter({ hasText: 'Уважаемый' }).first()).toBeVisible({ timeout: 30_000 });
-        // Only File · Format · Insert — no paid Review menu, no Help → library issue tracker.
         await expect(page.locator('.corr-docx-editor .docx-menubar__trigger')).toHaveText(['Файл', 'Формат', 'Вставка']);
         const blank = paragraphs.nth(9);
         await expect(blank).toHaveText('');

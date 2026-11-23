@@ -172,7 +172,6 @@ test.describe('@e2e Файловый менеджер: Диск как пров�
                 localStorage.removeItem('fm-disk-hidden');
             }
             catch {
-                // ignore
             }
         });
     });

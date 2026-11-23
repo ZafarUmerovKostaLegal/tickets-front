@@ -17,7 +17,6 @@ export type InvoicePreviewFormDraftV1 = {
     customBilledCurrency?: string;
     customBilledDescription?: string;
     customBilledLines?: Array<{ amount: string; description: string }>;
-    /** Selected project expenses converted to the custom-sum currency (preview only). */
     customBilledExpenses?: string;
 };
 

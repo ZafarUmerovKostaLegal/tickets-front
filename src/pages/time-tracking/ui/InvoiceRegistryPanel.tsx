@@ -280,7 +280,6 @@ function formatPdfUploadedAt(iso: string | null | undefined): string {
         : d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-/** Uploaded PDF if present, otherwise the PDF generated from invoice data. */
 async function loadRegistryPdf(invoiceId: string): Promise<Omit<RegistryPdfDoc, 'url'>> {
     let uploaded: InvoiceUploadedPdfMeta | null = null;
     try {
@@ -597,7 +596,6 @@ function PartnerNoteDialog({
             className="tt-inv-overlay tt-inv-reg-note-overlay"
             role="presentation"
             onClick={(event) => {
-                // React bubbles portal clicks to the table row, which would open the invoice.
                 event.stopPropagation();
                 if (!saving)
                     onClose();
@@ -1203,7 +1201,6 @@ export function InvoiceRegistryPanel({
     const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
     const [dateTo, setDateTo] = useState(initialFilters.dateTo);
     const [months, setMonths] = useState<Set<number>>(() => new Set(initialFilters.months));
-    // Year whose saved filters are in state: until they are applied nothing is written back.
     const filtersYearRef = useRef<InvoiceRegistryYearId>(year);
     const tableWrapRef = useRef<HTMLDivElement | null>(null);
     const scrollSaveFrame = useRef<number | null>(null);
@@ -1447,7 +1444,6 @@ export function InvoiceRegistryPanel({
 
     useEffect(() => {
         if (filtersYearRef.current !== year) {
-            // This commit still holds the previous sheet's filters; the saved ones arrive next render.
             filtersYearRef.current = year;
             return;
         }

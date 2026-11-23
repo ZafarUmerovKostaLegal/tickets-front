@@ -43,7 +43,6 @@ import { formatBytes, formatDateTime } from '../lib/filesFormat';
 import { CHUNKED_THRESHOLD } from '../lib/chunkedUpload';
 import { enqueueUploadItems, onUploadDone } from '../lib/uploadQueue';
 
-/** Bigger files are not pulled through the page: they download via a signed link straight to disk. */
 const DIRECT_DOWNLOAD_LIMIT = 50 * 1024 * 1024;
 import { FilePreview } from './FilePreview';
 import { FmSelect } from './fmSelect';
@@ -525,7 +524,6 @@ export function DiskView() {
     }, [load.data]);
 
     useEffect(() => {
-        // React has no typed prop for folder pickers.
         dirRef.current?.setAttribute('webkitdirectory', '');
         dirRef.current?.setAttribute('directory', '');
     }, []);
@@ -713,7 +711,6 @@ export function DiskView() {
 
     const uploadTo = async (all: DroppedFile[], target: string | null) => {
         const nestedAll = all.some((row) => row.path.includes('/'));
-        // Large files (up to 2 GB) go to the background queue: chunked, resumable, the page stays usable.
         const large = all.filter((row) => row.file.size > CHUNKED_THRESHOLD);
         if (large.length) {
             enqueueUploadItems(large.map((row) => ({
@@ -820,7 +817,6 @@ export function DiskView() {
         setMenu({ x: Math.max(8, Math.min(x, maxX)), y: Math.max(8, Math.min(y, Math.max(8, maxY))), target });
     };
 
-    // ---- drag and drop -------------------------------------------------------------------------
     const startDrag = (event: DragEvent<HTMLElement>, entry: Entry) => {
         const key = entryKey(entry);
         const keys = selection.has(key) ? [...selection] : [key];
@@ -888,7 +884,6 @@ export function DiskView() {
         },
     });
 
-    // ---- keyboard ------------------------------------------------------------------------------
     const modalOpen = createOpen || renaming !== null || purge !== null || helpOpen || previewing !== null;
     const keyRef = useRef<(event: KeyboardEvent) => void>(() => {});
     keyRef.current = (event: KeyboardEvent) => {
@@ -998,7 +993,6 @@ export function DiskView() {
 
     const setSortKey = (key: SortKey) => setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'date' || key === 'size' ? 'desc' : 'asc' }));
 
-    // ---- rendering helpers ---------------------------------------------------------------------
     const itemClass = (entry: Entry, base: string) => {
         const key = entryKey(entry);
         return [

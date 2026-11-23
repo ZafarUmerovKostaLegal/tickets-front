@@ -11,10 +11,6 @@ type Props = {
     onChanged: () => void;
 };
 
-/**
- * Copies inside the matter. The oldest document of each group is the original; the others can go
- * to the recycle bin (restorable), one by one or all at once.
- */
 export function DuplicatesModal({ matterId, editable, onClose, onOpen, onChanged }: Props) {
     const { tr, locale } = useFm();
     const act = useAction();

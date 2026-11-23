@@ -47,7 +47,6 @@ body[data-theme='dark'] .snow-cap {
   animation: snow-cap-settle 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
 
-/* Separate group so the press "shiver" never replays the settle-in animation. */
 .snow-cap__poke {
   transform-box: view-box;
   transform-origin: 50% 22px;
@@ -57,14 +56,12 @@ body[data-theme='dark'] .snow-cap {
   animation: snow-cap-poke 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
 
-/* Soft volume instead of a hard outline: contact shadow on the tile + a long soft one. */
 .snow-cap__body {
   filter:
     drop-shadow(0 1px 0.6px var(--snow-cap-shadow))
     drop-shadow(0 5px 9px color-mix(in srgb, var(--snow-cap-shadow) 55%, transparent));
 }
 
-/* Bright, slightly translucent crest catching the light. */
 .snow-cap__rim {
   fill: none;
   stroke: var(--snow-cap-rim);
@@ -104,7 +101,6 @@ body:not([data-theme='dark']) .snow-cap__sparkle {
   animation: snow-cap-drip 7s cubic-bezier(0.55, 0, 0.9, 0.4) infinite;
 }
 
-/* Crumbs of snow knocked off by the pointer. */
 .snow-cap__flakes {
   position: absolute;
   inset: 0;

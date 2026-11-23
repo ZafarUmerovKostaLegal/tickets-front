@@ -1257,7 +1257,6 @@ export async function deleteDraftInvoice(id: string): Promise<void> {
     await throwIfNotOk(res);
 }
 
-/** Manually uploaded PDF that replaces the generated invoice PDF (registry «2026 (система)»). */
 export type InvoiceUploadedPdfMeta = {
     id: string;
     fileName: string;
@@ -1270,7 +1269,6 @@ function invoicePdfFileUrl(invoiceId: string, suffix = ''): string {
     return `/api/v1/time-tracking/invoices/${encodeURIComponent(invoiceId)}/pdf-file${suffix}`;
 }
 
-/** Current uploaded PDF, or null when the invoice still uses the generated one. */
 export async function getInvoiceUploadedPdf(invoiceId: string): Promise<InvoiceUploadedPdfMeta | null> {
     const res = await apiFetch(invoicePdfFileUrl(invoiceId), invoiceApiFetchInit);
     await throwIfNotOk(res);
@@ -1285,7 +1283,6 @@ export async function fetchInvoiceUploadedPdfBlob(invoiceId: string): Promise<Bl
     return blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
 }
 
-/** Upload a new PDF for the invoice. The previous upload is kept in the DB but hidden from the UI. */
 export async function replaceInvoicePdf(invoiceId: string, file: File): Promise<InvoiceUploadedPdfMeta> {
     const body = new FormData();
     body.append('file', file, file.name);

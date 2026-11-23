@@ -14,7 +14,6 @@ COPY package.docker.json ./package.json
 COPY package-lock.docker.json ./package-lock.json
 RUN npm ci
 
-# Add-in deps right after the main ones: frontend source changes no longer invalidate this layer.
 COPY outlook-addin/package.json outlook-addin/package-lock.json ./outlook-addin/
 RUN npm ci --prefix outlook-addin
 
@@ -35,7 +34,6 @@ ENV VITE_BUILD_REV=$BUILD_REV
 
 RUN echo "frontend build rev: $BUILD_REV" && npm run build
 
-# Outlook add-in → /outlook-addin/ on the same Hub domain
 COPY outlook-addin/ ./outlook-addin/
 RUN npm run build --prefix outlook-addin
 

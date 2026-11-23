@@ -33,7 +33,6 @@ function scrubLockedFontStyles(html: string): string {
     const wrap = document.createElement('div');
     wrap.innerHTML = html;
     wrap.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
-        // Letters come from outside: no remote resources (tracking pixels) and no page overlays.
         el.setAttribute('style', safeInlineStyle(el.getAttribute('style') ?? ''));
         el.style.removeProperty('font-family');
         el.style.removeProperty('font-size');

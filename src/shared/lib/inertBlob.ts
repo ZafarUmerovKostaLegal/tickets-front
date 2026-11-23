@@ -8,7 +8,6 @@ export function isScriptableFile(type: string | null | undefined, fileName?: str
     return Boolean(fileName && SCRIPTABLE_NAME.test(fileName.trim()));
 }
 
-/** Same bytes; anything that could run script becomes text/plain. */
 export function inertBlob(blob: Blob, fileName?: string | null): Blob {
     if (!isScriptableFile(blob.type, fileName))
         return blob;

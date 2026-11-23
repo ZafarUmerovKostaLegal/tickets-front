@@ -37,7 +37,6 @@ img.twemoji {
   --app-bg-soft: #f1f5f9;
   --app-surface: #ffffff;
   --app-surface-soft: #f8fafc;
-  /* Alias used by older styles; must exist in both themes or they fall back to light colours. */
   --app-surface-muted: var(--app-surface-soft);
   --app-surface-blur: rgba(255, 255, 255, 0.92);
   --app-border: #e2e8f0;

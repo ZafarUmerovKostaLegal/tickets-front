@@ -167,9 +167,7 @@ export function InvoicePreviewPage() {
     const userPickedBankRef = useRef(false);
     const pendingDocOverridesRef = useRef<InvoiceDocumentOverridesV1 | null>(null);
     const skipNextAutosaveRef = useRef(true);
-    /** Every manual edit bumps the counter; autosave stores it until `savedRef` catches up. */
     const dirtyRef = useRef(0);
-    /** Time report rows were edited by hand: rebuilds must start from them, not from the loaded snapshot. */
     const packEditedRef = useRef(false);
     const savedRef = useRef(0);
     const [dirtyTick, setDirtyTick] = useState(0);
@@ -185,7 +183,6 @@ export function InvoicePreviewPage() {
     const timeReportPackRef = useRef(timeReportPack);
     timeReportPackRef.current = timeReportPack;
     const [existingBilledServices, setExistingBilledServices] = useState<{ amount: number; currency: string; expenses?: number } | null>(null);
-    /** Issued invoice: billed project expenses = its expense lines (invoice FX), whatever was saved in the layout. */
     const [invoiceExpenses, setInvoiceExpenses] = useState<number | null>(null);
     const [issuedFacts, setIssuedFacts] = useState<IssuedInvoiceFacts | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
@@ -476,7 +473,6 @@ export function InvoicePreviewPage() {
             const picked = pickFirmBankingProfileForCurrency(profiles, invoiceCurrency);
             const savedBank = Boolean(doc?.legal && (doc.legal.bankName?.trim() || doc.legal.accountNumber?.trim() || doc.legal.recipientName?.trim()));
             if (savedBank) {
-                // The invoice already carries its (possibly hand-edited) bank details — keep them.
                 userPickedBankRef.current = true;
                 if (picked)
                     setSelectedBankProfileId(picked.id);
@@ -724,7 +720,6 @@ export function InvoicePreviewPage() {
         };
     }, [legalOverrides, reportBill, customBilledOverride, session, invoiceExpenses]);
 
-    // Issued invoice: TOTAL / extra expenses / VAT always as in the invoice itself.
     const reconciled = useMemo(
         () => (issuedFacts ? reconcileWithIssuedInvoice(pricedModelRaw, pricedLegalRaw, issuedFacts) : { model: pricedModelRaw, legal: pricedLegalRaw }),
         [issuedFacts, pricedModelRaw, pricedLegalRaw],
@@ -927,12 +922,10 @@ export function InvoicePreviewPage() {
             return;
         const edited = packEditedRef.current ? timeReportPackRef.current : null;
         const savedPack = edited ?? pendingDocOverridesRef.current?.timeReport;
-        // Edited by hand (now or in a saved version): show exactly what was saved, no live re-merge.
         if (savedPack && timeReportPackHasContent(savedPack) && (edited != null || pendingDocOverridesRef.current?.manual === true)) {
             setTimeReportPack(ensureMehnatSeparatedPack(savedPack));
             if (session.mode !== 'existing')
                 return;
-            // Billed expense amounts are facts of the invoice, not editable text: keep them equal to its lines.
             let stop = false;
             void getInvoice(session.invoiceId, false).then((inv) => {
                 if (!stop)

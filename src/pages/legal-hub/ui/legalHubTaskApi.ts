@@ -167,7 +167,6 @@ export type LegalHubTaskActivity = {
     files: TaskFile[];
     history: TaskHistory[];
     checks: TaskCheck[];
-    /** Workflow buttons the server allows for the viewer right now. */
     actions: TaskActionId[];
 };
 

@@ -1,10 +1,8 @@
-/* Mobile-only pieces: event dots in compact cells and the agenda of the selected day. */
 .csched-cal__dots,
 .csched-agenda {
   display: none;
 }
 
-/* Tablets: the main grid already has month navigation, so the duplicate mini calendar goes away. */
 @media (max-width: 960px) {
   .csched-page__rail {
     padding: 0.75rem 1rem;
@@ -92,7 +90,6 @@
     padding: 0 0.75rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Toolbar: month + arrows on the first row, actions on the second. */
   .csched-cal__toolbar {
     gap: 0.5rem;
     margin-bottom: 0.6rem;
@@ -129,7 +126,6 @@
     display: none;
   }
 
-  /* Compact month grid */
   .csched-cal__grid-wrap {
     flex: 0 0 auto;
     border-radius: 14px;
@@ -225,7 +221,6 @@
     background: var(--app-muted, #94a3b8);
   }
 
-  /* Agenda of the selected day */
   .csched-agenda {
     display: block;
     margin-top: 0.75rem;
@@ -400,7 +395,6 @@
   }
 }
 
-/* Modals become bottom sheets on phones */
 @media (max-width: 600px) {
   .csched-modal-overlay {
     align-items: flex-end;

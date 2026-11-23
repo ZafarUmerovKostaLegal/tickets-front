@@ -13,11 +13,6 @@ export type IssuedInvoiceFacts = {
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-/**
- * An issued invoice is the source of truth for its money: TOTAL, extra expenses (its expense lines, converted
- * with the invoice FX) and VAT. Saved layouts may carry stale numbers (e.g. a registry «USD equivalent» typed in
- * before the invoice existed) — they are replaced here, for the screen, the PDF and the Word file alike.
- */
 export function reconcileWithIssuedInvoice(
     model: InvoiceCoverLetterModel,
     legal: InvoiceLegalPageOverrides | undefined,
@@ -51,7 +46,6 @@ export function reconcileWithIssuedInvoice(
     };
 }
 
-/** For PDF / Word export from anywhere (preview, invoice page, registry). */
 export async function withIssuedInvoiceTotals(input: InvoicePreviewPackInput): Promise<InvoicePreviewPackInput> {
     if (input.session?.mode !== 'existing')
         return input;

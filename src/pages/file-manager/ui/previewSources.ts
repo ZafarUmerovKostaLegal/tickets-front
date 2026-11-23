@@ -2,7 +2,6 @@ import { diskApi, type DiskFile } from '../api/diskApi';
 import { filesApi, type DocumentRow } from '../api/filesApi';
 import type { PreviewSource } from './FilePreview';
 
-/** A matter document (optionally an older version) for the viewer. */
 export function documentSource(doc: Pick<DocumentRow, 'id' | 'name' | 'sizeBytes' | 'contentType' | 'version'>, version?: number): PreviewSource {
     const v = version && version !== doc.version ? version : undefined;
     const entry = (index: number, name: string, size: number): PreviewSource => ({
@@ -29,7 +28,6 @@ export function documentSource(doc: Pick<DocumentRow, 'id' | 'name' | 'sizeBytes
     };
 }
 
-/** A file on «Диск» for the viewer. */
 export function diskSource(file: Pick<DiskFile, 'id' | 'name' | 'sizeBytes' | 'updatedAt'>): PreviewSource {
     const entry = (index: number, name: string, size: number): PreviewSource => ({
         key: `${file.id}:#${index}`,

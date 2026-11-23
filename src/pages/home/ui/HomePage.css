@@ -3962,7 +3962,6 @@ body[data-theme='dark'] .home-page--tickets {
   }
 }
 
-/* Phones: one side gutter instead of main + inner (12px + 12px), tiles use the full width. */
 @media (max-width: 600px) {
   .home-page__main.home-page__main--hub {
     padding-left: 0;

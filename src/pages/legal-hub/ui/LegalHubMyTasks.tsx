@@ -126,7 +126,6 @@ function isBuiltin(column: string): column is BoardColumn {
     return (COLUMNS as readonly string[]).includes(column);
 }
 
-/** List view: tasks grouped by project (most urgent project first), or one flat group inside a project. */
 export function listGroups(tasks: MineTask[], byProject: boolean): Array<{ key: string; name: string; tasks: MineTask[]; late: number }> {
     if (!byProject)
         return [{ key: 'all', name: '', tasks, late: tasks.filter((task) => !task.done && dayDelta(task.clientOn) < 0).length }];
@@ -342,7 +341,6 @@ export function LegalHubMyTasks({
     headingNote?: string | null;
     scope?: string | null;
     boardOwnerId?: number | null;
-    /** Tasks are still loading: show the skeleton board instead of empty columns. */
     loading?: boolean;
 }) {
     const { t, locale } = useI18n();
@@ -1608,7 +1606,6 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
     );
 }
 
-/** Loading placeholder shaped like the board: columns with shimmering cards. */
 function BoardSkeleton({ label }: { label: string }) {
     const shape = [3, 2, 1, 2, 0, 1];
     return (
@@ -1695,7 +1692,6 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
     const assignees = useMemo(() => {
         if (me == null)
             return [];
-        // Any teammate, whatever the role (the roster is already limited to the team).
         return staff;
     }, [me, staff]);
     const reviewers = useMemo(() => {

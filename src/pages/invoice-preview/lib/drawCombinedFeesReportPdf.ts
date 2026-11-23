@@ -177,7 +177,6 @@ function sheetRowLayout(
     const { widths } = sheetColXs(weights, frame);
     const lines = cells.map((cell, i) => {
         const width = Math.max(8, widths[i]! - PAD_X * 2);
-        // Spacer cells of total rows stay empty, like on the invoice page (no "—" filler).
         if (!cell.trim())
             return [''];
         if (right.has(i))
@@ -410,7 +409,6 @@ function planPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PD
     let first = true;
     for (const block of blocks(snapshot)) {
         const rows = layouts(block);
-        // Title + header + first row stay together; never leave an orphaned heading at the bottom.
         const lead = (first ? 0 : SHEET_GAP) + (block.title ? TITLE_GAP : 0) + SHEET_HEAD + (rows[0]?.layout.height ?? 0);
         if (!first && y - lead < MB)
             nextPage();

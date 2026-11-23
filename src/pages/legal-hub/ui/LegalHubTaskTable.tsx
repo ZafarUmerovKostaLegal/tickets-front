@@ -265,7 +265,6 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null, titl
             return haystack.includes(needle);
         });
         filtered.sort((a, b) => {
-            // Rows are grouped by project; the chosen sort applies inside each project.
             const byProject = compareText(taskProjectName(a), taskProjectName(b), 1);
             if (byProject !== 0)
                 return byProject;

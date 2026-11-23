@@ -34,7 +34,6 @@ export function selectionSize(selection: DiskSelection): number {
     return selection.folderIds.length + selection.fileIds.length;
 }
 
-/** Explorer click semantics: plain = single, Ctrl = toggle, Shift = range from the anchor (Ctrl+Shift adds the range). */
 export function clickSelect(
     current: ReadonlySet<ItemKey>,
     order: readonly ItemKey[],
@@ -62,7 +61,6 @@ export function clickSelect(
     return { selection: new Set([key]), anchor: key };
 }
 
-/** Arrow-key navigation inside the item list. */
 export function stepSelect(order: readonly ItemKey[], focus: ItemKey | null, delta: number): ItemKey | null {
     if (!order.length)
         return null;
@@ -97,7 +95,6 @@ export function parentMap(rows: readonly DiskTreeRow[]): Map<string, string | nu
     return new Map(rows.map((row) => [row.id, row.parentId]));
 }
 
-/** Folder ids from the root down to `id` (inclusive). */
 export function ancestorIds(parents: ReadonlyMap<string, string | null>, id: string | null): string[] {
     const out: string[] = [];
     const seen = new Set<string>();
@@ -110,10 +107,6 @@ export function ancestorIds(parents: ReadonlyMap<string, string | null>, id: str
     return out;
 }
 
-/**
- * A folder cannot be dropped into itself or into one of its subfolders; dropping into the current parent is a no-op.
- * `sourceParentId` is undefined when the items come from different folders (search results).
- */
 export function canDrop(
     selection: DiskSelection,
     targetId: string | null,
@@ -147,7 +140,6 @@ export function compareItems(a: Sortable, b: Sortable, key: SortKey, dir: SortDi
     return dir === 'asc' ? result : -result;
 }
 
-/** Windows forbids these characters in names; the server checks too, this only gives instant feedback. */
 export function invalidNameReason(raw: string, { allowPath = false } = {}): 'empty' | 'chars' | null {
     const value = raw.trim();
     if (!value || value === '.' || value === '..')

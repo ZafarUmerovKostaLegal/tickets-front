@@ -296,7 +296,6 @@ export function FileManagerPage() {
                                 type="button"
                                 className="fm-btn fm-btn--primary"
                                 onClick={() => {
-                                    // Hub app opens a separate window; Kosta File has none — its main window is the explorer.
                                     void openDmsExplorerWindow().catch(() => navigate(routes.dmsExplorer));
                                 }}
                             >

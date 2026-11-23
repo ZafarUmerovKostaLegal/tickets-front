@@ -25,7 +25,6 @@ function formatEta(seconds: number, tr: ReturnType<typeof useFm>['tr']): string 
     return tr('uploads.etaHours', { hours: Math.floor(seconds / 3600), minutes: Math.ceil((seconds % 3600) / 60) });
 }
 
-/** Floating panel with large uploads: progress, speed, time left, pause / resume / cancel / retry. */
 export function UploadQueuePanel({ onOpen }: { onOpen?: (item: QueueItem) => void }) {
     const { tr, locale } = useFm();
     const items = useSyncExternalStore(subscribeQueue, queueSnapshot, queueSnapshot);

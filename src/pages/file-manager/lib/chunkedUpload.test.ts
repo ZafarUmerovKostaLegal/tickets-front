@@ -12,7 +12,6 @@ Object.defineProperty(globalThis, 'localStorage', {
     },
 });
 
-/** In-memory imitation of the file manager upload API, with injectable failures. */
 function fakeServer(options: { chunkSize: number; dropEvery?: number; failStatus?: number }) {
     const sessions = new Map<string, { size: number; data: number[] }>();
     let calls = 0;

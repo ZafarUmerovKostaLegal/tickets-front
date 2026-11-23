@@ -4,7 +4,6 @@ import { canEdit, formatBytes, formatDateTime } from '../lib/filesFormat';
 import { CHUNKED_THRESHOLD, uploadInChunks } from '../lib/chunkedUpload';
 import { filesSend } from '../lib/uploadQueue';
 
-/** Bigger files are not pulled into the page: no auto-preview, downloads go through a signed link. */
 const PREVIEW_LIMIT = 50 * 1024 * 1024;
 import { FilePreview } from './FilePreview';
 import { FmSelect } from './fmSelect';

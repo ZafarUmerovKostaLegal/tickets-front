@@ -1,7 +1,3 @@
-//! Kosta File — the DMS desktop app (MacroView-style): matters, folders and Disk in its own
-//! window, documents edited in Word / Excel with every save going back to Kosta as a new version.
-//! Runs once per user, lives in the tray, and the window opens on the DMS Explorer.
-
 #[path = "../../../src-tauri/src/dms_explorer.rs"]
 #[allow(dead_code)]
 mod dms_explorer;
@@ -24,7 +20,6 @@ fn setup_window_and_tray(app: &tauri::App) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_min_size(Some(LogicalSize::new(1024.0, 680.0)));
         let hide = window.clone();
-        // Closing the window keeps Kosta File in the tray: Office saves still reach Kosta.
         window.on_window_event(move |event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -71,7 +66,6 @@ fn setup_window_and_tray(app: &tauri::App) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        // A second launch (desktop shortcut, Start menu) just brings the running window back.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .setup(|app| {
             setup_window_and_tray(app)?;

@@ -1,9 +1,6 @@
-/** What the document viewer can show, and the small parsers it needs (pure, unit-tested). */
-
 export type PreviewKind = 'pdf' | 'image' | 'video' | 'audio' | 'text' | 'csv' | 'docx' | 'xlsx' | 'archive' | 'email' | 'unsupported-archive';
 
 export const TEXT_HEAD_BYTES = 256 * 1024;
-/** Office files are rendered in the browser: keep them reasonably small. */
 export const OFFICE_PREVIEW_LIMIT = 25 * 1024 * 1024;
 
 const ext = (name: string) => (name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? '');
@@ -41,7 +38,6 @@ export function previewKindOf(name: string, contentType = ''): PreviewKind | nul
     return null;
 }
 
-/** RFC 4180-ish CSV (quotes, escaped quotes, `;` or `,`) — first `limit` rows. */
 export function parseCsv(text: string, limit = 300): string[][] {
     const firstLine = text.slice(0, text.indexOf('\n') >>> 0);
     const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
@@ -93,7 +89,6 @@ export type ArchiveEntry = { index: number; path: string; dir: boolean; size: nu
 export type ArchiveListing = { supported: boolean; reason?: string; entries: ArchiveEntry[]; total: number; truncated: boolean; uncompressed: number };
 export type ArchiveRow = { name: string; path: string; dir: boolean; size: number; entry: ArchiveEntry | null; count: number };
 
-/** Children of `folder` ('' = root) — folders first; folders that exist only implicitly in paths are included. */
 export function archiveFolder(entries: readonly ArchiveEntry[], folder: string): ArchiveRow[] {
     const prefix = folder ? `${folder.replace(/\/$/, '')}/` : '';
     const dirs = new Map<string, ArchiveRow>();

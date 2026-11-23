@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { currentAuthMethod } from '../auth/authApi';
-import { ssoState } from '../auth/naa';
+import { ssoProblem, ssoState } from '../auth/naa';
 import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
 import { describeMatch } from '../rules';
@@ -51,6 +51,23 @@ export function Brand({ sub }: { sub?: string }) {
   );
 }
 
+function SsoProblem() {
+  const problem = ssoProblem();
+  if (!problem)
+    return null;
+  const { error } = ssoState();
+  return (
+    <div className="kf-signinfo is-warn">
+      <span className="kf-signinfo__dot" aria-hidden="true" />
+      <div>
+        <strong>Единый вход не сработал</strong>
+        <span>{problem}</span>
+        {error ? <code title={error}>{error}</code> : null}
+      </div>
+    </div>
+  );
+}
+
 export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: string; onSignIn: () => void }) {
   return (
     <main className="kf-signin">
@@ -64,6 +81,7 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
         {busy ? 'Входим…' : 'Войти через Microsoft'}
       </button>
       {error ? <p className="kf-alert kf-alert--error" role="alert">{error}</p> : null}
+      <SsoProblem />
       <p className="kf-signin__hint">Если Outlook покажет окно с кнопкой Allow, нажмите её — это разрешение открыть окно входа.</p>
     </main>
   );

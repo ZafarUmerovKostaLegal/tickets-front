@@ -1,11 +1,3 @@
-/**
- * Resumable chunked upload of large files (gigabytes) into a matter.
- *
- * The file is read slice by slice (`File.slice`), so the browser never holds it in memory. Each chunk is
- * retried with back-off; after a dropped connection the server tells where to continue. A small record in
- * localStorage lets the same file (name + size + date) resume after a page reload.
- */
-
 export const CHUNKED_THRESHOLD = 40 * 1024 * 1024;
 
 export type UploadTarget = {
@@ -14,7 +6,6 @@ export type UploadTarget = {
     documentId?: string | null;
     comment?: string;
     allowDuplicate?: boolean;
-    /** Another service (Диск): where the upload starts and what it needs besides name/size/type. */
     startPath?: string;
     extra?: Record<string, unknown>;
 };
@@ -64,7 +55,6 @@ function writeResume(rows: ResumeRecord[]): void {
         localStorage.setItem(RESUME_KEY, JSON.stringify(fresh));
     }
     catch {
-        // private mode / quota — resuming after reload is a convenience only
     }
 }
 
@@ -98,14 +88,12 @@ async function detailOf(response: Response): Promise<{ message: string; received
         }
     }
     catch {
-        // not JSON
     }
     return { message: `HTTP ${response.status}` };
 }
 
 const retryableStatus = (status: number) => status === 408 || status === 429 || status >= 500 && status !== 507;
 
-/** One request with retries for network errors and 5xx; 4xx are returned to the caller. */
 async function withRetry(run: () => Promise<Response>, signal?: AbortSignal, onRetry?: (attempt: number) => void, backoff: readonly number[] = BACKOFF_MS): Promise<Response> {
     for (let attempt = 0; ; attempt += 1) {
         try {

@@ -277,7 +277,6 @@ body[data-theme='dark'] .home-hub-topbar__search-input {
     }
 }
 
-/* Tablets: logo, search and actions fit in one row; phones keep search on the second row. */
 @media (min-width: 601px) and (max-width: 900px) {
     .home-hub-topbar__inner {
         grid-template-columns: auto minmax(0, 1fr) auto;
@@ -322,7 +321,6 @@ body[data-theme='dark'] .home-hub-topbar__search-input {
     }
 }
 
-/* Phones: compact top bar. Selectors beat the global 44px tap-target rule (button / input). */
 @media (max-width: 600px) {
     .home-hub-topbar .home-hub-topbar__inner {
         gap: 0.4rem 0.5rem;

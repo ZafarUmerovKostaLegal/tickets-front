@@ -43,7 +43,6 @@ export type InvoiceLegalPageOverrides = {
     dueDateDisplay?: string | null;
     vatAmount?: string | null;
     extraExpensesAmount?: string | null;
-    /** Own name of the extra expenses row (any language); empty = the default label. */
     extraExpensesLabel?: string | null;
     firmAddress?: string | null;
     recipientName?: string | null;

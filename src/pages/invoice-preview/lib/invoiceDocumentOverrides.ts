@@ -162,7 +162,6 @@ export type InvoiceCoverDocumentOverrides = Partial<Pick<
 
 export type InvoiceDocumentOverridesV1 = {
     v: 1;
-    /** Saved by a person from the preview editor: trust every field as typed (no stale-period heuristics). */
     manual?: true;
     legal?: InvoiceLegalPageOverrides | null;
     cover?: InvoiceCoverDocumentOverrides | null;

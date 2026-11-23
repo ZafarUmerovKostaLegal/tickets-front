@@ -1,4 +1,3 @@
-/** Word / Excel viewers — loaded on demand (heavy libraries stay out of the main bundle). */
 import { useEffect, useState } from 'react';
 import { DocxEditor, useFonts } from '@docx-editor.dev/react';
 import { defaultFonts } from '@docx-editor.dev/fonts';

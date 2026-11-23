@@ -92,7 +92,6 @@ export function FilePreview({ source, onDownload }: { source: PreviewSource; onD
     }
 }
 
-/** Streamed straight from the server by URL — gigabyte videos and PDFs never pass through page memory. */
 function MediaPreview({ source, kind }: { source: PreviewSource; kind: 'pdf' | 'image' | 'video' | 'audio' }) {
     const { tr } = useFm();
     const { data: url, error } = useAsync(() => source.link({ inline: true }), [source.key]);
@@ -242,7 +241,6 @@ function EmailView({ source }: { source: PreviewSource }) {
     const { tr, locale } = useFm();
     const { data, error } = useAsync(() => source.email!(), [source.key]);
     const html = useMemo(() => (data?.html ? sanitizeHtml(data.html) : ''), [data]);
-    // Remote images in mail are tracking pixels as often as not: nothing leaves the browser until asked.
     const [remoteAllowed, setRemoteAllowed] = useState(false);
     const hasRemote = useMemo(() => /\b(?:src|background)\s*=\s*["']?\s*https?:|url\(\s*["']?\s*https?:/i.test(html), [html]);
     if (error)

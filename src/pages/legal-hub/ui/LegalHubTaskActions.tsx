@@ -13,15 +13,10 @@ const LABEL: Record<TaskActionId, TranslationKey> = {
     reassign: 'legalHub.actReassign',
 };
 
-/** Steps that need a form before they run (a person and/or a comment). */
 function needsForm(action: TaskActionId, hasReviewer: boolean): boolean {
     return action === 'return' || action === 'reassign' || action === 'approve' || (action === 'submit' && !hasReviewer);
 }
 
-/**
- * Team workflow on a task: take it, send it for review, return it for changes, accept the work,
- * hand it over. Only the buttons the server allows for this viewer are shown.
- */
 export function LegalHubTaskActions({ taskId, actions, reviewerId, assigneeId, onDone }: {
     taskId: string;
     actions: TaskActionId[];

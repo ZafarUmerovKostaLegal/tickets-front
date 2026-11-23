@@ -112,7 +112,6 @@ export type AttachmentPreviewBuildResult = {
 export async function buildAttachmentPreview(blob: Blob, fileName: string, contentType: string | null): Promise<AttachmentPreviewBuildResult> {
     const ext = fileExt(fileName);
     const mime = normalizeMime(contentType, blob.type);
-    // SVG can carry script: it is shown as source text, never as a document of our origin.
     if ((mime.startsWith('image/') && mime !== 'image/svg+xml') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
         const objectUrl = inertObjectUrl(blob, fileName);
         return { model: { type: 'image', objectUrl }, objectUrl };

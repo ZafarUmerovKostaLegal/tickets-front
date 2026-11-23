@@ -1,7 +1,3 @@
-/* ── Legal Hub board: kanban layer ──
-   Imported after LegalHubPage.css and LegalHubTeamwork.css. Lists have a fixed comfortable width and
-   grow with their cards (no full-height empty strips); cards carry stage labels and activity badges. */
-
 .lh-my.lh-my--docket {
   --lh-col-bg: color-mix(in srgb, var(--app-text) 4.5%, var(--app-bg-soft, var(--app-bg)));
   --lh-col-bg-target: color-mix(in srgb, var(--app-accent) 10%, var(--lh-col-bg));
@@ -23,7 +19,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   --lh-card-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 
-/* Board: horizontal lane of lists */
 .lh-my.lh-my--docket .lh-my__board {
   display: flex;
   align-items: flex-start;
@@ -34,7 +29,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   scroll-padding-inline: 0.25rem;
 }
 
-/* Lists */
 .lh-my.lh-my--docket .lh-my__board > .lh-my__col:not(.is-folded) {
   --lh-col-w: 17.5rem;
   display: flex;
@@ -97,7 +91,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   opacity: 1;
 }
 
-/* "+ Add a card" */
 .lh-my.lh-my--docket .lh-my__board > .lh-my__col .lh-my__quick { margin: 0 0.5rem 0.5rem; }
 .lh-my.lh-my--docket .lh-my__board > .lh-my__col .lh-my__quick > button {
   display: flex;
@@ -122,7 +115,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   }
 }
 
-/* Folded list: a slim but readable rail */
 .lh-my.lh-my--docket .lh-my__board > .lh-my__col.is-folded {
   align-self: stretch;
   max-height: 22rem;
@@ -134,13 +126,11 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   .lh-my.lh-my--docket .lh-my__board > .lh-my__col.is-folded:hover { background: color-mix(in srgb, var(--app-text) 8%, var(--lh-col-bg)); }
 }
 
-/* "+ Add a list" */
 .lh-my.lh-my--docket .lh-my__board > :last-child:not(.lh-my__col) {
   flex: 0 0 17.5rem;
   border-radius: 14px;
 }
 
-/* Cards */
 .lh-my.lh-my--docket .lh-my__board .lh-my__card {
   margin: 0;
   padding: 0.6rem 0.7rem 0.55rem;
@@ -196,7 +186,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
 }
 .lh-my.lh-my--docket .lh-my__board .lh-my__card .lh-my__card-foot .lh-tasks__avatar { margin-left: auto; }
 
-/* Stage labels (colour + urgent) */
 .lh-card__labels { display: flex; gap: 0.25rem; margin-bottom: 0.45rem; }
 .lh-card__label {
   display: block;
@@ -215,7 +204,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
 .lh-card__label--done { background: var(--lh-label-done); }
 .lh-card__label--urgent { background: var(--lh-label-urgent); width: 1.25rem; }
 
-/* Activity badges */
 .lh-card__badges { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--app-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
 .lh-card__badges:empty { display: none; }
 .lh-card__badge { display: inline-flex; align-items: center; gap: 0.2rem; }
@@ -227,7 +215,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   color: #fff;
 }
 
-/* Skeleton */
 .lh-skel {
   display: flex;
   align-items: flex-start;
@@ -277,7 +264,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   to { transform: translateX(100%); }
 }
 
-/* Motion & touch */
 @media (prefers-reduced-motion: reduce) {
   .lh-my.lh-my--docket .lh-my__board .lh-my__card,
   .lh-my.lh-my--docket .lh-my__board > .lh-my__col { transition: none; }
@@ -299,7 +285,6 @@ body[data-theme='dark'] .lh-my.lh-my--docket {
   .lh-my.lh-my--docket .lh-my__board > .lh-my__col .lh-my__quick > button { min-height: 44px; }
 }
 
-/* Card footer stays on one line: the date gives way first */
 .lh-my.lh-my--docket .lh-my__board .lh-my__card .lh-my__card-foot { flex-wrap: nowrap; }
 .lh-my.lh-my--docket .lh-my__board .lh-my__card .lh-my__card-foot > .lh-my__duepill { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lh-my.lh-my--docket .lh-my__board .lh-my__card .lh-card__badges,

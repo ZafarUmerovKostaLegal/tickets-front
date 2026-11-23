@@ -126,10 +126,6 @@ function localDay(date: Date): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/**
- * The date that matters to people: letters filed from Outlook start with the letter's date
- * (`2026-11-03_…` / `2026-11-03 …`), everything else uses the upload date. Returns `YYYY-MM-DD`.
- */
 export function documentDay(doc: { name: string; createdAt: string | null }): string {
     const fromName = NAME_DATE.exec(doc.name);
     if (fromName)
@@ -140,7 +136,6 @@ export function documentDay(doc: { name: string; createdAt: string | null }): st
     return Number.isNaN(created.getTime()) ? '' : localDay(created);
 }
 
-/** Inclusive `[from, to]` day range for a filter; empty bounds are open. */
 export function dateRange(filter: DateFilter, today: Date = new Date()): { from: string; to: string } {
     const shift = (days: number) => {
         const date = new Date(today);
@@ -179,7 +174,6 @@ export function isMailName(name: string): boolean {
 
 export type UploadSummary = Record<'created' | 'version' | 'unchanged' | 'exists' | 'duplicate', number>;
 
-/** Count what the server did with each uploaded file (older servers send no `results`: all new). */
 export function summarizeUpload(response: { documents: unknown[]; results?: Array<{ status: string }> }): UploadSummary {
     const out: UploadSummary = { created: 0, version: 0, unchanged: 0, exists: 0, duplicate: 0 };
     if (!response.results) {

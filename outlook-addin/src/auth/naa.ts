@@ -114,3 +114,20 @@ export async function naaTokenInteractive(app: AzureAppInfo): Promise<Authentica
     return null;
   }
 }
+
+export function ssoProblem(): string {
+  const { status, error } = ssoState();
+  if (status === 'ok' || status === 'unknown')
+    return '';
+  if (status === 'unsupported')
+    return 'Эта версия Office не поддерживает единый вход. Обновите Microsoft 365 (Outlook и Office версии 2409 и новее).';
+  if (/AADSTS50011|redirect.?uri/i.test(error))
+    return `В Azure у приложения Kosta не добавлен адрес brk-multihub://${window.location.host} (платформа «Single-page application»). Его добавляет администратор.`;
+  if (/AADSTS65001|AADSTS65004|consent/i.test(error))
+    return 'Нужно один раз разрешить вход: нажмите «Войти через Microsoft». Если Office просит согласие администратора — его даёт администратор в Azure.';
+  if (/AADSTS700016|AADSTS90002/i.test(error))
+    return 'Office не нашёл приложение Kosta в Azure — сообщите администратору.';
+  if (status === 'consent')
+    return 'Office просит подтвердить вход: нажмите «Войти через Microsoft» один раз — дальше остальные программы войдут сами.';
+  return 'Office не выдал вход автоматически — сообщите администратору текст ниже.';
+}

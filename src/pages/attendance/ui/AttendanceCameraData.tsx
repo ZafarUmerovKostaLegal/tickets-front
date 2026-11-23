@@ -64,7 +64,6 @@ export function AttendanceCameraData({ periodFrom, periodTo, canManage, onDataCh
         return () => window.clearInterval(timer);
     }, [loadStatus]);
 
-    // While a backfill runs, follow it and reload the report once it is done.
     useEffect(() => {
         if (busy !== 'refresh')
             return;

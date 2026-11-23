@@ -1,7 +1,3 @@
-//! «Edit in Word / Excel»: a document is downloaded into a local working folder, opened in its
-//! Office app, and every save (Ctrl+S) is reported to the web UI, which uploads it as a new version.
-//! Shared by the Hub desktop app and the Kosta File desktop app.
-
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
@@ -54,7 +50,6 @@ fn sessions() -> &'static Mutex<HashMap<String, Session>> {
     SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// %LOCALAPPDATA%\Kosta\KostaFile\Edit — working copies; they are never removed by the app.
 pub fn edit_root() -> PathBuf {
     let base = std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
@@ -124,7 +119,6 @@ fn watch(app: AppHandle, document_id: String, file_name: String, path: PathBuf, 
                 pending = None;
                 continue;
             }
-            // Office writes in several steps: wait until the file stops changing for one poll.
             if pending != Some(sig) {
                 pending = Some(sig);
                 continue;
@@ -165,7 +159,6 @@ pub fn kf_edit_open(app: AppHandle, args: EditOpenArgs) -> Result<EditInfo, Stri
 
     let mut map = sessions().lock().map_err(|_| "edit sessions are unavailable".to_string())?;
     if let Some(existing) = map.get(&document_id) {
-        // Already being edited: bring the open copy back instead of overwriting unsaved work.
         open_with_default_app(&existing.path)?;
         return Ok(EditInfo {
             document_id,
@@ -182,7 +175,6 @@ pub fn kf_edit_open(app: AppHandle, args: EditOpenArgs) -> Result<EditInfo, Stri
     Ok(EditInfo { document_id, file_name, path: path.to_string_lossy().to_string() })
 }
 
-/// Bytes of a working copy for upload. Only files inside the edit folder can be read.
 #[tauri::command]
 pub fn kf_read_edit_file(path: String) -> Result<String, String> {
     let root = fs::canonicalize(edit_root()).map_err(|err| err.to_string())?;

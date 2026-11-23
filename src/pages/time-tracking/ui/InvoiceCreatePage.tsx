@@ -212,9 +212,6 @@ export function InvoiceCreatePage() {
       .filter((x) => selExp.has(x.id))
       .reduce((s, x) => s + (Number(x.equivalentAmount) || 0), 0);
   }, [unbilledExp, selExp]);
-  /** Selected project expenses in the custom-sum currency — exactly like the server and the expense registry:
-   *  USD invoice → the recorded USD amount of each expense (as paid), UZS → the UZS amount,
-   *  other currencies → UZS converted by the CBU rate of the expense date. */
   const [customExpensesInCcy, setCustomExpensesInCcy] = useState<number>(0);
   useEffect(() => {
     const picked = unbilledExp.filter((x) => selExp.has(x.id));
@@ -693,7 +690,6 @@ export function InvoiceCreatePage() {
     }
   }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t, skipPartnerGate, customBilledEnabled]);
 
-  // Custom sum: project expenses for the period load (and are ticked) on their own.
   useEffect(() => {
     if (!customBilledEnabled || !createProjectId || !unbilledFrom || !unbilledTo)
       return;

@@ -66,8 +66,6 @@ body[data-theme='dark'] .kd-tg {
   background: transparent;
 }
 
-/* Sidebar */
-
 .kd-tg__sidebar {
   background: var(--kd-tg-sidebar-bg);
   border-right-color: var(--kd-tg-border);
@@ -270,8 +268,6 @@ body[data-theme='dark'] .kd-tg {
   padding: 0.5rem 0.625rem;
 }
 
-/* Chat pane */
-
 .kd-tg__chat-pane {
   background: var(--kd-tg-wallpaper);
   background-size: 220px 220px, cover;
@@ -326,8 +322,6 @@ body[data-theme='dark'] .kd-tg {
   margin-right: auto;
 }
 
-/* Date & service pills */
-
 .kd-tg__date {
   margin: 0.75rem 0;
 }
@@ -346,8 +340,6 @@ body[data-theme='dark'] .kd-tg__date span,
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
-
-/* Rows & bubbles */
 
 .kd-tg__row,
 .kd-tg__row--grouped-top {
@@ -521,8 +513,6 @@ body[data-theme='dark'] .kd-tg__row--out .kd-tg__reaction {
   color: var(--kd-tg-accent);
 }
 
-/* Jump to bottom */
-
 .kd-tg__jump-bottom {
   right: max(1rem, calc((100% - var(--kd-col)) / 2 - 4rem));
   bottom: calc(5rem + env(safe-area-inset-bottom));
@@ -543,8 +533,6 @@ body[data-theme='dark'] .kd-tg__row--out .kd-tg__reaction {
   from { opacity: 0; transform: scale(0.6); }
   to { opacity: 1; transform: scale(1); }
 }
-
-/* Composer */
 
 .kd-tg__composer,
 body[data-theme='dark'] .kd-tg__composer {
@@ -712,8 +700,6 @@ body[data-theme='dark'] .kd-tg__composer-error {
   box-shadow: 0 1px 2px var(--kd-tg-bubble-shadow);
 }
 
-/* Attach menu */
-
 .kd-tg__attach {
   position: relative;
   flex-shrink: 0;
@@ -780,13 +766,9 @@ body[data-theme='dark'] .kd-tg__composer-error {
 .kd-tg__attach-icon--poll { background: #e0a42e; }
 .kd-tg__attach-icon--checklist { background: #2f9e6d; }
 
-/* Context menu polish */
-
 .kd-tg__ctx-actions {
   border-radius: 14px;
 }
-
-/* Desktop sizes */
 
 @media (min-width: 1400px) {
   .kd-tg {
@@ -812,8 +794,6 @@ body[data-theme='dark'] .kd-tg__composer-error {
     height: 48px;
   }
 }
-
-/* Mobile */
 
 @media (max-width: 860px) {
   .kd-tg {
@@ -939,8 +919,6 @@ body[data-theme='dark'] .kd-tg__composer-error {
   from { transform: translateX(-8%); opacity: 0.6; }
   to { transform: none; opacity: 1; }
 }
-
-/* Touch devices: actions live in the long-press menu */
 
 @media (hover: none) {
   .kd-tg__row-actions {

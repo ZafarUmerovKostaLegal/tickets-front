@@ -69,7 +69,6 @@ function checkTotal(label, measured, rawLimit, gzipLimit) {
 function matchesOptionalPrefix(file, prefix) {
     if (!file.startsWith(prefix) || !file.endsWith('.js'))
         return false;
-    // `docx-` must not also match `docx-editor-*.js`
     if (prefix === 'docx-' && file.startsWith('docx-editor-'))
         return false;
     return true;

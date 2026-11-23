@@ -32,9 +32,9 @@ import { matchRule } from '../rules';
 import { getSettings, loadRoamingSettings, saveSettings, wasFiled, type FilingRule } from '../settings';
 import { createMailRule, deleteMailRule, listMailRules, setMailAutofile, updateMailRule, type MailboxDto } from '../api';
 import { migrateLocalRules, toFilingRule } from '../mailRules';
-import { FolderTree, type FolderState } from './FolderTree';
+import { FolderTree, type DocState, type FolderState } from './FolderTree';
 import { Icon } from './icons';
-import { DocList, FileBar, MailStatus, PlaceList, recentToPlaces, Section, Suggestions, Toast, type FileOptions } from './panels';
+import { DocList, FileBar, MailStatus, PlaceList, recentToPlaces, Section, Suggestions, Toast, TreeDoc, type FileOptions } from './panels';
 import { Brand, SettingsSheet, SignInScreen } from './screens';
 
 type Phase = 'boot' | 'signin' | 'ready';
@@ -127,7 +127,9 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [recent, setRecent] = useState(getSettings().recentTargets);
   const [pinTip, setPinTip] = useState(isOutlook && !getSettings().pinTipDismissed);
 
-  const [folderDocs, setFolderDocs] = useState<DocRow[] | 'loading' | null>(null);
+  const [docs, setDocs] = useState<Record<string, DocState>>({});
+  const docsRef = useRef(docs);
+  docsRef.current = docs;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<DocRow[] | 'loading' | null>(null);
   const [recentDocs, setRecentDocs] = useState<DocRow[]>([]);
@@ -219,6 +221,7 @@ export function App({ host }: { host: Office.HostType | null }) {
     setProfile(null);
     setClients([]);
     setFolders({});
+    setDocs({});
     setPhase('signin');
   };
 
@@ -253,12 +256,30 @@ export function App({ host }: { host: Office.HostType | null }) {
     try {
       const data = await browse(matterId);
       setFolders((prev) => ({ ...prev, [matterId]: data.folders }));
+      setDocs((prev) => ({ ...prev, [`${matterId}|`]: data.documents }));
       return data.folders;
     } catch (error) {
       setFolders((prev) => ({ ...prev, [matterId]: { error: errorText(error) } }));
       return null;
     }
   }, []);
+
+  const loadDocs = useCallback(async (matterId: string, folderId: string | null) => {
+    const key = locationKey({ matterId, folderId });
+    setDocs((prev) => ({ ...prev, [key]: Array.isArray(prev[key]) ? prev[key]! : 'loading' }));
+    try {
+      const data = await browse(matterId, folderId);
+      setDocs((prev) => ({ ...prev, [key]: data.documents }));
+    } catch (error) {
+      setDocs((prev) => ({ ...prev, [key]: { error: errorText(error) } }));
+    }
+  }, []);
+
+  const refreshPlace = useCallback((location: Location) => {
+    void loadFolders(location.matterId, true);
+    if (location.folderId && docsRef.current[locationKey(location)] !== undefined)
+      void loadDocs(location.matterId, location.folderId);
+  }, [loadFolders, loadDocs]);
 
   useEffect(() => {
     if (phase !== 'ready')
@@ -268,6 +289,19 @@ export function App({ host }: { host: Office.HostType | null }) {
         void loadFolders(key.slice(2));
     });
   }, [phase, expanded, loadFolders]);
+
+  useEffect(() => {
+    if (phase !== 'ready')
+      return;
+    for (const [matterId, state] of Object.entries(folders)) {
+      if (!Array.isArray(state))
+        continue;
+      for (const folder of state) {
+        if (folder.documents && expanded.has(`f:${folder.id}`) && docsRef.current[locationKey({ matterId, folderId: folder.id })] === undefined)
+          void loadDocs(matterId, folder.id);
+      }
+    }
+  }, [phase, expanded, folders, loadDocs]);
 
   const toggle = (key: string) => {
     setExpanded((prev) => {
@@ -417,20 +451,6 @@ export function App({ host }: { host: Office.HostType | null }) {
       setTarget((current) => current ?? top);
   }, [suggestions]);
 
-  useEffect(() => {
-    if (!target || phase !== 'ready') {
-      setFolderDocs(null);
-      return;
-    }
-    let alive = true;
-    setFolderDocs('loading');
-    browse(target.matterId, target.folderId)
-      .then((data) => alive && setFolderDocs(data.documents))
-      .catch(() => alive && setFolderDocs([]));
-    return () => {
-      alive = false;
-    };
-  }, [target, phase]);
 
   useEffect(() => {
     const text = query.trim();
@@ -472,6 +492,8 @@ export function App({ host }: { host: Office.HostType | null }) {
     void run(async () => {
       if (isDocument) {
         const result = await fileOfficeDocument(host ?? undefined, location, opts.comment, (text) => setStatus({ text, kind: '' }));
+        if (result.saved.length)
+          refreshPlace(location);
         return resultText(result, location);
       }
       const info = item!;
@@ -484,7 +506,7 @@ export function App({ host }: { host: Office.HostType | null }) {
       }, (text) => setStatus({ text, kind: '' }));
       if (result.saved.length) {
         setFilings(await lookupFilings([info.messageId], info.conversationId).catch(() => filings));
-        void loadFolders(location.matterId, true);
+        refreshPlace(location);
         if (latest.current.target && locationKey(latest.current.target) === locationKey(location))
           setTarget({ ...location });
       }
@@ -495,7 +517,7 @@ export function App({ host }: { host: Office.HostType | null }) {
   const dropFiles = (location: Location, files: File[]) => {
     void run(async () => {
       const result = await fileDropped(location, files, (text) => setStatus({ text, kind: '' }));
-      void loadFolders(location.matterId, true);
+      refreshPlace(location);
       if (latest.current.target && locationKey(latest.current.target) === locationKey(location))
         setTarget({ ...location });
       return resultText(result, location);
@@ -657,6 +679,7 @@ export function App({ host }: { host: Office.HostType | null }) {
             void loadClients(true);
             void loadFavorites();
             setFolders({});
+            setDocs({});
             if (isOutlook)
               refreshItem();
           }}>
@@ -740,6 +763,13 @@ export function App({ host }: { host: Office.HostType | null }) {
                 onFavorite={(kind, id, matterId, on) => void toggleFavorite(kind, id, matterId, on)}
                 onCreateFolder={createFolderIn}
                 onDropFiles={dropFiles}
+                files={{
+                  docs,
+                  onLoad: (matterId, folderId) => void loadDocs(matterId, folderId),
+                  renderDoc: (doc) => (
+                    <TreeDoc doc={doc} compose={compose} busy={busy} onOpen={openDoc} onAttach={attachDoc} onLink={linkDoc} />
+                  ),
+                }}
               />
             )}
           </div>
@@ -796,19 +826,6 @@ export function App({ host }: { host: Office.HostType | null }) {
           </div>
         ) : null}
 
-        {target ? (
-          <Section
-            title="В этой папке"
-            icon="folderOpen"
-            className="kf-contents"
-            aside={<button type="button" className="kf-link" onClick={() => openDoc({ matterId: target.matterId, folderId: target.folderId })}>Открыть в Hub</button>}
-          >
-            {folderDocs === 'loading' ? <p className="kf-empty">Загрузка…</p> : null}
-            {Array.isArray(folderDocs) ? (
-              <DocList docs={folderDocs.slice(0, 50)} empty="Папка пуста" compose={compose} busy={busy} onOpen={openDoc} onAttach={attachDoc} onLink={linkDoc} />
-            ) : null}
-          </Section>
-        ) : null}
       </main>
 
       <Toast status={status} busy={busy} onClose={() => setStatus(null)} />

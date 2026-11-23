@@ -182,7 +182,6 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [history, setHistory] = useState(seed.history);
     const [actions, setActions] = useState<TaskActionId[]>([]);
-    /** The server answered: the workflow panel replaces the old local review buttons. */
     const [serverFlow, setServerFlow] = useState(false);
     const [reviewerNow, setReviewerNow] = useState<number | null>(task.reviewerId ?? null);
     const [commentDraft, setCommentDraft] = useState('');

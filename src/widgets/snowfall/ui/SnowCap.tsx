@@ -48,10 +48,8 @@ function smoothThrough(points: Pt[]): string {
     return d;
 }
 
-/** SVG box height; the tile's top edge sits EDGE px below the box top. Keep in sync with SnowCap.css. */
 const BOX_H = 42;
 const EDGE = 22;
-/** Matches `--hn-tile-radius` in HomeNavTiles.css. */
 const RADIUS = 14;
 const MAX_DEPTH = 20;
 const FROST = 2.2;
@@ -61,7 +59,6 @@ const TOP_STEPS = 24;
 const LEVEL = 1;
 const MELT = 0.4;
 
-/** Cursor dent: how deep a finger presses into the snow and how wide the dip is. */
 const DENT_MAX = 7;
 const DENT_WIDTH = 22;
 const MAX_FLAKES = 18;
@@ -87,7 +84,6 @@ function cornerPoint(width: number, side: -1 | 1, theta: number, out: number): P
     return [cx + side * r * Math.sin(theta), cy - r * Math.cos(theta)];
 }
 
-/** Snow thickness along the tile (t: 0..1), with a soft heap, waves and small fluffy lumps. */
 function makeDepth(seed: number, level: number, melt: number): (t: number) => number {
     const heap = 0.28 + rand(seed, 1) * 0.44;
     const ph1 = rand(seed, 2);
@@ -189,12 +185,6 @@ function prefersReducedMotion(): boolean {
         && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/**
- * Snow drift on top of a tile.
- * Interactive: the pointer presses a dent into the surface (spring back on leave),
- * flakes crumble off where the pointer moves, and a press shakes loose a puff of snow.
- * The path is only recomputed while the pointer is over the tile.
- */
 export function SnowCap({ seed }: SnowCapProps) {
     const uid = useId().replace(/:/g, '');
     const [ref, width] = useElementWidth<HTMLSpanElement>();
@@ -255,7 +245,6 @@ export function SnowCap({ seed }: SnowCapProps) {
                 p?.setAttribute('d', d);
         };
 
-        // Critically-damped-ish spring: quick press, soft rebound when the pointer leaves.
         const loop = (now: number) => {
             const dt = Math.min(0.05, (now - last) / 1000);
             last = now;
@@ -312,7 +301,6 @@ export function SnowCap({ seed }: SnowCapProps) {
             if (e.pointerType === 'touch')
                 return;
             const { x, y } = localPoint(e);
-            // Press only near the snow: strongest on the cap, fading out ~60px into the tile.
             const near = 1 - Math.min(1, Math.max(0, (y - EDGE) / 60));
             targetX = Math.min(width - RADIUS, Math.max(RADIUS, x));
             target = DENT_MAX * near;

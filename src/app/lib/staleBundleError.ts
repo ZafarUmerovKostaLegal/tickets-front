@@ -74,14 +74,14 @@ export function installStaleBundleReload(): void {
         return;
 
     window.addEventListener('vite:preloadError', (event) => {
-        event.preventDefault();
-        reloadForStaleBundle();
+        if (reloadForStaleBundle())
+            event.preventDefault();
     });
 
     window.addEventListener('unhandledrejection', (event) => {
         if (!isLikelyStaleBundleError(event.reason))
             return;
-        event.preventDefault();
-        reloadForStaleBundle();
+        if (reloadForStaleBundle())
+            event.preventDefault();
     });
 }

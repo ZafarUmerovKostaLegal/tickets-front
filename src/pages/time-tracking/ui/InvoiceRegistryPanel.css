@@ -926,7 +926,6 @@ body[data-theme='dark'] .tt-inv-reg__tr:hover .tt-inv-reg__td:not(.tt-inv-reg__t
   color: #e2e8f0;
 }
 
-/* Uploaded (manually replaced) invoice PDF */
 .tt-inv-reg__pdf--uploaded {
   display: inline-flex;
   align-items: center;

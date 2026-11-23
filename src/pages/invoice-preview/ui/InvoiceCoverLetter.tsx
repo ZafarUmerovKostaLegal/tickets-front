@@ -280,7 +280,6 @@ export function InvoiceCoverLetter({
               ariaLabel="Имя подписанта (можно на русском)"
               onChange={(signatoryName) => patch?.({
                   signatoryName,
-                  // The signature image follows the partner, not the spelling: keep it when the name is retyped (e.g. in Russian).
                   signatoryInitials: model.signatoryInitials || activePartner?.initials || '',
               })}
             />

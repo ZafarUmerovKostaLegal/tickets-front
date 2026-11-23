@@ -4,10 +4,6 @@ import { formatDateTime } from '../lib/filesFormat';
 import { FmSelect } from './fmSelect';
 import { ConfirmModal, Icon, StateBlock, useAction, useFm, useLoad } from './fmShared';
 
-/**
- * «Правила почты»: mail from an address or domain goes to a matter by itself.
- * The server files new mail of everyone who turned auto-filing on (Microsoft Graph), Outlook can be closed.
- */
 export function MailRulesView({ clients }: { clients: ClientsResponse | null }) {
     const { tr, locale } = useFm();
     const act = useAction();

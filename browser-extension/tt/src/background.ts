@@ -86,7 +86,6 @@ async function requestAuthFromAppTabs(): Promise<void> {
             await chrome.tabs.sendMessage(tab.id, { type: MSG.AUTH_PING });
         }
         catch {
-            // tab without content script
         }
     }));
 }

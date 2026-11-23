@@ -1,6 +1,5 @@
 import type { AttendanceStatus, DailyAttendanceItem } from '@entities/attendance';
 
-/** One person on one day (daily and period reports share this shape). */
 export type AttendanceDayRow = DailyAttendanceItem & { date: string };
 
 export function parseYmd(value: string): Date {
@@ -26,18 +25,11 @@ export function eventMs(iso: string | null | undefined): number | null {
 }
 
 export type WorkedTime = {
-    /** Worked milliseconds, null when it cannot be known. */
     ms: number | null;
-    /** Still in the office (today, no exit punch yet) — counted up to now. */
     ongoing: boolean;
-    /** Came in on a past day but the terminal has no exit punch. */
     noExit: boolean;
 };
 
-/**
- * Arrival = first punch, departure = last punch of the day. Only real punches count:
- * a past day without an exit punch is reported as such instead of assuming 18:00.
- */
 export function workedTime(row: Pick<AttendanceDayRow, 'date' | 'first_event_time' | 'last_event_time'>, now: Date = new Date()): WorkedTime {
     const first = eventMs(row.first_event_time);
     if (first == null)
@@ -57,7 +49,6 @@ export function formatDuration(ms: number | null): string {
     return `${Math.floor(totalMin / 60)}:${String(totalMin % 60).padStart(2, '0')}`;
 }
 
-/** Minutes after local midnight, for averaging arrival / departure times. */
 function minuteOfDay(iso: string | null | undefined): number | null {
     const ms = eventMs(iso);
     if (ms == null)
@@ -73,10 +64,6 @@ export function formatMinuteOfDay(minutes: number | null): string {
     return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
-/**
- * Period rows worth showing: a weekend without a punch is a day off, not an absence.
- * Future days are dropped as well — nobody can have come yet.
- */
 export function relevantPeriodRows<T extends AttendanceDayRow>(rows: T[], today: string): T[] {
     return rows.filter((row) => {
         if (row.date > today)
@@ -93,7 +80,6 @@ export type EmployeePeriodSummary = {
     subtitle: string;
     appUserId: number | null;
     cameraEmployeeNo: string;
-    /** Working days in the period that were counted for this person. */
     days: number;
     present: number;
     onTime: number;
@@ -103,7 +89,6 @@ export type EmployeePeriodSummary = {
     workedMs: number;
     avgArrival: number | null;
     avgDeparture: number | null;
-    /** Latest arrival in the period (minutes after midnight). */
     latestArrival: number | null;
 };
 
@@ -116,7 +101,6 @@ export function personKey(row: Pick<DailyAttendanceItem, 'camera_employee_no' | 
     return `n:${(row.display_name || row.camera_name || '').trim().toLowerCase()}`;
 }
 
-/** Per-employee totals for the period (rows must already be relevant — see relevantPeriodRows). */
 export function summarizeByEmployee(rows: AttendanceDayRow[], now: Date = new Date()): EmployeePeriodSummary[] {
     type Acc = EmployeePeriodSummary & { arrivals: number[]; departures: number[] };
     const byKey = new Map<string, Acc>();

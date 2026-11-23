@@ -40,5 +40,4 @@ coverage/
 playwright/.cache/
 browser-extension/tt/dist/
 
-# Local Claude Code skills (not shared)
 .claude/skills/kosta-design/

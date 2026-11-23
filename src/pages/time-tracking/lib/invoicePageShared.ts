@@ -129,7 +129,6 @@ export function summarizeBilledOverrideLines(
   closedExpenseCount: number;
   workedAmount: number;
   workedCurrency: string;
-  /** Project expenses billed on top of the custom sum (invoice currency). */
   expensesAmount: number;
 } {
   const all = lines ?? [];
@@ -145,7 +144,6 @@ export function summarizeBilledOverrideLines(
   });
   const moneyExpense = all.filter((ln) => invoiceLineKindSlug(ln) === 'expense' && Math.abs(Number(ln.lineTotal) || 0) > 1e-9);
   const hasTime = all.some((ln) => invoiceLineKindSlug(ln) === 'time');
-  // Custom sum + project expenses only: no zeroed lines when no time was selected.
   const isBilledOverride = moneyManual.length > 0 && (zeroTimeExpense.length > 0 || (moneyExpense.length > 0 && !hasTime));
   const expensesAmount = Math.round(moneyExpense.reduce((sum, ln) => sum + (Number(ln.lineTotal) || 0), 0) * 100) / 100;
   if (!isBilledOverride) {

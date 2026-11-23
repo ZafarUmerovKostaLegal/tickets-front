@@ -24,11 +24,9 @@ type Props = {
     onChange?: () => void;
     onSaveRequest?: () => void;
     onNewCommentRequest?: () => void;
-    /** File › Open: the page imports the .docx itself (keeps the draft and attachments in sync). */
     onOpenRequest?: () => void;
 };
 
-/** Phones and narrow tablets: no rulers — they eat the little room the page has. */
 function useNarrowScreen(): boolean {
     const query = '(max-width: 768px)';
     const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
@@ -284,8 +282,6 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     chrome
                     colorMode={colorMode}
                     menu={{
-                        // File · Format · Insert only: Review needs the paid module (every row is
-                        // disabled) and Help only links to the library's own issue tracker.
                         preset: false,
                         reportIssue: false,
                         onSave: () => { onSaveRequestRef.current?.(); },

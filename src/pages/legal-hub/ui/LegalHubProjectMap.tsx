@@ -21,7 +21,6 @@ const TOTALS: Array<[keyof TeamStats['totals'], TranslationKey, 'warn' | 'ok' | 
     ['returned30', 'legalHub.statsReturned30', ''],
 ];
 
-/** `{name}` placeholders in a translated string. */
 export function fill(text: string, vars: Record<string, string | number>): string {
     return Object.entries(vars).reduce((out, [key, value]) => out.split(`{${key}}`).join(String(value)), text);
 }
@@ -31,10 +30,6 @@ function formatDay(iso: string, locale: string): string {
     return new Date(y!, (m ?? 1) - 1, d).toLocaleDateString(locale, { day: '2-digit', month: 'short' });
 }
 
-/**
- * Team statistics and the project map: every project as a pipeline
- * (to do → in progress → waiting → review → changes → done) with the current stage highlighted.
- */
 export function LegalHubProjectMap({ canOpen, onOpen }: { canOpen: (id: string) => boolean; onOpen: (id: string) => void }) {
     const { t, locale } = useI18n();
     const [stats, setStats] = useState<TeamStats | null>(null);
@@ -121,14 +116,12 @@ export function LegalHubProjectMap({ canOpen, onOpen }: { canOpen: (id: string) 
     );
 }
 
-/** Same rule as the server: done when nothing is open, otherwise the stage holding most open tasks (ties → earlier). */
 export function currentStage(counts: Partial<Record<ProjectStage, number>>): ProjectStage {
     const open = PROJECT_STAGES.filter((stage) => stage !== 'done');
     const best = Math.max(0, ...open.map((stage) => counts[stage] ?? 0));
     return best === 0 ? 'done' : open.find((stage) => (counts[stage] ?? 0) === best)!;
 }
 
-/** Compact "where is this project" strip shown on top of a project board. */
 export function ProjectStageStrip({ stages, onMap }: { stages: ProjectStage[]; onMap?: () => void }) {
     const { t } = useI18n();
     if (stages.length === 0)

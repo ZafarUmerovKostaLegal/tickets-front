@@ -76,7 +76,6 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** Only allow http(s) origins; never inject raw apiBase into href. */
 function safeTimeTrackingHref(apiBase: string): string {
     try {
         const u = new URL(apiBase);

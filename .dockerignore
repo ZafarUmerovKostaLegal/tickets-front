@@ -1,4 +1,3 @@
-# Dependencies & build outputs (also nested, e.g. outlook-addin/node_modules)
 node_modules
 **/node_modules
 dist
@@ -8,14 +7,12 @@ dist
 coverage
 *.tsbuildinfo
 
-# Git / IDE
 .git
 .gitignore
 .vscode
 .idea
 .cursor
 
-# Local env / logs (compose file must stay available for some hosts)
 *.local
 npm-debug.log*
 yarn-debug.log*
@@ -23,7 +20,6 @@ yarn-error.log*
 pnpm-debug.log*
 docker-build-debug.log
 
-# Desktop / mobile native artifacts (can be tens of GB — breaks npm ci with exit 228 / ENOSPC)
 src-tauri
 src-tauri/target
 kosta-file
@@ -35,7 +31,6 @@ ios
 .cargo
 .github/workflows/tauri-*
 
-# Tests & reports (not needed for production image)
 e2e
 test-results
 playwright-report
@@ -43,7 +38,6 @@ playwright/.cache
 blob-report
 all-blob-reports
 
-# Misc heavy / unused in nginx image
 browser-extension
 pdf
 *.md

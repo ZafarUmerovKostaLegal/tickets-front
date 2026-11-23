@@ -36,7 +36,6 @@ const cellBorderNil = {
     right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
 } as const;
 
-/** Line spacing 1.05 (240 = single). Word's default 1.08 + 8pt after made every Enter a gap. */
 const LINE = 252;
 
 function contactLine(text: string, after = 0): Paragraph {
@@ -50,11 +49,6 @@ function contactLine(text: string, after = 0): Paragraph {
 
 type BodyOpts = { bold?: boolean; before?: number; after?: number; italic?: boolean; color?: string };
 
-/**
- * A letter paragraph. An empty line stays truly empty (the old NBSP placeholder became a stray
- * leading space as soon as someone typed into it), and the paragraph mark carries the same
- * font, so typing into an empty line and pressing Enter keep Calibri Light 11.
- */
 function bodyPara(text: string, opts?: BodyOpts): Paragraph {
     const run = {
         font: DOC_FONT,
@@ -139,8 +133,6 @@ export async function buildOutgoingLetterDocxBlob(
     const recipient = (model.recipientCompany || '').trim();
     const attention = (model.attentionName || '').trim();
     const bodyText = letterHtmlToPlainText(model.introParagraphOverride ?? '').trim();
-    // One empty line to type into — three blank lines only left a gap before the closing.
-    // Blank lines in imported text are paragraph breaks already carried by `after`.
     const bodyLines = bodyText.split(/\n/).map((line) => line.trim()).filter(Boolean);
 
     const children: (Paragraph | Table)[] = [
@@ -162,7 +154,6 @@ export async function buildOutgoingLetterDocxBlob(
     if (attention)
         children.push(bodyPara(`${labels.dear} ${attention},`, { before: 200, after: 120 }));
 
-    // Body paragraphs: Enter inside them makes a new paragraph with the same 6pt gap.
     for (const line of bodyLines.length ? bodyLines : [''])
         children.push(bodyPara(line, { after: 120 }));
 
@@ -207,8 +198,6 @@ export async function buildOutgoingLetterDocxBlob(
     }
 
     const doc = new Document({
-        // Document defaults = the letter's look. Without them, new and pasted paragraphs fell
-        // back to Word's Normal (plain Calibri, 8pt after, 1.08 lines) — the jumping spacing.
         styles: {
             default: {
                 document: {

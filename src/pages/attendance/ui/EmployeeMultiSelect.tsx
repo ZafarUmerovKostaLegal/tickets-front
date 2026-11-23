@@ -8,10 +8,6 @@ function fill(template: string, values: Record<string, string | number>): string
     return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ''));
 }
 
-/**
- * Several employees at once. An empty selection means "everyone" — the default report.
- * The list floats in a portal so the card's overflow never clips it.
- */
 export function EmployeeMultiSelect({ options, value, onChange, labelledBy }: {
     options: EmployeeChoice[];
     value: string[];
@@ -25,7 +21,6 @@ export function EmployeeMultiSelect({ options, value, onChange, labelledBy }: {
     const searchRef = useRef<HTMLInputElement>(null);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
-    /** Who was picked when the list opened — fixed order, so rows never jump under the cursor. */
     const [pinned, setPinned] = useState<Set<string>>(new Set());
     const [rect, setRect] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
 
@@ -34,7 +29,6 @@ export function EmployeeMultiSelect({ options, value, onChange, labelledBy }: {
     const filtered = useMemo(() => {
         const needle = query.trim().toLowerCase();
         const list = needle ? options.filter((o) => o.name.toLowerCase().includes(needle)) : options;
-        // People picked before opening come first, so the current choice is visible at the top.
         return [...list].sort((a, b) => Number(pinned.has(b.key)) - Number(pinned.has(a.key)));
     }, [options, query, pinned]);
 

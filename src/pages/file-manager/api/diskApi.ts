@@ -153,7 +153,6 @@ export const diskApi = {
         request<DiskBrowse>(`/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' }),
     deleteFolder: (folderId: string) =>
         request<DiskBrowse>(`/folders/${encodeURIComponent(folderId)}`, { method: 'DELETE' }),
-    /** Short-lived signed URL: the browser downloads big files itself (to disk, resumable). */
     link: async (fileId: string, options: { inline?: boolean; entry?: number } = {}) => {
         const body = await request<{ url: string }>(`/files/${encodeURIComponent(fileId)}/link${query({ inline: options.inline, entry: options.entry })}`, { method: 'POST' });
         return upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`);

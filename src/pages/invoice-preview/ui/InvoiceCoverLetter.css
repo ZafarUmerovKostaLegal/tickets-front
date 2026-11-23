@@ -222,7 +222,6 @@
   display: inline-block;
 }
 
-/* Signature partner picker under the free-text signatory name (editor only). */
 .tt-inv-cover__partner-pick {
   display: flex;
   flex-wrap: wrap;

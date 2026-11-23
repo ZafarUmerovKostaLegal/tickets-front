@@ -95,7 +95,6 @@ function formatDay(day: string, locale: string): string {
     return new Date(y!, m! - 1, d!).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-/** `Correspondence/Emails` of the matter template: letters there are sorted per colleague. */
 function isEmailsFolder(folder: FolderRow | null, folders: readonly FolderRow[]): boolean {
     if (!folder || folder.name.trim().toLowerCase() !== 'emails')
         return false;
@@ -141,7 +140,6 @@ export function MatterWorkspace({
         try {
             localStorage.setItem(DATE_FILTER_KEY, JSON.stringify(dateFilter));
         } catch {
-            /* private mode */
         }
     }, [dateFilter]);
 
@@ -227,7 +225,6 @@ export function MatterWorkspace({
 
     const upload = async (files: File[], allowDuplicate = false) => {
         const nonEmpty = files.filter((file) => file.size > 0);
-        // Large files go to the background queue: chunked, resumable, with progress — the page stays usable.
         const large = nonEmpty.filter((file) => file.size > CHUNKED_THRESHOLD);
         if (large.length) {
             enqueueUploads(large, { matterId, folderId, allowDuplicate });

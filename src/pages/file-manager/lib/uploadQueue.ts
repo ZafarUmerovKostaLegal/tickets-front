@@ -1,26 +1,18 @@
 import { apiFetch } from '@shared/api';
 import { cancelChunkedUpload, uploadInChunks, UploadError, type UploadResult, type UploadTarget } from './chunkedUpload';
 
-/**
- * Background queue of large uploads. Lives at module level, so uploads keep going while the user moves
- * around the app; two files go at a time. Pausing keeps the server-side session (resume continues where
- * it stopped); closing the tab asks for confirmation while something is uploading.
- */
-
 export type QueueStatus = 'queued' | 'uploading' | 'paused' | 'done' | 'error' | 'canceled';
 
 export type UploadApi = 'files' | 'drive';
 
 export type QueueItem = {
     id: string;
-    /** files — matter documents (file manager), drive — «Диск». */
     api: UploadApi;
     file: File;
     target: UploadTarget;
     matterLabel: string;
     status: QueueStatus;
     sent: number;
-    /** Bytes per second, smoothed. */
     speed: number;
     retrying: number;
     error: string;
@@ -56,7 +48,6 @@ export function queueSnapshot(): QueueItem[] {
     return items;
 }
 
-/** Called once per finished file (refresh the folder, open the document…). */
 export function onUploadDone(listener: (item: QueueItem) => void): () => void {
     doneListeners.add(listener);
     return () => doneListeners.delete(listener);
@@ -124,7 +115,6 @@ export function enqueueUploads(files: File[], target: UploadTarget, matterLabel 
     enqueueUploadItems(files.map((file) => ({ file, target })), 'files', matterLabel);
 }
 
-/** Each file with its own target (Диск: relative path inside a dropped folder). */
 export function enqueueUploadItems(rows: Array<{ file: File; target: UploadTarget }>, api: UploadApi, matterLabel = ''): void {
     for (const { file, target } of rows) {
         items.push({

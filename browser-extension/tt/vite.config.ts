@@ -5,7 +5,6 @@ import { build, defineConfig, type Plugin } from 'vite';
 const root = resolve(__dirname);
 const dist = resolve(root, 'dist');
 
-/** Content scripts cannot use ES `import` unless manifest sets type:module; ship a single IIFE instead. */
 function buildContentIifePlugin(): Plugin {
     return {
         name: 'build-content-iife',

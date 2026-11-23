@@ -125,7 +125,6 @@ pub fn dms_send_outlook_attachment(path: String, subject: Option<String>) -> Res
             .status()
             .map_err(|err| err.to_string())?;
         if !status.success() {
-            // Fallback: open Outlook compose with attachment switch when COM fails.
             let _ = Command::new("outlook.exe")
                 .args(["/a", &path.to_string_lossy()])
                 .spawn();

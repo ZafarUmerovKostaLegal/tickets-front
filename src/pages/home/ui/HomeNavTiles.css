@@ -429,9 +429,6 @@ body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__se
   }
 }
 
-/* Responsive grid: 2 compact columns on phones (down to 320px), 3 on tablets, 4 on desktop.
-   Keep in sync with BREAKPOINTS in widgets/snowfall/lib/useHubGridColumns.ts. */
-
 @media (max-width: 360px) {
   .home-nav-tiles--hub .home-nav-tiles__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -522,7 +519,6 @@ body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__se
   }
 }
 
-/* Touch screens: HTML5 drag-and-drop does not work there, so hide the handles and the hint. */
 @media (hover: none) and (pointer: coarse) {
   .home-nav-tiles--hub .home-nav-tiles__drag-handle,
   .home-nav-tiles--hub .home-nav-tiles__reorder-hint {

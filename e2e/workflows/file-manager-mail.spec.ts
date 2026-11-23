@@ -107,7 +107,6 @@ test.describe('@e2e Файловый менеджер: письма в matter', 
                 localStorage.removeItem('fm.matter.dateFilter');
             }
             catch {
-                // ignore
             }
         });
     });
@@ -122,7 +121,6 @@ test.describe('@e2e Файловый менеджер: письма в matter', 
         await expect(tiles).toHaveCount(1);
         await expect(page.locator('.fm-datebar__count')).toHaveText('Показано 1 из 4');
 
-        // Letters count by the letter date in the name; notes.docx was uploaded in October.
         await page.getByRole('button', { name: '30 дней' }).click();
         await expect(tiles).toHaveCount(3);
 

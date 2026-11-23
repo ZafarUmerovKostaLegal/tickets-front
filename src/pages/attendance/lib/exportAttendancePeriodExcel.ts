@@ -53,7 +53,6 @@ function styleTable(ws: Worksheet, headerRow: number, columns: number): void {
     });
 }
 
-/** Whole-team period report: a summary per employee plus every day with arrival and departure. */
 export async function exportAttendancePeriodExcel(input: {
     dateFrom: string;
     dateTo: string;

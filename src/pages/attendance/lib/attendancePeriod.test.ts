@@ -23,7 +23,6 @@ function row(partial: Partial<AttendanceDayRow> & { date: string }): AttendanceD
     };
 }
 
-// Local wall-clock ISO (no zone) so the tests do not depend on the machine's time zone.
 const at = (date: string, hm: string) => new Date(`${date}T${hm}:00`).toISOString();
 const NOW = new Date('2026-11-20T15:00:00');
 
