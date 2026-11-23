@@ -18,7 +18,7 @@ describe('registry status tones', () => {
 
     it('colors every status a system invoice can show', () => {
         expect(registryStatusToneClass('Отправлен')).toBe('tt-inv-reg-status--issued');
-        expect(registryStatusToneClass('Просмотрен')).toBe('tt-inv-reg-status--issued');
+        expect(registryStatusToneClass('Оплата в пути')).toBe('tt-inv-reg-status--issued');
         expect(registryStatusToneClass('Частично оплачен')).toBe('tt-inv-reg-status--review');
         expect(registryStatusToneClass('Просрочен')).toBe('tt-inv-reg-status--review');
         expect(registryStatusToneClass('Отменён')).toBe('tt-inv-reg-status--canceled');

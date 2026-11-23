@@ -11,10 +11,9 @@ export type InvoiceRegistryStatus = (typeof INVOICE_REGISTRY_STATUSES)[number];
 export const SYSTEM_INVOICE_REGISTRY_STATUSES = [
     'Черновик',
     'На согласовании с Клиентом',
-    'Жду подтверждения от клиента',
     'Отправлен',
     'Выставлен',
-    'Просмотрен',
+    'Оплата в пути',
     'Частично оплачен',
     'Оплачен',
     'Ольге направить',
@@ -27,7 +26,6 @@ export function isInvoiceRegistryStatus(value: string): value is InvoiceRegistry
 }
 
 export const LEGACY_INVOICE_REGISTRY_STATUSES = [
-    'Жду подтверждения от клиента',
     'Аннулирован',
 ] as const;
 
@@ -82,7 +80,7 @@ export function registryStatusToneClass(value: string): string {
         return 'tt-inv-reg-status--draft';
     if (label === 'На согласовании с Клиентом' || label === 'Частично оплачен' || label === 'Просрочен')
         return 'tt-inv-reg-status--review';
-    if (label === 'Выставлен' || label === 'Отправлен' || label === 'Просмотрен')
+    if (label === 'Выставлен' || label === 'Отправлен' || label === 'Оплата в пути')
         return 'tt-inv-reg-status--issued';
     if (label === 'Оплачен')
         return 'tt-inv-reg-status--paid';

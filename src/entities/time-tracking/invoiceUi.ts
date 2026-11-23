@@ -5,7 +5,7 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
     draft: 'Черновик',
     sent: 'Отправлен',
     issued: 'Выставлен',
-    viewed: 'Просмотрен',
+    viewed: 'Оплата в пути',
     partial_paid: 'Частично оплачен',
     paid: 'Оплачен',
     client_paid: 'Оплачен',
