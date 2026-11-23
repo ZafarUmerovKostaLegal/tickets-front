@@ -157,6 +157,7 @@ export function InvoicePreviewPage() {
     const [saveBusy, setSaveBusy] = useState(false);
     const session = useMemo(
         () => readInvoicePreviewSession(),
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- re-read stored session on navigation
         [location.key, location.pathname],
     );
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);

@@ -188,7 +188,7 @@ function sheetRowLayout(
 }
 
 function chromeHeight(title: string | null, fontBold: PDFFont): number {
-    let height = 30;
+    const height = 30;
     if (!title)
         return height;
     const lines = wrapAt(title.toUpperCase(), fontBold, sheetTableW(), 9);

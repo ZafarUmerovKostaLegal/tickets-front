@@ -155,12 +155,13 @@ export function StateBlock({ loading, error, onRetry, empty, children }: {
     return <>{children}</>;
 }
 
-export function Modal({ title, onClose, children, footer, wide }: {
+export function Modal({ title, onClose, children, footer, wide, className }: {
     title: string;
     onClose: () => void;
     children: ReactNode;
     footer?: ReactNode;
     wide?: boolean;
+    className?: string;
 }) {
     const { tr } = useFm();
     useEffect(() => {
@@ -176,7 +177,7 @@ export function Modal({ title, onClose, children, footer, wide }: {
             if (event.target === event.currentTarget)
                 onClose();
         }}>
-            <div className={wide ? 'fm-modal__card is-wide' : 'fm-modal__card'} role="dialog" aria-modal="true" aria-label={title}>
+            <div className={['fm-modal__card', wide ? 'is-wide' : '', className ?? ''].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title}>
                 <header>
                     <h3>{title}</h3>
                     <button type="button" className="fm-icon-btn" aria-label={tr('common.close')} onClick={onClose}><Icon name="close" /></button>

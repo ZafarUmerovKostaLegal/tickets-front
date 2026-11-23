@@ -303,9 +303,7 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
             if (pd < 1)
                 e.attachmentsPaymentDoc = 'Прикрепите документ для оплаты';
         }
-        else if (legacyOnly) {
-        }
-        else if (s.length + opts.filesPaymentDoc.length < 1) {
+        else if (!legacyOnly && s.length + opts.filesPaymentDoc.length < 1) {
             e.attachmentsPaymentDoc = 'Для возмещаемого расхода приложите документ для оплаты';
         }
     }

@@ -28,7 +28,7 @@ const JOURNAL_USER_KEY = 'it-security-journal-user';
 function storedJournalUser(): string {
     try {
         const raw = window.localStorage.getItem(JOURNAL_USER_KEY)?.trim() ?? '';
-        if (!raw || raw.length > 300 || /[\u0000-\u001f]/.test(raw))
+        if (!raw || raw.length > 300 || /\p{Cc}/u.test(raw))
             return 'all';
         return raw;
     }

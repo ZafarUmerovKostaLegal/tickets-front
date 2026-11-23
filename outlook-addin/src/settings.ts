@@ -28,6 +28,7 @@ export type AddinSettings = {
   rules: FilingRule[];
   filedMessageIds: string[];
   pinTipDismissed: boolean;
+  collapsed: boolean;
   recentTargets: RecentTarget[];
 };
 
@@ -50,6 +51,7 @@ const defaults: AddinSettings = {
   rules: [],
   filedMessageIds: [],
   pinTipDismissed: false,
+  collapsed: false,
   recentTargets: [],
 };
 
@@ -164,6 +166,7 @@ export function parseSettings(raw: unknown, fallback: AddinSettings = defaults):
       ? normalizeFiled(parsed.filedMessageIds, MAX_FILED)
       : fallback.filedMessageIds,
     pinTipDismissed: typeof parsed.pinTipDismissed === 'boolean' ? parsed.pinTipDismissed : fallback.pinTipDismissed,
+    collapsed: typeof parsed.collapsed === 'boolean' ? parsed.collapsed : fallback.collapsed,
     recentTargets: Array.isArray(parsed.recentTargets) ? normalizeRecentTargets(parsed.recentTargets) : fallback.recentTargets,
   };
 }

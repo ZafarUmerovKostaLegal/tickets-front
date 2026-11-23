@@ -27,7 +27,7 @@ const PAGE_CASES: PageCase[] = [
     { name: 'Посещаемость', path: '/attendance', persona: 'admin', heading: /посещаем/i },
     { name: 'Инвентаризация', path: '/inventory', persona: 'admin', selector: '.inventory-page, main' },
     { name: 'Расписание звонков', path: '/call-schedule', persona: 'admin', selector: '.csched-page, main' },
-    { name: 'Бухгалтерия', path: '/accounting', persona: 'admin', heading: /бухгалтер/i },
+    { name: 'Бухгалтерия', path: '/accounting', persona: 'partner', heading: /бухгалтер/i },
     { name: 'Контакты', path: '/contacts', persona: 'admin', selector: '.contacts-page, main' },
     { name: 'Заявки на расходы (модерация)', path: '/expenses/requests', persona: 'admin', selector: '.expenses-shell, main' },
     { name: 'Отчёт по расходам', path: '/expenses/report', persona: 'admin', selector: '.expenses-shell, main' },

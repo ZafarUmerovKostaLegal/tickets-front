@@ -277,6 +277,7 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null, titl
             return compareText(String(left ?? ''), String(right ?? ''), dir);
         });
         return filtered;
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- labelOf depends only on owner and t
     }, [filters, needle, owner, sort, t, tasks]);
     const openTask = tasks.find((task) => task.id === openId) ?? null;
     const filtersOn = Object.values(filters).some(Boolean);

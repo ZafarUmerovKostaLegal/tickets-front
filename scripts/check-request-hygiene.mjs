@@ -13,6 +13,10 @@ const DIRECT_FETCH_ALLOWLIST = new Set([
     'src/entities/todo/lib/todoTheme.ts',
     'src/pages/invoice-preview/lib/invoiceCoverLogoRaster.ts',
     'src/pages/invoice-preview/lib/buildInvoicePreviewPdf.ts',
+    'src/pages/invoice-preview/lib/invoiceCoverSignature.ts',
+    'src/entities/inventory/lib/exportInventoryItemCard.ts',
+    'src/pages/correspondence/lib/buildOutgoingLetterPdf.ts',
+    'src/pages/it-security/model/journalReportPdf.ts',
 ]);
 
 async function collectFiles(dir) {

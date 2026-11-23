@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode, } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode, } from 'react';
 import { VirtualizedTableRows, type VirtualTableRowMeasureProps } from '@shared/ui/VirtualizedTableRows';
 import { createPortal } from 'react-dom';
 import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
@@ -245,12 +245,12 @@ function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue,
     onValue: (next: string) => void;
 }) {
     const ref = useRef<HTMLTextAreaElement>(null);
-    const syncHeight = () => {
+    const syncHeight = useCallback(() => {
         syncTextareaHeightToContent(ref.current, variant === 'brief' ? undefined : TIME_PREVIEW_NOTE_AUTOSIZE_MAX_FULL_PX);
-    };
+    }, [variant]);
     useLayoutEffect(() => {
         syncHeight();
-    }, [value, variant, disabled]);
+    }, [value, disabled, syncHeight]);
     const cls = variant === 'brief'
         ? 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--brief tt-rp-mtable__textarea--autosize'
         : 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--autosize';

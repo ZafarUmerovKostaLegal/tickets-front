@@ -160,7 +160,7 @@ export function VacationSchedulePage() {
     const [shownPeople, setShownPeople] = useState<VacationRosterPerson[]>([]);
     const trackAttendance = !loading && canEditVacationSchedule(user);
     const facts = useVacationCalendarFacts(scheduleYear, canDecideRequests, scheduleReload, trackAttendance);
-    const selectedIds = new Set(selectedEmployees.map((row) => row.id));
+    const selectedIds = useMemo(() => new Set(selectedEmployees.map((row) => row.id)), [selectedEmployees]);
 
     useEffect(() => {
         const fromUrl = parseView(searchParams.get('tab'));

@@ -13,7 +13,7 @@ export type JournalReportDocument = {
 
 function safeFilePart(value: string): string {
     const cleaned = value
-        .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_')
+        .replace(/[<>:"/\\|?*\p{Cc}]+/gu, '_')
         .replace(/\s+/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');

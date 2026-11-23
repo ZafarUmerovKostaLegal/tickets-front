@@ -90,7 +90,7 @@ function toCrlf(value: string): string {
 }
 
 export function emlFileName(subject: string, received: string): string {
-  const safe = subject.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 80) || 'email';
+  const safe = subject.replace(/[<>:"/\\|?*\p{Cc}]/gu, '_').slice(0, 80) || 'email';
   return `${received.slice(0, 10)}_${safe}.eml`;
 }
 

@@ -29,6 +29,7 @@ import { canEditInOffice, editInOffice, finishEditing, listEdits, onEditUploaded
 import { getDmsClipboard, subscribeDmsClipboard } from '../model/dmsClipboard';
 import { DmsRibbon, type DmsMode } from './DmsRibbon';
 import { DmsTree, type TreeSelection } from './DmsTree';
+import '@pages/file-manager/ui/FileManagerPage.css';
 import './DmsExplorer.css';
 import { inertObjectUrl } from '@shared/lib/inertBlob';
 
@@ -650,7 +651,7 @@ function DmsExplorerWorkspace() {
             </div>
 
             {renameOpen ? (
-                <Modal title="Rename" onClose={() => setRenameOpen(false)} footer={(
+                <Modal title="Rename" onClose={() => setRenameOpen(false)} className="dms-modal" footer={(
                     <>
                         <button type="button" className="fm-btn" onClick={() => setRenameOpen(false)}>Cancel</button>
                         <button
@@ -697,7 +698,7 @@ function DmsExplorerWorkspace() {
             ) : null}
 
             {securityOpen && data && matterId ? (
-                <Modal title="Manage Permissions" onClose={() => setSecurityOpen(false)} wide>
+                <Modal title="Manage Permissions" onClose={() => setSecurityOpen(false)} wide className="dms-modal dms-modal--security">
                     <div className="dms-modal-security">
                         <SecurityView
                             clients={data}
@@ -713,10 +714,16 @@ function DmsExplorerWorkspace() {
 
 export function DmsExplorerPage() {
     useEffect(() => {
-        document.body.classList.add('dms-shell');
-        document.documentElement.dataset.theme = 'dark';
+        const body = document.body;
+        const previous = body.dataset.theme;
+        body.classList.add('dms-shell');
+        body.dataset.theme = 'dark';
         return () => {
-            document.body.classList.remove('dms-shell');
+            body.classList.remove('dms-shell');
+            if (previous)
+                body.dataset.theme = previous;
+            else
+                delete body.dataset.theme;
         };
     }, []);
 

@@ -54,7 +54,7 @@ function encodeMediaPath(mediaPath: string): string {
 
 export function inventoryItemExportStem(item: Pick<InventoryItem, 'inventory_number' | 'name'>): string {
     const raw = `${item.inventory_number}_${item.name}`
-        .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_')
+        .replace(/[<>:"/\\|?*\p{Cc}]+/gu, '_')
         .replace(/\s+/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');

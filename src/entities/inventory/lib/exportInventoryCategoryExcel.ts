@@ -55,7 +55,7 @@ function font(opts: Omit<Partial<Font>, 'wrapText'> & { color?: AC } = {}): Part
 
 function safeFilePart(name: string): string {
     return name
-        .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_')
+        .replace(/[<>:"/\\|?*\p{Cc}]+/gu, '_')
         .replace(/\s+/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '')

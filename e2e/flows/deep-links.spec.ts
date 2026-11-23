@@ -16,8 +16,8 @@ test.describe('Deep links @flows', () => {
         await expect(page).toHaveURL(/\/expenses\/exp-draft-1$/);
     });
 
-    test('getUserEditUrl доступен админу', async ({ page, loginAs }) => {
-        await loginAs('admin');
+    test('getUserEditUrl доступен партнёру', async ({ page, loginAs }) => {
+        await loginAs('partner');
         await page.goto(getUserEditUrl(1));
         await expect(page).toHaveURL(/\/admin\/user\/1$/);
     });

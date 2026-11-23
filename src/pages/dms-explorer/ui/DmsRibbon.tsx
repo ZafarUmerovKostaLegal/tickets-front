@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from '@pages/file-manager/ui/fmShared';
+import { routes } from '@shared/config';
 
 export type DmsMode = 'browse' | 'favorites' | 'recent' | 'search';
 
@@ -26,9 +28,21 @@ export function DmsRibbon({ mode, groups, onMode }: Props) {
         { id: 'recent', label: 'Recent', icon: 'clock' },
         { id: 'search', label: 'Search', icon: 'search' },
     ];
+    const navigate = useNavigate();
+    const goBack = () => {
+        const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+        if (idx > 0)
+            navigate(-1);
+        else
+            navigate(routes.home, { replace: true });
+    };
     return (
         <div className="dms-ribbon">
             <div className="dms-ribbon__tabs">
+                <button type="button" className="dms-ribbon__back" onClick={goBack} aria-label="Back" title="Back">
+                    <Icon name="back" />
+                    Back
+                </button>
                 <button type="button" className="dms-ribbon__tab is-on">Home</button>
             </div>
             <div className="dms-ribbon__body">

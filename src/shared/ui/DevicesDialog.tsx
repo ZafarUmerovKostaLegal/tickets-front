@@ -24,6 +24,8 @@ function DeviceIcon({ kind }: { kind: DeviceKind }) {
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><rect x="3" y="4" width="18" height="12" rx="1.8" /><path d="M8 20h8M12 16v4" /></svg>;
 }
 
+type DevicesResponse = { sessions: DeviceSession[] };
+
 export function DevicesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
     const { t, locale } = useI18n();
     const titleId = useId();
@@ -37,7 +39,8 @@ export function DevicesDialog({ open, onClose }: { open: boolean; onClose: () =>
             const response = await apiFetch(BASE, { skipGetDedupe: true });
             if (!response.ok)
                 throw new Error(t('header.devicesError'));
-            setSessions(((await response.json()) as { sessions: DeviceSession[] }).sessions);
+            const body = (await response.json()) as DevicesResponse;
+            setSessions(body.sessions);
         }
         catch (err) {
             setError(err instanceof Error ? err.message : t('header.devicesError'));

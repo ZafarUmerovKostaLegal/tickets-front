@@ -37,6 +37,8 @@ import { Icon } from './icons';
 import { DocList, FileBar, MailStatus, PlaceList, recentToPlaces, Section, Suggestions, Toast, TreeDoc, type FileOptions } from './panels';
 import { Brand, SettingsSheet, SignInScreen } from './screens';
 
+const ASSET_BASE = import.meta.env.BASE_URL || '/';
+
 type Phase = 'boot' | 'signin' | 'ready';
 type Tab = 'tree' | 'search' | 'saved';
 type Status = { text: string; kind: '' | 'ok' | 'error' } | null;
@@ -125,6 +127,11 @@ export function App({ host }: { host: Office.HostType | null }) {
   mailboxRef.current = mailbox;
   const [recent, setRecent] = useState(getSettings().recentTargets);
   const [pinTip, setPinTip] = useState(isOutlook && !getSettings().pinTipDismissed);
+  const [collapsed, setCollapsed] = useState(() => getSettings().collapsed);
+  const toggleCollapsed = (next: boolean) => {
+    saveSettings({ collapsed: next });
+    setCollapsed(next);
+  };
 
   const [docs, setDocs] = useState<Record<string, DocState>>({});
   const docsRef = useRef(docs);
@@ -665,6 +672,20 @@ export function App({ host }: { host: Office.HostType | null }) {
     void completeLocation(location.matterId, location.folderId, location).then(pick);
   };
 
+  if (collapsed) {
+    const saved = item?.mode === 'read' && filings.some((f) => f.sameMessage);
+    return (
+      <div className="kf-app is-collapsed">
+        <button type="button" className="kf-strip" onClick={() => toggleCollapsed(false)} aria-label="Развернуть Kosta File" title="Развернуть">
+          <img className="kf-strip__logo" src={`${ASSET_BASE}assets/logo.svg`} width="14" height="20" alt="" />
+          <span className="kf-strip__name">Kosta Legal</span>
+          {saved ? <span className="kf-strip__dot" title="Письмо сохранено" aria-label="Письмо сохранено" /> : null}
+          <span className="kf-strip__toggle" aria-hidden="true"><Icon name="chevron" size={14} /></span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={`kf-app${compose ? ' is-compose' : ''}`}>
       <header className="kf-top">
@@ -673,6 +694,9 @@ export function App({ host }: { host: Office.HostType | null }) {
           <MailStatus item={item} filings={filings} loading={contextLoading} onOpen={(f) => openDoc(f)} />
         ) : null}
         <div className="kf-top__tools">
+          <button type="button" className="kf-iconbtn kf-iconbtn--collapse" title="Свернуть" aria-label="Свернуть панель" onClick={() => toggleCollapsed(true)}>
+            <Icon name="chevron" />
+          </button>
           <button type="button" className="kf-iconbtn" title="Обновить" aria-label="Обновить" onClick={() => {
             clearApiCaches();
             void loadClients(true);

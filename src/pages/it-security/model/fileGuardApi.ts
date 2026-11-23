@@ -234,7 +234,7 @@ export type FileGuardStorageDeleteResult = {
 };
 
 function storedText(value: unknown, limit: number): string {
-    return typeof value === 'string' ? value.replace(/[\u0000-\u001f]/g, '').trim().slice(0, limit) : '';
+    return typeof value === 'string' ? value.replace(/\p{Cc}/gu, '').trim().slice(0, limit) : '';
 }
 
 function asStoredFile(item: unknown): FileGuardStoredFile | null {

@@ -1157,7 +1157,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         return () => {
             cancelled = true;
         };
-    }, [pathExpenseId, isLoading, searchParams, navigate, handleOpenReq, canModerate, isPaymentConfirmer]);
+    }, [pathExpenseId, isLoading, searchParams, navigate, handleOpenReq, canModerate, isPaymentConfirmer, user?.id]);
     const handleClosePanel = useCallback(() => {
         setIsPanelOpen(false);
         setEmailModerationIntent(null);

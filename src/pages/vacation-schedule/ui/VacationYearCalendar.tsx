@@ -447,6 +447,7 @@ export function VacationYearCalendar({
         if (month == null)
             return;
         openMonth(month);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- restore the requested month once on mount
     }, []);
 
     useEffect(() => {
@@ -458,6 +459,7 @@ export function VacationYearCalendar({
             closeMonth();
         else
             openMonth(month);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- react only to a new open request
     }, [openToken]);
 
     const onFlyEnd = (event: TransitionEvent<HTMLElement>) => {

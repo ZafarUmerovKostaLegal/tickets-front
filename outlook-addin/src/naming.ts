@@ -1,4 +1,4 @@
-const BAD_CHARS = /[<>:"/\\|?*\u0000-\u001f]/g;
+const BAD_CHARS = /[<>:"/\\|?*\p{Cc}]/gu;
 
 export function safeFilePart(value: string, max: number): string {
   return value.replace(BAD_CHARS, '_').replace(/\s+/g, ' ').trim().slice(0, max).trim();

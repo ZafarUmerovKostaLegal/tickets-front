@@ -89,7 +89,7 @@ function shortConversationKey(conversationId: string): string {
 }
 
 export function conversationDocumentFileName(conversationId: string, subject: string): string {
-  const safe = subject.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 60)
+  const safe = subject.replace(/[<>:"/\\|?*\p{Cc}]/gu, '_').replace(/\s+/g, ' ').trim().slice(0, 60)
     || 'conversation';
   return `Conversation_${shortConversationKey(conversationId)}_${safe}.eml`;
 }

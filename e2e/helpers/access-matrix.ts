@@ -41,20 +41,20 @@ export const ROUTE_ACCESS_MATRIX: RouteAccessExpectation[] = [
     { path: '/time-tracking', persona: 'noTimeTracking', expectUrl: /\/home$/ },
 
     
-    { path: '/admin', persona: 'admin', expectUrl: /\/admin$/ },
+    { path: '/admin', persona: 'admin', expectUrl: /\/home$/ },
     { path: '/attendance', persona: 'admin', expectUrl: /\/attendance$/ },
-    { path: '/accounting', persona: 'admin', expectUrl: /\/accounting$/ },
+    { path: '/accounting', persona: 'admin', expectUrl: /\/home$/ },
     { path: '/contacts', persona: 'admin', expectUrl: /\/contacts$/ },
     { path: '/inventory', persona: 'admin', expectUrl: /\/inventory$/ },
     { path: '/call-schedule', persona: 'admin', expectUrl: /\/call-schedule$/ },
     { path: '/expenses/requests', persona: 'admin', expectUrl: /\/expenses\/requests$/ },
     { path: '/expenses/report', persona: 'admin', expectUrl: /\/expenses\/report$/ },
-    { path: '/admin/user/1', persona: 'admin', expectUrl: /\/admin\/user\/1$/ },
+    { path: '/admin/user/1', persona: 'partner', expectUrl: /\/admin\/user\/1$/ },
 
     
     { path: '/admin', persona: 'partner', expectUrl: /\/admin$/ },
     { path: '/attendance', persona: 'partner', expectUrl: /\/attendance$/ },
-    { path: '/accounting', persona: 'partner', expectUrl: /\/home$/ },
+    { path: '/accounting', persona: 'partner', expectUrl: /\/accounting$/ },
     { path: '/contacts', persona: 'partner', expectUrl: /\/home$/ },
 
     

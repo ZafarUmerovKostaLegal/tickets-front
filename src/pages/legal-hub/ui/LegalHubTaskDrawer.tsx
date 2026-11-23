@@ -315,6 +315,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         return () => {
             cancelled = true;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the task or viewer changes
     }, [task.id, userId]);
 
     useEffect(() => {
