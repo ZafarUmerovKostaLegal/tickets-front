@@ -316,7 +316,7 @@ export async function loginWithHub(): Promise<AuthProfile> {
 
 async function loginWithDialog(): Promise<AuthProfile> {
   const { verifier, challenge } = await createPkcePair();
-  const state = randomState();
+  const state = officeDialogAvailable() ? randomState() : `${RELAY_PREFIX}${randomState()}${randomState()}`;
   const redirectUri = oauthRedirectUri();
   const hint = outlookEmailHint();
 
@@ -395,6 +395,28 @@ function humanizeOAuthError(raw: string): string {
 }
 
 const OAUTH_AUTHORIZE_KEY = 'kosta.outlook.oauth.authorize';
+const RELAY_PREFIX = 'tr.';
+
+function officeDialogAvailable(): boolean {
+  return typeof Office !== 'undefined' && Boolean(Office.context?.ui?.displayDialogAsync);
+}
+
+type RelayPayload = { type?: string; code?: string; state?: string; error?: string };
+
+async function takeRelay(state: string): Promise<RelayPayload | null> {
+  try {
+    const response = await fetch(`${gatewayOrigin()}/api/v1/auth/outlook/relay?${new URLSearchParams({ state }).toString()}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (response.status !== 200)
+      return null;
+    const data = await response.json() as RelayPayload;
+    return { type: 'kosta-outlook-oauth', code: data.code || '', state: data.state || state, error: data.error || '' };
+  } catch {
+    return null;
+  }
+}
 
 function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<string> {
   try {
@@ -454,7 +476,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       return false;
     };
 
-    if (typeof Office !== 'undefined' && Office.context?.ui?.displayDialogAsync) {
+    if (officeDialogAvailable()) {
       Office.context.ui.displayDialogAsync(
         bridge,
         { height: 65, width: 42, displayInIframe: false },
@@ -514,6 +536,34 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
     // Prefer short URL + localStorage when the query would be huge (some Teams builds reject long auth URLs).
     const teamsAuthUrl = withAzure.length <= 1800 ? withAzure : hubLoginPageUrl();
 
+    let relayTimer = 0;
+    let relayStop = 0;
+    if (expectedState.startsWith(RELAY_PREFIX)) {
+      const deadline = Date.now() + 5 * 60_000;
+      const poll = async () => {
+        if (settled || Date.now() > deadline)
+          return;
+        const relayed = await takeRelay(expectedState);
+        if (relayed && !settled) {
+          handlePayload(relayed);
+          return;
+        }
+        if (relayStop && Date.now() > relayStop) {
+          fail(new Error('Вход не завершён: окно Microsoft закрылось. Нажмите «Войти через Microsoft» снова и дождитесь возврата в Kosta File.'));
+          return;
+        }
+        relayTimer = window.setTimeout(() => void poll(), 1200);
+      };
+      relayTimer = window.setTimeout(() => void poll(), 1500);
+    }
+    const waitRelay = (error: Error) => {
+      if (!relayTimer || settled) {
+        fail(error);
+        return;
+      }
+      relayStop = Date.now() + 6000;
+    };
+
     void (async () => {
       try {
         const { authentication } = await import('@microsoft/teams-js');
@@ -540,13 +590,13 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
           return;
         }
         if (/cancelled|canceled|user_cancelled|user canceled/i.test(text)) {
-          fail(new Error(
+          waitRelay(new Error(
             'Вход не завершён: окно Microsoft закрылось. Нажмите «Войти через Microsoft» снова и дождитесь возврата в Kosta File.',
           ));
           return;
         }
         if (usesExternalDialogAuth() && text) {
-          fail(new Error(humanizeOAuthError(text) || 'Не удалось открыть вход Teams'));
+          waitRelay(new Error(humanizeOAuthError(text) || 'Не удалось открыть вход Teams'));
           return;
         }
       }
