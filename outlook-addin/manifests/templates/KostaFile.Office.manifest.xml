@@ -168,5 +168,13 @@
         <bt:String id="getStartedDesc" DefaultValue="Закройте эту подсказку и нажмите кнопку «Kosta File» на вкладке «Главная» (Home). Если кнопки не видно, она в меню «…» справа на ленте." />
       </bt:LongStrings>
     </Resources>
+    <WebApplicationInfo>
+      <Id>{{AZURE_CLIENT_ID}}</Id>
+      <Resource>api://{{ADDIN_HOST}}/{{AZURE_CLIENT_ID}}</Resource>
+      <Scopes>
+        <Scope>openid</Scope>
+        <Scope>profile</Scope>
+      </Scopes>
+    </WebApplicationInfo>
   </VersionOverrides>
 </OfficeApp>

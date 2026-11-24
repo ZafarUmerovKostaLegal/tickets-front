@@ -10,9 +10,13 @@ let pcaPromise: Promise<IPublicClientApplication | null> | null = null;
 let pcaKey = '';
 let lastStatus: SsoStatus = 'unknown';
 let lastError = '';
+let hostError = '';
 
 export function ssoState(): { status: SsoStatus; error: string } {
-  return { status: lastStatus, error: lastError };
+  if (lastStatus === 'ok')
+    return { status: 'ok', error: '' };
+  const error = [hostError ? `Office SSO: ${hostError}` : '', lastError].filter(Boolean).join(' · ');
+  return { status: hostError && lastStatus === 'unknown' ? 'failed' : lastStatus, error };
 }
 
 function remember(status: SsoStatus, error = ''): void {
@@ -20,35 +24,27 @@ function remember(status: SsoStatus, error = ''): void {
   lastError = error.slice(0, 300);
 }
 
+export function rememberHostSso(ok: boolean, error = ''): void {
+  hostError = ok ? '' : error.slice(0, 200);
+  if (ok)
+    remember('ok');
+}
+
 function describe(error: unknown): { status: SsoStatus; text: string } {
-  const code = String((error as { errorCode?: unknown })?.errorCode ?? '').trim();
-  const message = String((error as { errorMessage?: unknown; message?: unknown })?.errorMessage
-    ?? (error as { message?: unknown })?.message ?? error ?? '').trim();
-  const text = [code, message].filter(Boolean).join(': ') || 'unknown error';
-  const consent = /interaction_required|consent_required|login_required|no_account|AADSTS65001/i.test(text);
-  return { status: consent ? 'consent' : 'failed', text };
-}
-
-let hostBridge = false;
-/** Teams / hosts where MSAL acquireTokenPopup is invalid (OneAuth 2400). */
-let externalDialogAuth = false;
-
-export function enableHostAuthBridge(on: boolean): void {
-  hostBridge = on;
-}
-
-/** Prefer Teams/Office host dialog instead of nestable MSAL popup. */
-export function preferExternalDialogAuth(on: boolean): void {
-  externalDialogAuth = on;
-}
-
-export function usesExternalDialogAuth(): boolean {
-  return externalDialogAuth;
+  const raw = (error ?? {}) as { errorCode?: unknown; subError?: unknown; errorMessage?: unknown; message?: unknown; name?: unknown };
+  const code = String(raw.errorCode ?? '').trim();
+  const sub = String(raw.subError ?? '').trim();
+  const message = String(raw.errorMessage || raw.message || (typeof error === 'string' ? error : '')).trim();
+  const name = String(raw.name ?? '').trim();
+  const kind = name && name !== 'Error' && name !== 'AuthError' ? name : '';
+  const text = [code, sub, message].filter(Boolean).join(': ')
+    || (kind ? `${kind}: Office не передал описание ошибки` : 'Office не передал описание ошибки');
+  const consent = kind === 'InteractionRequiredAuthError'
+    || /interaction_required|consent_required|login_required|no_account|AADSTS65001/i.test(text);
+  return { status: consent ? 'consent' : 'failed', text: kind && !text.startsWith(kind) ? `${kind} · ${text}` : text };
 }
 
 export function naaSupported(): boolean {
-  if (hostBridge)
-    return true;
   try {
     return Boolean(Office?.context?.requirements?.isSetSupported?.('NestedAppAuth', '1.1'));
   } catch {
@@ -132,6 +128,8 @@ export function ssoProblem(): string {
     return '';
   if (status === 'unsupported')
     return 'Эта версия Office не поддерживает единый вход. Обновите Microsoft 365 (Outlook и Office версии 2409 и новее).';
+  if (/Office SSO: (13000|13007|13012|AADSTS500011|AADSTS65005|resourceDisabled|invalid_resource)/i.test(error))
+    return 'Единый вход ещё не настроен в Azure для приложения Kosta (Expose an API → access_as_user). Его настраивает администратор; пока нажмите «Войти через Microsoft».';
   if (/AADSTS50011|redirect.?uri/i.test(error))
     return `В Azure у приложения Kosta не добавлен адрес brk-multihub://${window.location.host} (платформа «Single-page application»). Его добавляет администратор.`;
   if (/AADSTS65001|AADSTS65004|consent/i.test(error))
@@ -139,7 +137,9 @@ export function ssoProblem(): string {
   if (/AADSTS700016|AADSTS90002/i.test(error))
     return 'Office не нашёл приложение Kosta в Azure — сообщите администратору.';
   if (/ApiContractViolation|OneAuth|ErrorCode":"2400"|operation attempted is invalid/i.test(error))
-    return 'Автоматический вход в этой панели недоступен — нажмите «Войти через Microsoft», откроется окно Teams/Office.';
+    return 'Автоматический вход в этой панели недоступен — нажмите «Войти через Microsoft».';
+  if (/^ServerError/.test(error))
+    return 'Служба входа Microsoft не ответила Office. Нажмите «Войти через Microsoft»; если ошибка повторится — перезапустите Office.';
   if (status === 'consent')
     return 'Office просит подтвердить вход: нажмите «Войти через Microsoft» один раз — дальше остальные программы войдут сами.';
   return 'Office не выдал вход автоматически — нажмите «Войти через Microsoft». Если снова ошибка, пришлите текст ниже администратору.';

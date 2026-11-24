@@ -236,6 +236,14 @@
           <bt:String id="openTipPin" DefaultValue="Открыть Kosta File. Закрепите панель булавкой в её шапке — она останется открытой при смене письма." />
         </bt:LongStrings>
       </Resources>
+      <WebApplicationInfo>
+        <Id>{{AZURE_CLIENT_ID}}</Id>
+        <Resource>api://{{ADDIN_HOST}}/{{AZURE_CLIENT_ID}}</Resource>
+        <Scopes>
+          <Scope>openid</Scope>
+          <Scope>profile</Scope>
+        </Scopes>
+      </WebApplicationInfo>
     </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>

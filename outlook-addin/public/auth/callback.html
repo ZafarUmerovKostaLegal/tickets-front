@@ -4,10 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kosta File — вход</title>
-    <script>
-      if ((new URLSearchParams(window.location.search).get('state') || '').indexOf('tr.') !== 0)
-        document.write('<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"><\/script>');
-    </script>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <style>
       body {
         margin: 0;
@@ -39,7 +36,6 @@
         };
         var message = JSON.stringify(payload);
         var ok = !payload.error && !!payload.code;
-        var relay = payload.state.indexOf('tr.') === 0;
         var done = false;
 
         function mark(text, hint) {
@@ -51,61 +47,6 @@
           if (done) return;
           done = true;
           mark(text || (ok ? 'Вход выполнен' : 'Ошибка входа'), hint || (ok ? 'Возвращаемся в Kosta File…' : payload.error));
-        }
-
-        function load(src, onload) {
-          var script = document.createElement('script');
-          script.src = src;
-          script.onload = onload;
-          script.onerror = function () {};
-          document.head.appendChild(script);
-        }
-
-        function apiOrigin() {
-          var origin = window.location.origin;
-          if (/:\/\/tickets\./.test(origin)) return origin.replace('://tickets.', '://ticketsback.');
-          return origin;
-        }
-
-        function closeSoon() {
-          setTimeout(function () {
-            try { window.close(); } catch (e) {}
-            setTimeout(function () { mark('Вход выполнен', 'Закройте это окно — Kosta File уже открыт.'); }, 600);
-          }, 900);
-        }
-
-        function teamsNotify() {
-          var t = window.microsoftTeams;
-          if (!t || !t.app || !t.authentication) return;
-          var notify = function () {
-            try {
-              if (payload.error) t.authentication.notifyFailure(String(payload.error));
-              else t.authentication.notifySuccess(message);
-            } catch (e) {}
-          };
-          try {
-            t.app.initialize().then(notify, notify);
-          } catch (e) {
-            notify();
-          }
-        }
-
-        if (relay) {
-          load('https://res.cdn.office.net/teams-js/2.31.1/js/MicrosoftTeams.min.js', teamsNotify);
-          fetch(apiOrigin() + '/api/v1/auth/outlook/relay', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state: payload.state, code: payload.code, error: payload.error.slice(0, 480) }),
-          }).then(function (response) {
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            finish();
-            closeSoon();
-          }).catch(function () {
-            setTimeout(function () {
-              if (!done) mark('Не удалось вернуть код входа', 'Закройте окно и нажмите «Войти через Microsoft» ещё раз.');
-            }, 8000);
-          });
-          return;
         }
 
         function sendOffice() {

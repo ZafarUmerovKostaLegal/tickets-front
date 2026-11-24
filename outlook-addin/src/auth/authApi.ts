@@ -1,7 +1,7 @@
 import {
   naaTokenInteractive,
   naaTokenSilent,
-  usesExternalDialogAuth,
+  rememberHostSso,
   type AzureAppInfo,
 } from './naa';
 import { createPkcePair, randomState } from './pkce';
@@ -184,11 +184,75 @@ async function bootstrapHub(accessToken: string, idToken: string, expiresInSec: 
   return fetchHubMe();
 }
 
+function hostErrorText(error: unknown): string {
+  const raw = (error ?? {}) as { code?: unknown; errorCode?: unknown; message?: unknown; name?: unknown };
+  const code = String(raw.code ?? raw.errorCode ?? '').trim();
+  const message = String(raw.message ?? (typeof error === 'string' ? error : '')).trim();
+  return [code, message].filter(Boolean).join(': ') || String(raw.name ?? 'unknown');
+}
+
+async function hostSsoToken(interactive: boolean): Promise<string | null> {
+  if (typeof Office !== 'undefined' && Office.auth?.getAccessToken) {
+    return Office.auth.getAccessToken({
+      allowSignInPrompt: interactive,
+      allowConsentPrompt: interactive,
+      forMSGraphAccess: false,
+    });
+  }
+  return null;
+}
+
+async function hostSso(interactive: boolean): Promise<AuthProfile | null> {
+  if (!gatewayOrigin())
+    return null;
+  let token: string | null = null;
+  try {
+    token = await hostSsoToken(interactive);
+  } catch (error) {
+    rememberHostSso(false, hostErrorText(error));
+    return null;
+  }
+  if (!token)
+    return null;
+  try {
+    const response = await fetch(`${gatewayOrigin()}/api/v1/auth/outlook/sso`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const body = await response.json() as { detail?: string };
+        if (body.detail)
+          detail = `${response.status} ${body.detail}`;
+      } catch {
+      }
+      rememberHostSso(false, detail);
+      return null;
+    }
+    const pair = await response.json() as { access_token?: string };
+    if (!pair.access_token) {
+      rememberHostSso(false, 'empty Hub token');
+      return null;
+    }
+    storeHubAccessToken(pair.access_token);
+    const me = await fetchHubMe();
+    rememberHostSso(true);
+    authMethod = 'sso';
+    return me;
+  } catch (error) {
+    rememberHostSso(false, hostErrorText(error));
+    return null;
+  }
+}
+
 function secondsLeft(expiresOn: Date | null | undefined): number {
   return expiresOn ? Math.max(60, Math.round((expiresOn.getTime() - Date.now()) / 1000)) : 3600;
 }
 
-export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'zoom' | 'unknown';
+export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'unknown';
 
 let authMethod: AuthMethod = 'unknown';
 
@@ -233,12 +297,12 @@ export function signInSilently(options: { force?: boolean } = {}): Promise<AuthP
       if (me)
         return me;
     }
-    // Teams: nestable MSAL hits OneAuth 2400 — skip and use host dialog instead.
-    if (!usesExternalDialogAuth()) {
-      const sso = await officeSso();
-      if (sso)
-        return sso;
-    }
+    const host = await hostSso(false);
+    if (host)
+      return host;
+    const sso = await officeSso();
+    if (sso)
+      return sso;
     if (options.force) {
       storeHubAccessToken('');
       return hubSession();
@@ -248,34 +312,6 @@ export function signInSilently(options: { force?: boolean } = {}): Promise<AuthP
     silentInFlight = null;
   });
   return silentInFlight;
-}
-
-export async function signInWithZoomCode(code: string, codeVerifier: string): Promise<AuthProfile> {
-  const origin = gatewayOrigin();
-  if (!origin)
-    throw new Error('Не задан адрес Kosta Hub');
-  const response = await fetch(`${origin}/api/v1/auth/outlook/zoom/bootstrap`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ code, codeVerifier }),
-  });
-  if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const body = await response.json() as { detail?: string };
-      if (body.detail)
-        detail = body.detail;
-    } catch {
-    }
-    throw new Error(detail);
-  }
-  const pair = await response.json() as { access_token?: string };
-  if (!pair.access_token)
-    throw new Error('Пустой ответ сервера');
-  storeHubAccessToken(pair.access_token);
-  authMethod = 'zoom';
-  return fetchHubMe();
 }
 
 export async function getGraphToken(): Promise<string | null> {
@@ -296,18 +332,17 @@ export async function getGraphToken(): Promise<string | null> {
 export async function loginWithHub(): Promise<AuthProfile> {
   if (!gatewayOrigin())
     throw new Error('Укажите File Manager API в настройках');
-  // In Teams the nestable MSAL popup hits OneAuth 2400 and closes immediately.
-  // Go straight to the host auth dialog (Teams authentication.authenticate).
-  if (!usesExternalDialogAuth()) {
-    try {
-      const result = await naaTokenInteractive(await azureApp());
-      if (result) {
-        const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
-        authMethod = 'sso';
-        return me;
-      }
-    } catch {
+  const host = await hostSso(true);
+  if (host)
+    return host;
+  try {
+    const result = await naaTokenInteractive(await azureApp());
+    if (result) {
+      const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+      authMethod = 'sso';
+      return me;
     }
+  } catch {
   }
   const me = await loginWithDialog();
   authMethod = 'dialog';
@@ -316,7 +351,7 @@ export async function loginWithHub(): Promise<AuthProfile> {
 
 async function loginWithDialog(): Promise<AuthProfile> {
   const { verifier, challenge } = await createPkcePair();
-  const state = officeDialogAvailable() ? randomState() : `${RELAY_PREFIX}${randomState()}${randomState()}`;
+  const state = randomState();
   const redirectUri = oauthRedirectUri();
   const hint = outlookEmailHint();
 
@@ -395,27 +430,9 @@ function humanizeOAuthError(raw: string): string {
 }
 
 const OAUTH_AUTHORIZE_KEY = 'kosta.outlook.oauth.authorize';
-const RELAY_PREFIX = 'tr.';
 
 function officeDialogAvailable(): boolean {
   return typeof Office !== 'undefined' && Boolean(Office.context?.ui?.displayDialogAsync);
-}
-
-type RelayPayload = { type?: string; code?: string; state?: string; error?: string };
-
-async function takeRelay(state: string): Promise<RelayPayload | null> {
-  try {
-    const response = await fetch(`${gatewayOrigin()}/api/v1/auth/outlook/relay?${new URLSearchParams({ state }).toString()}`, {
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    });
-    if (response.status !== 200)
-      return null;
-    const data = await response.json() as RelayPayload;
-    return { type: 'kosta-outlook-oauth', code: data.code || '', state: data.state || state, error: data.error || '' };
-  } catch {
-    return null;
-  }
 }
 
 function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<string> {
@@ -529,103 +546,29 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       return;
     }
 
-    // Teams only accepts authenticate() URLs on domains from the app manifest (validDomains).
-    // login.microsoftonline.com as the start URL → "Auth url is not valid".
-    // Start on our hub-login page (tickets.kostalegal.com), then redirect to Azure from there.
     const withAzure = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
-    // Prefer short URL + localStorage when the query would be huge (some Teams builds reject long auth URLs).
-    const teamsAuthUrl = withAzure.length <= 1800 ? withAzure : hubLoginPageUrl();
-
-    let relayTimer = 0;
-    let relayStop = 0;
-    if (expectedState.startsWith(RELAY_PREFIX)) {
-      const deadline = Date.now() + 5 * 60_000;
-      const poll = async () => {
-        if (settled || Date.now() > deadline)
-          return;
-        const relayed = await takeRelay(expectedState);
-        if (relayed && !settled) {
-          handlePayload(relayed);
-          return;
-        }
-        if (relayStop && Date.now() > relayStop) {
-          fail(new Error('Вход не завершён: окно Microsoft закрылось. Нажмите «Войти через Microsoft» снова и дождитесь возврата в Kosta File.'));
-          return;
-        }
-        relayTimer = window.setTimeout(() => void poll(), 1200);
-      };
-      relayTimer = window.setTimeout(() => void poll(), 1500);
+    const popup = window.open(withAzure, 'kosta-hub-login', 'width=480,height=680');
+    if (!popup) {
+      fail(new Error('Не удалось открыть окно входа. Разрешите всплывающие окна и нажмите «Войти» снова.'));
+      return;
     }
-    const waitRelay = (error: Error) => {
-      if (!relayTimer || settled) {
-        fail(error);
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin)
         return;
-      }
-      relayStop = Date.now() + 6000;
-    };
-
-    void (async () => {
-      try {
-        const { authentication } = await import('@microsoft/teams-js');
-        const raw = await authentication.authenticate({
-          url: teamsAuthUrl,
-          width: 520,
-          height: 720,
-        });
-        let payload: { type?: string; code?: string; state?: string; error?: string };
-        if (typeof raw === 'string' && raw.startsWith('{'))
-          payload = JSON.parse(raw) as typeof payload;
-        else if (typeof raw === 'string' && raw.length > 8)
-          payload = { type: 'kosta-outlook-oauth', code: raw, state: expectedState };
-        else
-          throw new Error('Пустой ответ окна входа Teams');
-        handlePayload(payload);
-        return;
-      } catch (error) {
-        const text = String((error as { message?: unknown })?.message ?? error ?? '');
-        if (/auth url is not valid/i.test(text)) {
-          fail(new Error(
-            'Teams не принял URL входа. Обновите приложение пакетом KostaFile.Teams.zip (в validDomains должен быть tickets.kostalegal.com).',
-          ));
-          return;
-        }
-        if (/cancelled|canceled|user_cancelled|user canceled/i.test(text)) {
-          waitRelay(new Error(
-            'Вход не завершён: окно Microsoft закрылось. Нажмите «Войти через Microsoft» снова и дождитесь возврата в Kosta File.',
-          ));
-          return;
-        }
-        if (usesExternalDialogAuth() && text) {
-          waitRelay(new Error(humanizeOAuthError(text) || 'Не удалось открыть вход Teams'));
-          return;
-        }
-      }
-
-      const popup = window.open(withAzure, 'kosta-hub-login', 'width=480,height=680');
-      if (!popup) {
-        fail(new Error(
-          'Не удалось открыть окно входа. Разрешите всплывающие окна или обновите приложение Kosta File в Teams.',
-        ));
-        return;
-      }
-      const onMessage = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin)
-          return;
-        const data = event.data as {
-          type?: string;
-          code?: string;
-          state?: string;
-          error?: string;
-        };
-        if (data?.type === 'kosta-outlook-ready')
-          return;
-        if (data?.type !== 'kosta-outlook-oauth' && data?.type !== 'kosta-hub-oauth')
-          return;
-        window.removeEventListener('message', onMessage);
-        popup.close();
-        handlePayload(data);
+      const data = event.data as {
+        type?: string;
+        code?: string;
+        state?: string;
+        error?: string;
       };
-      window.addEventListener('message', onMessage);
-    })();
+      if (data?.type === 'kosta-outlook-ready')
+        return;
+      if (data?.type !== 'kosta-outlook-oauth' && data?.type !== 'kosta-hub-oauth')
+        return;
+      window.removeEventListener('message', onMessage);
+      popup.close();
+      handlePayload(data);
+    };
+    window.addEventListener('message', onMessage);
   });
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { currentAuthMethod } from '../auth/authApi';
-import { ssoProblem, ssoState, usesExternalDialogAuth } from '../auth/naa';
+import { ssoProblem, ssoState } from '../auth/naa';
 import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
 import { Icon } from './icons';
@@ -12,7 +12,6 @@ const METHOD_LABEL: Record<string, string> = {
   cookie: 'по общей сессии Kosta Hub',
   token: 'по сохранённой сессии',
   dialog: 'через окно входа',
-  zoom: 'через Zoom',
 };
 
 function SignInInfo() {
@@ -51,9 +50,6 @@ export function Brand({ sub }: { sub?: string }) {
 }
 
 function SsoProblem() {
-  // Teams uses host dialog auth — OneAuth 2400 noise only confuses users.
-  if (usesExternalDialogAuth())
-    return null;
   const problem = ssoProblem();
   if (!problem)
     return null;
@@ -70,13 +66,13 @@ function SsoProblem() {
   );
 }
 
-export function SignInScreen({ busy, error, onSignIn, intro }: { busy: boolean; error: string; onSignIn: () => void; intro?: string }) {
+export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: string; onSignIn: () => void }) {
   return (
     <main className="kf-signin">
       <Brand />
       <h1>Войдите один раз</h1>
       <p>
-        {intro ?? 'Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера. Вход выполняется той же учётной записью Microsoft, что и Outlook, и запоминается.'}
+        Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера. Вход выполняется той же учётной записью Microsoft, что и Outlook, и запоминается.
       </p>
       <button type="button" className="kf-btn kf-btn--primary kf-btn--wide" disabled={busy} onClick={onSignIn}>
         {busy ? 'Входим…' : 'Войти через Microsoft'}
