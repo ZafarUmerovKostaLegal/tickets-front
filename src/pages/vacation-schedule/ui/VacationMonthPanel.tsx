@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { excelWorkbookBufferToBlob, loadExcelJS, writeExcelWorkbookBuffer } from '@shared/lib/exceljsLoader';
 import { VACATION_MONTH_NAMES } from '../lib/vacationScheduleModel';
 import type { VacationDayDetailRow } from './VacationDayDetails';
@@ -24,15 +24,6 @@ function monthSummary(rows: ReadonlyArray<VacationDayDetailRow>): string {
     if (away === 0)
         return ruCount(lates, 'опоздание', 'опоздания', 'опозданий');
     return `${ruCount(away, 'отсутствие', 'отсутствия', 'отсутствий')} · ${ruCount(lates, 'опоздание', 'опоздания', 'опозданий')}`;
-}
-
-function rowWhen(row: VacationDayDetailRow): { when: string; times: string | null } {
-    if (row.kindLabel !== 'Опоздание')
-        return { when: row.rangeLabel, times: null };
-    const [head, tail] = row.rangeLabel.split(' · ');
-    if (tail && /^\d+/.test(head))
-        return { when: tail, times: head.split(' ')[0] ?? null };
-    return { when: head, times: tail ?? null };
 }
 
 function groupedRows(rows: ReadonlyArray<VacationDayDetailRow>): Array<{ kind: string; color: string; rows: VacationDayDetailRow[] }> {
@@ -77,12 +68,11 @@ async function downloadMonthList(title: string, rows: ReadonlyArray<VacationDayD
     sheet.getRow(1).font = { bold: true };
     for (const group of groupedRows(rows)) {
         for (const row of group.rows) {
-            const meta = rowWhen(row);
             sheet.addRow({
                 kind: group.kind,
                 name: row.label,
                 team: row.teamName,
-                when: meta.times ? `${meta.when} (×${meta.times})` : meta.when,
+                when: row.rangeLabel,
             });
         }
     }
@@ -112,6 +102,10 @@ type Props = {
 export function VacationMonthPanel({ year, monthIndex, open, visible = true, rows, onToggle, onStepMonth, onOpenCard, onOpenDocs, showDocs }: Props) {
     const title = `${VACATION_MONTH_NAMES[monthIndex]} ${year}`;
     const [downloading, setDownloading] = useState(false);
+    const [kind, setKind] = useState<string | null>(null);
+    const groups = useMemo(() => groupedRows(rows), [rows]);
+    const activeKind = kind && groups.some((group) => group.kind === kind) ? kind : null;
+    const shown = activeKind ? rows.filter((row) => row.kindLabel === activeKind) : rows;
     const download = () => {
         if (rows.length === 0 || downloading)
             return;
@@ -159,39 +153,44 @@ export function VacationMonthPanel({ year, monthIndex, open, visible = true, row
                     <p className="vac-month__empty">В этом месяце отсутствий нет</p>
                 ) : (
                     <div className="vac-month__list">
-                        {groupedRows(rows).map((group) => (
-                            <section key={group.kind} className="vac-month__group">
-                                <h3 className="vac-month__group-title">
-                                    <i style={{ background: group.color }} aria-hidden />
-                                    <span>{group.kind}</span>
-                                    <em>{group.rows.length}</em>
-                                </h3>
-                                <ul>
-                                    {group.rows.map((row) => {
-                                        const meta = rowWhen(row);
-                                        const docs = showDocs && row.allowDocs !== false && row.canOpenCard;
-                                        return (
-                                            <li key={`${row.employeeId}-${row.kindLabel}`} className="vac-month__row">
-                                                {row.canOpenCard ? (
-                                                    <button type="button" className="vac-month__who" onClick={() => onOpenCard(row.employeeId)}>
-                                                        {row.label}
-                                                    </button>
-                                                ) : <span className="vac-month__who">{row.label}</span>}
-                                                <span className="vac-month__when">
-                                                    {meta.times ? <em>×{meta.times}</em> : null}
-                                                    {meta.when}
-                                                </span>
-                                                {docs ? (
-                                                    <button type="button" className="vac-month__doc" title="Документы" onClick={() => onOpenDocs(row.employeeId, row.label)}>
-                                                        Док.
-                                                    </button>
+                        {groups.length > 1 ? (
+                            <div className="vac-month__kinds" role="group" aria-label="Тип события">
+                                <button type="button" className={activeKind == null ? 'is-on' : undefined} aria-pressed={activeKind == null}
+                                    onClick={() => setKind(null)}>
+                                    Все <em>{rows.length}</em>
+                                </button>
+                                {groups.map((group) => (
+                                    <button key={group.kind} type="button" className={activeKind === group.kind ? 'is-on' : undefined}
+                                        aria-pressed={activeKind === group.kind} onClick={() => setKind(group.kind)}>
+                                        <i style={{ background: group.color }} aria-hidden />
+                                        {group.kind} <em>{group.rows.length}</em>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                        <h3 className="vac-day__events">События</h3>
+                        <ul className="vac-day__list vac-month__events">
+                            {shown.map((row) => (
+                                <li key={`${row.employeeId}-${row.kindLabel}-${row.sortIso ?? row.rangeLabel}`} className="vac-day__item">
+                                    <span className="vac-day__dot" style={{ background: row.color }} aria-hidden />
+                                    <div className="vac-day__copy">
+                                        <strong>{row.label}</strong>
+                                        <span>{row.rangeLabel}</span>
+                                        {row.canOpenCard ? (
+                                            <span className="vac-day__links">
+                                                <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
+                                                {showDocs && row.allowDocs !== false ? (
+                                                    <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
                                                 ) : null}
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            </section>
-                        ))}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    <span className="vac-day__badge" style={{ color: row.color, background: `color-mix(in srgb, ${row.color} 14%, #fff)` }}>
+                                        {row.kindLabel}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )
             ) : (

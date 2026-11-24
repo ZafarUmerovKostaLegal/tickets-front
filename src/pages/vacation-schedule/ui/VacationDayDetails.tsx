@@ -16,6 +16,7 @@ export type VacationDayDetailRow = {
     rangeLabel: string;
     canOpenCard: boolean;
     allowDocs?: boolean;
+    sortIso?: string;
 };
 
 type Props = {

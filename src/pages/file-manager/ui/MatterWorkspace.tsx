@@ -5,7 +5,10 @@ import { CHUNKED_THRESHOLD } from '../lib/chunkedUpload';
 import { enqueueUploads, onUploadDone } from '../lib/uploadQueue';
 import { DuplicatesModal } from './DuplicatesModal';
 import { DOC_DRAG_TYPE } from './DocumentTable';
+import { DocumentAccessDrawer } from './DocumentAccessDrawer';
 import { DocumentPane } from './DocumentPane';
+import { FolderAccessDrawer } from './FolderAccessDrawer';
+import './MatterWorkspace.css';
 import { ConfirmModal, FileBadge, Icon, Modal, StateBlock, useAction, useFm, useLoad, useNotify } from './fmShared';
 
 export type Location = { matterId: string | null; folderId: string | null; docId: string | null };
@@ -67,6 +70,17 @@ function FolderNameModal({ title, initial, onClose, onSubmit }: {
 }
 
 const DATE_FILTER_KEY = 'fm.matter.dateFilter';
+const LAYOUT_KEY = 'fm.matter.layout';
+
+type Layout = 'tiles' | 'list';
+
+function readLayout(): Layout {
+    try {
+        return localStorage.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'tiles';
+    } catch {
+        return 'tiles';
+    }
+}
 const DATE_PRESETS: DatePreset[] = ['all', 'today', 'week', 'month', 'thisMonth', 'custom'];
 const PRESET_LABEL: Record<DatePreset, string> = {
     all: 'browser.dateAll',
@@ -133,6 +147,9 @@ export function MatterWorkspace({
     const [organizing, setOrganizing] = useState(false);
     const [duplicatesOpen, setDuplicatesOpen] = useState(false);
     const [copyPrompt, setCopyPrompt] = useState<{ files: File[]; text: string } | null>(null);
+    const [layout, setLayout] = useState<Layout>(readLayout);
+    const [accessFolderId, setAccessFolderId] = useState<string | null>(null);
+    const [accessDocId, setAccessDocId] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -143,11 +160,19 @@ export function MatterWorkspace({
         }
     }, [dateFilter]);
 
+    useEffect(() => {
+        try {
+            localStorage.setItem(LAYOUT_KEY, layout);
+        } catch {
+        }
+    }, [layout]);
+
     const browse = useLoad(() => filesApi.browse(matterId, folderId), [matterId, folderId]);
     const data = browse.data && browse.data.matter.id === matterId ? browse.data : null;
     const folders = useMemo(() => data?.folders ?? [], [data]);
     const level = data?.matter.level ?? 'none';
     const editable = canEdit(level);
+    const manager = canManage(level);
     const currentFolder = folderId ? folders.find((folder) => folder.id === folderId) ?? null : null;
     const selectedFolder = selectedFolderId ? folders.find((folder) => folder.id === selectedFolderId) ?? null : null;
     const parentId = currentFolder?.parentId ?? null;
@@ -187,6 +212,16 @@ export function MatterWorkspace({
         setSelectedFolderId(null);
         setMenu(null);
     }, [matterId, folderId, docId]);
+
+    useEffect(() => {
+        setAccessFolderId(null);
+        setAccessDocId(null);
+    }, [matterId]);
+
+    useEffect(() => {
+        if (docId)
+            setAccessFolderId(null);
+    }, [docId]);
 
     const lastUploadSignal = useRef(uploadSignal);
     useEffect(() => {
@@ -316,6 +351,116 @@ export function MatterWorkspace({
         setClipboard(null);
     };
 
+    const rowClass = (on: boolean) => (on ? 'fm-ex__row is-on' : 'fm-ex__row');
+
+    const folderHandlers = (folder: FolderRow) => ({
+        onClick: (event: ReactMouseEvent<HTMLElement>) => {
+            event.stopPropagation();
+            setSelectedFolderId(folder.id);
+            if (manager) {
+                setAccessDocId(null);
+                setAccessFolderId(folder.id);
+                if (docId)
+                    onNavigate({ matterId, folderId, docId: null });
+            }
+        },
+        onDoubleClick: (event: ReactMouseEvent<HTMLElement>) => {
+            event.stopPropagation();
+            goFolder(folder.id);
+        },
+        onContextMenu: (event: ReactMouseEvent<HTMLElement>) => openCtx(event, { kind: 'folder', folder }),
+        onDragOver: editable ? (event: DragEvent<HTMLElement>) => {
+            if (event.dataTransfer.types.includes(DOC_DRAG_TYPE))
+                event.preventDefault();
+        } : undefined,
+        onDrop: editable ? (event: DragEvent<HTMLElement>) => {
+            const id = event.dataTransfer.getData(DOC_DRAG_TYPE);
+            if (id) {
+                event.preventDefault();
+                event.stopPropagation();
+                void moveDoc(folder.id, id);
+            }
+        } : undefined,
+    });
+
+    const docHandlers = (doc: DocumentRow) => ({
+        draggable: editable,
+        onDragStart: editable ? (event: DragEvent<HTMLElement>) => {
+            event.dataTransfer.setData(DOC_DRAG_TYPE, doc.id);
+            event.dataTransfer.effectAllowed = 'move';
+        } : undefined,
+        onClick: (event: ReactMouseEvent<HTMLElement>) => {
+            event.stopPropagation();
+            setSelectedFolderId(null);
+            setAccessFolderId(null);
+            setAccessDocId(null);
+            onNavigate({ matterId, folderId, docId: doc.id });
+        },
+        onDoubleClick: (event: ReactMouseEvent<HTMLElement>) => {
+            event.stopPropagation();
+            onNavigate({ matterId, folderId, docId: doc.id });
+        },
+        onContextMenu: (event: ReactMouseEvent<HTMLElement>) => openCtx(event, { kind: 'document', doc }),
+    });
+
+    const canShareDoc = (doc: DocumentRow) => manager || Boolean(doc.access?.mine);
+
+    const openDocAccess = (doc: DocumentRow) => {
+        setAccessFolderId(null);
+        setAccessDocId(doc.id);
+    };
+
+    const docBadge = (doc: DocumentRow) => {
+        const info = doc.access;
+        if (!info)
+            return null;
+        if (info.restricted) {
+            return (
+                <span className="fm-ex__access is-restricted" title={tr('docAccess.restrictedHint')}>
+                    <Icon name="lock" /><span>{tr('docAccess.badgeRestricted')}</span>
+                </span>
+            );
+        }
+        if (info.entries > 0) {
+            return (
+                <span className="fm-ex__access is-custom" title={tr('docAccess.customHint')}>
+                    <Icon name="key" /><span>{tr('docAccess.badgeCustom', { n: info.entries })}</span>
+                </span>
+            );
+        }
+        if (!info.mine && !manager && info.level === 'read') {
+            return (
+                <span className="fm-ex__access is-shared" title={tr('folderAccess.sharedHint')}>
+                    <Icon name="eye" /><span>{tr('docAccess.badgeRead')}</span>
+                </span>
+            );
+        }
+        return null;
+    };
+
+    const folderBadge = (folder: FolderRow) => {
+        const info = folder.access;
+        if (!info)
+            return null;
+        if (manager && (info.entries > 0 || !info.inherit)) {
+            return (
+                <span className="fm-ex__access is-custom" title={tr('folderAccess.customHint')}>
+                    <Icon name="lock" />
+                    <span>{tr('folderAccess.custom')}</span>
+                </span>
+            );
+        }
+        if (!manager && (info.level === 'read' || info.level === 'edit')) {
+            return (
+                <span className="fm-ex__access is-shared" title={tr('folderAccess.sharedHint')}>
+                    <Icon name="eye" />
+                    <span>{info.level === 'edit' ? tr('folderAccess.sharedEdit') : tr('folderAccess.sharedRead')}</span>
+                </span>
+            );
+        }
+        return null;
+    };
+
     const empty = subfolders.length === 0 && documents.length === 0;
     const filteredOut = !empty && dateActive && documents.length > 0 && shownDocuments.length === 0;
 
@@ -370,6 +515,27 @@ export function MatterWorkspace({
                             title={tr('browser.duplicatesHint')}>
                             {tr('browser.duplicates')}
                         </button>
+                        {manager && folderId ? (
+                            <button type="button" className="fm-btn fm-datebar__access"
+                                onClick={() => {
+                                    setAccessFolderId(folderId);
+                                    if (docId)
+                                        onNavigate({ matterId, folderId, docId: null });
+                                }}>
+                                <Icon name="shield" />
+                                {tr('folderAccess.button')}
+                            </button>
+                        ) : null}
+                        <div className="fm-datebar__layout" role="group" aria-label={tr('browser.layout')}>
+                            <button type="button" className={layout === 'tiles' ? 'is-on' : undefined} aria-pressed={layout === 'tiles'}
+                                title={tr('browser.layoutTiles')} aria-label={tr('browser.layoutTiles')} onClick={() => setLayout('tiles')}>
+                                <Icon name="grid" />
+                            </button>
+                            <button type="button" className={layout === 'list' ? 'is-on' : undefined} aria-pressed={layout === 'list'}
+                                title={tr('browser.layoutList')} aria-label={tr('browser.layoutList')} onClick={() => setLayout('list')}>
+                                <Icon name="list" />
+                            </button>
+                        </div>
                         {canOrganize ? (
                             <button type="button" className="fm-btn fm-datebar__organize" disabled={organizing}
                                 title={tr('browser.organizeMailHint')} onClick={() => void organize()}>
@@ -397,6 +563,87 @@ export function MatterWorkspace({
                                     <p>{editable ? tr('browser.dropHint') : tr('browser.emptyFolder')}</p>
                                 </div>
                             ) : (
+                                layout === 'list' ? (
+                                    <div className="fm-ex__list-wrap">
+                                        <table className="fm-ex__list">
+                                            <thead>
+                                                <tr>
+                                                    <th>{tr('browser.colName')}</th>
+                                                    <th className="fm-ex__col-type">{tr('browser.colType')}</th>
+                                                    <th className="fm-ex__col-date">{tr('browser.colModified')}</th>
+                                                    <th className="fm-ex__col-author">{tr('browser.colAuthor')}</th>
+                                                    <th className="fm-ex__col-size">{tr('browser.colSize')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {folderId ? (
+                                                    <tr className="fm-ex__row fm-ex__row--up" tabIndex={0}
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            goFolder(parentId);
+                                                        }}
+                                                        onKeyDown={(event) => {
+                                                            if (event.key === 'Enter')
+                                                                goFolder(parentId);
+                                                        }}>
+                                                        <td colSpan={5}>
+                                                            <span className="fm-ex__row-name"><Icon name="up" /><strong>..</strong></span>
+                                                        </td>
+                                                    </tr>
+                                                ) : null}
+                                                {subfolders.map((folder) => (
+                                                    <tr key={folder.id} tabIndex={0}
+                                                        className={rowClass(selectedFolderId === folder.id || accessFolderId === folder.id)}
+                                                        {...folderHandlers(folder)}
+                                                        onKeyDown={(event) => {
+                                                            if (event.key === 'Enter')
+                                                                goFolder(folder.id);
+                                                        }}>
+                                                        <td>
+                                                            <span className="fm-ex__row-name">
+                                                                <Icon name="folder" className="fm-ico--folder" />
+                                                                <span className="fm-ex__row-text"><strong title={folder.name}>{folder.name}</strong></span>
+                                                                {folderBadge(folder)}
+                                                            </span>
+                                                        </td>
+                                                        <td className="fm-ex__col-type">{tr('browser.folderType')}</td>
+                                                        <td className="fm-ex__col-date">—</td>
+                                                        <td className="fm-ex__col-author">—</td>
+                                                        <td className="fm-ex__col-size">{tr('browser.filesCount', { n: folder.documents })}</td>
+                                                    </tr>
+                                                ))}
+                                                {shownDocuments.map((doc) => {
+                                                    const day = documentDay(doc);
+                                                    const subject = isMailName(doc.name) ? doc.description.trim() : '';
+                                                    return (
+                                                        <tr key={doc.id} tabIndex={0} className={rowClass(docId === doc.id)}
+                                                            {...docHandlers(doc)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === 'Enter')
+                                                                    onNavigate({ matterId, folderId, docId: doc.id });
+                                                            }}>
+                                                            <td>
+                                                                <span className="fm-ex__row-name" title={[doc.name, subject].filter(Boolean).join('\n')}>
+                                                                    <FileBadge kind={doc.kind} />
+                                                                    <span className="fm-ex__row-text">
+                                                                        <strong>{doc.name}</strong>
+                                                                        {subject ? <small>{subject}</small> : null}
+                                                                    </span>
+                                                                    {docBadge(doc)}
+                                                                    {doc.checkedOutById ? <Icon name="lock" className="fm-ex__row-lock" /> : null}
+                                                                </span>
+                                                            </td>
+                                                            <td className="fm-ex__col-type">{kindLabel(doc.kind, tr)}{doc.version > 1 ? ` · v${doc.version}` : ''}</td>
+                                                            <td className="fm-ex__col-date">{day ? formatDay(day, locale) : '—'}</td>
+                                                            <td className="fm-ex__col-author">{doc.createdBy || '—'}</td>
+                                                            <td className="fm-ex__col-size">{formatBytes(doc.sizeBytes, locale)}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
                                 <div className="fm-ex__tiles">
                                     {folderId ? (
                                         <button type="button" className="fm-ex__tile fm-ex__tile--up"
@@ -419,34 +666,15 @@ export function MatterWorkspace({
                                     ) : null}
                                     {subfolders.map((folder) => (
                                         <button key={folder.id} type="button"
-                                            className={selectedFolderId === folder.id ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                setSelectedFolderId(folder.id);
-                                            }}
-                                            onDoubleClick={(event) => {
-                                                event.stopPropagation();
-                                                goFolder(folder.id);
-                                            }}
-                                            onContextMenu={(event) => openCtx(event, { kind: 'folder', folder })}
-                                            onDragOver={editable ? (event) => {
-                                                if (event.dataTransfer.types.includes(DOC_DRAG_TYPE))
-                                                    event.preventDefault();
-                                            } : undefined}
-                                            onDrop={editable ? (event) => {
-                                                const id = event.dataTransfer.getData(DOC_DRAG_TYPE);
-                                                if (id) {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    void moveDoc(folder.id, id);
-                                                }
-                                            } : undefined}>
+                                            className={selectedFolderId === folder.id || accessFolderId === folder.id ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
+                                            {...folderHandlers(folder)}>
                                             <span className="fm-ex__tile-ico" aria-hidden>
                                                 <Icon name="folder" className="fm-ico--folder" />
                                             </span>
                                             <span className="fm-ex__tile-meta">
                                                 <strong title={folder.name}>{folder.name}</strong>
                                                 <small>{tr('browser.folderType')}</small>
+                                                {folderBadge(folder)}
                                             </span>
                                         </button>
                                     ))}
@@ -457,21 +685,7 @@ export function MatterWorkspace({
                                         return (
                                             <button key={doc.id} type="button"
                                                 className={docId === doc.id ? 'fm-ex__tile is-on' : 'fm-ex__tile'}
-                                                draggable={editable}
-                                                onDragStart={editable ? (event) => {
-                                                    event.dataTransfer.setData(DOC_DRAG_TYPE, doc.id);
-                                                    event.dataTransfer.effectAllowed = 'move';
-                                                } : undefined}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setSelectedFolderId(null);
-                                                    onNavigate({ matterId, folderId, docId: doc.id });
-                                                }}
-                                                onDoubleClick={(event) => {
-                                                    event.stopPropagation();
-                                                    onNavigate({ matterId, folderId, docId: doc.id });
-                                                }}
-                                                onContextMenu={(event) => openCtx(event, { kind: 'document', doc })}>
+                                                {...docHandlers(doc)}>
                                                 <span className="fm-ex__tile-ico" aria-hidden>
                                                     <FileBadge kind={doc.kind} />
                                                 </span>
@@ -484,11 +698,13 @@ export function MatterWorkspace({
                                                         {doc.version > 1 ? ` · v${doc.version}` : ''}
                                                         {doc.checkedOutById ? ` · ${lockedByOther ? tr('table.checkedOutBy', { name: doc.checkedOutBy ?? '' }) : tr('table.checkedOutMe')}` : ''}
                                                     </small>
+                                                    {docBadge(doc)}
                                                 </span>
                                             </button>
                                         );
                                     })}
                                 </div>
+                                )
                             )}
                             {filteredOut ? (
                                 <div className="fm-datebar__empty">
@@ -508,6 +724,15 @@ export function MatterWorkspace({
                                                 goFolder(menu.target.kind === 'folder' ? menu.target.folder.id : null);
                                                 setMenu(null);
                                             }}>{tr('browser.open')}</button>
+                                            {manager ? (
+                                                <button type="button" role="menuitem" onClick={() => {
+                                                    if (menu.target.kind === 'folder')
+                                                        setAccessFolderId(menu.target.folder.id);
+                                                    if (docId)
+                                                        onNavigate({ matterId, folderId, docId: null });
+                                                    setMenu(null);
+                                                }}>{tr('folderAccess.menu')}</button>
+                                            ) : null}
                                             {editable ? (
                                                 <>
                                                     <button type="button" role="menuitem" onClick={() => {
@@ -541,6 +766,13 @@ export function MatterWorkspace({
                                                     onNavigate({ matterId, folderId, docId: menu.target.doc.id });
                                                 setMenu(null);
                                             }}>{tr('browser.properties')}</button>
+                                            {menu.target.kind === 'document' && canShareDoc(menu.target.doc) ? (
+                                                <button type="button" role="menuitem" onClick={() => {
+                                                    if (menu.target.kind === 'document')
+                                                        openDocAccess(menu.target.doc);
+                                                    setMenu(null);
+                                                }}>{tr('docAccess.menu')}</button>
+                                            ) : null}
                                         </>
                                     ) : null}
                                     {menu.target.kind === 'blank' ? (
@@ -603,9 +835,29 @@ export function MatterWorkspace({
                 }} />
             </section>
 
-            {docId ? (
+            {accessDocId ? (
+                <DocumentAccessDrawer
+                    documentId={accessDocId}
+                    onClose={() => setAccessDocId(null)}
+                    onChanged={browse.reload}
+                />
+            ) : null}
+            {accessFolderId && manager && !docId && !accessDocId ? (
+                <FolderAccessDrawer
+                    folderId={accessFolderId}
+                    onClose={() => setAccessFolderId(null)}
+                    onChanged={browse.reload}
+                    onOpenFolder={(id) => goFolder(id)}
+                    onShowFolder={(id) => {
+                        setAccessFolderId(id);
+                        goFolder(folders.find((row) => row.id === id)?.parentId ?? null);
+                    }}
+                />
+            ) : null}
+            {docId && !accessDocId ? (
                 <DocumentPane
                     documentId={docId}
+                    onOpenAccess={(id) => setAccessDocId(id)}
                     viewerId={viewerId}
                     folders={folders}
                     onChanged={patchDoc}

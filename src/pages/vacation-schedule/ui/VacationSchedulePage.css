@@ -293,6 +293,62 @@
   gap: 0.85rem;
 }
 
+.vac-month__kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.vac-month__kinds button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.75rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--app-surface, #fff);
+  color: var(--app-muted, #64748b);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vac-month__kinds button i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+}
+
+.vac-month__kinds button em {
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.vac-month__kinds button.is-on {
+  border-color: var(--app-accent-border, #c7d2fe);
+  background: var(--app-accent-light-bg, #eef2ff);
+  color: var(--app-accent, #4f46e5);
+}
+
+.vac-month__list .vac-day__events {
+  margin-top: 0.2rem;
+}
+
+.vac-month__list .vac-month__events {
+  flex: none;
+  overflow: visible;
+  margin-top: 0;
+}
+
+@media (max-width: 768px) {
+  .vac-month__kinds button.is-on,
+  .vac-month__kinds button {
+    min-height: 2rem;
+  }
+}
+
 .vac-month__group-title {
   margin: 0 0 0.2rem;
   display: flex;

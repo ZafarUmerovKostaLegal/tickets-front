@@ -56,6 +56,7 @@ export type DocumentRow = {
     id: string;
     docNumber: string;
     name: string;
+    access?: DocumentAccessInfo;
     kind: FileKind;
     docType: string;
     description: string;
@@ -99,6 +100,88 @@ export type FolderRow = {
     documents: number;
     createdAt: string | null;
     favorite: boolean;
+    access?: FolderAccessInfo;
+};
+
+export type FolderAccessLevel = 'own' | 'read' | 'edit' | 'deny';
+
+export type DocumentAccessInfo = {
+    restricted: boolean;
+    entries: number;
+    mine: boolean;
+    level: FolderAccessLevel;
+};
+
+export type DocumentAccessMember = {
+    userId: number;
+    name: string;
+    position: string;
+    partner: boolean;
+    owner: boolean;
+    matterLevel: string;
+    entry: FolderAccessEntry | null;
+    viaFolder: FolderAccessLevel | null;
+    effective: 'owner' | 'read' | 'edit' | 'deny' | 'own' | 'none';
+};
+
+export type DocumentAccessResponse = {
+    document: { id: string; name: string; folderId: string | null; folderName: string; createdBy: string; createdById: number; restricted: boolean };
+    matter: { id: string; name: string; code: string };
+    members: DocumentAccessMember[];
+};
+
+export type SecurityDocument = {
+    id: string;
+    name: string;
+    folderId: string | null;
+    createdBy: string;
+    restricted: boolean;
+    entries: number;
+    deny: number;
+    temporary: number;
+};
+
+export type FolderAccessInfo = {
+    level: FolderAccessLevel | null;
+    entries: number;
+    inherit: boolean;
+};
+
+export type FolderAccessEntry = {
+    level: FolderAccessLevel;
+    effective: FolderAccessLevel | null;
+    note: string;
+    until: string | null;
+    suspendedUntil: string | null;
+    grantedBy: string;
+    grantedAt: string | null;
+};
+
+export type FolderAccessMember = {
+    userId: number;
+    name: string;
+    position: string;
+    partner: boolean;
+    matterLevel: string;
+    source: 'timeTracking' | 'acl' | 'both' | 'folder';
+    entry: FolderAccessEntry | null;
+    inherited: { level: FolderAccessLevel; folderId: string; folderName: string } | null;
+    effective: FolderAccessLevel | null;
+};
+
+export type FolderAccessResponse = {
+    folder: { id: string; name: string; parentId: string | null; inherit: boolean; path: Crumb[] };
+    matter: { id: string; name: string; code: string };
+    members: FolderAccessMember[];
+};
+
+export type FolderAccessInput = {
+    userId: number;
+    userName: string;
+    level: FolderAccessLevel;
+    note?: string;
+    until?: string | null;
+    suspendedUntil?: string | null;
 };
 
 export type Crumb = { id: string; name: string };
@@ -197,6 +280,7 @@ export type AuditRow = {
 export type DocumentDetail = {
     document: DocumentRow;
     level: AccessLevel;
+    canManageAccess?: boolean;
     path: Crumb[];
     versions: VersionRow[];
     activity: AuditRow[];
@@ -244,12 +328,50 @@ export type SecurityMember = {
     position: string;
     source: 'timeTracking' | 'acl' | 'both';
     level: AclLevel;
+    until?: string | null;
+    suspendedUntil?: string | null;
+    effective?: AclLevel | 'none';
+    partner?: boolean;
+};
+
+export type SecurityFolder = {
+    id: string;
+    parentId: string | null;
+    name: string;
+    documents: number;
+    inherit: boolean;
+    entries: number;
+    deny: number;
+    temporary: number;
 };
 
 export type SecurityResponse = {
-    matter: { id: string; name: string; code: string; clientName: string };
+    matter: { id: string; name: string; code: string; clientName: string; closed?: boolean };
     effective: SecurityMember[];
-    acl: Array<{ userId: number; userName: string; level: AclLevel; note: string; grantedBy: string; grantedAt: string | null }>;
+    acl: Array<{
+        userId: number;
+        userName: string;
+        level: AclLevel;
+        note: string;
+        grantedBy: string;
+        grantedAt: string | null;
+        until?: string | null;
+        suspendedUntil?: string | null;
+    }>;
+    folders?: SecurityFolder[];
+    documents?: SecurityDocument[];
+    pendingRequests?: number;
+};
+
+export type SecuritySummary = {
+    rules: number;
+    walls: number;
+    temporary: number;
+    suspended: number;
+    folderRules: number;
+    folders: number;
+    documents?: number;
+    pending: number;
 };
 
 export type MatrixResponse = {
@@ -409,10 +531,32 @@ export const filesApi = {
     purgeTrash: (kind: string, id: string) =>
         request<{ ok: true }>(`/trash/${kind}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     security: (matterId: string) => request<SecurityResponse>(`/matters/${encodeURIComponent(matterId)}/security`),
-    setAcl: (matterId: string, body: { userId: number; userName: string; level: AclLevel; note?: string }) =>
+    securityOverview: () => request<{ matters: Record<string, SecuritySummary> }>('/security/overview'),
+    setAcl: (matterId: string, body: {
+        userId: number;
+        userName: string;
+        level: AclLevel;
+        note?: string;
+        until?: string | null;
+        suspendedUntil?: string | null;
+    }) =>
         request<unknown>(`/matters/${encodeURIComponent(matterId)}/security`, json('PUT', body)),
     removeAcl: (matterId: string, userId: number) =>
         request<unknown>(`/matters/${encodeURIComponent(matterId)}/security/${userId}`, { method: 'DELETE' }),
+    folderAccess: (folderId: string) => request<FolderAccessResponse>(`/folders/${encodeURIComponent(folderId)}/access`),
+    setFolderAccess: (folderId: string, body: FolderAccessInput) =>
+        request<{ entry: FolderAccessEntry }>(`/folders/${encodeURIComponent(folderId)}/access`, json('PUT', body)),
+    removeFolderAccess: (folderId: string, userId: number) =>
+        request<unknown>(`/folders/${encodeURIComponent(folderId)}/access/${userId}`, { method: 'DELETE' }),
+    documentAccess: (documentId: string) => request<DocumentAccessResponse>(`/documents/${encodeURIComponent(documentId)}/access`),
+    setDocumentAccess: (documentId: string, body: FolderAccessInput) =>
+        request<{ entry: FolderAccessEntry }>(`/documents/${encodeURIComponent(documentId)}/access`, json('PUT', body)),
+    removeDocumentAccess: (documentId: string, userId: number) =>
+        request<unknown>(`/documents/${encodeURIComponent(documentId)}/access/${userId}`, { method: 'DELETE' }),
+    setDocumentRestricted: (documentId: string, restricted: boolean) =>
+        request<{ restricted: boolean }>(`/documents/${encodeURIComponent(documentId)}/restricted`, json('PUT', { restricted })),
+    setFolderInherit: (folderId: string, inherit: boolean) =>
+        request<{ inherit: boolean }>(`/folders/${encodeURIComponent(folderId)}/inherit`, json('PUT', { inherit })),
     matrix: (clientId: string) => request<MatrixResponse>(`/matrix${query({ clientId })}`),
     requests: (status: 'pending' | 'all') => request<{ requests: AccessRequest[] }>(`/access-requests${query({ status })}`),
     createRequest: (body: { matterId: string; level: 'read' | 'edit'; reason: string }) =>

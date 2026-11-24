@@ -23,6 +23,7 @@ type Props = {
     onDeleted: (documentId: string) => void;
     onClose: () => void;
     onLocate?: (doc: DocumentRow) => void;
+    onOpenAccess?: (documentId: string) => void;
 };
 
 function Properties({ detail, folders, editable, onSaved }: {
@@ -189,7 +190,7 @@ function CheckinModal({ doc, onClose, onDone }: { doc: DocumentRow; onClose: () 
     );
 }
 
-export function DocumentPane({ documentId, viewerId, folders = [], onChanged, onDeleted, onClose, onLocate }: Props) {
+export function DocumentPane({ documentId, viewerId, folders = [], onChanged, onDeleted, onClose, onLocate, onOpenAccess }: Props) {
     const { tr, locale } = useFm();
     const act = useAction();
     const [tab, setTab] = useState<Tab>('preview');
@@ -294,6 +295,11 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                         <div className="fm-pane__actions">
                             <button type="button" className="fm-btn fm-btn--primary" onClick={() => download()}><Icon name="download" />{tr('pane.download')}</button>
                             <button type="button" className="fm-btn" onClick={openInTab}><Icon name="eye" />{tr('pane.open')}</button>
+                            {onOpenAccess && data.canManageAccess ? (
+                                <button type="button" className="fm-btn" onClick={() => onOpenAccess(doc.id)}>
+                                    <Icon name="key" />{tr('docAccess.button')}
+                                </button>
+                            ) : null}
                             {editable && doc.checkedOutById === null ? (
                                 <button type="button" className="fm-btn" onClick={async () => {
                                     const result = await act(() => filesApi.checkout(doc.id));

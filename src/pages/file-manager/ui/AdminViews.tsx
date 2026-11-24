@@ -7,7 +7,7 @@ import { Icon, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShare
 const AUDIT_ACTIONS = [
     'upload', 'version', 'open', 'download', 'checkout', 'checkin', 'discard', 'rename', 'properties', 'move', 'delete',
     'restore', 'purge', 'folder_create', 'folder_rename', 'folder_move', 'folder_delete', 'provision', 'acl_set',
-    'acl_remove', 'request_create', 'request_approve', 'request_reject', 'template_update', 'denied',
+    'acl_remove', 'folder_acl_set', 'folder_acl_remove', 'folder_inherit', 'doc_acl_set', 'doc_acl_remove', 'doc_restrict', 'request_create', 'request_approve', 'request_reject', 'template_update', 'denied',
 ] as const;
 
 const PAGE = 100;

@@ -10,7 +10,8 @@ import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
 import { AddinClientsView, AuditView, MonitoringView, TemplateView } from './AdminViews';
 import { MailRulesView } from './MailRulesView';
-import { MatrixView, RequestsView, SecurityView } from './AccessViews';
+import { MatrixView, RequestsView } from './AccessViews';
+import { SecurityWorkspace } from './SecurityWorkspace';
 import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
 import { MatterWorkspace, type Location } from './MatterWorkspace';
@@ -182,7 +183,15 @@ function FileManagerWorkspace() {
             case 'requests':
                 return <RequestsView canManage={canManage} onChanged={refreshAll} />;
             case 'security':
-                return <SecurityView clients={data} matterId={matterId} onPickMatter={(id) => go('security', { matterId: id })} />;
+                return (
+                    <SecurityWorkspace
+                        clients={data}
+                        matterId={matterId}
+                        onPickMatter={(id) => go('security', { matterId: id })}
+                        onOpenFolder={(id, folder) => openMatter({ matterId: id, folderId: folder, docId: null })}
+                        onOpenRequests={() => go('requests')}
+                    />
+                );
             case 'matrix':
                 return <MatrixView clients={data} />;
             case 'audit':

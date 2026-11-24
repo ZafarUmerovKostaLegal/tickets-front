@@ -67,6 +67,36 @@ function vacationAttentionText(locale: string, kind: 'decide' | 'mine', count: n
         : `${count} ${noun} на рассмотрении у партнёра`;
 }
 
+function appendLateEvents(
+    rows: VacationDayDetailRow[],
+    people: readonly VacationRosterPerson[],
+    lates: readonly { employeeId: number; iso: string; arrival: string | null }[],
+    fromIso: string,
+    toIso: string,
+    hidden: boolean,
+): void {
+    if (hidden)
+        return;
+    const byId = new Map(people.map((person) => [person.id, person]));
+    for (const late of lates) {
+        const person = byId.get(late.employeeId);
+        if (!person || late.iso < fromIso || late.iso > toIso)
+            continue;
+        const day = formatAbsenceRange(late.iso, late.iso);
+        rows.push({
+            employeeId: person.id,
+            label: person.label,
+            teamName: person.teamName,
+            color: VACATION_LATE_COLOR,
+            kindLabel: 'Опоздание',
+            rangeLabel: late.arrival ? `${day} · ${late.arrival}` : day,
+            canOpenCard: !isVacationSystemRowId(person.id),
+            allowDocs: false,
+            sortIso: late.iso,
+        });
+    }
+}
+
 function appendLateRows(
     rows: VacationDayDetailRow[],
     people: readonly VacationRosterPerson[],
@@ -287,29 +317,36 @@ export function VacationSchedulePage() {
         const rows: VacationDayDetailRow[] = [];
         for (const person of focusPeople) {
             const days = daysByEmployee.get(person.id) ?? [];
-            const inside = days.filter((day) => day.iso >= fromIso && day.iso <= toIso && !hiddenKinds.has(day.kind));
-            const kinds = [...new Set(inside.map((day) => day.kind))];
-            for (const kind of kinds) {
-                const sample = inside.find((day) => day.kind === kind);
-                if (!sample)
+            const inside = days
+                .filter((day) => day.iso >= fromIso && day.iso <= toIso && !hiddenKinds.has(day.kind))
+                .sort((a, b) => a.iso.localeCompare(b.iso));
+            const covered = new Set<string>();
+            for (const day of inside) {
+                const key = `${day.kind}:${day.iso}`;
+                if (covered.has(key))
                     continue;
-                const run = absenceRunAround(days, sample.iso, kind);
+                const run = absenceRunAround(days, day.iso, day.kind);
                 if (!run)
                     continue;
-                const legendItem = legendByKind.get(kind);
+                for (const other of inside) {
+                    if (other.kind === day.kind && other.iso >= run.from && other.iso <= run.to)
+                        covered.add(`${other.kind}:${other.iso}`);
+                }
+                const legendItem = legendByKind.get(day.kind);
                 rows.push({
                     employeeId: person.id,
                     label: person.label,
                     teamName: person.teamName,
                     color: legendItem?.color ?? '#64748b',
-                    kindLabel: legendItem?.label ?? kind,
+                    kindLabel: legendItem?.label ?? day.kind,
                     rangeLabel: formatAbsenceRange(run.from, run.to),
                     canOpenCard: !isVacationSystemRowId(person.id),
+                    sortIso: run.from,
                 });
             }
         }
-        appendLateRows(rows, focusPeople, lateMarks, fromIso, toIso, hideLates);
-        rows.sort((a, b) => a.rangeLabel.localeCompare(b.rangeLabel, 'ru') || a.label.localeCompare(b.label, 'ru'));
+        appendLateEvents(rows, focusPeople, lateMarks, fromIso, toIso, hideLates);
+        rows.sort((a, b) => (a.sortIso ?? '').localeCompare(b.sortIso ?? '') || a.label.localeCompare(b.label, 'ru'));
         return rows;
     }, [daysByEmployee, detailMonth, facts.legend, focusPeople, hiddenKinds, hideLates, lateMarks, scheduleYear]);
     const timeline = useMemo(() => {

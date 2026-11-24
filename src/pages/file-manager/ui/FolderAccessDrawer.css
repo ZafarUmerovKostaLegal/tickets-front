@@ -1,0 +1,423 @@
+.fm-faccess {
+  --fa-read: #2563eb;
+  --fa-edit: #059669;
+  --fa-deny: #dc2626;
+  --fa-pause: #d97706;
+  width: 440px;
+}
+
+body[data-theme='dark'] .fm-faccess {
+  --fa-read: #60a5fa;
+  --fa-edit: #34d399;
+  --fa-deny: #f87171;
+  --fa-pause: #fbbf24;
+}
+
+.fm-faccess .fm-pane__head {
+  align-items: center;
+  border-bottom: 1px solid var(--fm-border);
+  padding-bottom: 0.8rem;
+}
+
+.fm-faccess__badge {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+}
+
+.fm-faccess__badge svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.fm-faccess__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 0.9rem 1.2rem;
+}
+
+.fm-faccess__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.fm-faccess__inherit {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 12px;
+  background: var(--fm-soft);
+  cursor: pointer;
+}
+
+.fm-faccess__inherit.is-restricted {
+  border-color: color-mix(in srgb, var(--fa-deny) 40%, var(--fm-border));
+  background: color-mix(in srgb, var(--fa-deny) 6%, var(--fm-soft));
+}
+
+.fm-faccess__inherit input,
+.fm-faccess__checks input,
+.fm-faccess__radio input {
+  width: 1rem;
+  height: 1rem;
+  min-height: 0;
+  margin: 0.1rem 0 0;
+  flex-shrink: 0;
+  accent-color: var(--fm-accent);
+}
+
+.fm-faccess__inherit span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.fm-faccess__inherit strong {
+  color: var(--fm-text);
+  font-size: 0.84rem;
+}
+
+.fm-faccess__inherit small,
+.fm-faccess__note,
+.fm-faccess__hint {
+  margin: 0;
+  color: var(--fm-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.fm-faccess__search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 10px;
+  background: var(--fm-surface);
+  color: var(--fm-muted);
+}
+
+.fm-faccess__search svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+}
+
+.fm-faccess__search input {
+  flex: 1;
+  min-width: 0;
+  height: 2.2rem;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.fm-faccess__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-faccess__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 12px;
+  background: var(--fm-surface);
+}
+
+.fm-faccess__row.is-deny {
+  border-color: color-mix(in srgb, var(--fa-deny) 35%, var(--fm-border));
+  background: color-mix(in srgb, var(--fa-deny) 5%, var(--fm-surface));
+}
+
+.fm-faccess__who {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.fm-faccess__avatar {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.fm-faccess__name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fm-faccess__name strong,
+.fm-faccess__name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-faccess__name strong {
+  color: var(--fm-text);
+  font-size: 0.84rem;
+}
+
+.fm-faccess__name small {
+  color: var(--fm-muted);
+  font-size: 0.72rem;
+}
+
+.fm-faccess__chip {
+  flex-shrink: 0;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: var(--fm-soft);
+  color: var(--fm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fm-faccess__chip.is-read { background: color-mix(in srgb, var(--fa-read) 12%, transparent); color: var(--fa-read); }
+.fm-faccess__chip.is-edit { background: color-mix(in srgb, var(--fa-edit) 12%, transparent); color: var(--fa-edit); }
+.fm-faccess__chip.is-deny { background: color-mix(in srgb, var(--fa-deny) 12%, transparent); color: var(--fa-deny); }
+.fm-faccess__chip.is-partner { background: var(--fm-accent-soft); color: var(--fm-accent); }
+
+.fm-faccess__checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+  padding-left: 2.6rem;
+}
+
+.fm-faccess__checks label,
+.fm-faccess__radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--fm-text);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.fm-faccess__checks label.is-danger input {
+  accent-color: var(--fa-deny);
+}
+
+.fm-faccess__checks label:has(input:disabled) {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.fm-faccess .fm-faccess__more {
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  min-height: 0;
+  margin-left: auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  background: var(--fm-surface);
+  color: var(--fm-muted);
+  cursor: pointer;
+}
+
+.fm-faccess .fm-faccess__more svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.fm-faccess .fm-faccess__more.is-on {
+  border-color: var(--fm-accent-border);
+  background: var(--fm-accent-soft);
+  color: var(--fm-accent);
+}
+
+.fm-faccess .fm-faccess__more:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fm-faccess__hint {
+  padding-left: 2.6rem;
+}
+
+.fm-faccess .fm-faccess__link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fm-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fm-faccess__temp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-left: 2.6rem;
+}
+
+.fm-faccess__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fa-read) 10%, transparent);
+  color: var(--fa-read);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.fm-faccess__tag svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.fm-faccess__tag.is-over {
+  background: var(--fm-soft);
+  color: var(--fm-muted);
+}
+
+.fm-faccess__tag.is-paused {
+  background: color-mix(in srgb, var(--fa-pause) 14%, transparent);
+  color: var(--fa-pause);
+}
+
+.fm-faccess__panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-left: 2.6rem;
+  padding: 0.7rem;
+  border-radius: 10px;
+  background: var(--fm-soft);
+}
+
+.fm-faccess__panel label,
+.fm-faccess__date {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--fm-muted);
+  font-size: 0.72rem;
+}
+
+.fm-faccess__panel input,
+.fm-faccess__date input {
+  height: 2.1rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  background: var(--fm-surface);
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.8rem;
+  color-scheme: light dark;
+}
+
+.fm-faccess__quick,
+.fm-faccess__panel .fm-faccess__note,
+.fm-faccess__panel-foot {
+  grid-column: 1 / -1;
+}
+
+.fm-faccess__quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fm-faccess__quick > span {
+  margin-right: 0.15rem;
+  color: var(--fm-muted);
+  font-size: 0.72rem;
+}
+
+.fm-faccess__panel-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.fm-faccess__add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.4rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--fm-border);
+  border-radius: 12px;
+}
+
+.fm-faccess__add h4 {
+  margin: 0;
+  color: var(--fm-text);
+  font-size: 0.84rem;
+}
+
+.fm-faccess__add-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.fm-faccess__add > .fm-btn {
+  align-self: flex-end;
+}
+
+@media (max-width: 1024px) {
+  .fm-faccess {
+    width: min(100%, 440px);
+  }
+}
+
+@media (max-width: 600px) {
+  .fm-faccess__checks,
+  .fm-faccess__hint,
+  .fm-faccess__temp {
+    padding-left: 0;
+  }
+
+  .fm-faccess__panel {
+    grid-template-columns: 1fr;
+    margin-left: 0;
+  }
+
+  .fm-faccess__panel input,
+  .fm-faccess__date input,
+  .fm-faccess__search input {
+    font-size: 16px;
+  }
+}
