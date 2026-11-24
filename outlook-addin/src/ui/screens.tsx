@@ -70,14 +70,13 @@ function SsoProblem() {
   );
 }
 
-export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: string; onSignIn: () => void }) {
+export function SignInScreen({ busy, error, onSignIn, intro }: { busy: boolean; error: string; onSignIn: () => void; intro?: string }) {
   return (
     <main className="kf-signin">
       <Brand />
       <h1>Войдите один раз</h1>
       <p>
-        Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера.
-        Вход выполняется той же учётной записью Microsoft, что и Outlook, и запоминается.
+        {intro ?? 'Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера. Вход выполняется той же учётной записью Microsoft, что и Outlook, и запоминается.'}
       </p>
       <button type="button" className="kf-btn kf-btn--primary kf-btn--wide" disabled={busy} onClick={onSignIn}>
         {busy ? 'Входим…' : 'Войти через Microsoft'}

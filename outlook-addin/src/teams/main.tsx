@@ -5,6 +5,7 @@ import { enableHostAuthBridge, preferExternalDialogAuth } from '../auth/naa';
 import { Brand } from '../ui/screens';
 import { checkMeetingNow, deleteMeetingLink, getMeetingLink, saveMeetingLink } from '../api';
 import { MeetingPanel, type MeetingSource } from '../meeting/MeetingPanel';
+import { MeetingsHome } from '../meeting/MeetingsHome';
 
 const container = document.getElementById('app');
 if (!container)
@@ -44,22 +45,6 @@ function ConfigPage() {
   );
 }
 
-/** Personal tab / opened outside a meeting chat — guide into the in-meeting Apps flow. */
-function HowToOpen() {
-  return (
-    <main className="kf-teams">
-      <Brand sub="Запись встречи" />
-      <ol className="kf-teams__steps">
-        <li>Добавьте приложение себе: в Apps выберите <strong>Add for me</strong> / «Добавить для меня» — не выбирайте собрание из списка.</li>
-        <li>Войдите в нужное собрание Teams.</li>
-        <li>В собрании откройте <strong>Apps</strong> (+) → <strong>Kosta File</strong>.</li>
-        <li>Выберите matter и папку — запись и расшифровка сохранятся в Kosta Hub.</li>
-      </ol>
-      <p className="kf-alert kf-alert--error">{OUTSIDE}</p>
-    </main>
-  );
-}
-
 function OutsideTeams() {
   return (
     <main className="kf-teams">
@@ -70,7 +55,6 @@ function OutsideTeams() {
 }
 
 function inMeetingContext(context: app.Context): boolean {
-  // Personal static tab has no meeting/chat — show how-to. Meeting side panel has chat id.
   if (context.meeting?.id)
     return true;
   const frame = String(context.page?.frameContext ?? '');
@@ -78,6 +62,11 @@ function inMeetingContext(context: app.Context): boolean {
 }
 
 async function start(): Promise<void> {
+  if (import.meta.env.DEV && view === 'home') {
+    applyTheme(new URLSearchParams(window.location.search).get('theme') ?? 'default');
+    root.render(<MeetingsHome />);
+    return;
+  }
   if (import.meta.env.DEV && view === 'demo') {
     applyTheme(new URLSearchParams(window.location.search).get('theme') ?? 'default');
     root.render(<MeetingPanel source={teamsSource('19:meeting_demo@thread.v2')} outside={OUTSIDE} />);
@@ -108,13 +97,12 @@ async function start(): Promise<void> {
     return;
   }
 
-  // Teams iframe: nestable MSAL popup is invalid (OneAuth 2400). Use host auth dialog only.
   preferExternalDialogAuth(true);
   enableHostAuthBridge(false);
 
   const chatId = context.chat?.id ?? null;
   if (!chatId || !inMeetingContext(context)) {
-    root.render(<HowToOpen />);
+    root.render(<MeetingsHome />);
     return;
   }
 

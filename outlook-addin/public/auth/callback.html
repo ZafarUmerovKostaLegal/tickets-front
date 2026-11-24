@@ -23,64 +23,67 @@
           error: params.get('error_description') || params.get('error') || '',
         };
         var message = JSON.stringify(payload);
+        var ok = !payload.error && !!payload.code;
         var done = false;
 
         function mark(text, hint) {
           try { document.getElementById('msg').textContent = text; } catch (e) {}
-          if (hint) {
-            try { document.getElementById('hint').textContent = hint; } catch (e) {}
-          }
+          try { document.getElementById('hint').textContent = hint || ''; } catch (e) {}
         }
 
-        function finish(ok) {
-          if (done) return;
+        function finish() {
+          if (done) return false;
           done = true;
-          mark(ok ? 'Вход выполнен — возвращаемся…' : 'Ошибка входа', ok ? 'Это окно можно закрыть.' : '');
+          mark(ok ? 'Вход выполнен — возвращаемся…' : 'Ошибка входа', ok ? 'Это окно закроется само.' : payload.error);
+          return true;
         }
 
-        // Teams auth popup: notifySuccess WITHOUT app.initialize() — initialize often breaks the dialog.
-        function sendTeams() {
+        function teamsNotify(t) {
+          if (done) return;
+          if (payload.error)
+            t.authentication.notifyFailure(String(payload.error));
+          else if (payload.code)
+            t.authentication.notifySuccess(message);
+          else
+            t.authentication.notifyFailure('empty_oauth_response');
+          finish();
+        }
+
+        function startTeams() {
+          var t = window.microsoftTeams;
+          if (!t || !t.authentication || !t.app || !t.app.initialize) return;
           try {
-            var auth = window.microsoftTeams && microsoftTeams.authentication;
-            if (!auth || typeof auth.notifySuccess !== 'function')
+            t.app.initialize().then(function () {
+              try { teamsNotify(t); } catch (e) {}
+            }, function () {});
+          } catch (e) {}
+        }
+
+        function sendOffice() {
+          try {
+            if (done || !(window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent))
               return false;
-            if (payload.error) {
-              auth.notifyFailure(String(payload.error));
-            } else if (payload.code) {
-              // Prefer raw code — some Teams hosts accept plain string; JSON also handled by parent.
-              try {
-                auth.notifySuccess(message);
-              } catch (e1) {
-                auth.notifySuccess(payload.code);
-              }
-            } else {
-              auth.notifyFailure('empty_oauth_response');
-            }
-            finish(!payload.error && !!payload.code);
+            Office.context.ui.messageParent(message);
+            finish();
             return true;
           } catch (e) {
             return false;
           }
         }
 
-        function sendOffice() {
+        function sameOriginOpener() {
           try {
-            if (!(window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent))
-              return false;
-            Office.context.ui.messageParent(message);
-            finish(!payload.error && !!payload.code);
-            return true;
+            return !!window.opener && window.opener.location.origin === window.location.origin;
           } catch (e) {
             return false;
           }
         }
 
         function sendOpener() {
+          if (done || !sameOriginOpener()) return false;
           try {
-            if (!window.opener)
-              return false;
             window.opener.postMessage(payload, window.location.origin);
-            finish(!payload.error && !!payload.code);
+            finish();
             try { window.close(); } catch (e) {}
             return true;
           } catch (e) {
@@ -88,53 +91,26 @@
           }
         }
 
-        function sendAll() {
-          if (sendTeams())
-            return;
-          if (sendOffice())
-            return;
-          sendOpener();
-        }
+        startTeams();
+        sendOffice();
 
-        sendAll();
-
-        // Late Office bridge (Outlook dialog).
         if (window.Office && Office.onReady) {
-          Office.onReady(function () {
-            if (!done)
-              sendAll();
-          });
+          Office.onReady(function () { sendOffice(); });
         }
 
-        // After Teams CDN + host bridge settle.
         var tries = 0;
         var timer = setInterval(function () {
           tries += 1;
-          if (done || tries > 40) {
+          if (done) {
             clearInterval(timer);
-            if (!done) {
-              // Last resort: try initialize then notify (some desktop Teams builds need it).
-              try {
-                if (window.microsoftTeams && microsoftTeams.app && microsoftTeams.app.initialize) {
-                  microsoftTeams.app.initialize().then(function () {
-                    if (!done)
-                      sendAll();
-                  }).catch(function () {});
-                }
-              } catch (e) {}
-              setTimeout(function () {
-                if (!done) {
-                  mark(
-                    'Не удалось вернуть код входа в Teams',
-                    'Закройте окно и нажмите «Войти через Microsoft» ещё раз.',
-                  );
-                }
-              }, 800);
-            }
             return;
           }
-          if (!done)
-            sendAll();
+          if (sendOffice()) return;
+          if (tries === 15 && sendOpener()) return;
+          if (tries >= 60) {
+            clearInterval(timer);
+            mark('Не удалось вернуть код входа', 'Закройте окно и нажмите «Войти через Microsoft» ещё раз.');
+          }
         }, 200);
       })();
     </script>

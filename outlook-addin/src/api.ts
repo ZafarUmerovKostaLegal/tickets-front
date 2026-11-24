@@ -397,12 +397,19 @@ export type MeetingLinkDto = {
   mine: boolean;
   canEdit: boolean;
   hidden?: boolean;
+  provider?: 'teams' | 'zoom';
 };
 
 export type MeetingLinkResponse = { link: MeetingLinkDto | null; serverReady: boolean; warning?: string | null };
 
 function chatQuery(chatId: string): string {
   return `?chatId=${encodeURIComponent(chatId)}`;
+}
+
+export type MyMeetingLinks = { links: MeetingLinkDto[]; serverReady: boolean; zoomReady: boolean };
+
+export function listMyMeetingLinks(): Promise<MyMeetingLinks> {
+  return request<MyMeetingLinks>('/meetings/links');
 }
 
 export function getMeetingLink(chatId: string): Promise<MeetingLinkResponse> {
