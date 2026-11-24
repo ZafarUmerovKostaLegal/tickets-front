@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { app, nestedAppAuth, pages } from '@microsoft/teams-js';
 import '../styles.css';
-import { enableHostAuthBridge } from '../auth/naa';
+import { enableHostAuthBridge, preferExternalDialogAuth } from '../auth/naa';
 import { Brand } from '../ui/screens';
 import { checkMeetingNow, deleteMeetingLink, getMeetingLink, saveMeetingLink } from '../api';
 import { MeetingPanel, type MeetingSource } from '../meeting/MeetingPanel';
@@ -108,6 +108,7 @@ async function start(): Promise<void> {
     return;
   }
 
+  preferExternalDialogAuth(true);
   try {
     enableHostAuthBridge(nestedAppAuth.isNAAChannelRecommended());
   } catch {

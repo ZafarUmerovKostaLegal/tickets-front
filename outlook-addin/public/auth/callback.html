@@ -7,43 +7,53 @@
     <script src="https://res.cdn.office.net/teams-js/2.31.1/js/MicrosoftTeams.min.js"></script>
     <style>
       body { font-family: "Segoe UI", sans-serif; padding: 24px; color: #1f2937; }
+      .muted { opacity: 0.7; font-size: 13px; }
     </style>
   </head>
   <body>
-    <p>Завершение входа…</p>
+    <p id="msg">Завершение входа…</p>
+    <p class="muted" id="hint"></p>
     <script>
       (function () {
-        const params = new URLSearchParams(window.location.search);
-        const payload = {
+        var params = new URLSearchParams(window.location.search);
+        var payload = {
           type: 'kosta-outlook-oauth',
           code: params.get('code') || '',
           state: params.get('state') || '',
           error: params.get('error_description') || params.get('error') || '',
         };
-        const message = JSON.stringify(payload);
+        var message = JSON.stringify(payload);
+        var done = false;
 
-        function sendOffice() {
-          if (window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent) {
-            Office.onReady(function () {
-              Office.context.ui.messageParent(message);
-            });
-            return true;
-          }
-          return false;
+        function mark(text) {
+          try { document.getElementById('msg').textContent = text; } catch (e) {}
+        }
+
+        function finish() {
+          if (done) return;
+          done = true;
         }
 
         function sendTeams() {
           try {
             if (!window.microsoftTeams || !microsoftTeams.authentication)
               return false;
-            const notify = function () {
-              if (payload.error)
-                microsoftTeams.authentication.notifyFailure(payload.error);
-              else
-                microsoftTeams.authentication.notifySuccess(message);
+            var notify = function () {
+              try {
+                if (payload.error)
+                  microsoftTeams.authentication.notifyFailure(String(payload.error));
+                else
+                  microsoftTeams.authentication.notifySuccess(message);
+                finish();
+                mark('Можно закрыть окно');
+              } catch (e) {
+                /* not a Teams auth window */
+              }
             };
             if (microsoftTeams.app && microsoftTeams.app.initialize) {
-              microsoftTeams.app.initialize().then(notify).catch(notify);
+              microsoftTeams.app.initialize().then(notify).catch(function () { notify(); });
+            } else if (microsoftTeams.initialize) {
+              try { microsoftTeams.initialize(notify); } catch (e) { notify(); }
             } else {
               notify();
             }
@@ -53,28 +63,69 @@
           }
         }
 
+        function sendOffice() {
+          try {
+            if (!(window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent))
+              return false;
+            Office.context.ui.messageParent(message);
+            finish();
+            mark('Можно закрыть окно');
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
         function sendOpener() {
-          if (window.opener) {
+          try {
+            if (!window.opener)
+              return false;
             window.opener.postMessage(payload, window.location.origin);
+            finish();
             window.close();
             return true;
+          } catch (e) {
+            return false;
           }
-          return false;
         }
 
-        function send() {
-          if (sendOffice())
-            return;
+        function sendAll() {
+          // Teams auth popup first — Office.onReady often never fires there.
           if (sendTeams())
             return;
-          sendOpener();
+          if (sendOffice())
+            return;
+          if (sendOpener())
+            return;
         }
 
-        if (window.Office) {
-          Office.onReady(send);
-        } else {
-          send();
+        // Kick Teams immediately (CDN script is sync above).
+        sendAll();
+
+        if (window.Office && Office.onReady) {
+          Office.onReady(function () {
+            if (!done)
+              sendAll();
+          });
         }
+
+        // Retry a few times while host bridges finish loading.
+        var tries = 0;
+        var timer = setInterval(function () {
+          tries += 1;
+          if (done || tries > 20) {
+            clearInterval(timer);
+            if (!done) {
+              mark('Не удалось вернуть результат входа');
+              try {
+                document.getElementById('hint').textContent =
+                  'Закройте окно и нажмите «Войти через Microsoft» ещё раз.';
+              } catch (e) {}
+            }
+            return;
+          }
+          sendAll();
+        }, 250);
       })();
     </script>
   </body>

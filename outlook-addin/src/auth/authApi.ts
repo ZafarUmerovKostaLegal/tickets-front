@@ -1,4 +1,9 @@
-import { naaTokenInteractive, naaTokenSilent, type AzureAppInfo } from './naa';
+import {
+  naaTokenInteractive,
+  naaTokenSilent,
+  usesExternalDialogAuth,
+  type AzureAppInfo,
+} from './naa';
 import { createPkcePair, randomState } from './pkce';
 import {
   clearSession,
@@ -288,14 +293,18 @@ export async function getGraphToken(): Promise<string | null> {
 export async function loginWithHub(): Promise<AuthProfile> {
   if (!gatewayOrigin())
     throw new Error('Укажите File Manager API в настройках');
-  try {
-    const result = await naaTokenInteractive(await azureApp());
-    if (result) {
-      const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
-      authMethod = 'sso';
-      return me;
+  // In Teams the nestable MSAL popup hits OneAuth 2400 and closes immediately.
+  // Go straight to the host auth dialog (Teams authentication.authenticate).
+  if (!usesExternalDialogAuth()) {
+    try {
+      const result = await naaTokenInteractive(await azureApp());
+      if (result) {
+        const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
+        authMethod = 'sso';
+        return me;
+      }
+    } catch {
     }
-  } catch {
   }
   const me = await loginWithDialog();
   authMethod = 'dialog';
@@ -518,9 +527,16 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
         return;
       } catch (error) {
         const text = String((error as { message?: unknown })?.message ?? error ?? '');
-        // Not running in Teams, or user closed the window — fall through to popup.
-        if (/cancelled|canceled|user_cancelled|user canceled/i.test(text)) {
-          fail(new Error('Окно входа закрыто'));
+        // User closed the Teams auth window, or host cancelled before callback notified success.
+        if (/cancelled|canceled|user_cancelled|user canceled|resource.not.allowed/i.test(text)) {
+          fail(new Error(
+            'Окно входа закрылось до завершения. Нажмите «Войти через Microsoft» ещё раз и дождитесь входа Microsoft — не закрывайте окно сами.',
+          ));
+          return;
+        }
+        if (text) {
+          // Teams present but authenticate failed for another reason — don't silently use window.open.
+          fail(new Error(humanizeOAuthError(text)));
           return;
         }
       }

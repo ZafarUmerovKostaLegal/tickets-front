@@ -30,9 +30,20 @@ function describe(error: unknown): { status: SsoStatus; text: string } {
 }
 
 let hostBridge = false;
+/** Teams / hosts where MSAL acquireTokenPopup is invalid (OneAuth 2400). */
+let externalDialogAuth = false;
 
 export function enableHostAuthBridge(on: boolean): void {
   hostBridge = on;
+}
+
+/** Prefer Teams/Office host dialog instead of nestable MSAL popup. */
+export function preferExternalDialogAuth(on: boolean): void {
+  externalDialogAuth = on;
+}
+
+export function usesExternalDialogAuth(): boolean {
+  return externalDialogAuth;
 }
 
 export function naaSupported(): boolean {
