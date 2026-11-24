@@ -233,9 +233,12 @@ export function signInSilently(options: { force?: boolean } = {}): Promise<AuthP
       if (me)
         return me;
     }
-    const sso = await officeSso();
-    if (sso)
-      return sso;
+    // Teams: nestable MSAL hits OneAuth 2400 — skip and use host dialog instead.
+    if (!usesExternalDialogAuth()) {
+      const sso = await officeSso();
+      if (sso)
+        return sso;
+    }
     if (options.force) {
       storeHubAccessToken('');
       return hubSession();
@@ -506,37 +509,43 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
 
     const popupUrl = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
 
-    // Teams (and other hosts without Office dialogs): window.open is blocked in the iframe.
+    // Teams: window.open is blocked. Open Azure authorize URL directly (isExternal) so the
+    // host does not close the window on the first redirect away from our domain.
     void (async () => {
       try {
         const { authentication } = await import('@microsoft/teams-js');
         const raw = await authentication.authenticate({
-          url: popupUrl,
-          width: 480,
-          height: 680,
+          url: authorizeUrl,
+          width: 520,
+          height: 720,
+          isExternal: true,
         });
-        const payload = (typeof raw === 'string' && raw.startsWith('{')
-          ? JSON.parse(raw)
-          : { type: 'kosta-outlook-oauth', code: String(raw || ''), state: expectedState }) as {
-          type?: string;
-          code?: string;
-          state?: string;
-          error?: string;
-        };
+        let payload: { type?: string; code?: string; state?: string; error?: string };
+        if (typeof raw === 'string' && raw.startsWith('{'))
+          payload = JSON.parse(raw) as typeof payload;
+        else if (typeof raw === 'string' && raw.length > 8)
+          payload = { type: 'kosta-outlook-oauth', code: raw, state: expectedState };
+        else
+          throw new Error('Пустой ответ окна входа Teams');
         handlePayload(payload);
         return;
       } catch (error) {
         const text = String((error as { message?: unknown })?.message ?? error ?? '');
-        // User closed the Teams auth window, or host cancelled before callback notified success.
-        if (/cancelled|canceled|user_cancelled|user canceled|resource.not.allowed/i.test(text)) {
+        if (/cancelled|canceled|user_cancelled|user canceled/i.test(text)) {
           fail(new Error(
-            'Окно входа закрылось до завершения. Нажмите «Войти через Microsoft» ещё раз и дождитесь входа Microsoft — не закрывайте окно сами.',
+            'Вход не завершён: окно Microsoft закрылось. Нажмите «Войти через Microsoft» снова и дождитесь возврата в Kosta File.',
           ));
           return;
         }
-        if (text) {
-          // Teams present but authenticate failed for another reason — don't silently use window.open.
-          fail(new Error(humanizeOAuthError(text)));
+        if (/resource\.not\.allowed|invalid.*domain|domain/i.test(text)) {
+          fail(new Error(
+            'Teams блокирует окно входа: в манифесте должны быть domains tickets.kostalegal.com и login.microsoftonline.com. Обновите KostaFile.Teams.zip в Admin Center.',
+          ));
+          return;
+        }
+        // Fall through to window.open / hub-login bridge when Teams auth API is absent.
+        if (usesExternalDialogAuth() && text) {
+          fail(new Error(humanizeOAuthError(text) || 'Не удалось открыть вход Teams'));
           return;
         }
       }
@@ -544,7 +553,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       const popup = window.open(popupUrl, 'kosta-hub-login', 'width=480,height=680');
       if (!popup) {
         fail(new Error(
-          'Не удалось открыть окно входа. В Teams обновите приложение Kosta File и нажмите «Войти» снова; в браузере разрешите всплывающие окна.',
+          'Не удалось открыть окно входа. Разрешите всплывающие окна или обновите приложение Kosta File в Teams.',
         ));
         return;
       }

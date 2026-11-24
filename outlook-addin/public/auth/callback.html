@@ -25,38 +25,38 @@
         var message = JSON.stringify(payload);
         var done = false;
 
-        function mark(text) {
+        function mark(text, hint) {
           try { document.getElementById('msg').textContent = text; } catch (e) {}
+          if (hint) {
+            try { document.getElementById('hint').textContent = hint; } catch (e) {}
+          }
         }
 
-        function finish() {
+        function finish(ok) {
           if (done) return;
           done = true;
+          mark(ok ? 'Вход выполнен — возвращаемся…' : 'Ошибка входа', ok ? 'Это окно можно закрыть.' : '');
         }
 
+        // Teams auth popup: notifySuccess WITHOUT app.initialize() — initialize often breaks the dialog.
         function sendTeams() {
           try {
-            if (!window.microsoftTeams || !microsoftTeams.authentication)
+            var auth = window.microsoftTeams && microsoftTeams.authentication;
+            if (!auth || typeof auth.notifySuccess !== 'function')
               return false;
-            var notify = function () {
+            if (payload.error) {
+              auth.notifyFailure(String(payload.error));
+            } else if (payload.code) {
+              // Prefer raw code — some Teams hosts accept plain string; JSON also handled by parent.
               try {
-                if (payload.error)
-                  microsoftTeams.authentication.notifyFailure(String(payload.error));
-                else
-                  microsoftTeams.authentication.notifySuccess(message);
-                finish();
-                mark('Можно закрыть окно');
-              } catch (e) {
-                /* not a Teams auth window */
+                auth.notifySuccess(message);
+              } catch (e1) {
+                auth.notifySuccess(payload.code);
               }
-            };
-            if (microsoftTeams.app && microsoftTeams.app.initialize) {
-              microsoftTeams.app.initialize().then(notify).catch(function () { notify(); });
-            } else if (microsoftTeams.initialize) {
-              try { microsoftTeams.initialize(notify); } catch (e) { notify(); }
             } else {
-              notify();
+              auth.notifyFailure('empty_oauth_response');
             }
+            finish(!payload.error && !!payload.code);
             return true;
           } catch (e) {
             return false;
@@ -68,8 +68,7 @@
             if (!(window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent))
               return false;
             Office.context.ui.messageParent(message);
-            finish();
-            mark('Можно закрыть окно');
+            finish(!payload.error && !!payload.code);
             return true;
           } catch (e) {
             return false;
@@ -81,8 +80,8 @@
             if (!window.opener)
               return false;
             window.opener.postMessage(payload, window.location.origin);
-            finish();
-            window.close();
+            finish(!payload.error && !!payload.code);
+            try { window.close(); } catch (e) {}
             return true;
           } catch (e) {
             return false;
@@ -90,18 +89,16 @@
         }
 
         function sendAll() {
-          // Teams auth popup first — Office.onReady often never fires there.
           if (sendTeams())
             return;
           if (sendOffice())
             return;
-          if (sendOpener())
-            return;
+          sendOpener();
         }
 
-        // Kick Teams immediately (CDN script is sync above).
         sendAll();
 
+        // Late Office bridge (Outlook dialog).
         if (window.Office && Office.onReady) {
           Office.onReady(function () {
             if (!done)
@@ -109,23 +106,36 @@
           });
         }
 
-        // Retry a few times while host bridges finish loading.
+        // After Teams CDN + host bridge settle.
         var tries = 0;
         var timer = setInterval(function () {
           tries += 1;
-          if (done || tries > 20) {
+          if (done || tries > 40) {
             clearInterval(timer);
             if (!done) {
-              mark('Не удалось вернуть результат входа');
+              // Last resort: try initialize then notify (some desktop Teams builds need it).
               try {
-                document.getElementById('hint').textContent =
-                  'Закройте окно и нажмите «Войти через Microsoft» ещё раз.';
+                if (window.microsoftTeams && microsoftTeams.app && microsoftTeams.app.initialize) {
+                  microsoftTeams.app.initialize().then(function () {
+                    if (!done)
+                      sendAll();
+                  }).catch(function () {});
+                }
               } catch (e) {}
+              setTimeout(function () {
+                if (!done) {
+                  mark(
+                    'Не удалось вернуть код входа в Teams',
+                    'Закройте окно и нажмите «Войти через Microsoft» ещё раз.',
+                  );
+                }
+              }, 800);
             }
             return;
           }
-          sendAll();
-        }, 250);
+          if (!done)
+            sendAll();
+        }, 200);
       })();
     </script>
   </body>

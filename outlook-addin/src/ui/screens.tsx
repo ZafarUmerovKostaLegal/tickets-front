@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { currentAuthMethod } from '../auth/authApi';
-import { ssoProblem, ssoState } from '../auth/naa';
+import { ssoProblem, ssoState, usesExternalDialogAuth } from '../auth/naa';
 import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
 import { Icon } from './icons';
@@ -51,6 +51,9 @@ export function Brand({ sub }: { sub?: string }) {
 }
 
 function SsoProblem() {
+  // Teams uses host dialog auth — OneAuth 2400 noise only confuses users.
+  if (usesExternalDialogAuth())
+    return null;
   const problem = ssoProblem();
   if (!problem)
     return null;

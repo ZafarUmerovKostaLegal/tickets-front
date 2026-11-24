@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { app, nestedAppAuth, pages } from '@microsoft/teams-js';
+import { app, pages } from '@microsoft/teams-js';
 import '../styles.css';
 import { enableHostAuthBridge, preferExternalDialogAuth } from '../auth/naa';
 import { Brand } from '../ui/screens';
@@ -108,12 +108,9 @@ async function start(): Promise<void> {
     return;
   }
 
+  // Teams iframe: nestable MSAL popup is invalid (OneAuth 2400). Use host auth dialog only.
   preferExternalDialogAuth(true);
-  try {
-    enableHostAuthBridge(nestedAppAuth.isNAAChannelRecommended());
-  } catch {
-    enableHostAuthBridge(false);
-  }
+  enableHostAuthBridge(false);
 
   const chatId = context.chat?.id ?? null;
   if (!chatId || !inMeetingContext(context)) {
