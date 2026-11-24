@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Kosta File — вход</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="https://res.cdn.office.net/teams-js/2.31.1/js/MicrosoftTeams.min.js"></script>
     <style>
       body { font-family: "Segoe UI", sans-serif; padding: 24px; color: #1f2937; }
     </style>
@@ -19,19 +20,56 @@
           state: params.get('state') || '',
           error: params.get('error_description') || params.get('error') || '',
         };
-        function send() {
-          const message = JSON.stringify(payload);
+        const message = JSON.stringify(payload);
+
+        function sendOffice() {
           if (window.Office && Office.context && Office.context.ui && Office.context.ui.messageParent) {
             Office.onReady(function () {
               Office.context.ui.messageParent(message);
             });
-            return;
+            return true;
           }
+          return false;
+        }
+
+        function sendTeams() {
+          try {
+            if (!window.microsoftTeams || !microsoftTeams.authentication)
+              return false;
+            const notify = function () {
+              if (payload.error)
+                microsoftTeams.authentication.notifyFailure(payload.error);
+              else
+                microsoftTeams.authentication.notifySuccess(message);
+            };
+            if (microsoftTeams.app && microsoftTeams.app.initialize) {
+              microsoftTeams.app.initialize().then(notify).catch(notify);
+            } else {
+              notify();
+            }
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        function sendOpener() {
           if (window.opener) {
             window.opener.postMessage(payload, window.location.origin);
             window.close();
+            return true;
           }
+          return false;
         }
+
+        function send() {
+          if (sendOffice())
+            return;
+          if (sendTeams())
+            return;
+          sendOpener();
+        }
+
         if (window.Office) {
           Office.onReady(send);
         } else {

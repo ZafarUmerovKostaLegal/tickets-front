@@ -127,7 +127,9 @@ export function ssoProblem(): string {
     return 'Нужно один раз разрешить вход: нажмите «Войти через Microsoft». Если Office просит согласие администратора — его даёт администратор в Azure.';
   if (/AADSTS700016|AADSTS90002/i.test(error))
     return 'Office не нашёл приложение Kosta в Azure — сообщите администратору.';
+  if (/ApiContractViolation|OneAuth|ErrorCode":"2400"|operation attempted is invalid/i.test(error))
+    return 'Автоматический вход в этой панели недоступен — нажмите «Войти через Microsoft», откроется окно Teams/Office.';
   if (status === 'consent')
     return 'Office просит подтвердить вход: нажмите «Войти через Microsoft» один раз — дальше остальные программы войдут сами.';
-  return 'Office не выдал вход автоматически — сообщите администратору текст ниже.';
+  return 'Office не выдал вход автоматически — нажмите «Войти через Microsoft». Если снова ошибка, пришлите текст ниже администратору.';
 }

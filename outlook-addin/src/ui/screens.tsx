@@ -81,7 +81,7 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
       </button>
       {error ? <p className="kf-alert kf-alert--error" role="alert">{error}</p> : null}
       <SsoProblem />
-      <p className="kf-signin__hint">Если Outlook покажет окно с кнопкой Allow, нажмите её — это разрешение открыть окно входа.</p>
+      <p className="kf-signin__hint">Откроется окно входа Microsoft. Если хост спросит Allow / Разрешить — нажмите, затем войдите своей учётной записью.</p>
     </main>
   );
 }

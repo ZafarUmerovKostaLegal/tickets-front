@@ -496,28 +496,60 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
     }
 
     const popupUrl = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
-    const popup = window.open(popupUrl, 'kosta-hub-login', 'width=480,height=680');
-    if (!popup) {
-      fail(new Error('Браузер заблокировал окно входа'));
-      return;
-    }
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin)
+
+    // Teams (and other hosts without Office dialogs): window.open is blocked in the iframe.
+    void (async () => {
+      try {
+        const { authentication } = await import('@microsoft/teams-js');
+        const raw = await authentication.authenticate({
+          url: popupUrl,
+          width: 480,
+          height: 680,
+        });
+        const payload = (typeof raw === 'string' && raw.startsWith('{')
+          ? JSON.parse(raw)
+          : { type: 'kosta-outlook-oauth', code: String(raw || ''), state: expectedState }) as {
+          type?: string;
+          code?: string;
+          state?: string;
+          error?: string;
+        };
+        handlePayload(payload);
         return;
-      const data = event.data as {
-        type?: string;
-        code?: string;
-        state?: string;
-        error?: string;
+      } catch (error) {
+        const text = String((error as { message?: unknown })?.message ?? error ?? '');
+        // Not running in Teams, or user closed the window — fall through to popup.
+        if (/cancelled|canceled|user_cancelled|user canceled/i.test(text)) {
+          fail(new Error('Окно входа закрыто'));
+          return;
+        }
+      }
+
+      const popup = window.open(popupUrl, 'kosta-hub-login', 'width=480,height=680');
+      if (!popup) {
+        fail(new Error(
+          'Не удалось открыть окно входа. В Teams обновите приложение Kosta File и нажмите «Войти» снова; в браузере разрешите всплывающие окна.',
+        ));
+        return;
+      }
+      const onMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin)
+          return;
+        const data = event.data as {
+          type?: string;
+          code?: string;
+          state?: string;
+          error?: string;
+        };
+        if (data?.type === 'kosta-outlook-ready')
+          return;
+        if (data?.type !== 'kosta-outlook-oauth' && data?.type !== 'kosta-hub-oauth')
+          return;
+        window.removeEventListener('message', onMessage);
+        popup.close();
+        handlePayload(data);
       };
-      if (data?.type === 'kosta-outlook-ready')
-        return;
-      if (data?.type !== 'kosta-outlook-oauth' && data?.type !== 'kosta-hub-oauth')
-        return;
-      window.removeEventListener('message', onMessage);
-      popup.close();
-      handlePayload(data);
-    };
-    window.addEventListener('message', onMessage);
+      window.addEventListener('message', onMessage);
+    })();
   });
 }

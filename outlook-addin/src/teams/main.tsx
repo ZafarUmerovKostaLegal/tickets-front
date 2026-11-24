@@ -18,7 +18,7 @@ function applyTheme(theme: string | undefined): void {
   document.body.dataset.theme = dark ? 'dark' : 'light';
 }
 
-const OUTSIDE = 'Откройте Kosta File внутри встречи Teams — вне встречи сохранять нечего.';
+const OUTSIDE = 'Откройте Kosta File из Apps во время собрания Teams — вне встречи сохранять нечего.';
 
 function teamsSource(chatId: string | null): MeetingSource | null {
   if (!chatId)
@@ -38,9 +38,24 @@ function ConfigPage() {
     <main className="kf-teams">
       <Brand sub="Запись встречи" />
       <p className="kf-teams__label">
-        Kosta File появится в панели встречи. Выберите там matter и папку — запись и расшифровка встречи сохранятся в Kosta Hub автоматически.
+        Нажмите «Сохранить» / «Add» в шапке Teams — Kosta File откроется в боковой панели этой встречи.
       </p>
-      <p className="kf-teams__label">Нажмите «Сохранить», чтобы добавить приложение.</p>
+    </main>
+  );
+}
+
+/** Personal tab / opened outside a meeting chat — guide into the in-meeting Apps flow. */
+function HowToOpen() {
+  return (
+    <main className="kf-teams">
+      <Brand sub="Запись встречи" />
+      <ol className="kf-teams__steps">
+        <li>Добавьте приложение себе: в Apps выберите <strong>Add for me</strong> / «Добавить для меня» — не выбирайте собрание из списка.</li>
+        <li>Войдите в нужное собрание Teams.</li>
+        <li>В собрании откройте <strong>Apps</strong> (+) → <strong>Kosta File</strong>.</li>
+        <li>Выберите matter и папку — запись и расшифровка сохранятся в Kosta Hub.</li>
+      </ol>
+      <p className="kf-alert kf-alert--error">{OUTSIDE}</p>
     </main>
   );
 }
@@ -49,9 +64,17 @@ function OutsideTeams() {
   return (
     <main className="kf-teams">
       <Brand sub="Запись встречи" />
-      <p className="kf-alert kf-alert--error">Эта страница открывается внутри Microsoft Teams. Добавьте Kosta File во встречу Teams.</p>
+      <p className="kf-alert kf-alert--error">Эта страница открывается внутри Microsoft Teams.</p>
     </main>
   );
+}
+
+function inMeetingContext(context: app.Context): boolean {
+  // Personal static tab has no meeting/chat — show how-to. Meeting side panel has chat id.
+  if (context.meeting?.id)
+    return true;
+  const frame = String(context.page?.frameContext ?? '');
+  return Boolean(context.chat?.id) && (frame === 'sidePanel' || frame === 'meetingStage' || frame === 'content');
 }
 
 async function start(): Promise<void> {
@@ -90,7 +113,14 @@ async function start(): Promise<void> {
   } catch {
     enableHostAuthBridge(false);
   }
-  root.render(<MeetingPanel source={teamsSource(context.chat?.id ?? null)} outside={OUTSIDE} />);
+
+  const chatId = context.chat?.id ?? null;
+  if (!chatId || !inMeetingContext(context)) {
+    root.render(<HowToOpen />);
+    return;
+  }
+
+  root.render(<MeetingPanel source={teamsSource(chatId)} outside={OUTSIDE} />);
 }
 
 void start();
