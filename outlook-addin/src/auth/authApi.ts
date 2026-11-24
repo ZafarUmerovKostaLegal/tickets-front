@@ -507,18 +507,20 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       return;
     }
 
-    const popupUrl = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
+    // Teams only accepts authenticate() URLs on domains from the app manifest (validDomains).
+    // login.microsoftonline.com as the start URL → "Auth url is not valid".
+    // Start on our hub-login page (tickets.kostalegal.com), then redirect to Azure from there.
+    const withAzure = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
+    // Prefer short URL + localStorage when the query would be huge (some Teams builds reject long auth URLs).
+    const teamsAuthUrl = withAzure.length <= 1800 ? withAzure : hubLoginPageUrl();
 
-    // Teams: window.open is blocked. Open Azure authorize URL directly (isExternal) so the
-    // host does not close the window on the first redirect away from our domain.
     void (async () => {
       try {
         const { authentication } = await import('@microsoft/teams-js');
         const raw = await authentication.authenticate({
-          url: authorizeUrl,
+          url: teamsAuthUrl,
           width: 520,
           height: 720,
-          isExternal: true,
         });
         let payload: { type?: string; code?: string; state?: string; error?: string };
         if (typeof raw === 'string' && raw.startsWith('{'))
@@ -531,26 +533,25 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
         return;
       } catch (error) {
         const text = String((error as { message?: unknown })?.message ?? error ?? '');
+        if (/auth url is not valid/i.test(text)) {
+          fail(new Error(
+            'Teams не принял URL входа. Обновите приложение пакетом KostaFile.Teams.zip (в validDomains должен быть tickets.kostalegal.com).',
+          ));
+          return;
+        }
         if (/cancelled|canceled|user_cancelled|user canceled/i.test(text)) {
           fail(new Error(
             'Вход не завершён: окно Microsoft закрылось. Нажмите «Войти через Microsoft» снова и дождитесь возврата в Kosta File.',
           ));
           return;
         }
-        if (/resource\.not\.allowed|invalid.*domain|domain/i.test(text)) {
-          fail(new Error(
-            'Teams блокирует окно входа: в манифесте должны быть domains tickets.kostalegal.com и login.microsoftonline.com. Обновите KostaFile.Teams.zip в Admin Center.',
-          ));
-          return;
-        }
-        // Fall through to window.open / hub-login bridge when Teams auth API is absent.
         if (usesExternalDialogAuth() && text) {
           fail(new Error(humanizeOAuthError(text) || 'Не удалось открыть вход Teams'));
           return;
         }
       }
 
-      const popup = window.open(popupUrl, 'kosta-hub-login', 'width=480,height=680');
+      const popup = window.open(withAzure, 'kosta-hub-login', 'width=480,height=680');
       if (!popup) {
         fail(new Error(
           'Не удалось открыть окно входа. Разрешите всплывающие окна или обновите приложение Kosta File в Teams.',

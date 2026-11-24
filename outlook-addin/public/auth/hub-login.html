@@ -54,13 +54,30 @@
           return new URLSearchParams(window.location.search).get('azure') || '';
         }
 
-        var azure = tryLocal() || tryQuery();
-        if (azure) {
-          go(azure);
-          return;
+        function tryStart() {
+          var azure = tryQuery() || tryLocal();
+          if (azure) {
+            go(azure);
+            return true;
+          }
+          return false;
         }
 
-        document.getElementById('hint').textContent = 'Ждём ссылку входа от панели Kosta File…';
+        if (tryStart())
+          return;
+
+        document.getElementById('hint').textContent = 'Ждём ссылку входа…';
+
+        // Teams auth WebView may see localStorage a moment later than the side panel wrote it.
+        var polls = 0;
+        var pollTimer = setInterval(function () {
+          polls += 1;
+          if (tryStart() || polls > 25) {
+            clearInterval(pollTimer);
+            if (!redirected && polls > 25)
+              fail('Не найден URL входа Azure. Закройте окно и нажмите «Войти» ещё раз.');
+          }
+        }, 200);
 
         function askParent() {
           try {
@@ -99,14 +116,7 @@
             setTimeout(function () {
               if (!redirected) askParent();
             }, 400);
-            setTimeout(function () {
-              if (!redirected) {
-                fail('Не найден URL входа Azure. Закройте окно, нажмите Allow если спросят, затем «Войти» ещё раз.');
-              }
-            }, 8000);
           });
-        } else {
-          fail('Не найден URL входа Azure. Закройте окно и нажмите «Войти» ещё раз.');
         }
       })();
     </script>
