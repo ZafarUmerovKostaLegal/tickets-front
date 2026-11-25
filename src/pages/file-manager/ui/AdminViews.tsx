@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { filesApi, type AddinClient, type AuditRow, type ClientsResponse } from '../api/filesApi';
-import { formatBytes, formatDateTime, parseTemplate } from '../lib/filesFormat';
+import { formatDateTime, parseTemplate } from '../lib/filesFormat';
 import { FmSelect } from './fmSelect';
 import { Icon, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 
@@ -139,68 +139,6 @@ function Stat({ label, value, sub, tone }: { label: string; value: string | numb
             <strong>{value}</strong>
             {sub ? <small>{sub}</small> : null}
         </div>
-    );
-}
-
-export function MonitoringView({ onOpenAudit }: { onOpenAudit: () => void }) {
-    const { tr, locale } = useFm();
-    const stats = useLoad(() => filesApi.stats(), []);
-    const data = stats.data;
-    return (
-        <section className="fm-docs fm-docs--padded">
-            <StateBlock loading={stats.loading && !data} error={stats.error} onRetry={stats.reload}>
-                {data ? (
-                    <>
-                        <div className="fm-stats">
-                            <Stat label={tr('monitoring.documents')} value={data.documents} />
-                            <Stat label={tr('monitoring.storage')} value={formatBytes(data.storedBytes, locale)} sub={`${data.versions} ${tr('monitoring.versions')}`} />
-                            <Stat label={tr('monitoring.uploadsWeek')} value={data.uploadsWeek} />
-                            <Stat label={tr('monitoring.downloadsDay')} value={data.downloadsDay} />
-                            <Stat label={tr('monitoring.deniedDay')} value={data.deniedDay} tone={data.deniedDay ? 'alert' : undefined} />
-                            <Stat label={tr('monitoring.checkedOut')} value={data.checkedOut} />
-                            <Stat label={tr('monitoring.inTrash')} value={data.inTrash} />
-                            <Stat label={tr('monitoring.pending')} value={data.pendingRequests} tone={data.pendingRequests ? 'alert' : undefined} />
-                        </div>
-                        <div className="fm-panels">
-                            <div className="fm-panel">
-                                <h3>{tr('monitoring.activeUsers')}</h3>
-                                {data.activeUsers.length ? (
-                                    <ol>{data.activeUsers.map((row) => <li key={row.userId}><span>{row.name}</span><em>{row.events} {tr('monitoring.events')}</em></li>)}</ol>
-                                ) : <p className="fm-muted">{tr('monitoring.noData')}</p>}
-                            </div>
-                            <div className="fm-panel">
-                                <h3>{tr('monitoring.activeMatters')}</h3>
-                                {data.activeMatters.length ? (
-                                    <ol>{data.activeMatters.map((row) => <li key={row.matterId}><span>{row.name}</span><em>{row.events} {tr('monitoring.events')}</em></li>)}</ol>
-                                ) : <p className="fm-muted">{tr('monitoring.noData')}</p>}
-                            </div>
-                            <div className="fm-panel">
-                                <h3>{tr('monitoring.topDownloaders')}</h3>
-                                {data.topDownloaders.length ? (
-                                    <ol>{data.topDownloaders.map((row) => <li key={row.userId}><span>{row.name}</span><em>{row.downloads} {tr('monitoring.downloads')}</em></li>)}</ol>
-                                ) : <p className="fm-muted">{tr('monitoring.noData')}</p>}
-                            </div>
-                            <div className="fm-panel fm-panel--alert">
-                                <h3>
-                                    {tr('monitoring.recentDenied')}
-                                    <button type="button" className="fm-link" onClick={onOpenAudit}>{tr('nav.audit')}</button>
-                                </h3>
-                                {data.recentDenied.length ? (
-                                    <ul>
-                                        {data.recentDenied.map((row) => (
-                                            <li key={row.id}>
-                                                <span>{row.userName} → {row.matterName || row.targetName}</span>
-                                                <em>{formatDateTime(row.at, locale)}</em>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : <p className="fm-muted">{tr('monitoring.noData')}</p>}
-                            </div>
-                        </div>
-                    </>
-                ) : null}
-            </StateBlock>
-        </section>
     );
 }
 

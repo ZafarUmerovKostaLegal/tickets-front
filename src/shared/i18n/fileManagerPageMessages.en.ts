@@ -760,6 +760,17 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         hosts: { outlook: 'Outlook', word: 'Word', excel: 'Excel', powerpoint: 'PowerPoint', unknown: 'Office' },
         platforms: { windows: 'Windows', mac: 'Mac', web: 'Browser', ios: 'iPhone / iPad', android: 'Android', unknown: '' },
     },
+    monitoringX: {
+        subtitle: 'File manager activity',
+        updated: 'updated at {time}',
+        alertDenied: 'Access denials in the last 24 h: {n} — check the audit log',
+        alertPending: 'Access requests waiting: {n}',
+        emptyActivity: 'No activity in the last 7 days',
+        emptyDownloads: 'Nothing downloaded in the last 24 h',
+        emptyDenied: 'No access denials — all quiet',
+        events: { zero: 'events', one: 'event', two: 'events', few: 'events', many: 'events', other: 'events' },
+        downloads: { zero: 'downloads', one: 'download', two: 'downloads', few: 'downloads', many: 'downloads', other: 'downloads' },
+    },
     monitoring: {
         title: 'Monitoring',
         documents: 'Documents',

@@ -758,6 +758,17 @@ export const fileManagerPageMessages = {
         hosts: { outlook: 'Outlook', word: 'Word', excel: 'Excel', powerpoint: 'PowerPoint', unknown: 'Office' },
         platforms: { windows: 'Windows', mac: 'Mac', web: 'Браузер', ios: 'iPhone / iPad', android: 'Android', unknown: '' },
     },
+    monitoringX: {
+        subtitle: 'Активность файлового менеджера',
+        updated: 'обновлено в {time}',
+        alertDenied: 'Отказов в доступе за сутки: {n} — проверьте журнал аудита',
+        alertPending: 'Ждут решения запросов доступа: {n}',
+        emptyActivity: 'За 7 дней действий не было',
+        emptyDownloads: 'За сутки ничего не скачивали',
+        emptyDenied: 'Отказов в доступе нет — всё спокойно',
+        events: { zero: 'событий', one: 'событие', two: 'события', few: 'события', many: 'событий', other: 'события' },
+        downloads: { zero: 'скачиваний', one: 'скачивание', two: 'скачивания', few: 'скачивания', many: 'скачиваний', other: 'скачивания' },
+    },
     monitoring: {
         title: 'Мониторинг',
         documents: 'Документов',
