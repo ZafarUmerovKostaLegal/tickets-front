@@ -2,6 +2,7 @@ import {
   naaTokenInteractive,
   naaTokenSilent,
   rememberHostSso,
+  ssoState,
   type AzureAppInfo,
 } from './naa';
 import { createPkcePair, randomState } from './pkce';
@@ -67,7 +68,7 @@ function authHeaders(): HeadersInit {
   return headers;
 }
 
-function outlookEmailHint(): string {
+export function outlookEmailHint(): string {
   try {
     return (Office?.context?.mailbox?.userProfile?.emailAddress || '').trim();
   } catch {
@@ -214,7 +215,7 @@ async function hostSsoToken(interactive: boolean): Promise<string | null> {
       allowConsentPrompt: interactive,
       forMSGraphAccess: false,
     });
-    return interactive ? request : withTimeout(request, 10000, 'Office SSO');
+    return withTimeout(request, interactive ? 60000 : 10000, 'Office SSO');
   }
   return null;
 }
@@ -346,24 +347,45 @@ export async function getGraphToken(): Promise<string | null> {
   }
 }
 
+let signinSteps: string[] = [];
+
+export function signinDetails(): string {
+  return signinSteps.join('\n');
+}
+
+function describeLoginError(error: unknown): string {
+  return error instanceof Error ? error.message : hostErrorText(error);
+}
+
 export async function loginWithHub(): Promise<AuthProfile> {
+  signinSteps = [];
   if (!gatewayOrigin())
     throw new Error('Укажите File Manager API в настройках');
   const host = await hostSso(true);
   if (host)
     return host;
   try {
-    const result = await naaTokenInteractive(await azureApp());
+    const result = await withTimeout(naaTokenInteractive(await azureApp()), 90000, 'NAA');
     if (result) {
       const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
       authMethod = 'sso';
       return me;
     }
-  } catch {
+  } catch (error) {
+    signinSteps.push(`NAA: ${describeLoginError(error)}`);
   }
-  const me = await loginWithDialog();
-  authMethod = 'dialog';
-  return me;
+  const sso = ssoState().error;
+  if (sso)
+    signinSteps.unshift(...sso.split(' · '));
+  try {
+    const me = await loginWithDialog();
+    authMethod = 'dialog';
+    signinSteps = [];
+    return me;
+  } catch (error) {
+    signinSteps.push(`Окно входа: ${describeLoginError(error)}`);
+    throw error;
+  }
 }
 
 async function loginWithDialog(): Promise<AuthProfile> {
@@ -516,7 +538,8 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
         { height: 65, width: 42, displayInIframe: false },
         (result) => {
           if (result.status !== Office.AsyncResultStatus.Succeeded) {
-            fail(result.error ?? new Error('Не удалось открыть окно входа. Если был запрос Allow — нажмите Allow.'));
+            const code = result.error ? hostErrorText(result.error) : '';
+            fail(new Error(`Не удалось открыть окно входа${code ? ` (${code})` : ''}. Если был запрос Allow — нажмите Allow.`));
             return;
           }
           const dialog = result.value;

@@ -20,8 +20,8 @@ import {
   type Location,
   type Suggestion,
 } from '../api';
-import { loginWithHub, logoutHub, signInSilently } from '../auth/authApi';
-import { startPresence } from '../presence';
+import { loginWithHub, logoutHub, signInSilently, signinDetails } from '../auth/authApi';
+import { officeHost, officePlatform, officeVersion, reportSigninProblem, startPresence } from '../presence';
 import { clearLegacyOutlookTokens, type AuthProfile } from '../auth/session';
 import { filterClients, folderPath, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
 import { fileDropped, fileMail, fileOfficeDocument, ruleTarget, type FileResult } from '../filing';
@@ -68,6 +68,10 @@ function writeUi(state: UiState): void {
   }
 }
 
+function signinEnvironment(): string {
+  return `Устройство: ${officeHost()} · ${officePlatform()} · Office ${officeVersion() || '?'} · Kosta File ${import.meta.env.VITE_ADDIN_VERSION || '?'}`;
+}
+
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -96,6 +100,7 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [signInBusy, setSignInBusy] = useState(false);
   const [signInError, setSignInError] = useState('');
+  const [signInDetails, setSignInDetails] = useState('');
 
   const ui = useRef(readUi());
   const [tab, setTab] = useState<Tab>(ui.current.tab);
@@ -209,12 +214,17 @@ export function App({ host }: { host: Office.HostType | null }) {
   const signIn = async () => {
     setSignInBusy(true);
     setSignInError('');
+    setSignInDetails('');
     try {
       const me = await loginWithHub();
       setProfile(me);
       setPhase('ready');
     } catch (error) {
-      setSignInError(errorText(error));
+      const message = errorText(error);
+      const details = [signinEnvironment(), signinDetails()].filter(Boolean).join('\n');
+      setSignInError(message);
+      setSignInDetails(details);
+      reportSigninProblem(`${message}\n${details}`);
     } finally {
       setSignInBusy(false);
     }
@@ -646,7 +656,7 @@ export function App({ host }: { host: Office.HostType | null }) {
     );
   }
   if (phase === 'signin')
-    return <SignInScreen busy={signInBusy} error={signInError} onSignIn={() => void signIn()} />;
+    return <SignInScreen busy={signInBusy} error={signInError} details={signInDetails} onSignIn={() => void signIn()} />;
 
   const filtered = filterClients(clients, filter, { hideClosed });
   const selectedKey = target ? locationKey(target) : null;

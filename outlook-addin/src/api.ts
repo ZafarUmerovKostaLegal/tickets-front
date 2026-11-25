@@ -343,6 +343,27 @@ export type Heartbeat = {
   ssoError: string;
 };
 
+export type SigninFailureReport = {
+  clientId: string;
+  email: string;
+  host: string;
+  platform: string;
+  officeVersion: string;
+  addinVersion: string;
+  error: string;
+};
+
+export async function reportSigninFailure(body: SigninFailureReport): Promise<void> {
+  const base = baseUrl();
+  if (!base)
+    return;
+  await fetch(`${base}/addin/signin-failure`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function sendHeartbeat(body: Heartbeat): Promise<void> {
   await request<{ ok: boolean }>('/addin/heartbeat', {
     method: 'POST',

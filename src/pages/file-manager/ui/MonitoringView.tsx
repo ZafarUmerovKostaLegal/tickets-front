@@ -18,7 +18,7 @@ function initials(name: string): string {
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
-function Kpi({ icon, label, value, sub, tone, onClick }: {
+export function Kpi({ icon, label, value, sub, tone, onClick }: {
     icon: IconName;
     label: string;
     value: string | number;

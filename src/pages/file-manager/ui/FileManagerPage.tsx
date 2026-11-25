@@ -8,7 +8,8 @@ import { isScheduleOnlyAccount, scheduleOnlyLandingPath } from '@shared/lib/sche
 import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
-import { AddinClientsView, AuditView, TemplateView } from './AdminViews';
+import { AuditView, TemplateView } from './AdminViews';
+import { AddinClientsView } from './AddinClientsView';
 import { MonitoringView } from './MonitoringView';
 import { MailRulesView } from './MailRulesView';
 import { RequestsView } from './AccessViews';

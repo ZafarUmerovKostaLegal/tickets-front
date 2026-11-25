@@ -240,9 +240,23 @@ export type AddinClient = {
     online: boolean;
 };
 
+export type AddinSigninFailure = {
+    id: number;
+    clientId: string;
+    email: string;
+    host: AddinClient['host'];
+    platform: AddinClient['platform'];
+    officeVersion: string;
+    addinVersion: string;
+    error: string;
+    ip: string;
+    at: string | null;
+};
+
 export type AddinClientsResponse = {
     clients: AddinClient[];
-    summary: { online: number; onlineUsers: number; users: number; installs: number; ssoProblems: number };
+    failures?: AddinSigninFailure[];
+    summary: { online: number; onlineUsers: number; users: number; installs: number; ssoProblems: number; signinFailures: number };
 };
 
 export type BrowseResponse = {

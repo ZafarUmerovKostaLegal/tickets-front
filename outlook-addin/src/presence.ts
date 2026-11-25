@@ -1,11 +1,11 @@
-import { sendHeartbeat } from './api';
-import { currentAuthMethod } from './auth/authApi';
+import { reportSigninFailure, sendHeartbeat } from './api';
+import { currentAuthMethod, outlookEmailHint } from './auth/authApi';
 import { ssoState } from './auth/naa';
 
 const CLIENT_KEY = 'kosta.addin.clientId';
 const INTERVAL_MS = 5 * 60_000;
 
-function clientId(host: string): string {
+export function clientId(host: string): string {
   try {
     const saved = localStorage.getItem(CLIENT_KEY);
     if (saved && /^[A-Za-z0-9_-]{8,64}$/.test(saved))
@@ -55,12 +55,25 @@ export function officePlatform(): string {
   return 'unknown';
 }
 
-function officeVersion(): string {
+export function officeVersion(): string {
   try {
     return String(Office?.context?.diagnostics?.version ?? '').slice(0, 40);
   } catch {
     return '';
   }
+}
+
+export function reportSigninProblem(error: string): void {
+  const host = officeHost();
+  void reportSigninFailure({
+    clientId: clientId(host),
+    email: outlookEmailHint(),
+    host,
+    platform: officePlatform(),
+    officeVersion: officeVersion(),
+    addinVersion: import.meta.env.VITE_ADDIN_VERSION || '',
+    error: error.slice(0, 1500),
+  }).catch(() => undefined);
 }
 
 export function startPresence(): () => void {

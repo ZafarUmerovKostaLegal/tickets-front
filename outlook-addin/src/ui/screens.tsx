@@ -40,7 +40,7 @@ export function Brand({ sub }: { sub?: string }) {
   );
 }
 
-export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: string; onSignIn: () => void }) {
+export function SignInScreen({ busy, error, details, onSignIn }: { busy: boolean; error: string; details: string; onSignIn: () => void }) {
   return (
     <main className="kf-signin">
       <Brand />
@@ -52,6 +52,13 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
         {busy ? 'Входим…' : 'Войти через Microsoft'}
       </button>
       {error ? <p className="kf-alert kf-alert--error" role="alert">{error}</p> : null}
+      {error && details ? (
+        <details className="kf-signin__details">
+          <summary>Подробности для администратора</summary>
+          <pre>{details}</pre>
+          <p>Отчёт об ошибке уже отправлен администратору.</p>
+        </details>
+      ) : null}
       <p className="kf-signin__hint">Откроется окно входа Microsoft. Если хост спросит Allow / Разрешить — нажмите, затем войдите своей учётной записью.</p>
     </main>
   );

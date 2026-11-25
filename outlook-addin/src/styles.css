@@ -662,6 +662,9 @@ button:disabled { cursor: default; }
 .kf-signin p { margin: 0; color: var(--text-dim); }
 .kf-signin .kf-btn { flex: none; min-height: 38px; }
 .kf-signin p.kf-signin__hint { font-size: 12px; color: var(--text-faint); }
+.kf-signin__details { width: 100%; text-align: left; font-size: 12px; color: var(--text-dim); }
+.kf-signin__details summary { cursor: pointer; font-weight: 600; }
+.kf-signin__details pre { margin: 6px 0; padding: 8px; border-radius: 8px; background: var(--surface-2, rgba(127,127,127,.12)); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; user-select: text; }
 
 .kf-spinner {
   width: 22px;
