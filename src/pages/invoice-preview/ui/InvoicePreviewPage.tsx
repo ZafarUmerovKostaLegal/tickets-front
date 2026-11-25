@@ -155,6 +155,8 @@ export function InvoicePreviewPage() {
     const location = useLocation();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | 'page' | null>(null);
     const [saveBusy, setSaveBusy] = useState(false);
+    const [docLoaded, setDocLoaded] = useState(false);
+    const [saveState, setSaveState] = useState<{ kind: 'idle' | 'saving' | 'saved' | 'error'; at?: Date }>({ kind: 'idle' });
     const session = useMemo(
         () => readInvoicePreviewSession(),
         // eslint-disable-next-line react-hooks/exhaustive-deps -- re-read stored session on navigation
@@ -339,9 +341,11 @@ export function InvoicePreviewPage() {
         setExistingBilledServices(null);
         setInvoiceExpenses(null);
         setIssuedFacts(null);
+        setDocLoaded(false);
+        setSaveState({ kind: 'idle' });
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
-        (async () => {
+        void (async () => {
             const profiles = await loadFirmBankingProfiles({ migrateLocal: true });
             if (cancelled)
                 return;
@@ -480,7 +484,10 @@ export function InvoicePreviewPage() {
             }
             else if (picked && !userPickedBankRef.current)
                 applyBankProfile(picked);
-        })();
+        })().finally(() => {
+            if (!cancelled)
+                setDocLoaded(true);
+        });
         return () => {
             cancelled = true;
         };
@@ -502,15 +509,18 @@ export function InvoicePreviewPage() {
     }, [coverModel, bankProfiles, selectedBankProfileId, applyBankProfile]);
 
     const persistPreviewEdits = useCallback(async (opts?: { silent?: boolean }) => {
-        if (!session || !coverModel || timeReportPack == null)
+        if (!session || !coverModel || !docLoaded)
             return false;
-        const pack = timeReportPack;
-        const trChunks = splitDetailRowsForPagedTimeReport(pack.detailSlots);
-        const slots = buildInvoicePreviewPageSlots(trChunks.length);
-        const included = expandIncludedPageKeysIfCompleteSubset(
-            includedPageKeys ?? slots.map((s) => s.key),
-            slots,
-        );
+        const pack = timeReportPack ?? pendingDocOverridesRef.current?.timeReport ?? null;
+        let included: Iterable<InvoicePreviewPageKey> | null = includedPageKeys;
+        if (pack) {
+            const trChunks = splitDetailRowsForPagedTimeReport(pack.detailSlots);
+            const slots = buildInvoicePreviewPageSlots(trChunks.length);
+            included = expandIncludedPageKeysIfCompleteSubset(
+                includedPageKeys ?? slots.map((s) => s.key),
+                slots,
+            );
+        }
         const doc = buildInvoiceDocumentOverridesPayload({
             legal: legalOverrides,
             cover: coverModel,
@@ -536,10 +546,12 @@ export function InvoicePreviewPage() {
                 },
                 documentOverrides: doc as unknown as Record<string, unknown>,
             });
+            setSaveState({ kind: 'saved', at: new Date() });
             return true;
         }
 
         setSaveBusy(true);
+        setSaveState({ kind: 'saving' });
         try {
             let status = invoiceStatus;
             if (!status) {
@@ -582,9 +594,11 @@ export function InvoicePreviewPage() {
             if (!opts?.silent) {
                 pushToast({ message: 'Правки счёта сохранены', variant: 'info' });
             }
+            setSaveState({ kind: 'saved', at: new Date() });
             return true;
         }
         catch (e) {
+            setSaveState({ kind: 'error' });
             pushToast({
                 message: e instanceof Error ? e.message : 'Не удалось сохранить правки счёта',
                 variant: 'error',
@@ -594,28 +608,44 @@ export function InvoicePreviewPage() {
         finally {
             setSaveBusy(false);
         }
-    }, [session, coverModel, timeReportPack, showInitiatorName, combinedReport, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
+    }, [session, coverModel, docLoaded, timeReportPack, showInitiatorName, combinedReport, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
+
+    const latestPersistRef = useRef(persistPreviewEdits);
+    latestPersistRef.current = persistPreviewEdits;
+    const saveChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
+    const queueSave = useCallback((opts?: { silent?: boolean }): Promise<boolean> => {
+        const next = saveChainRef.current
+            .catch(() => false)
+            .then(() => new Promise<void>((resolve) => window.setTimeout(resolve, 0)))
+            .then(() => latestPersistRef.current(opts));
+        saveChainRef.current = next;
+        return next;
+    }, []);
 
     const togglePageEdit = useCallback(() => {
         if (editMode) {
-            void persistPreviewEdits({ silent: false }).finally(() => setEditMode(false));
+            const tick = dirtyRef.current;
+            void queueSave({ silent: false }).then((ok) => {
+                if (ok && savedRef.current < tick)
+                    savedRef.current = tick;
+            }).finally(() => setEditMode(false));
             return;
         }
         setEditMode(true);
-    }, [editMode, persistPreviewEdits]);
+    }, [editMode, queueSave]);
 
     useEffect(() => {
-        if (dirtyTick <= savedRef.current || !session || !coverModel)
+        if (dirtyTick <= savedRef.current || !session || !coverModel || !docLoaded)
             return;
         const tick = dirtyTick;
         const t = window.setTimeout(() => {
-            void persistPreviewEdits({ silent: true }).then((ok) => {
+            void queueSave({ silent: true }).then((ok) => {
                 if (ok && savedRef.current < tick)
                     savedRef.current = tick;
             });
-        }, 800);
+        }, 600);
         return () => window.clearTimeout(t);
-    }, [dirtyTick, session, coverModel, persistPreviewEdits]);
+    }, [dirtyTick, session, coverModel, docLoaded, queueSave]);
 
     const editingPage = editMode ? activePage : null;
 
@@ -845,8 +875,6 @@ export function InvoicePreviewPage() {
         setIncludedPageKeys(new Set(allPageSlots.map((s) => s.key)));
     }, [allPageSlots]);
 
-    const persistPreviewEditsRef = useRef(persistPreviewEdits);
-    persistPreviewEditsRef.current = persistPreviewEdits;
     const editModeRef = useRef(editMode);
     editModeRef.current = editMode;
 
@@ -854,7 +882,7 @@ export function InvoicePreviewPage() {
         const flush = () => {
             if (editModeRef.current || dirtyRef.current > savedRef.current) {
                 savedRef.current = dirtyRef.current;
-                void persistPreviewEditsRef.current({ silent: true });
+                void queueSave({ silent: true });
             }
         };
         window.addEventListener('pagehide', flush);
@@ -862,20 +890,20 @@ export function InvoicePreviewPage() {
             window.removeEventListener('pagehide', flush);
             flush();
         };
-    }, []);
+    }, [queueSave]);
 
     useEffect(() => {
-        if (!session || !coverModel || includedPageKeys == null)
+        if (!session || !coverModel || includedPageKeys == null || !docLoaded)
             return;
         if (skipNextAutosaveRef.current)
             return;
         const t = window.setTimeout(() => {
-            void persistPreviewEditsRef.current({ silent: true }).finally(() => {
+            void queueSave({ silent: true }).finally(() => {
                 skipNextAutosaveRef.current = true;
             });
         }, 500);
         return () => window.clearTimeout(t);
-    }, [includedPageKeys, session, coverModel]);
+    }, [includedPageKeys, session, coverModel, docLoaded, queueSave]);
 
     const selectAllPagesForExport = useCallback(() => {
         restoreAllPages();
@@ -1224,7 +1252,7 @@ export function InvoicePreviewPage() {
             return;
         setDownloadBusy('page');
         try {
-            await persistPreviewEdits({ silent: true });
+            await queueSave({ silent: true });
             const { buildInvoicePreviewPdfBlob } = await import('../lib/buildInvoicePreviewPdf');
             const blob = await buildInvoicePreviewPdfBlob({
                 ...exportInput,
@@ -1248,13 +1276,16 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [visiblePageSlots, activePage, allPageSlots, persistPreviewEdits, exportInput, defaultFilename, pushToast]);
+    }, [visiblePageSlots, activePage, allPageSlots, queueSave, exportInput, defaultFilename, pushToast]);
 
     const handleSaveActivePageEdits = useCallback(async () => {
-        const ok = await persistPreviewEdits({ silent: false });
+        const tick = dirtyRef.current;
+        const ok = await queueSave({ silent: false });
+        if (ok && savedRef.current < tick)
+            savedRef.current = tick;
         if (ok && editMode)
             setEditMode(false);
-    }, [persistPreviewEdits, editMode]);
+    }, [queueSave, editMode]);
 
     const toolbarTitle = subtitle ?? defaultFilename;
     const deletedPageCount = fullPackPageCount - pageCount;
@@ -1525,7 +1556,7 @@ export function InvoicePreviewPage() {
                   type="button"
                   className="tt-inv-preview__pdf-toolbar-edit-btn"
                   onClick={() => void handleSaveActivePageEdits()}
-                  disabled={!coverModel || saveBusy || downloadBusy != null}
+                  disabled={!coverModel || !docLoaded || saveBusy || downloadBusy != null}
                   title="Сохранить правки документа (включая состав страниц)"
                 >
                   {saveBusy ? 'Сохранение…' : 'Сохранить'}
@@ -1534,12 +1565,21 @@ export function InvoicePreviewPage() {
                   type="button"
                   className={`tt-inv-preview__pdf-toolbar-edit-btn${isEditingActivePage ? ' tt-inv-preview__pdf-toolbar-edit-btn--active' : ''}`}
                   onClick={togglePageEdit}
-                  disabled={!coverModel || saveBusy}
+                  disabled={!coverModel || !docLoaded}
                   aria-pressed={isEditingActivePage}
                   title={editMode ? 'Сохранить и завершить редактирование' : `Редактировать страницу ${activePage}`}
                 >
-                  {editMode ? 'Готово' : 'Редактировать'}
+                  {editMode ? 'Готово' : docLoaded ? 'Редактировать' : 'Загрузка…'}
                 </button>
+                <span className={`tt-inv-preview__save-state is-${saveState.kind}`} role="status" aria-live="polite">
+                  {saveState.kind === 'saving'
+                    ? 'Сохранение…'
+                    : saveState.kind === 'saved' && saveState.at
+                      ? `Сохранено ${saveState.at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`
+                      : saveState.kind === 'error'
+                        ? 'Не сохранено'
+                        : ''}
+                </span>
                 <label className="tt-inv-preview__show-name" title="Имя инициатора услуг стоит в заметке после символа /, * или =. Галочка вырезает его в отдельный столбец.">
                   <input
                     type="checkbox"

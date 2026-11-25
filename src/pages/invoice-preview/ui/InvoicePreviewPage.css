@@ -1124,3 +1124,23 @@
     width: 100%;
   }
 }
+
+.tt-inv-preview__save-state {
+  min-width: 0;
+  color: var(--app-muted, #64748b);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.tt-inv-preview__save-state.is-saved {
+  color: var(--app-success, #15803d);
+}
+
+.tt-inv-preview__save-state.is-error {
+  color: var(--app-error, #b42318);
+  font-weight: 600;
+}
+
+.tt-inv-preview__save-state.is-idle {
+  display: none;
+}

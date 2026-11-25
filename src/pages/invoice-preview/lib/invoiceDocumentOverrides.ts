@@ -299,7 +299,7 @@ export function parseInvoiceDocumentOverrides(raw: unknown): InvoiceDocumentOver
 export function buildInvoiceDocumentOverridesPayload(input: {
     legal: InvoiceLegalPageOverrides;
     cover: InvoiceCoverLetterModel;
-    timeReport: InvoiceTimeReportPack;
+    timeReport: InvoiceTimeReportPack | null;
     showServiceInitiatorName?: boolean;
     combinedReport?: CombinedReportSnapshot | null;
     includedPageKeys?: Iterable<InvoicePreviewPageKey> | null;
@@ -314,7 +314,7 @@ export function buildInvoiceDocumentOverridesPayload(input: {
         manual: true,
         legal: input.legal,
         cover: pickCoverDocumentOverrides(input.cover),
-        timeReport: input.timeReport,
+        ...(input.timeReport ? { timeReport: input.timeReport } : {}),
         ...(input.showServiceInitiatorName ? { showServiceInitiatorName: true } : {}),
         ...(input.combinedReport ? { reportLayout: 'combined' as const, combinedReport: input.combinedReport } : {}),
         ...(shouldPersistPages && included ? { includedPageKeys: included } : {}),

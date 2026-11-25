@@ -150,4 +150,12 @@ describe('manually saved overrides', () => {
         const payload = buildInvoiceDocumentOverridesPayload({ legal: {}, cover, timeReport: { currency: 'USD', detailSlots: [], summarySlots: [] } as never });
         expect(payload.manual).toBe(true);
     });
+
+    it('keep cover letter edits even before the time report has loaded', () => {
+        const cover = buildInvoiceCoverLetterModel({ issueDateIso: '2026-11-19', clientName: 'Makyol', clientAddress: null, contactName: null, totalAmount: 100, currency: 'USD' });
+        const payload = buildInvoiceDocumentOverridesPayload({ legal: {}, cover: { ...cover, introParagraphOverride: 'Edited intro' }, timeReport: null });
+        expect('timeReport' in payload).toBe(false);
+        const parsed = parseInvoiceDocumentOverrides(JSON.parse(JSON.stringify(payload)));
+        expect(applyCoverDocumentOverrides(cover, parsed?.cover, { trusted: true }).introParagraphOverride).toBe('Edited intro');
+    });
 });
