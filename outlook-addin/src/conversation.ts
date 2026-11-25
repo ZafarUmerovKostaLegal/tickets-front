@@ -1,3 +1,4 @@
+import { readConversationOnServer } from './api';
 import { normalizeMessageId } from './email';
 import { readAzureAccessToken } from './auth/session';
 
@@ -9,7 +10,43 @@ export type ConversationMessageMeta = {
   fromName: string;
   received: string;
   mimeBase64?: string;
+  preloaded?: {
+    to: Array<{ email: string; name: string }>;
+    cc: Array<{ email: string; name: string }>;
+    bodyType: string;
+    body: string;
+  };
 };
+
+function describeError(error: unknown): string {
+  if (error instanceof Error)
+    return error.message;
+  if (error && typeof error === 'object') {
+    const raw = error as { message?: unknown; name?: unknown; code?: unknown };
+    const text = [raw.code, raw.name, raw.message].filter((part) => part != null && String(part).trim()).map(String).join(': ');
+    if (text)
+      return text;
+    try {
+      return JSON.stringify(error);
+    } catch {
+    }
+  }
+  return String(error);
+}
+
+async function listViaServer(conversationId: string): Promise<ConversationMessageMeta[]> {
+  const item = currentItem();
+  const rows = await readConversationOnServer(conversationId, item.internetMessageId || '');
+  return rows.map((row) => ({
+    graphId: row.graphId,
+    internetMessageId: normalizeMessageId(row.internetMessageId || row.graphId),
+    subject: row.subject || '(без темы)',
+    fromEmail: row.fromEmail,
+    fromName: row.fromName || row.fromEmail,
+    received: row.received || new Date().toISOString(),
+    preloaded: { to: row.to, cc: row.cc, bodyType: row.bodyType, body: row.body },
+  }));
+}
 
 type GraphMessage = {
   id: string;
@@ -141,7 +178,7 @@ function ewsRequest(soap: string): Promise<string> {
       if (result.status === Office.AsyncResultStatus.Succeeded)
         resolve(result.value || '');
       else
-        reject(result.error ?? new Error('EWS request failed'));
+        reject(new Error(describeError(result.error) || 'EWS request failed'));
     });
   });
 }
@@ -263,15 +300,27 @@ export async function listConversationMessages(graphToken?: string | null): Prom
     }
   }
 
+  let serverError = '';
+  if (!messages.length) {
+    try {
+      messages = await listViaServer(officeConversationId);
+      if (messages[0]?.internetMessageId)
+        conversationId = officeConversationId;
+    } catch (error) {
+      serverError = describeError(error);
+      messages = [];
+    }
+  }
+
   if (!messages.length) {
     try {
       messages = await listViaEws(officeConversationId);
       conversationId = officeConversationId;
     } catch (error) {
-      const ewsMsg = error instanceof Error ? error.message : String(error);
-      const graphMsg = lastError?.message || (token ? '' : 'нет Azure-токена Mail.Read');
+      const ewsMsg = describeError(error);
+      const graphMsg = lastError?.message || (token ? '' : 'нет токена Microsoft');
       throw new Error(
-        `Не удалось прочитать тред.\nGraph: ${graphMsg || '—'}\nEWS: ${ewsMsg}`,
+        `Не удалось прочитать переписку.\nСервер: ${serverError || 'писем не найдено'}\nGraph: ${graphMsg || '—'}\nEWS: ${ewsMsg}`,
       );
     }
   }

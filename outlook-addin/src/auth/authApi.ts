@@ -191,13 +191,30 @@ function hostErrorText(error: unknown): string {
   return [code, message].filter(Boolean).join(': ') || String(raw.name ?? 'unknown');
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(`${label}: timeout`)), ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 async function hostSsoToken(interactive: boolean): Promise<string | null> {
   if (typeof Office !== 'undefined' && Office.auth?.getAccessToken) {
-    return Office.auth.getAccessToken({
+    const request = Office.auth.getAccessToken({
       allowSignInPrompt: interactive,
       allowConsentPrompt: interactive,
       forMSGraphAccess: false,
     });
+    return interactive ? request : withTimeout(request, 10000, 'Office SSO');
   }
   return null;
 }
@@ -273,7 +290,7 @@ async function hubSession(): Promise<AuthProfile | null> {
 
 async function officeSso(): Promise<AuthProfile | null> {
   try {
-    const result = await naaTokenSilent(await azureApp());
+    const result = await withTimeout(naaTokenSilent(await azureApp()), 10000, 'NAA');
     if (!result)
       return null;
     const me = await bootstrapHub(result.accessToken, result.idToken, secondsLeft(result.expiresOn));
@@ -440,7 +457,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
     localStorage.setItem(OAUTH_AUTHORIZE_KEY, authorizeUrl);
   } catch {
   }
-  const bridge = hubLoginPageUrl();
+  const bridge = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -546,8 +563,7 @@ function openOAuthDialog(authorizeUrl: string, expectedState: string): Promise<s
       return;
     }
 
-    const withAzure = `${hubLoginPageUrl()}?${new URLSearchParams({ azure: authorizeUrl }).toString()}`;
-    const popup = window.open(withAzure, 'kosta-hub-login', 'width=480,height=680');
+    const popup = window.open(bridge, 'kosta-hub-login', 'width=480,height=680');
     if (!popup) {
       fail(new Error('Не удалось открыть окно входа. Разрешите всплывающие окна и нажмите «Войти» снова.'));
       return;

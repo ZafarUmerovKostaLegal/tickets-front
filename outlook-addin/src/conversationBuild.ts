@@ -110,7 +110,11 @@ export async function mapWithConcurrency<T, R>(items: readonly T[], limit: numbe
   return results;
 }
 
-async function renderMessageBlock(meta: ConversationMessageMeta, token: string): Promise<string> {
+function formatPeople(rows?: Array<{ email: string; name: string }>): string {
+  return formatRecipients(rows?.map((row) => ({ emailAddress: { address: row.email, name: row.name } })));
+}
+
+async function renderMessageBlock(meta: ConversationMessageMeta, token: string | null): Promise<string> {
   let bodyHtml = `<p><em>(тело письма недоступно)</em></p>`;
   let to = '';
   let cc = '';
@@ -120,7 +124,19 @@ async function renderMessageBlock(meta: ConversationMessageMeta, token: string):
     : escapeHtml(meta.fromEmail);
   let received = meta.received;
   let loaded = false;
+  if (meta.preloaded) {
+    to = formatPeople(meta.preloaded.to);
+    cc = formatPeople(meta.preloaded.cc);
+    const raw = meta.preloaded.body || '';
+    if (meta.preloaded.bodyType === 'text')
+      bodyHtml = `<pre style="white-space:pre-wrap;font-family:Segoe UI,sans-serif">${escapeHtml(raw)}</pre>`;
+    else if (raw)
+      bodyHtml = raw;
+    loaded = Boolean(raw);
+  }
   try {
+    if (loaded || !token)
+      throw new Error('skip');
     const full = await fetchMessageBody(meta.graphId, token);
     subject = full.subject || subject;
     received = full.receivedDateTime || received;
@@ -168,8 +184,8 @@ export async function buildConversationEml(
   graphToken?: string | null,
 ): Promise<{ file: File }> {
   const token = graphToken ?? readAzureAccessToken();
-  if (!token)
-    throw new Error('Нет Azure-токена для Graph. Войдите снова.');
+  if (!token && messages.some((meta) => !meta.preloaded && !meta.mimeBase64))
+    throw new Error('Нет доступа к телам писем. Войдите снова через Microsoft.');
 
   let done = 0;
   const blocks = await mapWithConcurrency(messages, BODY_FETCH_CONCURRENCY, async (meta) => {

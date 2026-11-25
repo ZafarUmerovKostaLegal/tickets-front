@@ -283,6 +283,29 @@ export async function setFavorite(kind: 'matter' | 'folder', targetId: string, m
   await request(`/favorites/${kind}/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
 }
 
+export type ServerConversationMessage = {
+  graphId: string;
+  internetMessageId: string;
+  conversationId: string;
+  subject: string;
+  fromEmail: string;
+  fromName: string;
+  received: string;
+  to: Array<{ email: string; name: string }>;
+  cc: Array<{ email: string; name: string }>;
+  bodyType: string;
+  body: string;
+};
+
+export async function readConversationOnServer(conversationId: string, messageId: string): Promise<ServerConversationMessage[]> {
+  const data = await request<{ messages: ServerConversationMessage[] }>('/mail/conversation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversationId, messageId }),
+  });
+  return data.messages ?? [];
+}
+
 export async function lookupFilings(messageIds: string[], conversationId = ''): Promise<Filing[]> {
   const data = await request<{ filings: Filing[] }>('/mail/lookup', {
     method: 'POST',
