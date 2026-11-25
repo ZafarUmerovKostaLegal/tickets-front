@@ -543,6 +543,18 @@ export function MatterWorkspace({
                                 {tr('browser.organizeMail')}
                             </button>
                         ) : null}
+                        {editable ? (
+                            <div className="fm-datebar__add">
+                                <button type="button" className="fm-btn" onClick={() => setFolderModal('create')}>
+                                    <Icon name="plus" />
+                                    {tr('browser.newFolder')}
+                                </button>
+                                <button type="button" className="fm-btn fm-btn--primary" onClick={() => fileRef.current?.click()}>
+                                    <Icon name="upload" />
+                                    {tr('browser.upload')}
+                                </button>
+                            </div>
+                        ) : null}
                     </div>
                 ) : null}
                 <StateBlock loading={browse.loading && !data} error={browse.error} onRetry={browse.reload}>

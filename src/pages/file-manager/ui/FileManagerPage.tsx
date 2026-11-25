@@ -8,7 +8,8 @@ import { isScheduleOnlyAccount, scheduleOnlyLandingPath } from '@shared/lib/sche
 import { canUseDmsDesktop, openDmsExplorerWindow } from '@pages/dms-explorer';
 import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
-import { AuditView, TemplateView } from './AdminViews';
+import { TemplateView } from './AdminViews';
+import { AuditView } from './AuditView';
 import { AddinClientsView } from './AddinClientsView';
 import { MonitoringView } from './MonitoringView';
 import { MailRulesView } from './MailRulesView';
@@ -198,7 +199,14 @@ function FileManagerWorkspace() {
             case 'matrix':
                 return <MatrixWorkspace clients={data} onOpenSecurity={(id) => go('security', { matterId: id })} />;
             case 'audit':
-                return <AuditView clients={data} initialMatterId={matterId} />;
+                return (
+                    <AuditView
+                        clients={data}
+                        initialMatterId={matterId}
+                        onOpenMatter={(id) => openMatter({ matterId: id, folderId: null, docId: null })}
+                        onOpenDocument={(id, docId) => openMatter({ matterId: id, folderId: null, docId })}
+                    />
+                );
             case 'monitoring':
                 return (
                     <MonitoringView

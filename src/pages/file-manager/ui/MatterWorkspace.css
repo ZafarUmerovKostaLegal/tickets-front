@@ -8,6 +8,21 @@
   height: 0.95rem;
 }
 
+.fm-datebar__add {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.fm-datebar .fm-datebar__add .fm-btn {
+  min-height: 1.9rem;
+  font-size: 0.8rem;
+}
+
+.fm-datebar__add svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 .fm-datebar__layout {
   display: inline-flex;
   margin-left: auto;
@@ -235,5 +250,15 @@ body[data-theme='dark'] .fm-ex__access.is-custom {
 @media (max-width: 600px) {
   .fm-datebar__layout {
     margin-left: 0;
+  }
+
+  .fm-datebar__add {
+    flex: 1 1 100%;
+  }
+
+  .fm-datebar .fm-datebar__add .fm-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
   }
 }

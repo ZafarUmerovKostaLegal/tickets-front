@@ -760,6 +760,17 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         hosts: { outlook: 'Outlook', word: 'Word', excel: 'Excel', powerpoint: 'PowerPoint', unknown: 'Office' },
         platforms: { windows: 'Windows', mac: 'Mac', web: 'Browser', ios: 'iPhone / iPad', android: 'Android', unknown: '' },
     },
+    auditX: {
+        today: 'Today',
+        yesterday: 'Yesterday',
+        dayCount: 'events: {n}',
+        reset: 'Reset filters',
+        clearPerson: 'Show everyone',
+        onlyPerson: 'Show only this person',
+        nothing: 'No events match these filters',
+        more: 'Show {n} more of {total}',
+        groups: { all: 'All', files: 'Uploads', views: 'Views', edits: 'Changes', removals: 'Deletion', access: 'Access', denied: 'Denied' },
+    },
     addinX: {
         refresh: 'Refresh',
         people: 'People connected',

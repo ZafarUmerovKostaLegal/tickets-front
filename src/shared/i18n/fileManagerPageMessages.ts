@@ -758,6 +758,17 @@ export const fileManagerPageMessages = {
         hosts: { outlook: 'Outlook', word: 'Word', excel: 'Excel', powerpoint: 'PowerPoint', unknown: 'Office' },
         platforms: { windows: 'Windows', mac: 'Mac', web: 'Браузер', ios: 'iPhone / iPad', android: 'Android', unknown: '' },
     },
+    auditX: {
+        today: 'Сегодня',
+        yesterday: 'Вчера',
+        dayCount: 'событий: {n}',
+        reset: 'Сбросить фильтры',
+        clearPerson: 'Показать всех сотрудников',
+        onlyPerson: 'Показать только этого сотрудника',
+        nothing: 'По этим фильтрам событий нет',
+        more: 'Показать ещё {n} из {total}',
+        groups: { all: 'Все', files: 'Загрузки', views: 'Просмотры', edits: 'Изменения', removals: 'Удаление', access: 'Доступ', denied: 'Отказы' },
+    },
     addinX: {
         refresh: 'Обновить',
         people: 'Сотрудников подключено',
