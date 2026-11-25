@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-tracking';
+import type { TimeTrackingUserRow } from '@entities/time-tracking';
 import { SearchableSelect } from '@shared/ui';
 import { filesApi, type DocumentAccessMember, type FolderAccessInput, type FolderAccessLevel } from '../api/filesApi';
 import { endOfDay, isFuture, shortDay, toDay, todayPlus } from '../lib/accessDates';
+import { usePeopleNames } from '../lib/usePeopleNames';
 import { Icon, StateBlock, useAction, useFm, useLoad } from './fmShared';
 import './FolderAccessDrawer.css';
 
@@ -25,7 +26,7 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
     const { tr, locale } = useFm();
     const act = useAction();
     const access = useLoad(() => filesApi.documentAccess(documentId), [documentId]);
-    const users = useLoad(() => listTimeTrackingUsers(), []);
+    const people = usePeopleNames(tr('security.userFallback', { id: '{id}' }));
     const [query, setQuery] = useState('');
     const [openRow, setOpenRow] = useState<number | null>(null);
     const [draft, setDraft] = useState({ until: '', suspendedUntil: '' });
@@ -36,13 +37,17 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
 
     const members = useMemo(() => {
         const text = query.trim().toLowerCase();
-        const rows = data?.members ?? [];
+        const rows = (data?.members ?? []).map((row) => ({
+            ...row,
+            name: people.nameOf(row.userId, row.name),
+            position: people.positionOf(row.userId, row.position),
+        }));
         return text ? rows.filter((row) => `${row.name} ${row.position}`.toLowerCase().includes(text)) : rows;
-    }, [data, query]);
+    }, [data, query, people]);
     const known = useMemo(() => new Set((data?.members ?? []).map((row) => row.userId)), [data]);
     const candidates = useMemo(
-        () => (users.data ?? []).filter((user) => !user.is_blocked && !user.is_archived && !known.has(user.id)),
-        [users.data, known],
+        () => people.users.filter((user) => !user.is_blocked && !user.is_archived && !known.has(user.id)),
+        [people.users, known],
     );
 
     const refresh = () => {
@@ -275,7 +280,7 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
                                     return;
                                 const ok = await act(() => filesApi.setDocumentAccess(documentId, {
                                     userId: user.id,
-                                    userName: userLabel(user),
+                                    userName: people.nameOf(user.id),
                                     level: addLevel,
                                     until: endOfDay(addUntil),
                                 }), tr('folderAccess.saved'));
@@ -291,7 +296,7 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
                                     value={addUser}
                                     items={candidates}
                                     getOptionValue={(user) => String(user.id)}
-                                    getOptionLabel={userLabel}
+                                    getOptionLabel={(user) => people.nameOf(user.id)}
                                     getSearchText={(user) => `${userLabel(user)} ${user.email} ${user.position ?? ''}`}
                                     onSelect={(user) => setAddUser(String(user.id))}
                                     placeholder={tr('security.searchUser')}

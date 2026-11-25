@@ -18,7 +18,6 @@ export default [
       'android/**',
       'scripts/**',
       'public/**',
-      'browser-extension/**/dist/**',
       'e2e/**',
       '**/*.spec.ts',
       '**/*.spec.tsx',

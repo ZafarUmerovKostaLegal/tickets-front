@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-tracking';
+import type { TimeTrackingUserRow } from '@entities/time-tracking';
 import { SearchableSelect } from '@shared/ui';
 import {
     filesApi,
@@ -13,6 +13,7 @@ import {
     type SecuritySummary,
 } from '../api/filesApi';
 import { endOfDay, isFuture, shortDay, toDay, todayPlus } from '../lib/accessDates';
+import { usePeopleNames } from '../lib/usePeopleNames';
 import { formatDateTime } from '../lib/filesFormat';
 import { DocumentAccessDrawer } from './DocumentAccessDrawer';
 import { FolderAccessDrawer } from './FolderAccessDrawer';
@@ -44,15 +45,6 @@ function initialsOf(name: string, stored?: string | null): string {
     if (parts.length === 1)
         return parts[0]!.slice(0, 2).toUpperCase();
     return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
-}
-
-function cleanName(raw: string, fallback: string): string {
-    const name = raw.trim();
-    if (!name || /^auth-user-\d+(@|$)/i.test(name))
-        return fallback;
-    if (/^[^\s@]+@[^\s@]+$/.test(name))
-        return name.slice(0, name.indexOf('@')).replace(/[._]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
-    return name;
 }
 
 function fileKindOf(name: string): FileKind {
@@ -212,7 +204,7 @@ function MatterRail({ items, overview, matterId, onPick }: {
 function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () => void }) {
     const { tr, locale } = useFm();
     const act = useAction();
-    const users = useLoad(() => listTimeTrackingUsers(), []);
+    const { users: catalogUsers, nameOf, positionOf } = usePeopleNames(tr('security.userFallback', { id: '{id}' }));
     const [filter, setFilter] = useState<PeopleFilter>('all');
     const [query, setQuery] = useState('');
     const [grantOpen, setGrantOpen] = useState(false);
@@ -225,26 +217,25 @@ function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () =>
     const [draft, setDraft] = useState({ until: '', suspendedUntil: '' });
     const matterId = data.matter.id;
 
-    const catalog = useMemo(() => new Map((users.data ?? []).map((user) => [user.id, user])), [users.data]);
+    const catalog = useMemo(() => new Map(catalogUsers.map((user) => [user.id, user])), [catalogUsers]);
     const candidates = useMemo(() => {
         const known = new Set(data.effective.map((row) => row.userId));
-        return (users.data ?? []).filter((user) => !user.is_blocked && !user.is_archived && !known.has(user.id));
-    }, [users.data, data.effective]);
+        return catalogUsers.filter((user) => !user.is_blocked && !user.is_archived && !known.has(user.id));
+    }, [catalogUsers, data.effective]);
     const rules = useMemo(() => new Map(data.acl.map((row) => [row.userId, row])), [data.acl]);
 
     const people: Person[] = useMemo(() => data.effective.map((member) => {
         const user = catalog.get(member.userId);
-        const name = cleanName((user?.display_name ?? '').trim() || member.name || user?.email || '',
-            tr('security.userFallback', { id: String(member.userId) }));
+        const name = nameOf(member.userId, member.name);
         return {
             ...member,
             name,
-            position: (member.position || user?.position || '').trim(),
+            position: positionOf(member.userId, member.position),
             initials: initialsOf(name, user?.initials),
             email: user?.email ?? '',
             rule: rules.get(member.userId),
         };
-    }), [data.effective, catalog, rules, tr]);
+    }), [data.effective, catalog, rules, nameOf, positionOf]);
 
     const counts = useMemo(() => ({
         all: people.length,
@@ -355,7 +346,7 @@ function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () =>
                         const user = candidates.find((row) => String(row.id) === addUser);
                         if (!user || granting)
                             return;
-                        const name = cleanName(userLabel(user), tr('security.userFallback', { id: String(user.id) }));
+                        const name = nameOf(user.id);
                         setGranting(true);
                         const ok = await save({ userId: user.id, name }, { level: addLevel, until: endOfDay(addUntil), note: addNote, suspendedUntil: null }, addLevel);
                         setGranting(false);
@@ -371,7 +362,7 @@ function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () =>
                                 portalZIndex={2100}
                                 getOptionValue={(user) => String(user.id)}
                                 getOptionLabel={(user) => {
-                                    const name = cleanName(userLabel(user), tr('security.userFallback', { id: String(user.id) }));
+                                    const name = nameOf(user.id);
                                     return user.position ? `${name} · ${user.position}` : name;
                                 }}
                                 getSearchText={(user) => `${userLabel(user)} ${user.email} ${user.position ?? ''}`}

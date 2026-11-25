@@ -93,7 +93,7 @@ export function MailRulesView({ clients }: { clients: ClientsResponse | null }) 
             <StateBlock loading={load.loading && !data} error={load.error} onRetry={load.reload}>
                 {data ? (
                     <>
-                        <div className={`fm-mailrules__box${box?.enabled ? ' is-on' : ''}${box?.lastError ? ' is-error' : ''}`}>
+                        <div className={`fm-mailrules__box${box?.enabled ? ' is-on' : ''}`}>
                             <div>
                                 <strong>{tr('mailRules.autofileTitle')}</strong>
                                 <p>
@@ -105,7 +105,6 @@ export function MailRulesView({ clients }: { clients: ClientsResponse | null }) 
                                         })
                                         : tr('mailRules.autofileHint')}
                                 </p>
-                                {box?.enabled && box.lastError ? <p className="fm-mailrules__error">{box.lastError}</p> : null}
                                 {!data.serverReady ? <p className="fm-mailrules__error">{tr('mailRules.serverOff')}</p> : null}
                             </div>
                             <button type="button" className={`fm-btn${box?.enabled ? '' : ' fm-btn--primary'}`} disabled={busy} onClick={() => void toggleMailbox(!box?.enabled)}>

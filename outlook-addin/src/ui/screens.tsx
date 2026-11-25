@@ -100,7 +100,7 @@ export function SettingsSheet({
 
       <section className="kf-section">
         <header className="kf-section__head"><h2>Автосохранение почты</h2></header>
-        <div className={`kf-autofile${mailbox?.enabled ? ' is-on' : ''}${mailbox?.lastError ? ' is-error' : ''}`}>
+        <div className={`kf-autofile${mailbox?.enabled ? ' is-on' : ''}`}>
           <label className="kf-check">
             <input type="checkbox" checked={Boolean(mailbox?.enabled)} onChange={(event) => onAutofile(event.target.checked)} />
             Сохранять мою почту по правилам автоматически
@@ -110,7 +110,6 @@ export function SettingsSheet({
               ? `Сервер проверяет ${mailbox.email} каждые 5 минут, Outlook можно не открывать. Сохранено писем: ${mailbox.filedTotal}.`
               : 'Сервер не читает вашу почту. Правила срабатывают, только когда письмо открыто здесь.'}
           </p>
-          {mailbox?.enabled && mailbox.lastError ? <p className="kf-alert kf-alert--error">{mailbox.lastError}</p> : null}
           {!serverReady ? <p className="kf-alert kf-alert--error">Сервер ещё не настроен для чтения почты — обратитесь к администратору.</p> : null}
         </div>
       </section>

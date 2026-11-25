@@ -10,7 +10,8 @@ import { filesApi } from '../api/filesApi';
 import { AccessRequestsBadge } from './fmBadges';
 import { AddinClientsView, AuditView, MonitoringView, TemplateView } from './AdminViews';
 import { MailRulesView } from './MailRulesView';
-import { MatrixView, RequestsView } from './AccessViews';
+import { RequestsView } from './AccessViews';
+import { MatrixWorkspace } from './MatrixWorkspace';
 import { SecurityWorkspace } from './SecurityWorkspace';
 import { ClientsView, MattersListView } from './DirectoryViews';
 import { FavoritesView, RecentView, SearchView, TrashView } from './LibraryViews';
@@ -193,7 +194,7 @@ function FileManagerWorkspace() {
                     />
                 );
             case 'matrix':
-                return <MatrixView clients={data} />;
+                return <MatrixWorkspace clients={data} onOpenSecurity={(id) => go('security', { matterId: id })} />;
             case 'audit':
                 return <AuditView clients={data} initialMatterId={matterId} />;
             case 'monitoring':

@@ -50,9 +50,7 @@
     "test:e2e:report": "playwright show-report",
     "test:e2e:merge-reports": "playwright merge-reports --reporter html ./all-blob-reports",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:ci": "npm run test:unit && npm run test:e2e:ci",
-    "ext:tt:build": "vite build --config browser-extension/tt/vite.config.ts",
-    "ext:tt:dev": "vite build --config browser-extension/tt/vite.config.ts --watch"
+    "test:ci": "npm run test:unit && npm run test:e2e:ci"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^8.0.1",

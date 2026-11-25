@@ -38,6 +38,5 @@ blob-report/
 all-blob-reports/
 coverage/
 playwright/.cache/
-browser-extension/tt/dist/
 
 .claude/skills/kosta-design/
