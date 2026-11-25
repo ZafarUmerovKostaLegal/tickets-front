@@ -251,12 +251,28 @@ function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue,
     useLayoutEffect(() => {
         syncHeight();
     }, [value, disabled, syncHeight]);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el || typeof ResizeObserver === 'undefined')
+            return;
+        let width = el.clientWidth;
+        const observer = new ResizeObserver(() => {
+            if (el.clientWidth === width)
+                return;
+            width = el.clientWidth;
+            syncHeight();
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [syncHeight]);
     const cls = variant === 'brief'
         ? 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--brief tt-rp-mtable__textarea--autosize'
         : 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--autosize';
-    return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onChange={(e) => {
-            onValue(e.target.value);
-            requestAnimationFrame(syncHeight);
+    return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                e.preventDefault();
+        }} onChange={(e) => {
+            onValue(e.target.value.replace(/\r?\n/g, ' '));
         }}/>);
 }
 

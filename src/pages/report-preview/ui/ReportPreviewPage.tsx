@@ -96,6 +96,7 @@ import {
 import {
     resolveReportPreviewHotkey,
 } from '../lib/reportPreviewHotkeys';
+import { mergeSavedTimeRow } from '../lib/mergeSavedTimeRow';
 import type { TimeExcelPreviewRow, ExpenseExcelPreviewRow, UninvoicedExcelPreviewRow, BudgetExcelPreviewRow, } from '../lib/previewExcelTypes';
 import { REPORT_PREVIEW_SCOPE_DEFAULT } from '../lib/reportPreviewScopePalette';
 import { useCurrentUser } from '@shared/hooks';
@@ -934,9 +935,28 @@ export function ReportPreviewPage() {
         return projectPartnersWithAccess.some((p) => p.authUserId === uid);
     }, [user?.id, projectPartnersWithAccess]);
     const canOverrideWeeklyLock = canOverrideReportPreviewWeeklyLock(user) || isProjectPartnerForPreview;
-    const flushPersistTimeEntry = useCallback(async (rowKey: string) => {
+    const timeEntryInFlightRef = useRef(new Map<string, boolean>());
+    const flushPersistTimeEntry = useCallback(async (rowKey: string): Promise<void> => {
         if (timeEntryPersistSkipRowKeysRef.current.has(rowKey))
             return;
+        const inFlight = timeEntryInFlightRef.current;
+        if (inFlight.has(rowKey)) {
+            inFlight.set(rowKey, true);
+            return;
+        }
+        inFlight.set(rowKey, false);
+        try {
+            await persistTimeEntryOnce(rowKey);
+        }
+        finally {
+            const again = inFlight.get(rowKey) === true;
+            inFlight.delete(rowKey);
+            if (again && !timeEntrySaveTimers.current.has(rowKey))
+                void flushPersistTimeEntryRef.current(rowKey);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persistTimeEntryOnce is read through its latest closure below
+    }, []);
+    const persistTimeEntryOnce = async (rowKey: string): Promise<void> => {
         const row = timeExcelRowsRef.current.find((r) => r.rowKey === rowKey);
         if (!row || row.rowKind !== 'entry' || !row.timeEntryId?.trim()) {
             return;
@@ -959,7 +979,11 @@ export function ReportPreviewPage() {
                 timeEntryServerOwnerByEntryIdRef.current.delete(entryId);
                 registerTimeEntryServerOwner(timeEntryServerOwnerByEntryIdRef.current, savedRow.timeEntryId, serverAuthUserId);
             }
-            setTimeExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? savedRow : r)));
+            setTimeExcelRows((prev) => {
+                const next = prev.map((r) => (r.rowKey === rowKey ? mergeSavedTimeRow(row, r, savedRow) : r));
+                timeExcelRowsRef.current = next;
+                return next;
+            });
             const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
             const snapRowId = snapshotRowIdByPreviewKey[rowKey];
             if (snapshotId && snapRowId) {
@@ -1011,7 +1035,9 @@ export function ReportPreviewPage() {
             setTimeEntrySaveUI('err');
             setTimeEntrySaveMessage(msg);
         }
-    }, [snapshotRowIdByPreviewKey, xferSnapshot?.partnerConfirmationSnapshotId]);
+    };
+    const flushPersistTimeEntryRef = useRef(flushPersistTimeEntry);
+    flushPersistTimeEntryRef.current = flushPersistTimeEntry;
     const schedulePersistTimeEntry = useCallback((rowKey: string) => {
         clearPendingSaveTimer(rowKey);
         timeEntrySaveTimers.current.set(rowKey, setTimeout(() => {
