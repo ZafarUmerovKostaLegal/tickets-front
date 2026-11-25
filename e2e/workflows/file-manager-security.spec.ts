@@ -118,6 +118,17 @@ test.describe('@e2e Файловый менеджер: безопасность 
         await expect.poll(() => mocks.puts.length).toBe(1);
         expect(mocks.puts[0]).toMatchObject({ userId: 2, level: 'read' });
 
+        await page.getByRole('button', { name: 'Выдать доступ' }).click();
+        const grant = page.getByRole('dialog', { name: /Выдать доступ · KL-104/ });
+        await expect(grant).toBeVisible();
+        await grant.getByRole('radio', { name: /Стена/ }).click();
+        await expect(grant).toContainText('Этическая стена скрывает matter');
+        await expect(grant.getByRole('button', { name: 'Выдать доступ' })).toBeDisabled();
+        if (SHOTS)
+            await page.screenshot({ path: `${SHOTS}/sx-grant-modal.png` });
+        await page.keyboard.press('Escape');
+        await expect(grant).toBeHidden();
+
         await page.locator('.fm-sx-person', { hasText: 'Iroda T' }).getByRole('button', { name: 'Срок доступа и временное отключение' }).click();
         await expect(page.getByText('Временно отключить по')).toBeVisible();
 

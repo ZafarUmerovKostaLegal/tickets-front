@@ -555,6 +555,13 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
             manage: 'Manage',
             deny: 'Wall',
         },
+        grantModalTitle: 'Grant access · {matter}',
+        levelHint: {
+            read: 'Opens the matter and own files, read only',
+            edit: 'Uploads and edits own files',
+            manage: 'Manages access to the matter',
+            deny: 'Hides the matter completely',
+        },
         untilOptional: 'Access until (optional)',
         grantHint: 'An explicit rule overrides the time-tracking assignment.',
         until: 'until {date}',

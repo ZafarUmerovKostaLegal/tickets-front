@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { currentAuthMethod } from '../auth/authApi';
-import { ssoProblem, ssoState } from '../auth/naa';
+import { ssoState } from '../auth/naa';
 import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
 import { Icon } from './icons';
@@ -16,22 +16,13 @@ const METHOD_LABEL: Record<string, string> = {
 
 function SignInInfo() {
   const method = currentAuthMethod();
-  const sso = ssoState();
-  const single = sso.status === 'ok';
-  const reason = sso.status === 'unsupported'
-    ? 'эта версия Office не поддерживает единый вход — обновите Microsoft 365'
-    : sso.status === 'consent'
-      ? 'нужно один раз подтвердить вход: нажмите «Выйти» и войдите снова'
-      : sso.status === 'failed'
-        ? 'Office не выдал вход — сообщите администратору'
-        : '';
+  const single = ssoState().status === 'ok';
   return (
-    <div className={`kf-signinfo${single ? ' is-ok' : reason ? ' is-warn' : ''}`}>
+    <div className={`kf-signinfo${single ? ' is-ok' : ''}`}>
       <span className="kf-signinfo__dot" aria-hidden="true" />
       <div>
-        <strong>{single ? 'Единый вход работает' : reason ? 'Единый вход не работает' : 'Вход выполнен'}</strong>
-        <span>Вход {METHOD_LABEL[method] ?? 'выполнен'}.{reason ? ` Причина: ${reason}.` : single ? ' Word, Excel, PowerPoint и Outlook входят сами.' : ''}</span>
-        {sso.error && !single ? <code title={sso.error}>{sso.error}</code> : null}
+        <strong>{single ? 'Единый вход работает' : 'Вход выполнен'}</strong>
+        <span>Вход {METHOD_LABEL[method] ?? 'выполнен'}.{single ? ' Word, Excel, PowerPoint и Outlook входят сами.' : ''}</span>
       </div>
     </div>
   );
@@ -49,23 +40,6 @@ export function Brand({ sub }: { sub?: string }) {
   );
 }
 
-function SsoProblem() {
-  const problem = ssoProblem();
-  if (!problem)
-    return null;
-  const { error } = ssoState();
-  return (
-    <div className="kf-signinfo is-warn">
-      <span className="kf-signinfo__dot" aria-hidden="true" />
-      <div>
-        <strong>Единый вход не сработал</strong>
-        <span>{problem}</span>
-        {error ? <code title={error}>{error}</code> : null}
-      </div>
-    </div>
-  );
-}
-
 export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: string; onSignIn: () => void }) {
   return (
     <main className="kf-signin">
@@ -78,7 +52,6 @@ export function SignInScreen({ busy, error, onSignIn }: { busy: boolean; error: 
         {busy ? 'Входим…' : 'Войти через Microsoft'}
       </button>
       {error ? <p className="kf-alert kf-alert--error" role="alert">{error}</p> : null}
-      <SsoProblem />
       <p className="kf-signin__hint">Откроется окно входа Microsoft. Если хост спросит Allow / Разрешить — нажмите, затем войдите своей учётной записью.</p>
     </main>
   );

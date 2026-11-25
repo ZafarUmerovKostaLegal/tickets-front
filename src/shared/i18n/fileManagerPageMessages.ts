@@ -553,6 +553,13 @@ export const fileManagerPageMessages = {
             manage: 'Управление',
             deny: 'Стена',
         },
+        grantModalTitle: 'Выдать доступ · {matter}',
+        levelHint: {
+            read: 'Открывает matter и свои файлы, без изменений',
+            edit: 'Загружает и меняет свои файлы',
+            manage: 'Управляет доступом к matter',
+            deny: 'Полностью скрывает matter',
+        },
         untilOptional: 'Доступ по (необязательно)',
         grantHint: 'Явное правило главнее назначения из учёта времени.',
         until: 'по {date}',

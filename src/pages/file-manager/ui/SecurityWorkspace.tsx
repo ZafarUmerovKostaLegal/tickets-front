@@ -16,7 +16,7 @@ import { endOfDay, isFuture, shortDay, toDay, todayPlus } from '../lib/accessDat
 import { formatDateTime } from '../lib/filesFormat';
 import { DocumentAccessDrawer } from './DocumentAccessDrawer';
 import { FolderAccessDrawer } from './FolderAccessDrawer';
-import { FileBadge, Icon, StateBlock, useAction, useFm, useLoad, type IconName } from './fmShared';
+import { FileBadge, Icon, Modal, StateBlock, useAction, useFm, useLoad, type IconName } from './fmShared';
 import './SecurityWorkspace.css';
 
 type MatterItem = MatterRow & { clientName: string };
@@ -216,6 +216,7 @@ function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () =>
     const [filter, setFilter] = useState<PeopleFilter>('all');
     const [query, setQuery] = useState('');
     const [grantOpen, setGrantOpen] = useState(false);
+    const [granting, setGranting] = useState(false);
     const [addUser, setAddUser] = useState('');
     const [addLevel, setAddLevel] = useState<AclLevel>('read');
     const [addUntil, setAddUntil] = useState('');
@@ -291,6 +292,14 @@ function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () =>
         return Boolean(ok);
     };
 
+    const closeGrant = () => {
+        setGrantOpen(false);
+        setAddUser('');
+        setAddUntil('');
+        setAddNote('');
+        setAddLevel('read');
+    };
+
     const remove = async (person: Person) => {
         const ok = await act(() => filesApi.removeAcl(matterId, person.userId), tr('security.changed'));
         if (ok)
@@ -321,67 +330,82 @@ function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () =>
                     <input value={query} onChange={(event) => setQuery(event.target.value)}
                         placeholder={tr('security.searchPeople')} aria-label={tr('security.searchPeople')} />
                 </label>
-                <button type="button" className={grantOpen ? 'fm-btn' : 'fm-btn fm-btn--primary'} onClick={() => setGrantOpen((open) => !open)}>
-                    <Icon name={grantOpen ? 'close' : 'plus'} />{grantOpen ? tr('common.cancel') : tr('security.grantTitle')}
+                <button type="button" className="fm-btn fm-btn--primary" onClick={() => setGrantOpen(true)}>
+                    <Icon name="plus" />{tr('security.grantTitle')}
                 </button>
             </div>
 
             {grantOpen ? (
-                <form className="fm-sx-grant" onSubmit={async (event) => {
-                    event.preventDefault();
-                    const user = candidates.find((row) => String(row.id) === addUser);
-                    if (!user)
-                        return;
-                    const name = cleanName(userLabel(user), tr('security.userFallback', { id: String(user.id) }));
-                    const ok = await save({ userId: user.id, name }, { level: addLevel, until: endOfDay(addUntil), note: addNote, suspendedUntil: null }, addLevel);
-                    if (ok) {
-                        setAddUser('');
-                        setAddUntil('');
-                        setAddNote('');
-                        setGrantOpen(false);
-                    }
-                }}>
-                    <div className="fm-field">
-                        <span>{tr('security.addUser')}</span>
-                        <SearchableSelect<TimeTrackingUserRow>
-                            value={addUser}
-                            items={candidates}
-                            getOptionValue={(user) => String(user.id)}
-                            getOptionLabel={(user) => {
-                                const name = cleanName(userLabel(user), tr('security.userFallback', { id: String(user.id) }));
-                                return user.position ? `${name} · ${user.position}` : name;
-                            }}
-                            getSearchText={(user) => `${userLabel(user)} ${user.email} ${user.position ?? ''}`}
-                            onSelect={(user) => setAddUser(String(user.id))}
-                            placeholder={tr('security.searchUser')}
-                        />
-                    </div>
-                    <div className="fm-field">
-                        <span>{tr('security.addLevel')}</span>
-                        <div className="fm-sx-levels" role="radiogroup" aria-label={tr('security.addLevel')}>
-                            {LEVELS.map((level) => (
-                                <button key={level} type="button" role="radio" aria-checked={addLevel === level}
-                                    className={`is-${level}${addLevel === level ? ' is-on' : ''}`} onClick={() => setAddLevel(level)}>
-                                    <Icon name={LEVEL_ICON[level]} />{tr(`securityX.level.${level}`)}
-                                </button>
-                            ))}
+                <Modal
+                    title={tr('securityX.grantModalTitle', { matter: data.matter.code || data.matter.name })}
+                    className="fm-sx-modal"
+                    onClose={closeGrant}
+                    footer={(
+                        <>
+                            <p className="fm-sx-modal__hint">{addLevel === 'deny' ? tr('security.wallNote') : tr('securityX.grantHint')}</p>
+                            <button type="button" className="fm-btn" onClick={closeGrant}>{tr('common.cancel')}</button>
+                            <button type="submit" form="fm-sx-grant-form" className="fm-btn fm-btn--primary" disabled={!addUser || granting}>
+                                <Icon name="check" />{tr('security.add')}
+                            </button>
+                        </>
+                    )}
+                >
+                    <form id="fm-sx-grant-form" className="fm-sx-grant" onSubmit={async (event) => {
+                        event.preventDefault();
+                        const user = candidates.find((row) => String(row.id) === addUser);
+                        if (!user || granting)
+                            return;
+                        const name = cleanName(userLabel(user), tr('security.userFallback', { id: String(user.id) }));
+                        setGranting(true);
+                        const ok = await save({ userId: user.id, name }, { level: addLevel, until: endOfDay(addUntil), note: addNote, suspendedUntil: null }, addLevel);
+                        setGranting(false);
+                        if (ok)
+                            closeGrant();
+                    }}>
+                        <div className="fm-field">
+                            <span>{tr('security.addUser')}</span>
+                            <SearchableSelect<TimeTrackingUserRow>
+                                value={addUser}
+                                items={candidates}
+                                portalDropdown
+                                portalZIndex={2100}
+                                getOptionValue={(user) => String(user.id)}
+                                getOptionLabel={(user) => {
+                                    const name = cleanName(userLabel(user), tr('security.userFallback', { id: String(user.id) }));
+                                    return user.position ? `${name} · ${user.position}` : name;
+                                }}
+                                getSearchText={(user) => `${userLabel(user)} ${user.email} ${user.position ?? ''}`}
+                                onSelect={(user) => setAddUser(String(user.id))}
+                                placeholder={tr('security.searchUser')}
+                            />
                         </div>
-                    </div>
-                    <label className="fm-field">
-                        <span>{tr('securityX.untilOptional')}</span>
-                        <input type="date" value={addUntil} min={todayPlus(0)} onChange={(event) => setAddUntil(event.target.value)} />
-                    </label>
-                    <label className="fm-field fm-sx-grant__note">
-                        <span>{tr('security.note')}</span>
-                        <input value={addNote} maxLength={500} placeholder={tr('security.notePh')} onChange={(event) => setAddNote(event.target.value)} />
-                    </label>
-                    <div className="fm-sx-grant__foot">
-                        <p className="fm-sx-muted">{addLevel === 'deny' ? tr('security.wallNote') : tr('securityX.grantHint')}</p>
-                        <button type="submit" className="fm-btn fm-btn--primary" disabled={!addUser}>
-                            <Icon name="check" />{tr('security.add')}
-                        </button>
-                    </div>
-                </form>
+                        <div className="fm-field">
+                            <span>{tr('security.addLevel')}</span>
+                            <div className="fm-sx-levels fm-sx-levels--grid" role="radiogroup" aria-label={tr('security.addLevel')}>
+                                {LEVELS.map((level) => (
+                                    <button key={level} type="button" role="radio" aria-checked={addLevel === level}
+                                        className={`is-${level}${addLevel === level ? ' is-on' : ''}`} onClick={() => setAddLevel(level)}>
+                                        <Icon name={LEVEL_ICON[level]} />
+                                        <span>
+                                            <strong>{tr(`securityX.level.${level}`)}</strong>
+                                            <small>{tr(`securityX.levelHint.${level}`)}</small>
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="fm-sx-grant__row">
+                            <label className="fm-field">
+                                <span>{tr('securityX.untilOptional')}</span>
+                                <input type="date" value={addUntil} min={todayPlus(0)} onChange={(event) => setAddUntil(event.target.value)} />
+                            </label>
+                            <label className="fm-field">
+                                <span>{tr('security.note')}</span>
+                                <input value={addNote} maxLength={500} placeholder={tr('security.notePh')} onChange={(event) => setAddNote(event.target.value)} />
+                            </label>
+                        </div>
+                    </form>
+                </Modal>
             ) : null}
 
             {people.length === 0 ? (
