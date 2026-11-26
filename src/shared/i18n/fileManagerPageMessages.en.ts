@@ -334,6 +334,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         attachmentSavedTitle: 'Already in the matter: {folder} · saved by {name}',
         matterRoot: 'matter root',
         pickFolder: 'Where to save the attachment',
+        fullscreen: 'Full screen',
         findFolder: 'Find a folder',
         noFolders: 'No folders found',
         saveHere: 'Save here',

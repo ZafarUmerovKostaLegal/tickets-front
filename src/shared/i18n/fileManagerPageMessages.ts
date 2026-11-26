@@ -332,6 +332,7 @@ export const fileManagerPageMessages = {
         attachmentSavedTitle: 'Уже в matter: {folder} · сохранил {name}',
         matterRoot: 'корень matter',
         pickFolder: 'Куда сохранить вложение',
+        fullscreen: 'На весь экран',
         findFolder: 'Найти папку',
         noFolders: 'Папки не найдены',
         saveHere: 'Сохранить сюда',

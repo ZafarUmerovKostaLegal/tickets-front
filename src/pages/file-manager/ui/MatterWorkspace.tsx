@@ -92,6 +92,27 @@ const PRESET_LABEL: Record<DatePreset, string> = {
     custom: 'browser.dateCustom',
 };
 
+const LIST_FILTERS_KEY = 'fm.matter.listFilters';
+const SORT_KEYS = ['name', 'type', 'date', 'author', 'size'] as const;
+
+type ListFilters = { query: string; author: string; kind: string; sort: Sort };
+
+function readListFilters(): ListFilters {
+    try {
+        const raw = JSON.parse(localStorage.getItem(LIST_FILTERS_KEY) || '{}') as Partial<ListFilters>;
+        const text = (value: unknown, max: number) => (typeof value === 'string' ? value.slice(0, max) : '');
+        const key = SORT_KEYS.includes(raw.sort?.key as SortKey) ? raw.sort!.key : 'name';
+        return {
+            query: text(raw.query, 200),
+            author: text(raw.author, 200),
+            kind: text(raw.kind, 20),
+            sort: { key, dir: raw.sort?.dir === -1 ? -1 : 1 },
+        };
+    } catch {
+        return { query: '', author: '', kind: '', sort: { key: 'name', dir: 1 } };
+    }
+}
+
 function readDateFilter(): DateFilter {
     try {
         const raw = JSON.parse(localStorage.getItem(DATE_FILTER_KEY) || '{}') as Partial<DateFilter>;
@@ -203,15 +224,18 @@ export function MatterWorkspace({
         [data],
     );
 
-    const [query, setQuery] = useState('');
-    const [author, setAuthor] = useState('');
-    const [kind, setKind] = useState('');
-    const [sort, setSort] = useState<Sort>({ key: 'name', dir: 1 });
+    const [initialFilters] = useState(readListFilters);
+    const [query, setQuery] = useState(initialFilters.query);
+    const [author, setAuthor] = useState(initialFilters.author);
+    const [kind, setKind] = useState(initialFilters.kind);
+    const [sort, setSort] = useState<Sort>(initialFilters.sort);
     useEffect(() => {
-        setQuery('');
-        setAuthor('');
-        setKind('');
-    }, [matterId, folderId]);
+        try {
+            localStorage.setItem(LIST_FILTERS_KEY, JSON.stringify({ query, author, kind, sort }));
+        } catch {
+            return;
+        }
+    }, [query, author, kind, sort]);
     const range = useMemo(() => dateRange(dateFilter), [dateFilter]);
     const dateActive = Boolean(range.from || range.to);
     const needle = query.trim().toLowerCase();
@@ -224,8 +248,9 @@ export function MatterWorkspace({
             { value: '', label: tr('browser.anyAuthor') },
             ...[...counts.entries()].filter(([name]) => name).sort((a, b) => a[0].localeCompare(b[0], 'ru'))
                 .map(([name, n]) => ({ value: name, label: `${name} · ${n}` })),
+            ...(author && !counts.has(author) ? [{ value: author, label: `${author} · 0` }] : []),
         ];
-    }, [documents, tr]);
+    }, [documents, tr, author]);
     const kindOptions = useMemo(() => {
         const counts = new Map<string, number>();
         for (const doc of documents)
@@ -234,8 +259,9 @@ export function MatterWorkspace({
             { value: '', label: tr('browser.anyKind') },
             ...[...counts.entries()].map(([value, n]) => ({ value, label: `${kindLabel(value as DocumentRow['kind'], tr)} · ${n}` }))
                 .sort((a, b) => a.label.localeCompare(b.label, 'ru')),
+            ...(kind && !counts.has(kind) ? [{ value: kind, label: `${kindLabel(kind as DocumentRow['kind'], tr)} · 0` }] : []),
         ];
-    }, [documents, tr]);
+    }, [documents, tr, kind]);
     const shownDocuments = useMemo(() => documents
         .filter((doc) => (!dateActive || inDateRange(documentDay(doc), range))
             && (!author || (doc.createdBy || '') === author)
@@ -622,7 +648,7 @@ export function MatterWorkspace({
                         ) : null}
                     </div>
                 ) : null}
-                {data && documents.length > 1 ? (
+                {data && (documents.length > 1 || Boolean(query || author || kind)) ? (
                     <div className="fm-filterbar" role="search">
                         <label className="fm-filterbar__search">
                             <Icon name="search" />

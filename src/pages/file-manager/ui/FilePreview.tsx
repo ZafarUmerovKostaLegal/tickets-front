@@ -98,9 +98,42 @@ export function FilePreview({ source, onDownload }: { source: PreviewSource; onD
     }
 }
 
+function PdfPreview({ source }: { source: PreviewSource }) {
+    const [url, setUrl] = useState<string | null>(null);
+    const [error, setError] = useState('');
+    useEffect(() => {
+        let alive = true;
+        let objectUrl: string | null = null;
+        setUrl(null);
+        setError('');
+        source.blob().then((blob) => {
+            if (!alive)
+                return;
+            // Shown from a blob: the server's own address may not be framed by the Hub (CSP / X-Frame-Options).
+            objectUrl = URL.createObjectURL(blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' }));
+            setUrl(objectUrl);
+        }).catch((err: unknown) => {
+            if (alive)
+                setError(err instanceof Error ? err.message : String(err));
+        });
+        return () => {
+            alive = false;
+            if (objectUrl)
+                URL.revokeObjectURL(objectUrl);
+        };
+    }, [source]);
+    if (error)
+        return <Note>{error}</Note>;
+    if (!url)
+        return <Loading />;
+    return <iframe className="fm-pv fm-pv--pdf" src={`${url}#view=FitH`} title={source.name} />;
+}
+
 function MediaPreview({ source, kind }: { source: PreviewSource; kind: 'pdf' | 'image' | 'video' | 'audio' }) {
     const { tr } = useFm();
-    const { data: url, error } = useAsync(() => source.link({ inline: true }), [source.key]);
+    const { data: url, error } = useAsync(() => (kind === 'pdf' ? Promise.resolve('') : source.link({ inline: true })), [source.key]);
+    if (kind === 'pdf')
+        return <PdfPreview source={source} />;
     if (error)
         return <Note>{error}</Note>;
     if (!url)

@@ -231,4 +231,19 @@ test.describe('@e2e Файловый менеджер: доступ к папк�
             expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
         });
     }
+
+    test('фильтры и сортировка списка сохраняются после перезагрузки', async ({ page, loginAs }) => {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await loginAs('admin');
+        await openMatter(page);
+        await page.locator('.fm-datebar__layout button').nth(1).click();
+        await page.getByPlaceholder('Найти в папке…').fill('SPA');
+        await page.locator('.fm-ex__sort', { hasText: 'Размер' }).click();
+        await expect(page.locator('.fm-ex__list tbody tr', { hasText: 'SPA v3.docx' })).toBeVisible();
+        await page.reload();
+        await expect(page.getByPlaceholder('Найти в папке…')).toHaveValue('SPA', { timeout: 30_000 });
+        await page.locator('.fm-datebar__layout button').nth(1).click();
+        await expect(page.locator('.fm-ex__sort.is-on')).toContainText('Размер');
+        await expect(page.locator('.fm-ex__list tbody tr', { hasText: 'Board minutes.pdf' })).toHaveCount(0);
+    });
 });

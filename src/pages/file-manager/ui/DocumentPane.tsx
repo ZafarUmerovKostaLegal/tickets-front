@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { filesApi, type DocumentDetail, type DocumentRow, type FolderRow } from '../api/filesApi';
 import { canEdit, formatBytes, formatDateTime } from '../lib/filesFormat';
 import { CHUNKED_THRESHOLD, uploadInChunks } from '../lib/chunkedUpload';
@@ -214,6 +214,12 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
     const data = detail.data;
     const doc = data?.document;
     const editable = Boolean(data && canEdit(data.level));
+    const [fullscreen, setFullscreen] = useState(false);
+    const previewSource = useMemo(
+        () => (data ? documentSource(data.document, undefined, { canSave: editable, onSaved: onAttachmentSaved, onOpen: onOpenSaved }) : null),
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only when the document itself changes
+        [data?.document.id, data?.document.version, editable],
+    );
     const mine = doc?.checkedOutById === viewerId;
     const lockedByOther = Boolean(doc && doc.checkedOutById !== null && !mine);
     const canOverride = data?.level === 'manage';
@@ -351,7 +357,16 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                             ))}
                         </nav>
                         <div className="fm-pane__body">
-                            {tab === 'preview' ? <FilePreview source={documentSource(data.document, undefined, { canSave: editable, onSaved: onAttachmentSaved, onOpen: onOpenSaved })} onDownload={() => void download()} /> : null}
+                            {tab === 'preview' ? (
+                                <>
+                                    <div className="fm-pv-bar">
+                                        <button type="button" className="fm-btn fm-pv-bar__full" onClick={() => setFullscreen(true)}>
+                                            <Icon name="panes" />{tr('preview.fullscreen')}
+                                        </button>
+                                    </div>
+                                    {previewSource ? <FilePreview source={previewSource} onDownload={() => void download()} /> : null}
+                                </>
+                            ) : null}
                             {tab === 'properties' ? (
                                 <Properties detail={data} folders={folders} editable={editable && (!lockedByOther || canOverride)} onSaved={apply} />
                             ) : null}
@@ -412,6 +427,13 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                         if (result)
                             apply(result.document);
                     }} />
+            ) : null}
+            {fullscreen && previewSource ? (
+                <Modal title={previewSource.name} onClose={() => setFullscreen(false)} wide className="fm-pv-full">
+                    <div className="fm-pv-full__body">
+                        <FilePreview source={previewSource} onDownload={() => void download()} />
+                    </div>
+                </Modal>
             ) : null}
         </aside>
     );

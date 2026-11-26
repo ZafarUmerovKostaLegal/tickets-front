@@ -76,4 +76,38 @@ test.describe('@e2e Файловый менеджер: вложения пись
         await list.locator('li').nth(1).getByRole('button').click();
         await expect(page).toHaveURL(/folder=emails/);
     });
+
+    test('PDF открывается в превью и на весь экран', async ({ page, loginAs }) => {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await loginAs('admin');
+        const pdf = { ...letter, id: 'pdf1', name: 'Contract.pdf', kind: 'pdf', contentType: 'application/pdf', sizeBytes: 600 };
+        const json = (route: Route, body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        await page.route('**/api/v1/files/clients', (route) => json(route, {
+            viewer: { userId: 1, name: 'Partner P', canManage: true },
+            clients: [{ id: 'c1', name: 'Acme', matters: [{ id: 'm1', clientId: 'c1', name: 'Project Falcon', code: 'KL-104', closed: false, level: 'manage', mine: true, favorite: false }] }],
+            requestable: [],
+        }));
+        await page.route('**/api/v1/files/access-requests**', (route) => json(route, { requests: [] }));
+        await page.route('**/api/v1/files/matters/m1/browse**', (route) => json(route, {
+            matter: { id: 'm1', name: 'Project Falcon', code: 'KL-104', closed: false, level: 'manage', favorite: false },
+            client: { id: 'c1', name: 'Acme' }, folderId: null, path: [], folders: [], documents: [pdf],
+        }));
+        await page.route('**/api/v1/files/documents/pdf1', (route) => json(route, { document: pdf, level: 'manage', canManageAccess: true, path: [], versions: [], activity: [] }));
+        await page.route('**/api/v1/files/documents/pdf1/content**', (route) => route.fulfill({
+            status: 200, contentType: 'application/pdf',
+            body: ['%PDF-1.4', '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 200 200]/Parent 2 0 R>>endobj', 'trailer<</Root 1 0 R>>', '%%EOF'].join('\n'),
+        }));
+        await page.goto('/files?view=matter&matter=m1&doc=pdf1');
+        const frame = page.locator('.fm-pane iframe.fm-pv--pdf');
+        await expect(frame).toHaveAttribute('src', /^blob:/, { timeout: 30_000 });
+        await page.getByRole('button', { name: 'На весь экран' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Contract.pdf' });
+        await expect(dialog.locator('iframe.fm-pv--pdf')).toHaveAttribute('src', /^blob:/);
+        const box = await dialog.boundingBox();
+        expect(box?.width ?? 0).toBeGreaterThan(1200);
+        if (SHOTS)
+            await page.screenshot({ path: `${SHOTS}/pdf-fullscreen.png` });
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+    });
 });
