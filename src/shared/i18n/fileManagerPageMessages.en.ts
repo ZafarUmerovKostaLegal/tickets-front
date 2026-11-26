@@ -787,6 +787,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
     },
     auditX: {
         today: 'Today',
+        collapseAll: 'Collapse all days',
+        expandAll: 'Expand all days',
         yesterday: 'Yesterday',
         dayCount: 'events: {n}',
         reset: 'Reset filters',

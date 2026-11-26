@@ -59,6 +59,27 @@ function dayKey(iso: string | null): string {
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+const COLLAPSED_KEY = 'fm.audit.collapsedDays';
+
+function readCollapsed(): Set<string> {
+    try {
+        const raw = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]') as unknown;
+        return new Set(Array.isArray(raw) ? raw.filter((item): item is string => typeof item === 'string').slice(-60) : []);
+    }
+    catch {
+        return new Set();
+    }
+}
+
+function writeCollapsed(keys: Set<string>): void {
+    try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...keys].slice(-60)));
+    }
+    catch {
+        return;
+    }
+}
+
 function extension(name: string): string {
     const match = /\.([a-z0-9]{1,5})$/i.exec(name);
     return match ? match[1].toLowerCase() : '';
@@ -78,6 +99,16 @@ export function AuditView({ clients, initialMatterId, onOpenMatter, onOpenDocume
     const [text, setText] = useState('');
     const [q, setQ] = useState('');
     const [items, setItems] = useState<AuditRow[]>([]);
+    const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed());
+    const toggleDay = (key: string) => setCollapsed((prev) => {
+        const next = new Set(prev);
+        if (next.has(key))
+            next.delete(key);
+        else
+            next.add(key);
+        writeCollapsed(next);
+        return next;
+    });
     const [offset, setOffset] = useState(0);
 
     useEffect(() => {
@@ -199,6 +230,13 @@ export function AuditView({ clients, initialMatterId, onOpenMatter, onOpenDocume
                         </button>
                     ) : null}
                     <span>{tr('audit.total', { count: total })}</span>
+                    {days.length > 1 ? (
+                        <button type="button" className="fm-au__reset fm-au__fold" onClick={() => {
+                            const all = collapsed.size < days.length ? new Set(days.map((day) => day.key)) : new Set<string>();
+                            writeCollapsed(all);
+                            setCollapsed(all);
+                        }}>{collapsed.size < days.length ? tr('auditX.collapseAll') : tr('auditX.expandAll')}</button>
+                    ) : null}
                     {filtered ? (
                         <button type="button" className="fm-au__reset" onClick={() => {
                             setText('');
@@ -219,11 +257,15 @@ export function AuditView({ clients, initialMatterId, onOpenMatter, onOpenDocume
                     <div className="fm-au__feed">
                         {days.map((day) => (
                             <section key={day.key} className="fm-au-day">
-                                <h3 className="fm-au-day__title">
-                                    <span>{dayTitle(day.at)}</span>
-                                    <em>{tr('auditX.dayCount', { n: day.rows.length })}</em>
+                                <h3 className="fm-au-day__head">
+                                    <button type="button" className={`fm-au-day__title${collapsed.has(day.key) ? ' is-collapsed' : ''}`}
+                                        aria-expanded={!collapsed.has(day.key)} onClick={() => toggleDay(day.key)}>
+                                        <Icon name="chevron" className="fm-au-day__chev" />
+                                        <span>{dayTitle(day.at)}</span>
+                                        <em>{tr('auditX.dayCount', { n: day.rows.length })}</em>
+                                    </button>
                                 </h3>
-                                <ol className="fm-au-day__list">
+                                <ol className="fm-au-day__list" hidden={collapsed.has(day.key)}>
                                     {day.rows.map((row) => {
                                         const group = groupOf(row.action);
                                         const ext = extension(row.targetName);

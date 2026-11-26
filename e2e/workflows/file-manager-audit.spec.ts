@@ -50,6 +50,16 @@ test.describe('@e2e Файловый менеджер: журнал аудита
         if (SHOTS)
             await page.screenshot({ path: `${SHOTS}/audit-1440.png`, fullPage: true });
 
+        await page.locator('.fm-au-day__title', { hasText: 'Вчера' }).click();
+        await expect(page.locator('.fm-au-ev:visible')).toHaveCount(4);
+        if (SHOTS)
+            await page.screenshot({ path: `${SHOTS}/audit-collapsed.png` });
+        await page.locator('.fm-au-day__title', { hasText: 'Вчера' }).click();
+        await expect(page.locator('.fm-au-ev:visible')).toHaveCount(6);
+        await page.getByRole('button', { name: 'Свернуть все дни' }).click();
+        await expect(page.locator('.fm-au-ev:visible')).toHaveCount(0);
+        await page.getByRole('button', { name: 'Развернуть все дни' }).click();
+        await expect(page.locator('.fm-au-ev:visible')).toHaveCount(6);
         await page.locator('.fm-au__chip', { hasText: 'Доступ' }).click();
         await expect(page.locator('.fm-au-ev')).toHaveCount(1);
         expect(urls.at(-1)).toContain('folder_acl_set');
@@ -58,7 +68,7 @@ test.describe('@e2e Файловый менеджер: журнал аудита
         await page.locator('.fm-au-ev__who', { hasText: 'Iroda Tursunova' }).first().click();
         await expect(page.locator('.fm-au-ev')).toHaveCount(2);
         await expect(page.locator('.fm-au__pill')).toContainText('Iroda Tursunova');
-        await page.locator('.fm-au__reset').click();
+        await page.locator('.fm-au__reset:not(.fm-au__fold)').click();
         await expect(page.locator('.fm-au-ev')).toHaveCount(6);
     });
 
