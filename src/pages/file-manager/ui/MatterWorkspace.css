@@ -262,3 +262,119 @@ body[data-theme='dark'] .fm-ex__access.is-custom {
     min-height: 44px;
   }
 }
+
+.fm-filterbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 15rem) minmax(9rem, 12rem) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem 0;
+}
+
+.fm-filterbar__search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 9px;
+  background: var(--fm-surface);
+  color: var(--fm-muted);
+}
+
+.fm-filterbar__search:focus-within {
+  border-color: var(--fm-accent-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fm-accent) 14%, transparent);
+}
+
+.fm-filterbar .fm-filterbar__search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2rem;
+  border: 0;
+  background: transparent;
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.fm-filterbar .fm-filterbar__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 0;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--fm-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fm-filterbar__reset svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.fm-ex__list .fm-ex__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.fm-ex__sort span {
+  color: var(--fm-muted);
+  font-size: 0.75em;
+  opacity: 0.55;
+}
+
+.fm-ex__list .fm-ex__sort.is-on,
+.fm-ex__sort.is-on span {
+  color: var(--fm-accent);
+  opacity: 1;
+}
+
+.fm-ex__col-size .fm-ex__sort,
+.fm-ex__col-size {
+  justify-content: flex-end;
+}
+
+@media (hover: hover) {
+  .fm-ex__list .fm-ex__sort:hover {
+    color: var(--fm-accent);
+  }
+}
+
+@media (max-width: 900px) {
+  .fm-filterbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .fm-filterbar__search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .fm-filterbar {
+    padding: 0.6rem 0.75rem 0;
+  }
+
+  .fm-filterbar .fm-filterbar__search input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}

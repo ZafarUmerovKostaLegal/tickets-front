@@ -8,6 +8,7 @@ import { DOC_DRAG_TYPE } from './DocumentTable';
 import { DocumentAccessDrawer } from './DocumentAccessDrawer';
 import { DocumentPane } from './DocumentPane';
 import { FolderAccessDrawer } from './FolderAccessDrawer';
+import { FmSelect } from './fmSelect';
 import './MatterWorkspace.css';
 import { ConfirmModal, FileBadge, Icon, Modal, StateBlock, useAction, useFm, useLoad, useNotify } from './fmShared';
 
@@ -116,6 +117,23 @@ function isEmailsFolder(folder: FolderRow | null, folders: readonly FolderRow[])
     return parent?.name.trim().toLowerCase() === 'correspondence';
 }
 
+type SortKey = 'name' | 'type' | 'date' | 'author' | 'size';
+type Sort = { key: SortKey; dir: 1 | -1 };
+
+function compareDocs(a: DocumentRow, b: DocumentRow, sort: Sort): number {
+    const text = (x: string, y: string) => x.localeCompare(y, 'ru', { sensitivity: 'base', numeric: true });
+    let diff = 0;
+    if (sort.key === 'size')
+        diff = a.sizeBytes - b.sizeBytes;
+    else if (sort.key === 'date')
+        diff = (documentDay(a) ?? '').localeCompare(documentDay(b) ?? '');
+    else if (sort.key === 'author')
+        diff = text(a.createdBy || '', b.createdBy || '');
+    else if (sort.key === 'type')
+        diff = text(a.kind, b.kind);
+    return (diff || text(a.name, b.name)) * sort.dir;
+}
+
 function kindLabel(kind: DocumentRow['kind'], tr: (key: string) => string): string {
     const key = `kinds.${kind}`;
     const label = tr(key);
@@ -185,11 +203,58 @@ export function MatterWorkspace({
         [data],
     );
 
+    const [query, setQuery] = useState('');
+    const [author, setAuthor] = useState('');
+    const [kind, setKind] = useState('');
+    const [sort, setSort] = useState<Sort>({ key: 'name', dir: 1 });
+    useEffect(() => {
+        setQuery('');
+        setAuthor('');
+        setKind('');
+    }, [matterId, folderId]);
     const range = useMemo(() => dateRange(dateFilter), [dateFilter]);
     const dateActive = Boolean(range.from || range.to);
-    const shownDocuments = useMemo(
-        () => (dateActive ? documents.filter((doc) => inDateRange(documentDay(doc), range)) : documents),
-        [documents, range, dateActive],
+    const needle = query.trim().toLowerCase();
+    const filterActive = dateActive || Boolean(needle || author || kind);
+    const authorOptions = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const doc of documents)
+            counts.set(doc.createdBy || '', (counts.get(doc.createdBy || '') ?? 0) + 1);
+        return [
+            { value: '', label: tr('browser.anyAuthor') },
+            ...[...counts.entries()].filter(([name]) => name).sort((a, b) => a[0].localeCompare(b[0], 'ru'))
+                .map(([name, n]) => ({ value: name, label: `${name} · ${n}` })),
+        ];
+    }, [documents, tr]);
+    const kindOptions = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const doc of documents)
+            counts.set(doc.kind, (counts.get(doc.kind) ?? 0) + 1);
+        return [
+            { value: '', label: tr('browser.anyKind') },
+            ...[...counts.entries()].map(([value, n]) => ({ value, label: `${kindLabel(value as DocumentRow['kind'], tr)} · ${n}` }))
+                .sort((a, b) => a.label.localeCompare(b.label, 'ru')),
+        ];
+    }, [documents, tr]);
+    const shownDocuments = useMemo(() => documents
+        .filter((doc) => (!dateActive || inDateRange(documentDay(doc), range))
+            && (!author || (doc.createdBy || '') === author)
+            && (!kind || doc.kind === kind)
+            && (!needle || `${doc.name}\n${doc.description}\n${doc.docNumber}`.toLowerCase().includes(needle)))
+        .sort((a, b) => compareDocs(a, b, sort)), [documents, range, dateActive, author, kind, needle, sort]);
+    const resetFilters = () => {
+        setDateFilter({ preset: 'all', from: '', to: '' });
+        setQuery('');
+        setAuthor('');
+        setKind('');
+    };
+    const sortBy = (key: SortKey) => setSort((prev) => ({ key, dir: prev.key === key ? (prev.dir === 1 ? -1 : 1) : key === 'date' || key === 'size' ? -1 : 1 }));
+    const sortHead = (key: SortKey, label: string, className?: string) => (
+        <th className={className} aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+            <button type="button" className={`fm-ex__sort${sort.key === key ? ' is-on' : ''}`} onClick={() => sortBy(key)}>
+                {label}<span aria-hidden>{sort.key === key ? (sort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+            </button>
+        </th>
     );
     const looseLetters = useMemo(() => documents.filter((doc) => isMailName(doc.name)).length, [documents]);
     const canOrganize = editable && looseLetters > 0 && isEmailsFolder(currentFolder, folders);
@@ -462,7 +527,7 @@ export function MatterWorkspace({
     };
 
     const empty = subfolders.length === 0 && documents.length === 0;
-    const filteredOut = !empty && dateActive && documents.length > 0 && shownDocuments.length === 0;
+    const filteredOut = !empty && filterActive && documents.length > 0 && shownDocuments.length === 0;
 
     return (
         <div className="fm-split">
@@ -506,7 +571,7 @@ export function MatterWorkspace({
                                 </label>
                             </div>
                         ) : null}
-                        {dateActive ? (
+                        {filterActive ? (
                             <span className="fm-datebar__count">
                                 {tr('browser.dateShown', { shown: shownDocuments.length, total: documents.length })}
                             </span>
@@ -557,6 +622,22 @@ export function MatterWorkspace({
                         ) : null}
                     </div>
                 ) : null}
+                {data && documents.length > 1 ? (
+                    <div className="fm-filterbar" role="search">
+                        <label className="fm-filterbar__search">
+                            <Icon name="search" />
+                            <input type="search" value={query} placeholder={tr('browser.searchHere')} aria-label={tr('browser.searchHere')}
+                                onChange={(event) => setQuery(event.target.value)} />
+                        </label>
+                        <FmSelect value={author} options={authorOptions} placeholder={tr('browser.anyAuthor')} onChange={setAuthor} portalMinWidth={260} />
+                        <FmSelect value={kind} options={kindOptions} placeholder={tr('browser.anyKind')} onChange={setKind} portalMinWidth={220} />
+                        {filterActive ? (
+                            <button type="button" className="fm-filterbar__reset" onClick={resetFilters}>
+                                <Icon name="close" />{tr('browser.resetFilters')}
+                            </button>
+                        ) : null}
+                    </div>
+                ) : null}
                 <StateBlock loading={browse.loading && !data} error={browse.error} onRetry={browse.reload}>
                     {data ? (
                         <div
@@ -580,11 +661,11 @@ export function MatterWorkspace({
                                         <table className="fm-ex__list">
                                             <thead>
                                                 <tr>
-                                                    <th>{tr('browser.colName')}</th>
-                                                    <th className="fm-ex__col-type">{tr('browser.colType')}</th>
-                                                    <th className="fm-ex__col-date">{tr('browser.colModified')}</th>
-                                                    <th className="fm-ex__col-author">{tr('browser.colAuthor')}</th>
-                                                    <th className="fm-ex__col-size">{tr('browser.colSize')}</th>
+                                                    {sortHead('name', tr('browser.colName'))}
+                                                    {sortHead('type', tr('browser.colType'), 'fm-ex__col-type')}
+                                                    {sortHead('date', tr('browser.colModified'), 'fm-ex__col-date')}
+                                                    {sortHead('author', tr('browser.colAuthor'), 'fm-ex__col-author')}
+                                                    {sortHead('size', tr('browser.colSize'), 'fm-ex__col-size')}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -720,10 +801,10 @@ export function MatterWorkspace({
                             )}
                             {filteredOut ? (
                                 <div className="fm-datebar__empty">
-                                    <p>{tr('browser.dateEmpty')}</p>
+                                    <p>{dateActive && !needle && !author && !kind ? tr('browser.dateEmpty') : tr('browser.filterEmpty')}</p>
                                     <button type="button" className="fm-btn" onClick={(event) => {
                                         event.stopPropagation();
-                                        setDateFilter({ preset: 'all', from: '', to: '' });
+                                        resetFilters();
                                     }}>{tr('browser.dateReset')}</button>
                                 </div>
                             ) : null}
