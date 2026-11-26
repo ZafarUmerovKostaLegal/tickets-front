@@ -296,7 +296,9 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                             </div>
                         ) : null}
                         <div className="fm-pane__actions">
-                            <button type="button" className="fm-btn fm-btn--primary" onClick={() => download()}><Icon name="download" />{tr('pane.download')}</button>
+                            {doc.kind !== 'email' ? (
+                                <button type="button" className="fm-btn fm-btn--primary" onClick={() => download()}><Icon name="download" />{tr('pane.download')}</button>
+                            ) : null}
                             <button type="button" className="fm-btn" onClick={openInTab}><Icon name="eye" />{tr('pane.open')}</button>
                             {onOpenAccess && data.canManageAccess ? (
                                 <button type="button" className="fm-btn" onClick={() => onOpenAccess(doc.id)}>

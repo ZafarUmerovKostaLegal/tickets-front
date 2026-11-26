@@ -129,6 +129,8 @@ export type EmailPreview = {
     attachments: Array<{ index: number; name: string; contentType: string; size: number; saved?: SavedAttachment | null }>;
 };
 
+export type AttachmentFolder = { id: string; parentId: string | null; name: string };
+
 export type SavedAttachment = {
     documentId: string;
     name: string;

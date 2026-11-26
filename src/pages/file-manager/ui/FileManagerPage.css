@@ -3788,6 +3788,7 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
 .fm-att__card {
   display: grid;
   grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  row-gap: 0.55rem;
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
@@ -3930,4 +3931,169 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
   .fm-pv .fm-att__btn {
     min-height: 40px;
   }
+}
+
+.fm-pv .fm-att__btn.is-save.is-active {
+  background: var(--app-accent-hover, var(--app-accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 22%, transparent);
+}
+
+.fm-attpick {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--app-border-soft, var(--app-border));
+  animation: fm-attpick-in 0.18s ease both;
+}
+
+.fm-attpick__title {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.fm-attpick__search {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  color: var(--app-muted);
+}
+
+.fm-attpick__search svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.fm-pv .fm-attpick__search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 1.9rem;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.fm-attpick__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 14rem;
+  margin: 0;
+  padding: 0.2rem;
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  list-style: none;
+}
+
+.fm-pv .fm-attpick__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 1.9rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fm-attpick__row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-attpick__row svg {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #d97706;
+}
+
+.fm-pv .fm-attpick__row.is-on {
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .fm-pv .fm-attpick__row:hover:not(.is-on) {
+    background: color-mix(in srgb, var(--app-muted) 8%, transparent);
+  }
+}
+
+.fm-attpick__muted {
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  color: var(--app-muted);
+  font-size: 0.76rem;
+}
+
+.fm-attpick__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.fm-attpick__target {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-attpick__target svg {
+  flex: none;
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.fm-attpick__buttons {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.fm-pv .fm-attpick__buttons .fm-btn {
+  min-height: 2rem;
+  font-size: 0.78rem;
+}
+
+@keyframes fm-attpick-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-attpick { animation: none; }
+}
+
+@media (max-width: 768px) {
+  .fm-pv .fm-attpick__row { min-height: 40px; }
+  .fm-pv .fm-attpick__search input { min-height: 40px; font-size: 16px; }
+  .fm-pv .fm-attpick__buttons .fm-btn { min-height: 40px; }
 }

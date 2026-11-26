@@ -8,8 +8,10 @@ import {
     previewKindOf,
     TEXT_HEAD_BYTES,
     type ArchiveListing,
+    type AttachmentFolder,
     type EmailPreview, type SavedAttachment,
 } from '../lib/previewKinds';
+import { AttachmentFolderPicker } from './AttachmentFolderPicker';
 import { Icon, saveBlob, useFm } from './fmShared';
 
 const DocxView = lazy(() => import('./previewOffice').then((m) => ({ default: m.DocxView })));
@@ -27,7 +29,9 @@ export type PreviewSource = {
     entry?: (index: number, name: string, size: number) => PreviewSource;
     email?: () => Promise<EmailPreview>;
     emailAttachment?: (index: number) => Promise<Blob>;
-    saveAttachment?: (index: number) => Promise<SavedAttachment>;
+    saveAttachment?: (index: number, folderId: string | null) => Promise<SavedAttachment>;
+    attachmentFolders?: () => Promise<AttachmentFolder[]>;
+    attachmentDefaultFolderId?: string | null;
     openSaved?: (saved: SavedAttachment) => void;
 };
 
@@ -244,19 +248,21 @@ function EmailView({ source }: { source: PreviewSource }) {
     const { data, error } = useAsync(() => source.email!(), [source.key]);
     const [savedNow, setSavedNow] = useState<Record<number, SavedAttachment>>({});
     const [saving, setSaving] = useState<number | null>(null);
+    const [picking, setPicking] = useState<number | null>(null);
     const [saveError, setSaveError] = useState('');
     useEffect(() => {
         setSavedNow({});
         setSaveError('');
     }, [source.key]);
-    const saveOne = async (index: number) => {
+    const saveOne = async (index: number, folderId: string | null) => {
         if (!source.saveAttachment)
             return;
         setSaving(index);
         setSaveError('');
         try {
-            const saved = await source.saveAttachment(index);
+            const saved = await source.saveAttachment(index, folderId);
             setSavedNow((prev) => ({ ...prev, [index]: saved }));
+            setPicking(null);
         }
         catch (err) {
             setSaveError(err instanceof Error ? err.message : String(err));
@@ -308,8 +314,9 @@ function EmailView({ source }: { source: PreviewSource }) {
                                         <span>{saved.visible ? tr('preview.attachmentOpen') : tr('preview.attachmentOpenFolder')}</span>
                                     </button>
                                 ) : source.saveAttachment ? (
-                                    <button type="button" className="fm-att__btn is-save" disabled={saving !== null} title={tr('preview.attachmentSaveTitle')}
-                                        onClick={() => void saveOne(item.index)}>
+                                    <button type="button" className={`fm-att__btn is-save${picking === item.index ? ' is-active' : ''}`} disabled={saving !== null}
+                                        title={tr('preview.attachmentSaveTitle')} aria-expanded={picking === item.index}
+                                        onClick={() => setPicking((prev) => (prev === item.index ? null : item.index))}>
                                         <Icon name={busy ? 'clock' : 'upload'} />
                                         <span>{busy ? tr('preview.attachmentSaving') : tr('preview.attachmentSave')}</span>
                                     </button>
@@ -319,6 +326,15 @@ function EmailView({ source }: { source: PreviewSource }) {
                                         <Icon name="download" />
                                     </button>
                                 )}
+                                {picking === item.index && !saved && source.attachmentFolders ? (
+                                    <AttachmentFolderPicker
+                                        load={source.attachmentFolders}
+                                        initialFolderId={source.attachmentDefaultFolderId ?? null}
+                                        busy={busy}
+                                        onCancel={() => setPicking(null)}
+                                        onSave={(folderId) => void saveOne(item.index, folderId)}
+                                    />
+                                ) : null}
                             </li>
                         );
                     })}

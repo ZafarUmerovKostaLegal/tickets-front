@@ -1,7 +1,19 @@
 import { diskApi, type DiskFile } from '../api/diskApi';
 import { filesApi, type DocumentRow } from '../api/filesApi';
-import type { SavedAttachment } from '../lib/previewKinds';
+import type { AttachmentFolder, SavedAttachment } from '../lib/previewKinds';
 import type { PreviewSource } from './FilePreview';
+
+const folderLoaders = new Map<string, () => Promise<AttachmentFolder[]>>();
+
+function folderLoader(matterId: string): () => Promise<AttachmentFolder[]> {
+    let loader = folderLoaders.get(matterId);
+    if (!loader) {
+        loader = async () => (await filesApi.browse(matterId, null)).folders
+            .map((folder) => ({ id: folder.id, parentId: folder.parentId, name: folder.name }));
+        folderLoaders.set(matterId, loader);
+    }
+    return loader;
+}
 
 export type AttachmentActions = {
     canSave: boolean;
@@ -10,7 +22,7 @@ export type AttachmentActions = {
 };
 
 export function documentSource(
-    doc: Pick<DocumentRow, 'id' | 'name' | 'sizeBytes' | 'contentType' | 'version'>,
+    doc: Pick<DocumentRow, 'id' | 'name' | 'sizeBytes' | 'contentType' | 'version'> & Partial<Pick<DocumentRow, 'matterId' | 'folderId'>>,
     version?: number,
     attachments?: AttachmentActions,
 ): PreviewSource {
@@ -37,8 +49,8 @@ export function documentSource(
         email: () => filesApi.email(doc.id, v),
         emailAttachment: (index) => filesApi.emailAttachmentBlob(doc.id, index, v),
         ...(attachments?.canSave ? {
-            saveAttachment: async (index: number) => {
-                const result = await filesApi.saveEmailAttachment(doc.id, index);
+            saveAttachment: async (index: number, folderId: string | null) => {
+                const result = await filesApi.saveEmailAttachment(doc.id, index, folderId);
                 attachments.onSaved?.();
                 return {
                     documentId: result.document.id,
@@ -50,6 +62,8 @@ export function documentSource(
                     visible: result.visible ?? true,
                 } satisfies SavedAttachment;
             },
+            attachmentDefaultFolderId: doc.folderId ?? null,
+            ...(doc.matterId ? { attachmentFolders: folderLoader(doc.matterId) } : {}),
         } : {}),
         ...(attachments?.onOpen ? { openSaved: attachments.onOpen } : {}),
     };

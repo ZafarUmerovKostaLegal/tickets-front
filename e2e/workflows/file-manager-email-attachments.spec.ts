@@ -46,7 +46,7 @@ test.describe('@e2e Файловый менеджер: вложения пись
             ],
         }));
         await page.route('**/api/v1/files/documents/mail1/email/0/save', (route) => {
-            saves.push(route.request().url());
+            saves.push(String((route.request().postDataJSON() as { folderId?: string | null }).folderId ?? 'root'));
             saved = { ...letter, id: 'd10', name: 'pdf.pdf', kind: 'pdf', contentType: 'application/pdf', sizeBytes: 216_000 };
             return json(route, { status: 'created', document: saved, folderId: 'emails', folderPath: 'Correspondence / Emails', savedBy: 'Partner P' });
         });
@@ -55,7 +55,16 @@ test.describe('@e2e Файловый менеджер: вложения пись
         await expect(list.locator('li')).toHaveCount(2, { timeout: 30_000 });
         await expect(list.locator('li').nth(1)).toContainText('Открыть папку');
         await expect(list.locator('li').nth(1)).toContainText('Correspondence / Emails · Iroda T');
-        await list.locator('li').first().getByRole('button').click();
+        await expect(page.locator('.fm-pane__actions')).not.toContainText('Скачать');
+        await list.locator('li').first().getByRole('button', { name: 'В matter' }).click();
+        const picker = page.locator('.fm-attpick');
+        await expect(picker.getByRole('option', { name: 'Emails' })).toHaveAttribute('aria-selected', 'true');
+        await picker.getByRole('option', { name: 'Correspondence' }).click();
+        if (SHOTS)
+            await page.locator('.fm-pane').screenshot({ path: `${SHOTS}/email-attach-picker.png` });
+        await picker.getByRole('button', { name: 'Сохранить сюда' }).click();
+        await expect(picker).toHaveCount(0);
+        expect(saves).toEqual(['corr']);
         await expect(list.locator('li').first()).toContainText('Открыть');
         await expect(list.locator('li').first()).toContainText('Correspondence / Emails · Partner P');
         expect(saves).toHaveLength(1);
