@@ -40,6 +40,12 @@ export default defineConfig(({ mode }) => {
                             return 'react-vendor';
                         if (id.includes('node_modules/react-router'))
                             return 'router';
+                        if (
+                            norm.includes('/node_modules/pako/')
+                            || norm.includes('/node_modules/clsx/')
+                            || norm.includes('/node_modules/tslib/')
+                        )
+                            return 'shared-libs';
                         if (id.includes('node_modules/recharts'))
                             return 'recharts';
                         if (id.includes('node_modules/pdf-lib') || id.includes('node_modules/@pdf-lib/'))

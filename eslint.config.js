@@ -12,6 +12,8 @@ export default [
       'coverage/**',
       'node_modules/**',
       'src-tauri/**',
+      '**/src-tauri/target/**',
+      '**/dist/**',
       'playwright-report/**',
       'test-results/**',
       'all-blob-reports/**',

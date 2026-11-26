@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { JournalKind } from '../model/journalDemo';
 import { downloadFileGuardEvent, fetchFileGuardEventFile, fetchFileGuardEvents, fetchFileGuardPolicies, fetchFileGuardStorage, fileGuardPreviewBlob, matchingPolicy, policyScope, saveFileGuardPolicy, type FileGuardPolicy, type FileGuardStoredFile } from '../model/fileGuardApi';
-import { downloadJournalReport } from '../model/journalReportPdf';
 import {
     JOURNAL_UI_INITIAL,
     buildJournalView,
@@ -187,7 +186,8 @@ export function ItSecurityJournal() {
     const downloadReport = () => {
         setReportError('');
         setReportBusy(true);
-        void downloadJournalReport(model, state.view)
+        void import('../model/journalReportPdf')
+            .then(({ downloadJournalReport }) => downloadJournalReport(model, state.view))
             .catch((error: unknown) => {
                 setReportError(error instanceof Error ? error.message : 'Отчёт не удалось скачать');
             })

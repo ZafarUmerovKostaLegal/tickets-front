@@ -23,6 +23,11 @@ function makeMatter() {
         4: { level: 'edit', effective: 'deny', note: '', until: null, suspendedUntil: '2026-11-25T18:59:59Z', grantedBy: 'Partner', grantedAt: NOW },
     };
     const puts: unknown[] = [];
+    const folderFiles = [
+        { id: 'f1', name: 'Letter to Acme.pdf', kind: 'pdf', createdById: 2, createdBy: 'Iroda T', restricted: false },
+        { id: 'f2', name: 'Court filing.docx', kind: 'doc', createdById: 1, createdBy: 'Partner P', restricted: false },
+        { id: 'f3', name: 'Settlement terms.docx', kind: 'doc', createdById: 1, createdBy: 'Partner P', restricted: true },
+    ];
 
     const docOut = (doc: typeof docs[number]) => ({
         id: doc.id, docNumber: `KL-00000${doc.id.slice(1)}`, name: doc.name, kind: doc.kind, docType: '', description: '',
@@ -40,7 +45,15 @@ function makeMatter() {
         { userId: 4, name: 'Bekzod K', position: 'Paralegal', partner: false, matterLevel: 'edit', source: 'both' },
     ].map((member) => {
         const entry = entries[member.userId] ?? null;
-        return { ...member, entry, inherited: null, effective: member.partner ? null : entry?.effective ?? null };
+        const effective = member.partner ? null : entry?.effective ?? null;
+        const files: Record<string, string> = {};
+        for (const file of folderFiles) {
+            const level = member.partner ? 'edit' : file.createdById === member.userId ? 'edit'
+                : effective === 'read' || effective === 'edit' ? (file.restricted ? null : effective) : null;
+            if (level)
+                files[file.id] = level;
+        }
+        return { ...member, entry, inherited: null, effective, files };
     });
 
     const handleMatter = async (route: Route) => {
@@ -73,6 +86,7 @@ function makeMatter() {
             folder: { id: 'corr', name: 'Correspondence', parentId: null, inherit: true, path: [] },
             matter: { id: 'm1', name: 'Project Falcon', code: 'KL-104' },
             members: members(),
+            documents: folderFiles,
         });
     };
 
@@ -165,10 +179,25 @@ test.describe('@e2e Файловый менеджер: доступ к папк�
         if (SHOTS)
             await page.screenshot({ path: `${SHOTS}/fa-1440-light.png` });
 
-        await drawer.locator('.fm-faccess__row', { hasText: 'Lawyer L' }).getByLabel('Изменение').click();
+        const lawyer = drawer.locator('.fm-faccess__row', { hasText: 'Lawyer L' });
+        await expect(lawyer.getByRole('radio', { name: 'Свои файлы' })).toHaveAttribute('aria-checked', 'true');
+        await expect(lawyer).toContainText('Доступно файлов: 0 из 3');
+        await lawyer.getByRole('radio', { name: 'Редактирование' }).click();
         await expect.poll(() => matter.puts.length).toBe(1);
         expect(matter.puts[0]).toMatchObject({ userId: 3, level: 'edit' });
-        await expect(drawer.locator('.fm-faccess__row', { hasText: 'Lawyer L' })).toContainText('Может изменять');
+        await expect(lawyer.getByRole('radio', { name: 'Редактирование' })).toHaveAttribute('aria-checked', 'true');
+        await expect(lawyer).toContainText('Доступно файлов: 2 из 3');
+        const iroda = drawer.locator('.fm-faccess__row', { hasText: 'Iroda T' });
+        await expect(iroda.getByRole('radio', { name: 'Чтение' })).toHaveAttribute('aria-checked', 'true');
+        await iroda.getByRole('button', { name: /Доступно файлов: 2 из 3/ }).click();
+        const list = iroda.locator('.fm-faccess__file-list li');
+        await expect(list).toHaveCount(3);
+        await expect(list.filter({ hasText: 'Letter to Acme.pdf' })).toContainText('Редактирование');
+        await expect(list.filter({ hasText: 'Letter to Acme.pdf' })).toContainText('автор');
+        await expect(list.filter({ hasText: 'Court filing.docx' })).toContainText('Чтение');
+        await expect(list.filter({ hasText: 'Settlement terms.docx' })).toContainText('Нет доступа');
+        if (SHOTS)
+            await drawer.screenshot({ path: `${SHOTS}/fa-files.png` });
 
         await drawer.locator('.fm-faccess__row', { hasText: 'Iroda T' }).getByRole('button', { name: 'Временный доступ и отключение' }).click();
         await expect(drawer.getByText('Временно отключить по')).toBeVisible();

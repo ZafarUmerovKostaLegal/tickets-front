@@ -143,11 +143,9 @@ export const diskApi = {
         request<{ updated: number }>('/hide', json('POST', { ...selection, hidden })),
     remove: (selection: DiskSelection) =>
         request<{ deleted: number }>('/delete', json('POST', selection)),
-    zipBlob: async (selection: DiskSelection) => {
-        const response = await apiFetch(`${BASE}/zip`, json('POST', selection));
-        if (!response.ok)
-            await fail(response);
-        return await response.blob();
+    zipLink: async (selection: DiskSelection, name?: string) => {
+        const body = await request<{ url: string; fileName: string; files: number; sizeBytes: number }>('/zip/link', json('POST', { ...selection, name }));
+        return { ...body, url: upgradeUrlToPageSecurity(`${getApiBaseUrl()}${body.url}`) };
     },
     deleteFile: (fileId: string) =>
         request<DiskBrowse>(`/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' }),

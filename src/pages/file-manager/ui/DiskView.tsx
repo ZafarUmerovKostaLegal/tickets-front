@@ -477,6 +477,15 @@ function pathLabel(path: DiskCrumb[] | undefined, root: string): string {
     return [root, ...(path ?? []).map((crumb) => crumb.name)].join(' › ');
 }
 
+function startBrowserDownload(url: string) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
 export function DiskView() {
     const { tr, locale } = useFm();
     const act = useAction();
@@ -676,14 +685,8 @@ export function DiskView() {
     const downloadFile = async (item: DiskFile) => {
         if ((item.sizeBytes ?? 0) > DIRECT_DOWNLOAD_LIMIT) {
             const url = await act(() => diskApi.link(item.id));
-            if (url) {
-                const link = document.createElement('a');
-                link.href = url;
-                link.rel = 'noopener';
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-            }
+            if (url)
+                startBrowserDownload(url);
             return;
         }
         await act(async () => {
@@ -775,10 +778,9 @@ export function DiskView() {
         if (!selectionSize(sel))
             return;
         const name = list.length === 1 ? list[0]!.item.name : currentName;
-        await act(async () => {
-            await saveBlob(await diskApi.zipBlob(sel), `${name}.zip`);
-            return true;
-        });
+        const link = await act(() => diskApi.zipLink(sel, name));
+        if (link)
+            startBrowserDownload(link.url);
     };
 
     const selectEntry = (event: ReactMouseEvent, entry: Entry) => {

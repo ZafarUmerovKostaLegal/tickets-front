@@ -167,12 +167,23 @@ export type FolderAccessMember = {
     entry: FolderAccessEntry | null;
     inherited: { level: FolderAccessLevel; folderId: string; folderName: string } | null;
     effective: FolderAccessLevel | null;
+    files?: Record<string, 'read' | 'edit'>;
+};
+
+export type FolderAccessDocument = {
+    id: string;
+    name: string;
+    kind: FileKind;
+    createdById: number;
+    createdBy: string;
+    restricted: boolean;
 };
 
 export type FolderAccessResponse = {
     folder: { id: string; name: string; parentId: string | null; inherit: boolean; path: Crumb[] };
     matter: { id: string; name: string; code: string };
     members: FolderAccessMember[];
+    documents?: FolderAccessDocument[];
 };
 
 export type FolderAccessInput = {
@@ -399,6 +410,24 @@ export type MatrixResponse = {
     explicit: string[];
 };
 
+export type MatrixRule = {
+    level: FolderAccessLevel;
+    effective: FolderAccessLevel | null;
+    until: string | null;
+    suspendedUntil: string | null;
+};
+
+export type MatterAccessMatrix = {
+    matter: { id: string; name: string; code: string; closed: boolean };
+    folders: Array<{ id: string; parentId: string | null; name: string; inherit: boolean }>;
+    documents: Array<{ id: string; folderId: string | null; name: string; kind: FileKind; createdById: number; createdBy: string; restricted: boolean }>;
+    truncated: boolean;
+    people: Array<{ userId: number; name: string; position: string; partner: boolean; matterLevel: string; source: string }>;
+    folderRules: Record<string, MatrixRule>;
+    folderCells: Record<string, 'own' | 'read' | 'edit' | 'deny'>;
+    fileRules: Record<string, MatrixRule>;
+};
+
 export type StatsResponse = {
     documents: number;
     storedBytes: number;
@@ -583,6 +612,7 @@ export const filesApi = {
     setFolderInherit: (folderId: string, inherit: boolean) =>
         request<{ inherit: boolean }>(`/folders/${encodeURIComponent(folderId)}/inherit`, json('PUT', { inherit })),
     matrix: (clientId: string) => request<MatrixResponse>(`/matrix${query({ clientId })}`),
+    matterAccessMatrix: (matterId: string) => request<MatterAccessMatrix>(`/matters/${encodeURIComponent(matterId)}/access-matrix`),
     requests: (status: 'pending' | 'all') => request<{ requests: AccessRequest[] }>(`/access-requests${query({ status })}`),
     createRequest: (body: { matterId: string; level: 'read' | 'edit'; reason: string }) =>
         request<{ request: AccessRequest }>('/access-requests', json('POST', body)),

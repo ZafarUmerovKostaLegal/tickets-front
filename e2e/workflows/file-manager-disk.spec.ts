@@ -227,6 +227,31 @@ test.describe('@e2e Файловый менеджер: Диск как пров�
         await expect(tile(page, 'IT Folder')).toBeVisible();
     });
 
+    test('«Скачать ZIP» берёт ссылку и отдаёт архив загрузчику браузера', async ({ page, loginAs }) => {
+        await loginAs('admin');
+        await openDisk(page);
+        const asked: unknown[] = [];
+        await page.route('**/api/v1/legal-hub/drive/zip/link', (route) => {
+            asked.push(route.request().postDataJSON());
+            return route.fulfill({
+                status: 200, contentType: 'application/json',
+                body: JSON.stringify({ url: '/api/v1/legal-hub/drive/zipdl/tok', fileName: 'Диск.zip', files: 2, sizeBytes: 10, expiresIn: 300 }),
+            });
+        });
+        await page.route('**/api/v1/legal-hub/drive/zipdl/tok', (route) => route.fulfill({
+            status: 200, contentType: 'application/zip',
+            headers: { 'Content-Disposition': "attachment; filename*=UTF-8''%D0%94%D0%B8%D1%81%D0%BA.zip" },
+            body: Buffer.from('PK' + ' '.repeat(18), 'binary'),
+        }));
+        await tile(page, 'IT Folder').click();
+        await tile(page, 'Policy.pdf').click({ modifiers: ['Control'] });
+        await tile(page, 'Policy.pdf').click({ button: 'right' });
+        const download = page.waitForEvent('download');
+        await page.getByRole('menuitem', { name: 'Скачать ZIP' }).click();
+        expect((await download).suggestedFilename()).toBe('Диск.zip');
+        expect(asked).toEqual([{ folderIds: ['it'], fileIds: ['f1'], name: 'Диск' }]);
+    });
+
     test('скрытие папки, показ скрытых и удаление', async ({ page, loginAs }) => {
         await loginAs('admin');
         const drive = await openDisk(page);

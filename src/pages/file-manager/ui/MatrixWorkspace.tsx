@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { TimeTrackingUserRow } from '@entities/time-tracking';
 import { SearchableSelect } from '@shared/ui';
 import { filesApi, type AclLevel, type ClientsResponse, type MatrixResponse } from '../api/filesApi';
 import { endOfDay, todayPlus } from '../lib/accessDates';
 import { usePeopleNames } from '../lib/usePeopleNames';
+import { MatterAccessMatrix } from './MatterAccessMatrix';
 import { Icon, Modal, StateBlock, useAction, useFm, useLoad, type IconName } from './fmShared';
 import './SecurityWorkspace.css';
 import './MatrixWorkspace.css';
@@ -23,7 +24,50 @@ function matterLabel(matter: { code: string; name: string }): string {
     return matter.code ? `${matter.code} · ${matter.name}` : matter.name;
 }
 
+const MODE_KEY = 'fm.matrix.mode';
+
+function readMode(): 'matters' | 'folders' {
+    try {
+        return localStorage.getItem(MODE_KEY) === 'matters' ? 'matters' : 'folders';
+    } catch {
+        return 'folders';
+    }
+}
+
 export function MatrixWorkspace({ clients, onOpenSecurity }: { clients: ClientsResponse; onOpenSecurity: (matterId: string) => void }) {
+    const { tr } = useFm();
+    const [mode, setMode] = useState(readMode);
+    const pickMode = (next: 'matters' | 'folders') => {
+        setMode(next);
+        try {
+            localStorage.setItem(MODE_KEY, next);
+        } catch {
+            /* storage is optional */
+        }
+    };
+    const modes = (
+        <div className="fm-mx__modes" role="tablist" aria-label={tr('matrix.title')}>
+            {(['folders', 'matters'] as const).map((item) => (
+                <button key={item} type="button" role="tab" aria-selected={mode === item}
+                    className={mode === item ? 'is-on' : undefined} onClick={() => pickMode(item)}>
+                    <Icon name={item === 'folders' ? 'folder' : 'briefcase'} />
+                    {tr(item === 'folders' ? 'matrixF.modeFolders' : 'matrixF.modeMatters')}
+                </button>
+            ))}
+        </div>
+    );
+    if (mode === 'folders') {
+        return (
+            <section className="fm-mx">
+                {modes}
+                <MatterAccessMatrix clients={clients} onOpenSecurity={onOpenSecurity} />
+            </section>
+        );
+    }
+    return <ClientMatrix clients={clients} onOpenSecurity={onOpenSecurity} modes={modes} />;
+}
+
+function ClientMatrix({ clients, onOpenSecurity, modes }: { clients: ClientsResponse; onOpenSecurity: (matterId: string) => void; modes: ReactNode }) {
     const { tr } = useFm();
     const act = useAction();
     const [clientId, setClientId] = useState(clients.clients[0]?.id ?? '');
@@ -170,6 +214,7 @@ export function MatrixWorkspace({ clients, onOpenSecurity }: { clients: ClientsR
 
     return (
         <section className="fm-mx">
+            {modes}
             <div className="fm-mx__bar">
                 <div className="fm-mx__client">
                     <SearchableSelect
