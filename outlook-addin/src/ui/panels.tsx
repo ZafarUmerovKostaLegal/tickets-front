@@ -129,10 +129,15 @@ export function MailStatus({ item, filings, loading, onOpen }: {
             <ul className="kf-filed">
               {message.map((filing) => (
                 <li key={`${filing.documentId}-${filing.kind}`}>
-                  <button type="button" className="kf-filed__row" onClick={() => onOpen(filing)} title="Открыть в Kosta Hub">
+                  <button type="button" className="kf-filed__row"
+                    onClick={() => onOpen(filing.visible === false ? { ...filing, documentId: '' } : filing)}
+                    title={filing.visible === false ? 'Сохранил коллега — доступ к письму открывает партнёр. Откроется папка.' : 'Открыть в Kosta Hub'}>
                     <Icon name={filing.kind === 'thread' ? 'thread' : filing.kind === 'attachment' ? 'clip' : 'mail'} size={14} />
                     <LocationText location={filing} compact />
-                    <span className="kf-filed__meta">{filing.filedBy} · {formatDate(filing.filedAt)}</span>
+                    <span className="kf-filed__meta">
+                      {filing.filedBy} · {formatDate(filing.filedAt)}
+                      {filing.visible === false ? ' · доступ у партнёра' : ''}
+                    </span>
                     <Icon name="open" size={13} className="kf-filed__open" />
                   </button>
                 </li>

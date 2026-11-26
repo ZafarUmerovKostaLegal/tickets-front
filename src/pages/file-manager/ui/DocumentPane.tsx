@@ -7,6 +7,7 @@ import { filesSend } from '../lib/uploadQueue';
 const PREVIEW_LIMIT = 50 * 1024 * 1024;
 import { FilePreview } from './FilePreview';
 import { FmSelect } from './fmSelect';
+import type { SavedAttachment } from '../lib/previewKinds';
 import { documentSource } from './previewSources';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, Modal, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 import { inertObjectUrl } from '@shared/lib/inertBlob';
@@ -24,6 +25,8 @@ type Props = {
     onClose: () => void;
     onLocate?: (doc: DocumentRow) => void;
     onOpenAccess?: (documentId: string) => void;
+    onOpenSaved?: (saved: SavedAttachment) => void;
+    onAttachmentSaved?: () => void;
 };
 
 function Properties({ detail, folders, editable, onSaved }: {
@@ -190,7 +193,7 @@ function CheckinModal({ doc, onClose, onDone }: { doc: DocumentRow; onClose: () 
     );
 }
 
-export function DocumentPane({ documentId, viewerId, folders = [], onChanged, onDeleted, onClose, onLocate, onOpenAccess }: Props) {
+export function DocumentPane({ documentId, viewerId, folders = [], onChanged, onDeleted, onClose, onLocate, onOpenAccess, onOpenSaved, onAttachmentSaved }: Props) {
     const { tr, locale } = useFm();
     const act = useAction();
     const [tab, setTab] = useState<Tab>('preview');
@@ -346,7 +349,7 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                             ))}
                         </nav>
                         <div className="fm-pane__body">
-                            {tab === 'preview' ? <FilePreview source={documentSource(data.document)} onDownload={() => void download()} /> : null}
+                            {tab === 'preview' ? <FilePreview source={documentSource(data.document, undefined, { canSave: editable, onSaved: onAttachmentSaved, onOpen: onOpenSaved })} onDownload={() => void download()} /> : null}
                             {tab === 'properties' ? (
                                 <Properties detail={data} folders={folders} editable={editable && (!lockedByOther || canOverride)} onSaved={apply} />
                             ) : null}

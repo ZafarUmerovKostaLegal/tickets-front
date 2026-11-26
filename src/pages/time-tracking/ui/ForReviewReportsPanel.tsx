@@ -70,6 +70,7 @@ import {
 } from './PartnerConfirmedCommentsDrawer';
 import { PartnerReportEmptyBadge, partnerReportIsEmpty } from './PartnerReportEmptyBadge';
 import { PartnerReportsListLoading } from './PartnerReportsListLoading';
+import { ForReviewHistoryModal } from './ForReviewHistoryModal';
 
 const FOR_REVIEW_PAGE_SIZE = 50;
 
@@ -80,6 +81,9 @@ const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="
     <path d="M16 21h5v-5" />
 </svg>);
 
+const IcoHistory = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" />
+</svg>);
 const IcoEye = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
@@ -410,6 +414,7 @@ export function ForReviewReportsPanel() {
     const [clientNamesById, setClientNamesById] = useState<Map<string, string>>(new Map());
     const [clientMetaByProjectId, setClientMetaByProjectId] = useState<Map<string, PartnerReportClientMeta>>(new Map());
     const [usersById, setUsersById] = useState<Map<number, PartnerUserMeta>>(new Map());
+    const [historyRow, setHistoryRow] = useState<PartnerReportConfirmationRequest | null>(null);
     const [confirmBusyId, setConfirmBusyId] = useState<string | null>(null);
     const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
     const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
@@ -1044,6 +1049,18 @@ export function ForReviewReportsPanel() {
                                     {t(`timeTrackingPage.reports.forReview.priority.${priority}`)}
                                 </span>
                             )}
+                            {r.priorityChangedAt ? (
+                                <button type="button" className="tt-for-review__priority-since"
+                                  title={t('timeTrackingPage.reports.forReview.history.sinceTitle')
+                                      .replace('{when}', fmtIsoWhen(r.priorityChangedAt, locale))
+                                      .replace('{name}', r.priorityChangedBy ? (usersById.get(r.priorityChangedBy)?.label ?? `ID ${r.priorityChangedBy}`) : '—')}
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      setHistoryRow(r);
+                                  }}>
+                                    {t('timeTrackingPage.reports.forReview.history.since').replace('{when}', fmtUnsignedMarkDate(r.priorityChangedAt, locale))}
+                                </button>
+                            ) : null}
                         </td>
                         <td className="tt-partner-confirmed__td-partners" data-label={columnLabels.partners}>
                             <PartnerInitialsCell
@@ -1081,6 +1098,9 @@ export function ForReviewReportsPanel() {
                                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn tt-partner-confirmed__icon-btn--primary" onClick={() => openReportPreviewForRow(r)} title={t('timeTrackingPage.reports.forReview.previewTitle')} aria-label={t('timeTrackingPage.reports.forReview.previewAria')}>
                                     <IcoEye />
                                 </button>
+                                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" onClick={() => setHistoryRow(r)} title={t('timeTrackingPage.reports.forReview.history.open')} aria-label={t('timeTrackingPage.reports.forReview.history.open')}>
+                                    <IcoHistory />
+                                </button>
                                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={invoiceBusy} onClick={() => void generateInvoiceForRow(r)} title={invoiceTitle} aria-label={invoiceAria}>
                                     {invoiceBusy ? <IcoSpinner /> : <IcoInvoice />}
                                 </button>
@@ -1097,6 +1117,15 @@ export function ForReviewReportsPanel() {
             </tbody>
         </table>
     </div>);
+
+    const historyModal = historyRow ? (
+        <ForReviewHistoryModal
+            requestId={historyRow.id}
+            title={`${resolveProjectLabel(historyRow)} · ${formatIsoRangeTitle(historyRow.dateFrom, historyRow.dateTo, { prefix: false, locale: localeTag(locale) })}`}
+            nameOf={(id) => (id ? usersById.get(id)?.label ?? `ID ${id}` : '—')}
+            onClose={() => setHistoryRow(null)}
+        />
+    ) : null;
 
     return (<div className="tt-partner-confirmed" aria-labelledby="tt-for-review-heading">
         <div className="tt-partner-confirmed__head">
@@ -1218,5 +1247,6 @@ export function ForReviewReportsPanel() {
             cancel: t('timeTrackingPage.reports.partnerConfirmed.commentsCancel'),
             edited: t('timeTrackingPage.reports.partnerConfirmed.commentsEdited'),
         }} />
+        {historyModal}
     </div>);
 }

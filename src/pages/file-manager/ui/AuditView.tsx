@@ -6,7 +6,7 @@ import { Icon, StateBlock, saveBlob, useFm, useLoad, type IconName } from './fmS
 import './AuditView.css';
 
 const AUDIT_ACTIONS = [
-    'upload', 'version', 'open', 'download', 'checkout', 'checkin', 'discard', 'rename', 'properties', 'move', 'delete',
+    'upload', 'version', 'attachment_save', 'open', 'download', 'checkout', 'checkin', 'discard', 'rename', 'properties', 'move', 'delete',
     'restore', 'purge', 'erase', 'folder_create', 'folder_rename', 'folder_move', 'folder_delete', 'provision', 'acl_set',
     'acl_remove', 'folder_acl_set', 'folder_acl_remove', 'folder_inherit', 'doc_acl_set', 'doc_acl_remove', 'doc_restrict', 'request_create', 'request_approve', 'request_reject', 'template_update', 'denied',
 ] as const;
@@ -14,7 +14,7 @@ const AUDIT_ACTIONS = [
 type Group = 'files' | 'views' | 'edits' | 'removals' | 'access' | 'denied' | 'other';
 
 const GROUPS: Record<Exclude<Group, 'other'>, string[]> = {
-    files: ['upload', 'version', 'checkin'],
+    files: ['upload', 'version', 'checkin', 'attachment_save'],
     views: ['open', 'download'],
     edits: ['checkout', 'discard', 'rename', 'properties', 'move', 'folder_create', 'folder_rename', 'folder_move'],
     removals: ['delete', 'restore', 'purge', 'erase', 'folder_delete'],

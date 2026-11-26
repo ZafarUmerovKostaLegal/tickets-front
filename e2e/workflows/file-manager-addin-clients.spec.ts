@@ -17,14 +17,15 @@ for (const width of [1440, 390]) {
     await page.route('**/api/v1/files/clients', (route) => route.fulfill({ json: { viewer: { userId: 1, name: 'Admin', canManage: true }, clients: [], requestable: [] } }));
     await page.route('**/api/v1/files/access-requests**', (route) => route.fulfill({ json: { requests: [] } }));
     await page.goto('/files?view=addin');
-    await expect(page.locator('.fm-table--addin')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.fm-table--addin tbody tr')).toHaveCount(4);
-    await expect(page.locator('.fm-table--addin tr.is-denied')).toHaveCount(2);
-    await page.getByRole('tab', { name: 'Проблемы со входом' }).click();
-    await expect(page.locator('.fm-table--addin tbody tr')).toHaveCount(2);
+    const people = page.locator('.fm-kf-person');
+    await expect(people).toHaveCount(3, { timeout: 20_000 });
+    await expect(page.locator('.fm-kf-device')).toHaveCount(4);
+    await expect(page.locator('.fm-kf-person.is-problem')).toHaveCount(2);
+    await page.getByRole('tab', { name: /Проблемы со входом/ }).click();
+    await expect(people).toHaveCount(2);
     await expect(page.getByText(/AADSTS50011/)).toBeVisible();
-    await page.getByRole('tab', { name: 'В сети' }).click();
-    await expect(page.locator('.fm-table--addin tbody tr')).toHaveCount(3);
+    await page.getByRole('tab', { name: /В сети/ }).click();
+    await expect(people).toHaveCount(2);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
 }

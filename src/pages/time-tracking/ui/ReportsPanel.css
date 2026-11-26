@@ -3559,3 +3559,24 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     max-width: none;
   }
 }
+
+.tt-partner-confirmed__table .tt-for-review__priority-since {
+  display: block;
+  min-height: 0;
+  margin-top: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .tt-partner-confirmed__table .tt-for-review__priority-since:hover {
+    color: var(--app-accent);
+    text-decoration: underline;
+  }
+}

@@ -3690,3 +3690,65 @@ body[data-theme='dark'] .fm-table tbody tr.is-denied td { background: color-mix(
   .fm-mailrules__meta { align-items: flex-start; }
 }
 .fm-pv__remote { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: var(--fm-soft); color: var(--fm-muted); font-size: 0.8rem; }
+
+.fm-pv__attachments li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 100%;
+}
+
+.fm-pv__attachments button b {
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fm-pv__attachments button.is-save {
+  border-style: dashed;
+  border-color: var(--app-accent-border, var(--app-border));
+}
+
+.fm-pv__attachments li.is-saved button {
+  border-color: color-mix(in srgb, var(--app-success, #16a34a) 40%, var(--app-border));
+  background: color-mix(in srgb, var(--app-success, #16a34a) 6%, var(--app-surface));
+}
+
+.fm-pv__attachments li.is-saved button b {
+  background: color-mix(in srgb, var(--app-success, #16a34a) 14%, transparent);
+  color: var(--app-success, #15803d);
+}
+
+.fm-pv__attachments li small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 18rem;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-pv__attachments li small svg {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.fm-pv__attachments button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.fm-pv__save-error {
+  margin: 0.25rem 0 0;
+  color: var(--app-error, #b42318);
+  font-size: 0.78rem;
+}

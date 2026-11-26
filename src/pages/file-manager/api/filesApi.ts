@@ -529,6 +529,11 @@ export const filesApi = {
     },
     email: (documentId: string, version?: number) =>
         request<EmailPreview>(`/documents/${encodeURIComponent(documentId)}/email${query({ version })}`),
+    saveEmailAttachment: (documentId: string, index: number, folderId?: string | null) =>
+        request<{ status: UploadStatus | 'exists'; document: DocumentRow; folderId: string | null; folderPath?: string; savedBy?: string; visible?: boolean }>(
+            `/documents/${encodeURIComponent(documentId)}/email/${index}/save`,
+            json('POST', folderId === undefined ? {} : { folderId }),
+        ),
     emailAttachmentBlob: async (documentId: string, index: number, version?: number) => {
         const response = await apiFetch(`${BASE}/documents/${encodeURIComponent(documentId)}/email/${index}${query({ version })}`);
         if (!response.ok)

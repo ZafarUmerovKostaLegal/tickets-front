@@ -8,7 +8,7 @@ import {
     previewKindOf,
     TEXT_HEAD_BYTES,
     type ArchiveListing,
-    type EmailPreview,
+    type EmailPreview, type SavedAttachment,
 } from '../lib/previewKinds';
 import { Icon, saveBlob, useFm } from './fmShared';
 
@@ -27,6 +27,8 @@ export type PreviewSource = {
     entry?: (index: number, name: string, size: number) => PreviewSource;
     email?: () => Promise<EmailPreview>;
     emailAttachment?: (index: number) => Promise<Blob>;
+    saveAttachment?: (index: number) => Promise<SavedAttachment>;
+    openSaved?: (saved: SavedAttachment) => void;
 };
 
 function useAsync<T>(run: (() => Promise<T>) | null, deps: unknown[]): { data: T | null; error: string } {
@@ -240,6 +242,29 @@ function ArchivePreview({ source }: { source: PreviewSource }) {
 function EmailView({ source }: { source: PreviewSource }) {
     const { tr, locale } = useFm();
     const { data, error } = useAsync(() => source.email!(), [source.key]);
+    const [savedNow, setSavedNow] = useState<Record<number, SavedAttachment>>({});
+    const [saving, setSaving] = useState<number | null>(null);
+    const [saveError, setSaveError] = useState('');
+    useEffect(() => {
+        setSavedNow({});
+        setSaveError('');
+    }, [source.key]);
+    const saveOne = async (index: number) => {
+        if (!source.saveAttachment)
+            return;
+        setSaving(index);
+        setSaveError('');
+        try {
+            const saved = await source.saveAttachment(index);
+            setSavedNow((prev) => ({ ...prev, [index]: saved }));
+        }
+        catch (err) {
+            setSaveError(err instanceof Error ? err.message : String(err));
+        }
+        finally {
+            setSaving(null);
+        }
+    };
     const html = useMemo(() => (data?.html ? sanitizeHtml(data.html) : ''), [data]);
     const [remoteAllowed, setRemoteAllowed] = useState(false);
     const hasRemote = useMemo(() => /\b(?:src|background)\s*=\s*["']?\s*https?:|url\(\s*["']?\s*https?:/i.test(html), [html]);
@@ -258,17 +283,50 @@ function EmailView({ source }: { source: PreviewSource }) {
                 {field(tr('preview.date'), data.date)}
             </dl>
             {data.attachments.length ? (
+                <>
                 <ul className="fm-pv__attachments">
-                    {data.attachments.map((item) => (
-                        <li key={item.index}>
-                            <button type="button" onClick={() => void source.emailAttachment?.(item.index).then((blob) => saveBlob(blob, item.name))}>
-                                <Icon name="download" />
-                                <span>{item.name}</span>
-                                <em>{formatBytes(item.size, locale)}</em>
-                            </button>
-                        </li>
-                    ))}
+                    {data.attachments.map((item) => {
+                        const saved = savedNow[item.index] ?? item.saved ?? null;
+                        if (saved) {
+                            return (
+                                <li key={item.index} className="is-saved">
+                                    <button type="button" disabled={!source.openSaved}
+                                        title={tr('preview.attachmentSavedTitle', { folder: saved.folderPath || tr('preview.matterRoot'), name: saved.savedBy || '—' })}
+                                        onClick={() => source.openSaved?.(saved)}>
+                                        <Icon name={saved.visible ? 'eye' : 'folderOpen'} />
+                                        <span>{item.name}</span>
+                                        <b>{saved.visible ? tr('preview.attachmentOpen') : tr('preview.attachmentOpenFolder')}</b>
+                                    </button>
+                                    <small><Icon name="folder" />{saved.folderPath || tr('preview.matterRoot')}{saved.savedBy ? ` · ${saved.savedBy}` : ''}</small>
+                                </li>
+                            );
+                        }
+                        if (source.saveAttachment) {
+                            return (
+                                <li key={item.index}>
+                                    <button type="button" className="is-save" disabled={saving !== null} onClick={() => void saveOne(item.index)}
+                                        title={tr('preview.attachmentSaveTitle')}>
+                                        <Icon name={saving === item.index ? 'clock' : 'upload'} />
+                                        <span>{item.name}</span>
+                                        <em>{formatBytes(item.size, locale)}</em>
+                                        <b>{saving === item.index ? tr('preview.attachmentSaving') : tr('preview.attachmentSave')}</b>
+                                    </button>
+                                </li>
+                            );
+                        }
+                        return (
+                            <li key={item.index}>
+                                <button type="button" onClick={() => void source.emailAttachment?.(item.index).then((blob) => saveBlob(blob, item.name))}>
+                                    <Icon name="download" />
+                                    <span>{item.name}</span>
+                                    <em>{formatBytes(item.size, locale)}</em>
+                                </button>
+                            </li>
+                        );
+                    })}
                 </ul>
+                {saveError ? <p className="fm-pv__save-error">{saveError}</p> : null}
+                </>
             ) : null}
             {html && hasRemote && !remoteAllowed ? (
                 <p className="fm-pv__remote">

@@ -960,6 +960,8 @@ export function MatterWorkspace({
                         onNavigate({ matterId, folderId, docId: null });
                     }}
                     onClose={() => onNavigate({ matterId, folderId, docId: null })}
+                    onAttachmentSaved={() => browse.reload()}
+                    onOpenSaved={(saved) => onNavigate({ matterId, folderId: saved.folderId, docId: saved.visible ? saved.documentId : null })}
                 />
             ) : null}
 

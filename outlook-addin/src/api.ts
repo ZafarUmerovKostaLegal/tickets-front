@@ -59,6 +59,7 @@ export type Filing = Location & {
   version: number;
   filedBy: string;
   filedAt: string | null;
+  visible?: boolean;
 };
 
 export type SuggestionReason = 'conversation' | 'sender' | 'domain' | 'recent';

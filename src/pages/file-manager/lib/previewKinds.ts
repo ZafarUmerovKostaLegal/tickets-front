@@ -126,5 +126,15 @@ export type EmailPreview = {
     date: string;
     html: string;
     text: string;
-    attachments: Array<{ index: number; name: string; contentType: string; size: number }>;
+    attachments: Array<{ index: number; name: string; contentType: string; size: number; saved?: SavedAttachment | null }>;
+};
+
+export type SavedAttachment = {
+    documentId: string;
+    name: string;
+    folderId: string | null;
+    folderPath: string;
+    savedBy: string;
+    savedAt: string | null;
+    visible: boolean;
 };

@@ -38,8 +38,20 @@ export type PartnerReportConfirmationRequest = {
     lastComment?: PartnerConfirmedReportComment | null;
     entryCount?: number;
     isEmpty?: boolean;
+    priorityChangedAt?: string | null;
+    priorityChangedBy?: number | null;
     createdAt: string;
     updatedAt: string | null;
+};
+
+export type PartnerConfirmationHistoryEvent = {
+    id: string;
+    kind: 'submitted' | 'resubmitted' | 'priority' | 'signed' | 'unsigned' | 'confirmed' | 'reopened' | 'reset';
+    from: string;
+    to: string;
+    actorAuthUserId: number | null;
+    at: string;
+    legacy?: boolean;
 };
 
 export type PartnerReviewPriority = PartnerReportConfirmationRequest['reviewPriority'];
@@ -190,6 +202,8 @@ export function parsePartnerReportConfirmationRequest(raw: unknown): PartnerRepo
                 : {}),
         ...(entryCountNum != null ? { entryCount: Math.max(0, Math.trunc(entryCountNum)) } : {}),
         ...(isEmpty != null ? { isEmpty } : {}),
+        ...(o.priorityChangedAt ? { priorityChangedAt: String(o.priorityChangedAt) } : {}),
+        ...(o.priorityChangedBy != null ? { priorityChangedBy: readPartnerConfirmNum(o.priorityChangedBy) } : {}),
     };
 }
 export function parsePartnerReportConfirmationRequestList(raw: unknown): PartnerReportConfirmationRequest[] {
@@ -459,6 +473,34 @@ export async function revokePartnerReportConfirmationSignature(
         throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
     invalidatePartnerReportConfirmationsCache();
     return parsed;
+}
+
+export async function listPartnerConfirmationHistory(requestId: string): Promise<PartnerConfirmationHistoryEvent[]> {
+    const rid = String(requestId ?? '').trim();
+    if (!rid)
+        throw new Error('Не указан запрос подтверждения');
+    const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/${encodeURIComponent(rid)}/history`);
+    await reportsThrowIfNotOk(res);
+    const raw = await res.json() as unknown;
+    if (!Array.isArray(raw))
+        return [];
+    return raw.flatMap((row): PartnerConfirmationHistoryEvent[] => {
+        if (!row || typeof row !== 'object')
+            return [];
+        const o = row as Record<string, unknown>;
+        const at = String(o.at ?? '');
+        if (!at)
+            return [];
+        return [{
+            id: String(o.id ?? at),
+            kind: String(o.kind ?? '') as PartnerConfirmationHistoryEvent['kind'],
+            from: String(o.from ?? ''),
+            to: String(o.to ?? ''),
+            actorAuthUserId: readPartnerConfirmNum(o.actorAuthUserId),
+            at,
+            ...(o.legacy === true ? { legacy: true } : {}),
+        }];
+    });
 }
 
 export async function listPartnerConfirmationComments(requestId: string): Promise<PartnerConfirmedReportComment[]> {

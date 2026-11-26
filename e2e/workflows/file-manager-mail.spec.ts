@@ -133,7 +133,7 @@ test.describe('@e2e Файловый менеджер: письма в matter', 
         await page.getByLabel('С', { exact: true }).fill('2025-01-01');
         await page.getByLabel('По', { exact: true }).fill('2025-01-02');
         await expect(page.getByText('За выбранный период документов нет')).toBeVisible();
-        await page.getByRole('button', { name: 'Сбросить' }).click();
+        await page.getByRole('button', { name: 'Сбросить', exact: true }).click();
         await expect(tiles).toHaveCount(4);
     });
 
