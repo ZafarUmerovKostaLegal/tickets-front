@@ -23,7 +23,32 @@ export type CombinedReportPreviewSlice = {
     sharesFrom: number;
     sharesTo: number;
     showSharesTotal: boolean;
+    showProjectsSummary: boolean;
 };
+
+export type CombinedProjectTotal = { name: string; hours: number; fees: number; expenses: number; total: number };
+
+export function combinedProjectTotals(report: CombinedReportSnapshot): { rows: CombinedProjectTotal[]; total: CombinedProjectTotal } {
+    const rows = report.projects.map((project, projectIndex) => {
+        const hours = project.lines.reduce((sum, line) => sum + (Number(line.hours) || 0), 0);
+        const fees = project.lines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+        const expenses = projectExpenseIndexes(report, projectIndex)
+            .reduce((sum, index) => sum + (Number(report.expenses[index]?.amount) || 0), 0);
+        return { name: project.name, hours, fees, expenses, total: fees + expenses };
+    });
+    const total = rows.reduce((sum, row) => ({
+        name: '',
+        hours: sum.hours + row.hours,
+        fees: sum.fees + row.fees,
+        expenses: sum.expenses + row.expenses,
+        total: sum.total + row.total,
+    }), { name: '', hours: 0, fees: 0, expenses: 0, total: 0 });
+    return { rows, total };
+}
+
+export function hasProjectsSummary(report: CombinedReportSnapshot): boolean {
+    return report.layout === 'perProject' && report.projects.length > 1;
+}
 
 function emptySlice(): CombinedReportPreviewSlice {
     return {
@@ -41,6 +66,7 @@ function emptySlice(): CombinedReportPreviewSlice {
         sharesFrom: -1,
         sharesTo: -1,
         showSharesTotal: false,
+        showProjectsSummary: false,
     };
 }
 
@@ -78,6 +104,7 @@ function sortedProjectLines(report: CombinedReportSnapshot, projectIndex: number
 
 function planPerProjectPages(report: CombinedReportSnapshot): CombinedReportPreviewSlice[] {
     const pages: CombinedReportPreviewSlice[] = [];
+    let lastUsed = 0;
     report.projects.forEach((project, projectIndex) => {
         const lines = sortedProjectLines(report, projectIndex);
         const people = new Set(lines.map((line) => line.initials || line.user)).size;
@@ -87,6 +114,7 @@ function planPerProjectPages(report: CombinedReportSnapshot): CombinedReportPrev
             if (used <= 0)
                 return;
             pages.push(page);
+            lastUsed = used;
             page = { ...emptySlice(), projectIndex };
             used = 0;
         };
@@ -161,6 +189,16 @@ function planPerProjectPages(report: CombinedReportSnapshot): CombinedReportPrev
         }
         commit();
     });
+    if (hasProjectsSummary(report) && pages.length > 0) {
+        const height = GAP_PX + SECTION_HEAD_PX + THEAD_PX + report.projects.length * ROW_PX + TOTAL_PX;
+        const last = pages[pages.length - 1]!;
+        if (lastUsed + height <= USABLE_PX)
+            last.showProjectsSummary = true;
+        else {
+            const lines = report.projects[last.projectIndex]?.lines.length ?? 0;
+            pages.push({ ...emptySlice(), projectIndex: last.projectIndex, timeFrom: lines, timeTo: lines, showProjectsSummary: true });
+        }
+    }
     return pages.length > 0 ? pages : [emptySlice()];
 }
 

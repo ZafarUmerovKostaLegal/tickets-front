@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
-import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
+import { combinedProjectTotals, planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { patchProjectSummary, projectExpenseIndexes, projectSummaryRows, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { formatTimeReportHours } from '../lib/invoiceTimeReportModel';
 import './InvoiceTimeReportPage.css';
@@ -341,6 +341,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                         </table>
                     </div>
                 ) : null}
+                {slice.showProjectsSummary ? <ProjectsSummary report={report} cur={cur} /> : null}
                 <footer className="tt-inv-tr__bottom">
                     <div className="tt-inv-tr__bottom-line" aria-hidden />
                     <div className="tt-inv-tr__bottom-meta">
@@ -704,6 +705,46 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                     <span className="tt-inv-tr__page-box">{pageNumber}</span>
                 </div>
             </footer>
+        </div>
+    );
+}
+
+function ProjectsSummary({ report, cur }: { report: CombinedReportSnapshot; cur: string }) {
+    const { rows, total } = combinedProjectTotals(report);
+    return (
+        <div className="tt-inv-tr__table-wrap tt-inv-tr__projects">
+            <h2 className="tt-inv-tr__subtitle">Summary by Project</h2>
+            <table className="tt-inv-tr__table">
+                <thead className="tt-inv-tr__thead">
+                    <tr>
+                        <th style={{ width: '40%' }}>Project</th>
+                        <th className="num" style={{ width: '12%' }}>Hours</th>
+                        <th className="num" style={{ width: '16%' }}>Fees ({cur})</th>
+                        <th className="num" style={{ width: '16%' }}>Expenses ({cur})</th>
+                        <th className="num" style={{ width: '16%' }}>Total ({cur})</th>
+                    </tr>
+                </thead>
+                <tbody className="tt-inv-tr__tbody">
+                    {rows.map((row, index) => (
+                        <tr key={`${row.name}-${index}`}>
+                            <td>{row.name || '—'}</td>
+                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(row.hours)}</td>
+                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(row.fees)}</td>
+                            <td className="tt-inv-tr__cell--num">{row.expenses ? formatTimeReportHours(row.expenses) : '-'}</td>
+                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(row.total)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+                <tfoot className="tt-inv-tr__tfoot">
+                    <tr>
+                        <td>Total ({cur})</td>
+                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(total.hours)}</td>
+                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(total.fees)}</td>
+                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{total.expenses ? formatTimeReportHours(total.expenses) : '-'}</td>
+                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(total.total)}</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     );
 }

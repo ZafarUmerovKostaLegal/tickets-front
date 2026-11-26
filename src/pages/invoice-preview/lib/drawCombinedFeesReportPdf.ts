@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { combinedReportDetailLines, projectExpenseIndexes, projectSummaryRows, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
-import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
+import { combinedProjectTotals, planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
 import { COVER_LETTERHEAD_LOGO_ASPECT } from './invoiceCoverLogoRaster';
 import { formatTimeReportHours } from './invoiceTimeReportModel';
@@ -311,6 +311,24 @@ function expenseSheetBlock(
     };
 }
 
+function projectsSummaryBlock(snapshot: CombinedReportSnapshot): Block {
+    const cur = snapshot.currency || 'USD';
+    const { rows, total } = combinedProjectTotals(snapshot);
+    const line = (row: { hours: number; fees: number; expenses: number; total: number }) => [
+        sheetNum(row.hours), sheetNum(row.fees), row.expenses ? sheetNum(row.expenses) : '-', sheetNum(row.total),
+    ];
+    return {
+        title: 'Summary by Project',
+        headers: ['Project', 'Hours', `Fees (${cur})`, `Expenses (${cur})`, `Total (${cur})`],
+        weights: [40, 12, 16, 16, 16],
+        right: new Set([1, 2, 3, 4]),
+        rows: [
+            ...rows.map((row) => ({ cells: [row.name || '—', ...line(row)] })),
+            { bold: true, cells: [`Total (${cur})`, ...line(total)] },
+        ],
+    };
+}
+
 function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PDFFont): PageOp[][] {
     const slices = planCombinedReportPreviewPages(snapshot).filter((slice) => slice.projectIndex >= 0);
     const pages: PageOp[][] = [];
@@ -337,6 +355,7 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
         const blocks: Block[] = [
             ...sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal),
             ...(expenseBlock ? [expenseBlock] : []),
+            ...(slice.showProjectsSummary ? [projectsSummaryBlock(snapshot)] : []),
         ];
         let firstBlock = true;
         for (const block of blocks) {

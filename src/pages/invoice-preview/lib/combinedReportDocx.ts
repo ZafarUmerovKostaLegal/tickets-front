@@ -11,6 +11,7 @@ import {
 } from 'docx';
 import { KOSTA_LEGAL_FIRM, KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
 import { combinedReportDetailLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedProjectTotals, hasProjectsSummary } from './combinedReportPreviewPages';
 
 const FONT = 'Calibri Light';
 const SIZE = 16;
@@ -152,5 +153,18 @@ export function combinedReportDocxChildren(snapshot: CombinedReportSnapshot): (P
         [36, 14, 25, 25],
         1,
     ));
+    if (hasProjectsSummary(snapshot)) {
+        const { rows, total } = combinedProjectTotals(snapshot);
+        const cells = (row: { hours: number; fees: number; expenses: number; total: number }) => [
+            row.hours.toFixed(2), money(row.fees), row.expenses ? money(row.expenses) : '-', money(row.total),
+        ];
+        out.push(heading('Summary by Project'));
+        out.push(table(
+            ['Project', 'Hours', `Fees (${cur})`, `Expenses (${cur})`, `Total (${cur})`],
+            [...rows.map((row) => [row.name || '—', ...cells(row)]), [`Total (${cur})`, ...cells(total)]],
+            [40, 12, 16, 16, 16],
+            1,
+        ));
+    }
     return out;
 }

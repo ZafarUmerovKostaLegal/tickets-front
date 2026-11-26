@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { projectExpenseIndexes, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
-import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
+import { combinedProjectTotals, planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 
 function report(overrides: Partial<CombinedReportSnapshot> = {}): CombinedReportSnapshot {
     return {
@@ -59,5 +59,35 @@ describe('per-project combined report pages', () => {
         const nur = pages.filter((page) => page.projectIndex === 0 && (page.showExpensesTotal || page.expensesTo > page.expensesFrom));
         expect(nur.length).toBeGreaterThan(0);
         expect(nur.some((page) => page.expensesFrom === 0)).toBe(true);
+    });
+});
+
+describe('summary by project', () => {
+    const two = () => report({
+        projects: [
+            { name: 'Jizzakh', lines: [{ date: '2026-09-10', user: 'A', initials: 'SRA', description: 'x', hours: 10, rate: 100, amount: 1000 }] },
+            { name: 'Quva', lines: [
+                { date: '2026-09-11', user: 'B', initials: 'IFT', description: 'y', hours: 2.5, rate: 200, amount: 500 },
+                { date: '2026-09-12', user: 'B', initials: 'IFT', description: 'z', hours: 1.5, rate: 200, amount: 300 },
+            ] },
+        ],
+        expenses: [{ description: 'Taxi', date: '2026-09-11', amount: 40, projectName: 'Quva' }],
+    });
+
+    it('is added once, after the last project, only for several projects', () => {
+        const pages = planCombinedReportPreviewPages(two());
+        expect(pages.filter((page) => page.showProjectsSummary)).toHaveLength(1);
+        expect(pages[pages.length - 1]!.showProjectsSummary).toBe(true);
+        expect(planCombinedReportPreviewPages(report()).some((page) => page.showProjectsSummary)).toBe(false);
+        expect(planCombinedReportPreviewPages({ ...two(), layout: undefined }).some((page) => page.showProjectsSummary)).toBe(false);
+    });
+
+    it('totals hours, fees and expenses per project', () => {
+        const { rows, total } = combinedProjectTotals(two());
+        expect(rows).toEqual([
+            { name: 'Jizzakh', hours: 10, fees: 1000, expenses: 0, total: 1000 },
+            { name: 'Quva', hours: 4, fees: 800, expenses: 40, total: 840 },
+        ]);
+        expect(total).toMatchObject({ hours: 14, fees: 1800, expenses: 40, total: 1840 });
     });
 });
