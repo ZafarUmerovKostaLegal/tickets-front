@@ -4,6 +4,7 @@ import { SearchableSelect } from '@shared/ui';
 import { filesApi, type DocumentAccessMember, type FolderAccessInput, type FolderAccessLevel } from '../api/filesApi';
 import { endOfDay, isFuture, shortDay, toDay, todayPlus } from '../lib/accessDates';
 import { usePeopleNames } from '../lib/usePeopleNames';
+import { useAnimatedClose } from '../lib/useAnimatedClose';
 import { Icon, StateBlock, useAction, useFm, useLoad } from './fmShared';
 import './FolderAccessDrawer.css';
 
@@ -23,6 +24,7 @@ function initials(name: string): string {
 }
 
 export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) {
+    const drawer = useAnimatedClose(onClose);
     const { tr, locale } = useFm();
     const act = useAction();
     const access = useLoad(() => filesApi.documentAccess(documentId), [documentId]);
@@ -112,14 +114,14 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
     const doc = data?.document;
 
     return (
-        <aside className="fm-pane fm-faccess" aria-label={tr('docAccess.title')}>
+        <aside className={`fm-pane fm-faccess${drawer.closing ? ' is-closing' : ''}`} aria-label={tr('docAccess.title')} onAnimationEnd={drawer.onAnimationEnd}>
             <header className="fm-pane__head">
                 <span className="fm-faccess__badge" aria-hidden><Icon name="key" /></span>
                 <div>
                     <h3>{tr('docAccess.title')}</h3>
                     <p title={doc?.name ?? ''}>{doc ? doc.name : '…'}</p>
                 </div>
-                <button type="button" className="fm-btn fm-faccess__close" onClick={onClose} aria-label={tr('common.close')}>
+                <button type="button" className="fm-btn fm-faccess__close" onClick={drawer.close} aria-label={tr('common.close')}>
                     <Icon name="close" />
                 </button>
             </header>

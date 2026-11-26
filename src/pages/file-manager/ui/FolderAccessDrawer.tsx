@@ -10,6 +10,7 @@ import {
 } from '../api/filesApi';
 import { endOfDay, isFuture, toDay, todayPlus } from '../lib/accessDates';
 import { usePeopleNames } from '../lib/usePeopleNames';
+import { useAnimatedClose } from '../lib/useAnimatedClose';
 import { Icon, StateBlock, useAction, useFm, useLoad } from './fmShared';
 import './FolderAccessDrawer.css';
 
@@ -33,6 +34,7 @@ function initials(name: string): string {
 }
 
 export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder, onShowFolder }: Props) {
+    const drawer = useAnimatedClose(onClose);
     const { tr, locale } = useFm();
     const act = useAction();
     const access = useLoad(() => filesApi.folderAccess(folderId), [folderId]);
@@ -135,7 +137,7 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
     const parent = folder?.path[folder.path.length - 1] ?? null;
 
     return (
-        <aside className="fm-pane fm-faccess" aria-label={tr('folderAccess.title')}>
+        <aside className={`fm-pane fm-faccess${drawer.closing ? ' is-closing' : ''}`} aria-label={tr('folderAccess.title')} onAnimationEnd={drawer.onAnimationEnd}>
             <header className="fm-pane__head">
                 <span className="fm-faccess__badge" aria-hidden><Icon name="shield" /></span>
                 <div>
@@ -144,7 +146,7 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
                         {folder ? [...folder.path.map((crumb) => crumb.name), folder.name].join(' / ') : '…'}
                     </p>
                 </div>
-                <button type="button" className="fm-btn fm-faccess__close" onClick={onClose} aria-label={tr('common.close')}>
+                <button type="button" className="fm-btn fm-faccess__close" onClick={drawer.close} aria-label={tr('common.close')}>
                     <Icon name="close" />
                 </button>
             </header>
