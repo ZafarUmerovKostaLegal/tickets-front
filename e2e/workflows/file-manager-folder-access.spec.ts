@@ -196,6 +196,14 @@ test.describe('@e2e Файловый менеджер: доступ к папк�
         await expect(list.filter({ hasText: 'Letter to Acme.pdf' })).toContainText('автор');
         await expect(list.filter({ hasText: 'Court filing.docx' })).toContainText('Чтение');
         await expect(list.filter({ hasText: 'Settlement terms.docx' })).toContainText('Нет доступа');
+        await expect(list.filter({ hasText: 'Letter to Acme.pdf' }).locator('select')).toHaveCount(0);
+        const settlement = list.filter({ hasText: 'Settlement terms.docx' }).locator('select');
+        await expect(settlement).toHaveValue('');
+        await expect(settlement.locator('option').first()).toHaveText('По папке: Нет доступа');
+        const before = matter.docPuts.length;
+        await settlement.selectOption('read');
+        await expect.poll(() => matter.docPuts.length).toBe(before + 1);
+        expect(matter.docPuts[before]).toMatchObject({ userId: 2, level: 'read' });
         if (SHOTS)
             await drawer.screenshot({ path: `${SHOTS}/fa-files.png` });
 

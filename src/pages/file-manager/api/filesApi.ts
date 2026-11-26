@@ -168,6 +168,7 @@ export type FolderAccessMember = {
     inherited: { level: FolderAccessLevel; folderId: string; folderName: string } | null;
     effective: FolderAccessLevel | null;
     files?: Record<string, 'read' | 'edit'>;
+    fileRules?: Record<string, FolderAccessLevel>;
 };
 
 export type FolderAccessDocument = {

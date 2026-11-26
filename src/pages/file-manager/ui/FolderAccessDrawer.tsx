@@ -31,6 +31,16 @@ const LEVEL_LABEL: Record<Level, string> = { own: 'colOwn', read: 'colRead', edi
 const LEVEL_HINT: Record<Level, string> = { own: 'Own', read: 'Read', edit: 'Edit', deny: 'Deny' };
 const LEVEL_ICON = { own: 'user', read: 'eye', edit: 'edit', deny: 'lock' } as const;
 
+// The project team may come without a job title; the people directory has it.
+const PARTNER_TITLE = /partner|партн[её]р/i;
+
+type FileRule = '' | 'read' | 'edit' | 'deny';
+
+function folderFileLevel(member: FolderAccessMember, restricted: boolean): 'read' | 'edit' | null {
+    const level = member.effective;
+    return (level === 'read' || level === 'edit') && !restricted ? level : null;
+}
+
 function selectedLevel(member: FolderAccessMember): Level {
     if (member.partner)
         return 'edit';
@@ -74,7 +84,7 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
             ...row,
             name: people.nameOf(row.userId, row.name),
             position: people.positionOf(row.userId, row.position),
-        }));
+        })).map((row) => (row.partner || !PARTNER_TITLE.test(row.position) ? row : { ...row, partner: true }));
         return text ? rows.filter((row) => `${row.name} ${row.position}`.toLowerCase().includes(text)) : rows;
     }, [data, query, people]);
 
@@ -104,6 +114,16 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
         if (ok)
             refresh();
         return Boolean(ok);
+    };
+
+    const setFileRule = async (member: FolderAccessMember, documentId: string, rule: FileRule) => {
+        const ok = await act(() => (rule
+            ? filesApi.setDocumentAccess(documentId, {
+                userId: member.userId, userName: member.name, level: rule, note: '', until: null, suspendedUntil: null,
+            })
+            : filesApi.removeDocumentAccess(documentId, member.userId)), tr('folderAccess.saved'));
+        if (ok)
+            refresh();
     };
 
     const remove = async (member: FolderAccessMember) => {
@@ -216,7 +236,10 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
                                     {members.map((member) => {
                                         const tone = status(member);
                                         const selected = selectedLevel(member);
-                                        const files = member.files ?? {};
+                                        const files: Record<string, 'read' | 'edit'> = member.partner
+                                            ? Object.fromEntries(documents.map((doc) => [doc.id, 'edit' as const]))
+                                            : member.files ?? {};
+                                        const rules = member.fileRules ?? {};
                                         const visible = documents.filter((doc) => files[doc.id]).length;
                                         const filesOpen = filesRow === member.userId;
                                         const lockedByParent = member.inherited?.level === 'deny';
@@ -283,9 +306,14 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
                                                             <Icon name="chevron" className="fm-faccess__caret" />
                                                         </button>
                                                         {filesOpen ? (
+                                                            <>
+                                                            {!member.partner ? <p className="fm-faccess__file-hint">{tr('folderAccess.filesHint')}</p> : null}
                                                             <ul className="fm-faccess__file-list">
                                                                 {documents.map((doc) => {
                                                                     const level = files[doc.id];
+                                                                    const author = doc.createdById === member.userId;
+                                                                    const rule = (rules[doc.id] ?? '') as FileRule;
+                                                                    const byFolder = folderFileLevel(member, doc.restricted);
                                                                     const notes = [
                                                                         doc.createdById === member.userId ? tr('folderAccess.fileAuthor') : '',
                                                                         doc.restricted ? tr('folderAccess.fileRestricted') : '',
@@ -297,13 +325,33 @@ export function FolderAccessDrawer({ folderId, onClose, onChanged, onOpenFolder,
                                                                                 <span>{doc.name}</span>
                                                                                 {notes ? <small>{notes}</small> : null}
                                                                             </span>
-                                                                            <span className={`fm-faccess__file-level is-${level ?? 'none'}`}>
-                                                                                {level ? tr(`folderAccess.${level === 'edit' ? 'colEdit' : 'colRead'}`) : tr('folderAccess.fileHidden')}
-                                                                            </span>
+                                                                            {member.partner || author ? (
+                                                                                <span className={`fm-faccess__file-level is-${level ?? 'none'}`}>
+                                                                                    {member.partner ? tr('folderAccess.filePartner') : tr('folderAccess.colEdit')}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <select
+                                                                                    className={`fm-faccess__file-select is-${level ?? 'none'}${rule ? ' is-rule' : ''}`}
+                                                                                    value={rule}
+                                                                                    aria-label={tr('folderAccess.fileRuleFor', { name: member.name, file: doc.name })}
+                                                                                    title={rule ? tr('folderAccess.fileOwnRule') : tr('folderAccess.fileFromFolder')}
+                                                                                    onChange={(event) => void setFileRule(member, doc.id, event.target.value as FileRule)}
+                                                                                >
+                                                                                    <option value="">
+                                                                                        {tr('folderAccess.fileByFolder', {
+                                                                                            level: byFolder ? tr(`folderAccess.${byFolder === 'edit' ? 'colEdit' : 'colRead'}`) : tr('folderAccess.fileHidden'),
+                                                                                        })}
+                                                                                    </option>
+                                                                                    <option value="read">{tr('folderAccess.colRead')}</option>
+                                                                                    <option value="edit">{tr('folderAccess.colEdit')}</option>
+                                                                                    <option value="deny">{tr('folderAccess.colDeny')}</option>
+                                                                                </select>
+                                                                            )}
                                                                         </li>
                                                                     );
                                                                 })}
                                                             </ul>
+                                                            </>
                                                         ) : null}
                                                     </div>
                                                 ) : (

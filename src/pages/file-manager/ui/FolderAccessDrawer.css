@@ -642,6 +642,10 @@ body[data-theme='dark'] .fm-faccess {
   transform: rotate(-90deg);
 }
 
+.fm-faccess__file-hint + .fm-faccess__file-list {
+  border-top: 0;
+}
+
 .fm-faccess__file-list {
   max-height: 15rem;
   margin: 0;
@@ -661,7 +665,7 @@ body[data-theme='dark'] .fm-faccess {
   border-radius: 6px;
 }
 
-.fm-faccess__file-list li.is-hidden {
+.fm-faccess__file-list li.is-hidden > :not(select) {
   opacity: 0.55;
 }
 
@@ -727,4 +731,57 @@ body[data-theme='dark'] .fm-faccess {
     flex-direction: row;
     gap: 0.35rem;
   }
+}
+
+.fm-faccess .fm-faccess__file-select {
+  flex-shrink: 0;
+  max-width: 9.5rem;
+  min-height: 0;
+  height: 1.6rem;
+  padding: 0 1.4rem 0 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: var(--fm-soft);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 0.65rem) 52%, calc(100% - 0.4rem) 52%;
+  background-size: 0.25rem 0.25rem;
+  background-repeat: no-repeat;
+  color: var(--fm-muted);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  appearance: none;
+}
+
+.fm-faccess .fm-faccess__file-select.is-read { background-color: color-mix(in srgb, var(--fa-read) 12%, transparent); color: var(--fa-read); }
+.fm-faccess .fm-faccess__file-select.is-edit { background-color: color-mix(in srgb, var(--fa-edit) 12%, transparent); color: var(--fa-edit); }
+.fm-faccess .fm-faccess__file-select.is-rule { border-color: currentColor; }
+
+.fm-faccess .fm-faccess__file-select:focus-visible {
+  outline: 2px solid var(--fm-accent);
+  outline-offset: 1px;
+}
+
+.fm-faccess .fm-faccess__file-select option {
+  background: var(--fm-surface);
+  color: var(--fm-text);
+}
+
+@media (max-width: 768px) {
+  .fm-faccess .fm-faccess__file-select {
+    height: 2.25rem;
+    max-width: 11rem;
+    font-size: 16px;
+  }
+}
+
+.fm-faccess .fm-faccess__file-hint {
+  margin: 0;
+  padding: 0.45rem 0.65rem 0.1rem;
+  border-top: 1px solid var(--fm-border);
+  color: var(--fm-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
 }
