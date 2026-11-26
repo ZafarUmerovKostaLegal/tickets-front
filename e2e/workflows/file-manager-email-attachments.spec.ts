@@ -51,7 +51,7 @@ test.describe('@e2e Файловый менеджер: вложения пись
             return json(route, { status: 'created', document: saved, folderId: 'emails', folderPath: 'Correspondence / Emails', savedBy: 'Partner P' });
         });
         await page.goto('/files?view=matter&matter=m1&folder=emails&doc=mail1');
-        const list = page.locator('.fm-pv__attachments');
+        const list = page.locator('.fm-att');
         await expect(list.locator('li')).toHaveCount(2, { timeout: 30_000 });
         await expect(list.locator('li').nth(1)).toContainText('Открыть папку');
         await expect(list.locator('li').nth(1)).toContainText('Correspondence / Emails · Iroda T');
@@ -60,8 +60,10 @@ test.describe('@e2e Файловый менеджер: вложения пись
         await expect(list.locator('li').first()).toContainText('Correspondence / Emails · Partner P');
         expect(saves).toHaveLength(1);
         expect(saved).not.toBeNull();
+        const overflow = await page.locator('.fm-pane').evaluate((el) => el.scrollWidth - el.clientWidth);
+        expect(overflow).toBeLessThanOrEqual(0);
         if (SHOTS)
-            await page.locator('.fm-pv--email').screenshot({ path: `${SHOTS}/email-attachments.png` });
+            await page.locator('.fm-pane').screenshot({ path: `${SHOTS}/email-attachments.png` });
         await list.locator('li').nth(1).getByRole('button').click();
         await expect(page).toHaveURL(/folder=emails/);
     });

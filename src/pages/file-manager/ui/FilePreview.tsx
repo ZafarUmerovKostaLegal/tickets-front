@@ -284,43 +284,41 @@ function EmailView({ source }: { source: PreviewSource }) {
             </dl>
             {data.attachments.length ? (
                 <>
-                <ul className="fm-pv__attachments">
+                <ul className="fm-att">
                     {data.attachments.map((item) => {
                         const saved = savedNow[item.index] ?? item.saved ?? null;
-                        if (saved) {
-                            return (
-                                <li key={item.index} className="is-saved">
-                                    <button type="button" disabled={!source.openSaved}
-                                        title={tr('preview.attachmentSavedTitle', { folder: saved.folderPath || tr('preview.matterRoot'), name: saved.savedBy || '—' })}
-                                        onClick={() => source.openSaved?.(saved)}>
-                                        <Icon name={saved.visible ? 'eye' : 'folderOpen'} />
-                                        <span>{item.name}</span>
-                                        <b>{saved.visible ? tr('preview.attachmentOpen') : tr('preview.attachmentOpenFolder')}</b>
-                                    </button>
-                                    <small><Icon name="folder" />{saved.folderPath || tr('preview.matterRoot')}{saved.savedBy ? ` · ${saved.savedBy}` : ''}</small>
-                                </li>
-                            );
-                        }
-                        if (source.saveAttachment) {
-                            return (
-                                <li key={item.index}>
-                                    <button type="button" className="is-save" disabled={saving !== null} onClick={() => void saveOne(item.index)}
-                                        title={tr('preview.attachmentSaveTitle')}>
-                                        <Icon name={saving === item.index ? 'clock' : 'upload'} />
-                                        <span>{item.name}</span>
-                                        <em>{formatBytes(item.size, locale)}</em>
-                                        <b>{saving === item.index ? tr('preview.attachmentSaving') : tr('preview.attachmentSave')}</b>
-                                    </button>
-                                </li>
-                            );
-                        }
+                        const ext = (/\.([a-z0-9]{1,5})$/i.exec(item.name)?.[1] ?? 'file').toLowerCase();
+                        const busy = saving === item.index;
                         return (
-                            <li key={item.index}>
-                                <button type="button" onClick={() => void source.emailAttachment?.(item.index).then((blob) => saveBlob(blob, item.name))}>
-                                    <Icon name="download" />
-                                    <span>{item.name}</span>
-                                    <em>{formatBytes(item.size, locale)}</em>
-                                </button>
+                            <li key={item.index} className={`fm-att__card${saved ? ' is-saved' : ''}`}>
+                                <span className={`fm-att__ext fm-att__ext--${ext}`} aria-hidden>{ext.slice(0, 4)}</span>
+                                <span className="fm-att__main">
+                                    <strong title={item.name}>{item.name}</strong>
+                                    <small>
+                                        {saved ? (
+                                            <span title={tr('preview.attachmentSavedTitle', { folder: saved.folderPath || tr('preview.matterRoot'), name: saved.savedBy || '—' })}>
+                                                <Icon name="check" />{saved.folderPath || tr('preview.matterRoot')}{saved.savedBy ? ` · ${saved.savedBy}` : ''}
+                                            </span>
+                                        ) : formatBytes(item.size, locale)}
+                                    </small>
+                                </span>
+                                {saved ? (
+                                    <button type="button" className="fm-att__btn is-open" disabled={!source.openSaved} onClick={() => source.openSaved?.(saved)}>
+                                        <Icon name={saved.visible ? 'eye' : 'folderOpen'} />
+                                        <span>{saved.visible ? tr('preview.attachmentOpen') : tr('preview.attachmentOpenFolder')}</span>
+                                    </button>
+                                ) : source.saveAttachment ? (
+                                    <button type="button" className="fm-att__btn is-save" disabled={saving !== null} title={tr('preview.attachmentSaveTitle')}
+                                        onClick={() => void saveOne(item.index)}>
+                                        <Icon name={busy ? 'clock' : 'upload'} />
+                                        <span>{busy ? tr('preview.attachmentSaving') : tr('preview.attachmentSave')}</span>
+                                    </button>
+                                ) : (
+                                    <button type="button" className="fm-att__btn" aria-label={tr('preview.download')} title={tr('preview.download')}
+                                        onClick={() => void source.emailAttachment?.(item.index).then((blob) => saveBlob(blob, item.name))}>
+                                        <Icon name="download" />
+                                    </button>
+                                )}
                             </li>
                         );
                     })}
@@ -341,7 +339,7 @@ function EmailView({ source }: { source: PreviewSource }) {
                     title={data.subject}
                     sandbox=""
                     referrerPolicy="no-referrer"
-                    srcDoc={`<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data: cid:${remoteAllowed ? ' https:' : ''}"><base target="_blank"><style>body{font:14px/1.5 system-ui,sans-serif;margin:12px;color:#111;word-wrap:break-word}img{max-width:100%}</style>${html}`}
+                    srcDoc={`<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data: cid:${remoteAllowed ? ' https:' : ''}"><base target="_blank"><style>html,body{overflow-x:hidden}body{font:14px/1.5 system-ui,sans-serif;margin:12px;color:#111;overflow-wrap:anywhere}img{max-width:100%!important;height:auto!important}table{max-width:100%!important}td,th{word-break:break-word}pre{white-space:pre-wrap}</style>${html}`}
                 />
             ) : <pre className="fm-pv__mailtext">{data.text}</pre>}
         </div>

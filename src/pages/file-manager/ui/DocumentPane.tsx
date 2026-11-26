@@ -303,7 +303,7 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                                     <Icon name="key" />{tr('docAccess.button')}
                                 </button>
                             ) : null}
-                            {editable && doc.checkedOutById === null ? (
+                            {editable && doc.checkedOutById === null && doc.kind !== 'email' ? (
                                 <button type="button" className="fm-btn" onClick={async () => {
                                     const result = await act(() => filesApi.checkout(doc.id));
                                     if (result)

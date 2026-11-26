@@ -352,7 +352,7 @@ function DmsExplorerWorkspace() {
                     id: 'checkout',
                     label: 'Check Out',
                     icon: 'lock' as const,
-                    disabled: !hasDoc,
+                    disabled: !hasDoc || selectedDocs[0]?.kind === 'email',
                     onClick: () => void run('Checked out', async () => {
                         await filesApi.checkout(selectedDocs[0].id);
                     }),
