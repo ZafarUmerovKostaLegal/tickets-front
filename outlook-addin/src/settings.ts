@@ -1,6 +1,7 @@
 export type FilingRule = {
   id: string;
   match: string;
+  subject?: string;
   matterId: string;
   matterName: string;
   clientName: string;

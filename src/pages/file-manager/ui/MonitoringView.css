@@ -527,3 +527,155 @@ body[data-theme='dark'] .fm-mon-rank__place.is-top3 { background: rgb(251 146 60
     min-height: 0;
   }
 }
+
+.fm-mon .fm-del {
+  grid-column: 1 / -1;
+}
+
+.fm-mon-card.fm-del.is-warn {
+  border-color: color-mix(in srgb, var(--mon-warn) 35%, var(--fm-border));
+}
+
+.fm-mon .fm-del h3 {
+  flex-wrap: wrap;
+}
+
+.fm-mon .fm-del__all {
+  margin-left: auto;
+  min-height: 2rem;
+  font-size: 0.78rem;
+}
+
+.fm-del__hint {
+  margin: 0 0 0.6rem;
+  color: var(--fm-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.fm-del__error {
+  margin: 0 0 0.5rem;
+  color: var(--mon-alert);
+  font-size: 0.8rem;
+}
+
+.fm-del__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-del__list li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--fm-border);
+}
+
+.fm-del__list li:last-child {
+  border-bottom: 0;
+}
+
+.fm-del__list li.is-archived {
+  opacity: 0.8;
+}
+
+.fm-del__ico {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--fm-muted) 12%, transparent);
+  color: var(--fm-muted);
+}
+
+.fm-del__ico svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fm-del__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.fm-del__main strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fm-del__main > span {
+  color: var(--fm-muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.fm-del__main em {
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fm-muted) 14%, transparent);
+  font-style: normal;
+}
+
+.fm-mon .fm-del__matter {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fm-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fm-del__size {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fm-del__actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.fm-mon .fm-del__actions .fm-btn {
+  min-height: 2rem;
+  padding: 0 0.6rem;
+  font-size: 0.78rem;
+}
+
+.fm-mon .fm-del__more {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .fm-del__list li {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+
+  .fm-del__actions {
+    grid-column: 2 / -1;
+  }
+
+  .fm-mon .fm-del__actions .fm-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .fm-mon .fm-del__all {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+}

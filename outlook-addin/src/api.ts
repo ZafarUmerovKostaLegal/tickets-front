@@ -376,6 +376,7 @@ export type MailRuleDto = {
   id: string;
   scope: 'personal' | 'shared';
   match: string;
+  subject?: string;
   matterId: string;
   matterName: string;
   matterCode: string;

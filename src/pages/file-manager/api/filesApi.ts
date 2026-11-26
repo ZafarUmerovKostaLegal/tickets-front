@@ -190,6 +190,7 @@ export type MailRule = {
     id: string;
     scope: 'personal' | 'shared';
     match: string;
+    subject?: string;
     matterId: string;
     matterName: string;
     matterCode: string;
@@ -319,6 +320,8 @@ export type TrashItem = {
     documents?: number;
     fileKind?: FileKind;
     sizeBytes?: number;
+    storedBytes?: number;
+    purgedAt?: string | null;
 };
 
 export type AccessRequest = {
@@ -402,6 +405,7 @@ export type StatsResponse = {
     versions: number;
     checkedOut: number;
     inTrash: number;
+    trashBytes?: number;
     pendingRequests: number;
     uploadsWeek: number;
     downloadsDay: number;
@@ -542,6 +546,8 @@ export const filesApi = {
     trash: (archived = false) => request<{ items: TrashItem[] }>(archived ? '/trash?archived=true' : '/trash'),
     restoreTrash: (kind: string, id: string) =>
         request<{ ok: true }>(`/trash/${kind}/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+    eraseTrash: (kind: string, id: string) =>
+        request<{ ok: true; documents: number; folders: number; bytes: number; diskBytes: number }>(`/trash/${kind}/${encodeURIComponent(id)}/erase`, { method: 'DELETE' }),
     purgeTrash: (kind: string, id: string) =>
         request<{ ok: true }>(`/trash/${kind}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     security: (matterId: string) => request<SecurityResponse>(`/matters/${encodeURIComponent(matterId)}/security`),
@@ -581,9 +587,9 @@ export const filesApi = {
         request<{ items: AuditRow[]; total: number }>(`/audit${query(params)}`),
     stats: () => request<StatsResponse>('/stats'),
     mailRules: () => request<MailRulesResponse>('/mail/rules'),
-    createMailRule: (body: { match: string; matterId: string; folderId?: string | null; scope: 'personal' | 'shared' }) =>
+    createMailRule: (body: { match: string; subject?: string; matterId: string; folderId?: string | null; scope: 'personal' | 'shared' }) =>
         request<{ rule: MailRule }>('/mail/rules', json('POST', body)),
-    updateMailRule: (id: string, patch: { enabled?: boolean; match?: string; matterId?: string; folderId?: string | null; clearFolder?: boolean }) =>
+    updateMailRule: (id: string, patch: { enabled?: boolean; match?: string; subject?: string; matterId?: string; folderId?: string | null; clearFolder?: boolean }) =>
         request<{ rule: MailRule }>(`/mail/rules/${encodeURIComponent(id)}`, json('PATCH', patch)),
     deleteMailRule: (id: string) => request<{ ok: true }>(`/mail/rules/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     setAutofile: (enabled: boolean) => request<{ mailbox: MailboxStatus | null }>('/mail/autofile', json('PUT', { enabled })),

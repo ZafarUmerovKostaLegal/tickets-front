@@ -4,7 +4,8 @@ import { saveSettings, type FilingRule } from './settings';
 export function toFilingRule(rule: MailRuleDto): FilingRule {
   return {
     id: rule.id,
-    match: rule.match.includes('@') ? rule.match : `@${rule.match}`,
+    match: !rule.match ? '' : rule.match.includes('@') ? rule.match : `@${rule.match}`,
+    subject: rule.subject ?? '',
     matterId: rule.matterId,
     matterName: rule.matterName,
     clientName: rule.clientName,

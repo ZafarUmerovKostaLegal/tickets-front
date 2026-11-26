@@ -7,7 +7,7 @@ import './AuditView.css';
 
 const AUDIT_ACTIONS = [
     'upload', 'version', 'open', 'download', 'checkout', 'checkin', 'discard', 'rename', 'properties', 'move', 'delete',
-    'restore', 'purge', 'folder_create', 'folder_rename', 'folder_move', 'folder_delete', 'provision', 'acl_set',
+    'restore', 'purge', 'erase', 'folder_create', 'folder_rename', 'folder_move', 'folder_delete', 'provision', 'acl_set',
     'acl_remove', 'folder_acl_set', 'folder_acl_remove', 'folder_inherit', 'doc_acl_set', 'doc_acl_remove', 'doc_restrict', 'request_create', 'request_approve', 'request_reject', 'template_update', 'denied',
 ] as const;
 
@@ -17,7 +17,7 @@ const GROUPS: Record<Exclude<Group, 'other'>, string[]> = {
     files: ['upload', 'version', 'checkin'],
     views: ['open', 'download'],
     edits: ['checkout', 'discard', 'rename', 'properties', 'move', 'folder_create', 'folder_rename', 'folder_move'],
-    removals: ['delete', 'restore', 'purge', 'folder_delete'],
+    removals: ['delete', 'restore', 'purge', 'erase', 'folder_delete'],
     access: ['acl_set', 'acl_remove', 'folder_acl_set', 'folder_acl_remove', 'folder_inherit', 'doc_acl_set', 'doc_acl_remove', 'doc_restrict', 'request_create', 'request_approve', 'request_reject'],
     denied: ['denied'],
 };
@@ -54,6 +54,7 @@ function hue(id: number): number {
 function dayKey(iso: string | null): string {
     if (!iso)
         return '';
+
     const date = new Date(iso);
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
@@ -112,7 +113,7 @@ export function AuditView({ clients, initialMatterId, onOpenMatter, onOpenDocume
     const matterOptions = useMemo(() => [
         { value: '', label: tr('search.anyMatter') },
         ...matters.map((matter) => ({
-            value: matter.id,
+            value: matter.id, 
             label: `${matter.clientName} · ${matter.code ? `${matter.code} · ` : ''}${matter.name}`,
         })),
     ], [matters, tr]);

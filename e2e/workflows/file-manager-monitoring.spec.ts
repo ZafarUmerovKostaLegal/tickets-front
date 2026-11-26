@@ -64,9 +64,39 @@ test.describe('@e2e Файловый менеджер: мониторинг', ()
         await mockStats(page, true);
         await page.goto('/files?view=monitoring');
         await expect(page.locator('.fm-mon__kpis')).toBeVisible({ timeout: 30_000 });
-        await expect(page.locator('.fm-mon-empty.is-ok')).toBeVisible();
+        await expect(page.locator('.fm-mon__grid .fm-mon-empty.is-ok')).toBeVisible();
         if (SHOTS)
             await page.screenshot({ path: `${SHOTS}/mon-390.png`, fullPage: true });
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    });
+
+    test('удалённые файлы: размер и удаление навсегда', async ({ page, loginAs }) => {
+        await page.setViewportSize({ width: 1440, height: 1100 });
+        await loginAs('admin');
+        await mockStats(page);
+        const erased: string[] = [];
+        let items = [
+            { kind: 'document', id: 'd1', name: 'Big archive.zip', matterId: 'm1', matterName: 'Проверка создания Matter', clientName: 'Kosta Legal', deletedAt: NOW, deletedBy: 'Zafar Umerov', canPurge: true, sizeBytes: 30_000_000, storedBytes: 31_000_000, purgedAt: null },
+            { kind: 'folder', id: 'f1', name: 'Old drafts', matterId: 'm2', matterName: 'TEST REPORTS', clientName: 'Kosta Legal', deletedAt: NOW, deletedBy: 'Iroda T', canPurge: true, documents: 3, storedBytes: 2_400_000, purgedAt: null },
+        ];
+        await page.route('**/api/v1/files/trash/*/*/erase', (route) => {
+            const id = route.request().url().split('/').slice(-2)[0];
+            erased.push(id);
+            items = items.filter((item) => item.id !== id);
+            return route.fulfill({ json: { ok: true, documents: 1, folders: 0, bytes: 31_000_000, diskBytes: 31_000_000 } });
+        });
+        await page.route('**/api/v1/files/trash?archived=true', (route) => route.fulfill({ status: 403, json: { detail: 'no' } }));
+        await page.route('**/api/v1/files/trash', (route) => route.fulfill({ json: { items } }));
+        await page.goto('/files?view=monitoring');
+        const card = page.locator('.fm-del');
+        await expect(card.locator('.fm-del__list li')).toHaveCount(2, { timeout: 30_000 });
+        await expect(card.locator('.fm-del__list li').first()).toContainText('Big archive.zip');
+        if (SHOTS)
+            await card.screenshot({ path: `${SHOTS}/mon-deleted.png` });
+        await card.locator('.fm-del__list li').first().getByRole('button', { name: 'Удалить навсегда' }).click();
+        await expect(page.getByRole('dialog')).toContainText('нельзя отменить');
+        await page.getByRole('dialog').getByRole('button', { name: 'Удалить навсегда' }).click();
+        await expect(card.locator('.fm-del__list li')).toHaveCount(1);
+        expect(erased).toEqual(['d1']);
     });
 });

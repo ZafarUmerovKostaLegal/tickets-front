@@ -1,67 +1,86 @@
-import { test, expect, type Page } from '../fixtures/test';
+import type { Page } from '@playwright/test';
+import { test, expect } from '../fixtures/test';
 
-type Rule = Record<string, unknown>;
+const SHOTS = process.env.FM_SHOTS_DIR ?? '';
 
-async function openRules(page: Page, width: number) {
-    await page.setViewportSize({ width, height: 900 });
-    const state = {
-        rules: [
-            { id: 'r1', scope: 'personal', match: 'ivan@acme.com', matterId: 'm1', matterName: 'Project Falcon', matterCode: 'KL-104', clientId: 'c1', clientName: 'Acme', folderId: null, folderPath: '', enabled: true, hits: 12, lastHitAt: '2026-11-20T09:00:00Z', ownerName: 'Admin', mine: true, canEdit: true, createdAt: null },
-            { id: 'r2', scope: 'shared', match: 'beta.com', matterId: 'm2', matterName: 'Beta Arbitration', matterCode: 'KL-221', clientId: 'c2', clientName: 'Beta LLC', folderId: 'f1', folderPath: 'Correspondence / Court', enabled: false, hits: 0, lastHitAt: null, ownerName: 'Partner P', mine: false, canEdit: true, createdAt: null },
-        ] as Rule[],
-        mailbox: null as Record<string, unknown> | null,
-        created: [] as Rule[],
-    };
+async function mockRules(page: Page) {
+    const posts: unknown[] = [];
+    const base = { matterId: 'm1', matterName: 'Проверка создания Matter', matterCode: 'KL-PRSZ-12/03', clientId: 'c1', clientName: 'Kosta Legal', enabled: true, ownerName: 'Zafar Umerov', mine: true, canEdit: true, createdAt: null, scope: 'personal' };
+    const rules = [
+        { ...base, id: 'r1', match: 'info@kostalegal.com', subject: '', folderId: null, folderPath: '', hits: 1, lastHitAt: '2026-11-25T09:11:00Z' },
+        { ...base, id: 'r2', match: 'client.com', subject: 'invoice, счёт', folderId: 'f-bill', folderPath: 'Billing', hits: 4, lastHitAt: '2026-11-25T10:12:00Z' },
+        { ...base, id: 'r3', match: '', subject: 'court hearing', folderId: 'f-court', folderPath: 'Court Documents', hits: 0, lastHitAt: null },
+    ];
     await page.route('**/api/v1/files/clients', (route) => route.fulfill({ json: {
-        viewer: { userId: 1, name: 'Admin', canManage: true },
-        clients: [
-            { id: 'c1', name: 'Acme', archived: false, favorite: false, matters: [{ id: 'm1', clientId: 'c1', name: 'Project Falcon', code: 'KL-104', closed: false, level: 'edit', mine: true, provisioned: true, documents: 4, favorite: false }] },
-            { id: 'c2', name: 'Beta LLC', archived: false, favorite: false, matters: [{ id: 'm2', clientId: 'c2', name: 'Beta Arbitration', code: 'KL-221', closed: false, level: 'manage', mine: false, provisioned: true, documents: 1, favorite: false }] },
-        ],
+        viewer: { userId: 1, name: 'Zafar Umerov', canManage: true },
+        clients: [{ id: 'c1', name: 'Kosta Legal', matters: [{ id: 'm1', name: 'Проверка создания Matter', code: 'KL-PRSZ-12/03', closed: false, level: 'manage', favorite: false, mine: true }] }],
         requestable: [],
     } }));
     await page.route('**/api/v1/files/access-requests**', (route) => route.fulfill({ json: { requests: [] } }));
-    await page.route('**/api/v1/files/mail/**', async (route) => {
-        const request = route.request();
-        const url = new URL(request.url());
-        if (url.pathname.endsWith('/mail/autofile')) {
-            const enabled = (request.postDataJSON() as { enabled: boolean }).enabled;
-            state.mailbox = { email: 'admin@kostalegal.com', enabled, since: '2026-11-21T08:00:00Z', filedTotal: 0, lastRunAt: null, lastFiledAt: null, lastError: null };
-            return route.fulfill({ json: { mailbox: state.mailbox } });
+    await page.route('**/api/v1/files/matters/m1/browse**', (route) => route.fulfill({ json: {
+        matter: { id: 'm1', name: 'Проверка создания Matter', code: 'KL-PRSZ-12/03', closed: false, level: 'manage', favorite: false },
+        client: { id: 'c1', name: 'Kosta Legal' }, folderId: null, path: [], documents: [],
+        folders: [
+            { id: 'f-bill', parentId: null, name: 'Billing', documents: 0, createdAt: null, favorite: false },
+            { id: 'f-corr', parentId: null, name: 'Correspondence', documents: 0, createdAt: null, favorite: false },
+            { id: 'f-mail', parentId: 'f-corr', name: 'Emails', documents: 0, createdAt: null, favorite: false },
+            { id: 'f-court', parentId: null, name: 'Court Documents', documents: 0, createdAt: null, favorite: false },
+        ],
+    } }));
+    await page.route('**/api/v1/files/mail/rules**', async (route) => {
+        if (route.request().method() === 'POST') {
+            posts.push(route.request().postDataJSON());
+            return route.fulfill({ status: 201, json: { rule: rules[0] } });
         }
-        if (request.method() === 'POST' && url.pathname.endsWith('/mail/rules')) {
-            const body = request.postDataJSON() as Rule;
-            state.created.push(body);
-            state.rules.unshift({ id: 'r3', scope: body.scope, match: String(body.match).replace(/^@/, ''), matterId: body.matterId, matterName: 'Project Falcon', matterCode: 'KL-104', clientId: 'c1', clientName: 'Acme', folderId: null, folderPath: '', enabled: true, hits: 0, lastHitAt: null, ownerName: 'Admin', mine: true, canEdit: true, createdAt: null });
-            return route.fulfill({ status: 201, json: { rule: state.rules[0] } });
-        }
-        return route.fulfill({ json: { rules: state.rules, mailbox: state.mailbox, canShare: true, serverReady: true } });
+        return route.fulfill({ json: {
+            rules,
+            mailbox: { email: 'zumerov@kostalegal.com', enabled: true, since: null, filedTotal: 18, lastRunAt: '2026-11-25T10:37:00Z', lastFiledAt: null, lastError: null },
+            canShare: true, serverReady: true,
+        } });
     });
-    await page.goto('/files?view=mailRules');
-    await expect(page.getByText('Автосохранение моей почты')).toBeVisible({ timeout: 20_000 });
-    return state;
+    return posts;
 }
 
 test.describe('@e2e Файловый менеджер: правила почты', () => {
-    for (const width of [1440, 390]) {
-        test(`автосохранение включается, правило добавляется (${width})`, async ({ page, loginAs }) => {
-            await loginAs('admin');
-            const state = await openRules(page, width);
-            await expect(page.getByText('@beta.com')).toBeVisible();
-            await expect(page.getByText('Correspondence / Court')).toBeVisible();
-            expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    test('тема, папка и несколько правил', async ({ page, loginAs }) => {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await loginAs('admin');
+        const posts = await mockRules(page);
+        await page.goto('/files?view=mailRules');
+        await expect(page.locator('.fm-mr-rule')).toHaveCount(3, { timeout: 30_000 });
+        await expect(page.locator('.fm-mr-rule').nth(2)).toContainText('Любой отправитель');
+        await expect(page.locator('.fm-mr-rule').nth(1)).toContainText('Все из @client.com');
 
-            await page.getByRole('button', { name: 'Включить' }).click();
-            await expect(page.getByText(/Включено для admin@kostalegal\.com/)).toBeVisible();
+        await page.getByPlaceholder(/ivan@client.com/).fill('anna@client.com');
+        await page.getByRole('button', { name: /всех сотрудников @client.com/ }).click();
+        await expect(page.getByPlaceholder(/ivan@client.com/)).toHaveValue('@client.com');
+        await expect(page.locator('.fm-mr-domain-note')).toContainText('client.com');
+        await page.getByPlaceholder(/invoice, счёт/).fill('NDA, договор');
+        await page.locator('.fm-mr-form__grid label').nth(2).locator('button').first().click();
+        await page.getByRole('option', { name: /Проверка создания Matter/ }).click();
+        await page.locator('.fm-mr-form__grid label').nth(3).locator('button').first().click();
+        await page.getByRole('option', { name: 'Correspondence / Emails', exact: true }).click();
+        await expect(page.locator('.fm-mr-form__summary')).toContainText('«NDA» или «договор»');
+        await expect(page.locator('.fm-mr-form__summary')).toContainText('Correspondence / Emails');
+        if (SHOTS)
+            await page.screenshot({ path: `${SHOTS}/rules-1440.png`, fullPage: true });
+        await page.locator('.fm-mr-form button[type=submit]').click();
+        await expect.poll(() => posts.length).toBe(1);
+        expect(posts[0]).toMatchObject({ match: '@client.com', subject: 'NDA, договор', matterId: 'm1', folderId: 'f-mail' });
 
-            await page.getByPlaceholder(/ivan@client\.com/).fill('@acme.com');
-            await page.locator('.fm-mailrules__matter button').first().click();
-            await page.getByRole('option', { name: /Project Falcon/ }).click();
-            await page.getByRole('button', { name: 'Добавить правило' }).click();
-            await expect.poll(() => state.created.length).toBe(1);
-            expect(state.created[0]).toMatchObject({ match: '@acme.com', matterId: 'm1', scope: 'personal' });
-            await expect(page.getByText('@acme.com', { exact: true })).toBeVisible();
-            await page.screenshot({ path: test.info().outputPath(`mail-rules-${width}.png`), fullPage: true });
-        });
-    }
+        await page.locator('.fm-mr-rule').nth(1).getByRole('button', { name: 'Изменить правило' }).click();
+        await expect(page.locator('.fm-mr-form h3')).toHaveText('Изменение правила');
+        await expect(page.getByPlaceholder(/invoice, счёт/)).toHaveValue('invoice, счёт');
+    });
+
+    test('390', async ({ page, loginAs }) => {
+        await page.setViewportSize({ width: 390, height: 860 });
+        await loginAs('admin');
+        await mockRules(page);
+        await page.goto('/files?view=mailRules');
+        await expect(page.locator('.fm-mr-rule').first()).toBeVisible({ timeout: 30_000 });
+        if (SHOTS)
+            await page.locator('.fm-mr-list').first().screenshot({ path: `${SHOTS}/rules-390.png` });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    });
 });

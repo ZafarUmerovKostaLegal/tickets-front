@@ -363,7 +363,7 @@ export function App({ host }: { host: Office.HostType | null }) {
   const fileWithRule = useCallback(async (info: ItemInfo, found: Filing[]) => {
     if (mailboxRef.current?.enabled)
       return;
-    const rule = matchRule(info.fromEmail, rulesRef.current);
+    const rule = matchRule(info.fromEmail, rulesRef.current, info.subject);
     if (!rule?.autoFile || info.mode !== 'read' || latest.current.busy)
       return;
     if (wasFiled(info.messageId) || found.some((f) => f.sameMessage) || autoFiled.current.has(info.messageId))
@@ -441,7 +441,7 @@ export function App({ host }: { host: Office.HostType | null }) {
     };
   }, [phase, isOutlook, refreshItem]);
 
-  const rule = item?.mode === 'read' ? matchRule(item.fromEmail, rules) : null;
+  const rule = item?.mode === 'read' ? matchRule(item.fromEmail, rules, item.subject) : null;
   const [ruleLocation, setRuleLocation] = useState<Location | null>(null);
   useEffect(() => {
     setRuleLocation(null);

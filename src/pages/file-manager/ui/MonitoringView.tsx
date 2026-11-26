@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { filesApi, type StatsResponse } from '../api/filesApi';
 import { formatBytes, formatDateTime } from '../lib/filesFormat';
 import { Icon, StateBlock, useFm, useLoad, type IconName } from './fmShared';
+import { DeletedFilesCard } from './DeletedFilesCard';
 import './MonitoringView.css';
 
 type Tone = 'accent' | 'ok' | 'warn' | 'alert' | 'muted';
@@ -140,7 +141,7 @@ export function MonitoringView({ onOpenAudit, onOpenRequests, onOpenTrash, onOpe
                         <div className="fm-mon__kpis">
                             <Kpi icon="folder" tone="accent" label={tr('monitoring.documents')} value={data.documents.toLocaleString(locale)} />
                             <Kpi icon="pulse" tone="accent" label={tr('monitoring.storage')} value={formatBytes(data.storedBytes, locale)}
-                                sub={`${data.versions} ${tr('monitoring.versions')}`} />
+                                sub={`${data.versions} ${tr('monitoring.versions')}${data.trashBytes ? ` · ${tr('deletedX.inTrash', { size: formatBytes(data.trashBytes, locale) })}` : ''}`} />
                             <Kpi icon="upload" tone="ok" label={tr('monitoring.uploadsWeek')} value={data.uploadsWeek} />
                             <Kpi icon="download" tone="ok" label={tr('monitoring.downloadsDay')} value={data.downloadsDay} />
                             <Kpi icon="shield" tone={data.deniedDay ? 'alert' : 'muted'} label={tr('monitoring.deniedDay')} value={data.deniedDay}
@@ -200,6 +201,7 @@ export function MonitoringView({ onOpenAudit, onOpenRequests, onOpenTrash, onOpe
                                 )}
                             </section>
                         </div>
+                        <DeletedFilesCard onChanged={stats.reload} onOpenMatter={onOpenMatter} />
                     </>
                 ) : null}
             </StateBlock>

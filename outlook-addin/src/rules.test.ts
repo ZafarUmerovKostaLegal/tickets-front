@@ -42,4 +42,16 @@ describe('matchRule', () => {
     expect(matchRule('', rules)).toBeNull();
     expect(matchRule('not-an-email', rules)).toBeNull();
   });
+
+  it('routes one sender into different rules by subject', () => {
+    const rules = [
+      rule({ id: 'any', match: '@client.com' }),
+      rule({ id: 'invoices', match: '@client.com', subject: 'Invoice, счёт' }),
+      rule({ id: 'court', match: '', subject: 'court hearing' }),
+    ];
+    expect(matchRule('a@client.com', rules, 'Re: INVOICE 12')?.id).toBe('invoices');
+    expect(matchRule('a@client.com', rules, 'Hello')?.id).toBe('any');
+    expect(matchRule('judge@court.uz', rules, 'Court  hearing')?.id).toBe('court');
+    expect(matchRule('judge@court.uz', rules, 'Hello')).toBeNull();
+  });
 });
