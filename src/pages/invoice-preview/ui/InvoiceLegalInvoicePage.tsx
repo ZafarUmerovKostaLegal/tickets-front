@@ -425,16 +425,32 @@ export function InvoiceLegalInvoicePage({
           onChange={(thanksLine) => onChangeLegalOverrides?.({ thanksLine })}
         />
       </p>
-      <p className="tt-inv-li__disclaimer">
-        <LiField
-          editable={editable}
-          className="tt-inv-li__field--disclaimer"
-          value={editable ? (legalOverrides?.paymentDisclaimer ?? paymentDisclaimer) : paymentDisclaimer}
-          ariaLabel="Payment disclaimer"
-          multiline={editable}
-          onChange={(paymentDisclaimer) => onChangeLegalOverrides?.({ paymentDisclaimer })}
-        />
-      </p>
+      {legalOverrides?.paymentDisclaimerHidden ? (
+        editable ? (
+          <button type="button" className="tt-inv-li__disclaimer-toggle" onClick={() => onChangeLegalOverrides?.({ paymentDisclaimerHidden: null })}>
+            + Вернуть текст об оплате
+          </button>
+        ) : null
+      ) : (
+        <div className="tt-inv-li__disclaimer-wrap">
+          <p className="tt-inv-li__disclaimer">
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--disclaimer"
+              value={editable ? (legalOverrides?.paymentDisclaimer ?? paymentDisclaimer) : paymentDisclaimer}
+              ariaLabel="Payment disclaimer"
+              multiline={editable}
+              onChange={(paymentDisclaimer) => onChangeLegalOverrides?.({ paymentDisclaimer })}
+            />
+          </p>
+          {editable ? (
+            <button type="button" className="tt-inv-li__disclaimer-remove" aria-label="Убрать текст об оплате" title="Убрать текст об оплате"
+              onClick={() => onChangeLegalOverrides?.({ paymentDisclaimerHidden: true })}>
+              ×
+            </button>
+          ) : null}
+        </div>
+      )}
     </div>
   </div>);
 }

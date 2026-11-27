@@ -1735,7 +1735,8 @@ function drawLegalInvoicePdfPage(
         y = wrapTextBlock(page, thanks, ML, y, contentW, DOC_FS, font, THANKS_TEXT, DOC_LH);
     }
 
-    wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, DOC_FS, font, DISCLAIMER_TEXT, DOC_LH);
+    if (!legalOverrides?.paymentDisclaimerHidden)
+        wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, DOC_FS, font, DISCLAIMER_TEXT, DOC_LH);
 }
 
 function remapPreviewPageSelectionToPdf(

@@ -37,6 +37,7 @@ export type InvoiceLegalPageOverrides = {
     serviceDescriptionLine?: string | null;
     serviceLines?: InvoiceLegalServiceLineOverride[] | null;
     paymentDisclaimer?: string | null;
+    paymentDisclaimerHidden?: boolean | null;
     thanksLine?: string | null;
     invoiceNumber?: string | null;
     issueDateDisplay?: string | null;

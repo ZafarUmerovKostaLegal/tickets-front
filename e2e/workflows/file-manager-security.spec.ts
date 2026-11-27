@@ -97,9 +97,13 @@ test.describe('@e2e Файловый менеджер: безопасность 
         await page.goto('/files?view=security');
 
         await expect(page.locator('.fm-sx-welcome h2')).toBeVisible({ timeout: 30_000 });
+        await expect(page.locator('.fm-sx-rail .fm-sx-matter')).toHaveCount(3);
+        await page.getByRole('button', { name: 'Показать закрытые (1)' }).click();
         await expect(page.locator('.fm-sx-rail .fm-sx-matter')).toHaveCount(4);
         if (SHOTS)
             await page.screenshot({ path: `${SHOTS}/sx-1440-welcome.png` });
+        await page.getByRole('button', { name: 'Скрыть закрытые (1)' }).click();
+        await expect(page.locator('.fm-sx-rail .fm-sx-matter')).toHaveCount(3);
 
         await page.getByRole('radio', { name: /Стены/ }).click();
         await expect(page.locator('.fm-sx-rail .fm-sx-matter')).toHaveCount(1);

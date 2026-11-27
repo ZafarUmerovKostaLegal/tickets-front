@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
-import { canSelectLegalHubReviewer } from './legalHubRank';
 import { useLegalHubView } from './legalHubView';
 import {
     addLegalHubCheck,
@@ -156,7 +155,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     onReviewed?: (patch: { status?: TaskStatusId; boardColumn: string; reviewerId?: number; done?: boolean; approval?: boolean; assigneeId?: number }) => void;
 }) {
     const { t, locale } = useI18n();
-    const { userId, staff, me } = useLegalHubView();
+    const { userId, directory } = useLegalHubView();
     const formId = useId();
     const seed = taskDrawerDetail(task);
     const stored = task as HubTask & { instructions?: string; internalOn?: string };
@@ -197,14 +196,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         : PERSON_LABEL[task.owner]);
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
-    const actor = me ?? (userId != null ? { id: userId, rank: 5000 } : null);
-    const reviewers = staff
-        .filter((person) => (
-            person.id === reviewerId
-            || (actor != null && canSelectLegalHubReviewer(actor, person))
-        ))
-        .slice()
-        .sort((left, right) => left.rank - right.rank || left.name.localeCompare(right.name, locale));
+    const reviewers = directory.filter((person) => person.id === reviewerId || person.id !== userId);
     const requestClose = useCallback(() => {
         setClosing((already) => {
             if (already)

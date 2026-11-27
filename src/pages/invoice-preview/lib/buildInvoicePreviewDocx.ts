@@ -995,7 +995,7 @@ function legalInvoiceDocxBlocks(
                 color: '6B7280',
             })],
         }),
-        new Paragraph({
+        ...(legalOverrides?.paymentDisclaimerHidden ? [] : [new Paragraph({
             spacing: { before: 80 },
             alignment: AlignmentType.LEFT,
             children: [new TextRun({
@@ -1004,7 +1004,7 @@ function legalInvoiceDocxBlocks(
                 font: DOC_FONT,
                 color: '4B5563',
             })],
-        }),
+        })]),
     ];
 }
 

@@ -29,7 +29,7 @@ const MB = 40;
 const INK = rgb(0.1, 0.1, 0.1);
 const MUTED = rgb(0.29, 0.33, 0.39);
 const RED = rgb(232 / 255, 51 / 255, 55 / 255);
-const CELL = 8;
+const CELL = 7;
 
 type Logo = Awaited<ReturnType<PDFDocument['embedPng']>> | null;
 
@@ -135,7 +135,7 @@ function flatBlock(lines: CombinedReportLine[], cur: string, num: (n: number) =>
     return {
         title: flatFeeTableTitle(lines),
         headers: ['Date', 'Initials', 'Task', 'Description', 'Per entry', 'Rate', `Amount (${cur})`],
-        weights: [13, 9, 14, 28, 9, 11, 16],
+        weights: [11, 8, 13, 30, 7, 15, 16],
         right: new Set([4, 5, 6]),
         rows: [
             ...lines.map((line) => ({
@@ -151,7 +151,7 @@ const SR = 20;
 const ST = 22;
 const SB = 28;
 const SHEET_HEAD = 22;
-const SHEET_LINE = 12;
+const SHEET_LINE = 10.5;
 const SHEET_GAP = 18;
 const PAD_X = 6;
 const GRID = rgb(0.58, 0.64, 0.72);
@@ -214,7 +214,7 @@ function sheetRowLayout(
         if (!cell.trim())
             return [''];
         if (right.has(i))
-            return [clip(cell, font, CELL, width)];
+            return [cell.trim()];
         return wrapped(cell, font, width);
     });
     const count = Math.max(1, ...lines.map((line) => line.length));
@@ -295,7 +295,7 @@ function sheetBlocks(
             rows.push({ bold: true, cells: ['', '', '', `Total (${cur})`, sheetNum(projectHours), '', sheetNum(projectFees)] });
         out.push({
             headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', 'Rate', `Amount (${cur})`],
-            weights: [13, 9, 14, 28, 9, 11, 16],
+            weights: [11, 8, 13, 30, 7, 15, 16],
             right: new Set([4, 5, 6]),
             rows,
         });
@@ -306,7 +306,7 @@ function sheetBlocks(
         const summaryFees = people.reduce((sum, person) => sum + person.amount, 0);
         out.push({
             headers: ['Initials', 'Name', 'Title', 'Hours', `Rate (${cur})`, `Amount (${cur})`],
-            weights: [11, 24, 20, 12, 16, 17],
+            weights: [9, 24, 22, 9, 17, 19],
             right: new Set([3, 4, 5]),
             rows: [
                 ...people.map((person) => ({
@@ -567,9 +567,11 @@ function drawSheetOps(
         const color = op.bold ? style.total : INK;
         op.lines.forEach((col, i) => {
             col.forEach((text, lineIndex) => {
-                const tw = face.widthOfTextAtSize(text, CELL);
+                const room = widths[i]! - PAD_X * 2;
+                const size = op.right.has(i) ? Math.min(CELL, (CELL * room) / Math.max(1, face.widthOfTextAtSize(text, CELL))) : CELL;
+                const tw = face.widthOfTextAtSize(text, size);
                 const dx = op.right.has(i) ? xs[i]! + widths[i]! - PAD_X - tw : xs[i]! + PAD_X;
-                page.drawText(text, { x: dx, y: y - 13 - lineIndex * SHEET_LINE, size: CELL, font: face, color });
+                page.drawText(text, { x: dx, y: y - 12 - lineIndex * SHEET_LINE, size, font: face, color });
             });
         });
         y -= op.height;

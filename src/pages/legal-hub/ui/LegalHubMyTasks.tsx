@@ -9,7 +9,6 @@ import type { ProjectStage } from './legalHubTeamApi';
 import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText, legalHubSectionUrl } from './legalHubShared';
-import { canSelectLegalHubReviewer } from './legalHubRank';
 import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
 import { createLegalHubTask, patchLegalHubTask } from './legalHubTaskApi';
 import { useLegalHubView } from './legalHubView';
@@ -1684,24 +1683,13 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
     onCreate: (task: MineTask) => void;
 }) {
     const { t } = useI18n();
-    const { staff, projects: hubProjects, userId, me } = useLegalHubView();
+    const { directory, projects: hubProjects, userId, me } = useLegalHubView();
     const openProjects = useMemo(
         () => hubProjects.filter((project) => userId != null && project.accessIds.includes(userId)),
         [hubProjects, userId],
     );
-    const assignees = useMemo(() => {
-        if (me == null)
-            return [];
-        return staff;
-    }, [me, staff]);
-    const reviewers = useMemo(() => {
-        if (me == null)
-            return [];
-        return staff
-            .filter((person) => canSelectLegalHubReviewer(me, person))
-            .slice()
-            .sort((left, right) => left.rank - right.rank || left.name.localeCompare(right.name, 'ru'));
-    }, [me, staff]);
+    const assignees = useMemo(() => (me == null ? [] : directory), [me, directory]);
+    const reviewers = useMemo(() => (me == null ? [] : directory.filter((person) => person.id !== me.id)), [me, directory]);
     const showOwner = assignees.some((person) => person.id !== me?.id);
     const [title, setTitle] = useState('');
     const [projectId, setProjectId] = useState(() => {

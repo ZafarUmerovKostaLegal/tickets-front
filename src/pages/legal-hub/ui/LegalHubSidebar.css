@@ -1,0 +1,162 @@
+.lh-side {
+  --lh-brand: #8b2635;
+  --lh-brand-2: #c2414f;
+  --lh-tone-indigo: #4f46e5;
+  --lh-tone-teal: #0d9488;
+  --lh-tone-amber: #d97706;
+  --lh-tone-rose: #e11d48;
+  background:
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--lh-brand) 7%, transparent) 0%, transparent 60%),
+    var(--app-surface);
+}
+
+body[data-theme='dark'] .lh-side {
+  --lh-brand: #c0485a;
+  --lh-brand-2: #e0687a;
+  --lh-tone-indigo: #818cf8;
+  --lh-tone-teal: #2dd4bf;
+  --lh-tone-amber: #fbbf24;
+  --lh-tone-rose: #fb7185;
+}
+
+.lh-side__mark {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--lh-brand-2), var(--lh-brand));
+  color: #fff;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--lh-brand) 35%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.25);
+}
+
+.lh-side__mark svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.lh-side__brand {
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.lh-side__section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lh-side__section::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--app-border), transparent);
+}
+
+.lh-side__item {
+  border-radius: 10px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.lh-side__tile {
+  --tone: var(--lh-tone-indigo);
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  color: var(--tone);
+  transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lh-side__tile svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.lh-side__tile.is-teal { --tone: var(--lh-tone-teal); }
+.lh-side__tile.is-amber { --tone: var(--lh-tone-amber); }
+.lh-side__tile.is-rose { --tone: var(--lh-tone-rose); }
+
+@media (hover: hover) {
+  .lh-side__item:hover .lh-side__tile {
+    transform: translateY(-1px) scale(1.05);
+    background: color-mix(in srgb, var(--tone) 18%, transparent);
+  }
+}
+
+.lh-side__item--active:has(.lh-side__tile) {
+  background: color-mix(in srgb, var(--app-accent) 7%, var(--app-surface));
+  box-shadow: inset 3px 0 0 var(--app-accent);
+}
+
+.lh-side__item--active .lh-side__tile {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 80%, #fff), var(--tone));
+  color: #fff;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--tone) 35%, transparent);
+}
+
+.lh-side__item--active .lh-side__tile svg path,
+.lh-side__item--active .lh-side__tile svg circle,
+.lh-side__item--active .lh-side__tile svg rect {
+  fill-opacity: 0.22;
+}
+
+.lh-side__item-icon .lh-side__dot {
+  top: -2px;
+  right: -2px;
+}
+
+.lh-side__badge {
+  border-radius: 999px;
+}
+
+.lh-side__find {
+  border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lh-side__find:focus-within {
+  border-color: var(--app-accent-border, var(--app-accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 14%, transparent);
+}
+
+.lh-side__settings {
+  border-radius: 10px;
+}
+
+.lh-side__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--app-bg-soft, var(--app-bg)) 70%, transparent));
+}
+
+.lh-side__collapse {
+  border-radius: 10px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.lh-side__collapse svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.lh-side__collapse.is-docked {
+  background: color-mix(in srgb, var(--app-accent) 10%, transparent);
+}
+
+.lh-side__item:focus-visible,
+.lh-side__collapse:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-side__tile,
+  .lh-side__item,
+  .lh-side__collapse {
+    transition: none;
+  }
+}

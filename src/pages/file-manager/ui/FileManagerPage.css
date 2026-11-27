@@ -1862,6 +1862,12 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   color: #be123c;
 }
 
+.fm-fav__bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.25rem;
+}
+
 .fm-section-title {
   margin: 0.4rem 0 0.6rem;
   color: var(--fm-text);

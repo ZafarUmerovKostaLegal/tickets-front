@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { listContactsColleagues } from '@entities/contacts';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
 import { listAllTimeManagerClientsMerged, type TimeManagerClientRow } from '@entities/time-tracking/api/domains/clients';
 import { listAllClientProjectsMerged, type TimeManagerClientProjectRow } from '@entities/time-tracking/api/domains/projects';
@@ -27,6 +28,8 @@ export type LegalHubProject = {
 type LegalHubViewValue = {
     people: LegalHubPerson[];
     staff: LegalHubPerson[];
+    /** Every active colleague: anyone can give a task to anyone. */
+    directory: LegalHubPerson[];
     me: LegalHubPerson | null;
     memberIds: number[];
     projects: LegalHubProject[];
@@ -98,6 +101,37 @@ function collectStaff(
     return people;
 }
 
+function mergeUsers(primary: TimeTrackingUserRow[], extra: TimeTrackingUserRow[]): TimeTrackingUserRow[] {
+    const byId = new Map<number, TimeTrackingUserRow>();
+    for (const row of extra)
+        byId.set(row.id, row);
+    for (const row of primary) {
+        const other = byId.get(row.id);
+        byId.set(row.id, other ? {
+            ...other,
+            ...row,
+            display_name: row.display_name?.trim() || other.display_name,
+            position: row.position?.trim() || other.position,
+            initials: row.initials?.trim() || other.initials,
+        } : row);
+    }
+    return [...byId.values()];
+}
+
+function collectDirectory(users: TimeTrackingUserRow[], staff: LegalHubPerson[]): LegalHubPerson[] {
+    const out = new Map<number, LegalHubPerson>(staff.map((person) => [person.id, person]));
+    for (const row of users) {
+        if (row.is_blocked || row.is_archived || out.has(row.id))
+            continue;
+        const name = (row.display_name || row.email || '').trim();
+        if (!name)
+            continue;
+        const position = (row.position ?? '').trim();
+        out.set(row.id, { id: row.id, name, code: personCode(name, row.initials), position, rank: legalHubPositionRank(position, row.role ?? null) });
+    }
+    return [...out.values()].sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, 'ru'));
+}
+
 function projectsOfTeam(
     rows: TimeManagerClientProjectRow[],
     partnerId: number,
@@ -131,6 +165,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
     const userId = user?.id ?? null;
     const [people, setPeople] = useState<LegalHubPerson[]>([]);
     const [staff, setStaff] = useState<LegalHubPerson[]>([]);
+    const [directory, setDirectory] = useState<LegalHubPerson[]>([]);
     const [me, setMe] = useState<LegalHubPerson | null>(null);
     const [projects, setProjects] = useState<LegalHubProject[]>([]);
     const [viewAsId, setViewAsId] = useState<number | null>(null);
@@ -141,6 +176,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         if (userId == null || user == null) {
             setPeople([]);
             setStaff([]);
+            setDirectory([]);
             setMe(null);
             setProjects([]);
             return undefined;
@@ -155,19 +191,22 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         let cancelled = false;
         void (async () => {
             try {
-                const [teams, users, projectRows, clients, hubTeams] = await Promise.all([
+                const [teams, catalog, colleagues, projectRows, clients, hubTeams] = await Promise.all([
                     listTimeTrackingTeams().catch(() => [] as TimeTrackingTeamRow[]),
                     listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
+                    listContactsColleagues().catch(() => [] as TimeTrackingUserRow[]),
                     listAllClientProjectsMerged(false).catch(() => [] as TimeManagerClientProjectRow[]),
                     listAllTimeManagerClientsMerged(false).catch(() => [] as TimeManagerClientRow[]),
                     fetchHubTeams().catch(() => null),
                 ]);
                 if (cancelled)
                     return;
+                const users = mergeUsers(catalog, colleagues);
                 const roster = collectStaff(teams, users, self, hubTeams?.mates ?? []);
                 const actor = roster.find((person) => person.id === userId) ?? roster[0] ?? null;
                 const clientNames = new Map(clients.map((client) => [client.id, client.name.trim()]));
                 setStaff(roster);
+                setDirectory(collectDirectory(users, roster));
                 setMe(actor);
                 setPeople(actor == null ? [] : roster.filter((person) => person.id !== actor.id && canAssignLegalHubTask(actor, person)));
                 setProjects(projectsOfTeam(projectRows, userId, roster.filter((person) => person.id !== userId).map((person) => person.id), clientNames));
@@ -176,6 +215,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
                 if (!cancelled) {
                     setPeople([]);
                     setStaff([]);
+                    setDirectory([]);
                     setMe(null);
                     setProjects([]);
                 }
@@ -196,6 +236,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         return {
             people,
             staff,
+            directory,
             me,
             memberIds: staff.map((person) => person.id),
             projects,
@@ -203,7 +244,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
             viewAs,
             setViewAsId,
         };
-    }, [me, people, projects, staff, userId, viewAsId]);
+    }, [directory, me, people, projects, staff, userId, viewAsId]);
 
     return <LegalHubViewContext.Provider value={value}>{children}</LegalHubViewContext.Provider>;
 }

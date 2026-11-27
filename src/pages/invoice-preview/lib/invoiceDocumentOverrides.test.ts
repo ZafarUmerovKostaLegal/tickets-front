@@ -17,6 +17,15 @@ describe('parseInvoiceDocumentOverrides', () => {
         expect(parsed?.legal?.invoiceNumber).toBe('INV-1');
     });
 
+    it('keeps the hidden payment disclaimer and its edited text', () => {
+        const parsed = parseInvoiceDocumentOverrides({
+            v: 1,
+            legal: { paymentDisclaimerHidden: true, paymentDisclaimer: 'Custom note' },
+        });
+        expect(parsed?.legal?.paymentDisclaimerHidden).toBe(true);
+        expect(parsed?.legal?.paymentDisclaimer).toBe('Custom note');
+    });
+
     it('rejects unknown versions', () => {
         expect(parseInvoiceDocumentOverrides({ v: 2, legal: {} })).toBeNull();
     });

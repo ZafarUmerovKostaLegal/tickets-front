@@ -30,6 +30,7 @@ import {
 import './LegalHubPage.css';
 import './LegalHubTeamwork.css';
 import './LegalHubBoard.css';
+import './LegalHubSidebar.css';
 
 
 const MINE_ITEMS: { id: 'myTasks' | 'reviewQueue'; labelKey: TranslationKey; icon: ComponentType }[] = [
@@ -37,138 +38,162 @@ const MINE_ITEMS: { id: 'myTasks' | 'reviewQueue'; labelKey: TranslationKey; ico
     { id: 'reviewQueue', labelKey: 'legalHub.sideReview', icon: IconShield },
 ];
 
+const DUO = { fill: 'currentColor', fillOpacity: 0.16, stroke: 'none' } as const;
+
+function Svg({ children, width = 1.9 }: { children: ReactNode; width?: number }) {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {children}
+        </svg>
+    );
+}
+
 function IconMark() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 20h16" />
-            <path d="M6 20V10" />
-            <path d="M10 20V10" />
-            <path d="M14 20V10" />
-            <path d="M18 20V10" />
-            <path d="M3 10h18" />
-            <path d="M12 3 3 10h18L12 3z" />
-        </svg>
+        <Svg width={1.8}>
+            <path d="M12 3.5v16.5" />
+            <path d="M8 20.5h8" />
+            <path d="M5 7.5h14" />
+            <path d="M12 4.6 5 7.5M12 4.6l7 2.9" />
+            <path d="M2.8 14.2 5 8.6l2.2 5.6a2.4 2.4 0 0 1-4.4 0Z" {...DUO} />
+            <path d="M2.8 14.2 5 8.6l2.2 5.6a2.4 2.4 0 0 1-4.4 0Z" />
+            <path d="M16.8 14.2 19 8.6l2.2 5.6a2.4 2.4 0 0 1-4.4 0Z" {...DUO} />
+            <path d="M16.8 14.2 19 8.6l2.2 5.6a2.4 2.4 0 0 1-4.4 0Z" />
+        </Svg>
     );
 }
 
 function IconTasks() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M8 6h13" />
-            <path d="M8 12h13" />
-            <path d="M8 18h13" />
-            <path d="M3 6h.01" />
-            <path d="M3 12h.01" />
-            <path d="M3 18h.01" />
-        </svg>
+        <Svg>
+            <rect x="3.5" y="3.5" width="17" height="17" rx="4" {...DUO} />
+            <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+            <path d="m7.5 9 1.6 1.6L12 7.8" />
+            <path d="M14.5 9.5h2.5" />
+            <path d="m7.5 15 1.6 1.6L12 13.8" />
+            <path d="M14.5 15.5h2.5" />
+        </Svg>
     );
 }
 
 function IconShield() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6l-7-3z" />
-            <path d="m9 12 2 2 4-4" />
-        </svg>
+        <Svg>
+            <circle cx="10.5" cy="10.5" r="6.5" {...DUO} />
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m20.5 20.5-5.2-5.2" />
+            <path d="m7.8 10.6 1.8 1.8 3.4-3.6" />
+        </Svg>
     );
 }
 
 function IconTeam() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="3" />
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a3 3 0 0 1 0 5.75" />
-        </svg>
+        <Svg>
+            <circle cx="9" cy="8" r="3.2" {...DUO} />
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5" {...DUO} />
+            <path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5" />
+            <path d="M15.5 5.2a3 3 0 0 1 0 5.6" />
+            <path d="M17.5 14.8c1.9.6 3.1 2.2 3.5 4.7" />
+        </Svg>
     );
 }
 
 function IconMap() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Z" />
-            <path d="M9 4v13.5M15 6.5V20" />
-        </svg>
+        <Svg>
+            <circle cx="12" cy="12" r="8.5" {...DUO} />
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="m15.6 8.4-2.1 5.1-5.1 2.1 2.1-5.1Z" fill="currentColor" fillOpacity={0.35} />
+            <path d="m15.6 8.4-2.1 5.1-5.1 2.1 2.1-5.1Z" />
+            <path d="M12 3.5v1.6M12 18.9v1.6M3.5 12h1.6M18.9 12h1.6" />
+        </Svg>
     );
 }
 
 function IconLock() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <rect x="5" y="11" width="14" height="9" rx="2" />
-            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-        </svg>
+        <Svg>
+            <rect x="4.5" y="10.5" width="15" height="10" rx="3" {...DUO} />
+            <rect x="4.5" y="10.5" width="15" height="10" rx="3" />
+            <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+            <path d="M12 14.5v2" />
+        </Svg>
     );
 }
 
 function IconSliders() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-            <path d="M4 7h16" />
-            <path d="M4 12h16" />
-            <path d="M4 17h16" />
-            <circle cx="8" cy="7" r="1.6" fill="var(--app-surface)" />
-            <circle cx="15" cy="12" r="1.6" fill="var(--app-surface)" />
-            <circle cx="11" cy="17" r="1.6" fill="var(--app-surface)" />
-        </svg>
+        <Svg>
+            <path d="M5 4v4M5 12v8M12 4v10M12 18v2M19 4v2M19 10v10" />
+            <circle cx="5" cy="10" r="2.2" {...DUO} />
+            <circle cx="5" cy="10" r="2.2" />
+            <circle cx="12" cy="16" r="2.2" {...DUO} />
+            <circle cx="12" cy="16" r="2.2" />
+            <circle cx="19" cy="8" r="2.2" {...DUO} />
+            <circle cx="19" cy="8" r="2.2" />
+        </Svg>
     );
 }
 
 function IconChevron({ open }: { open: boolean }) {
     return (
         <svg className={open ? 'is-open' : ''} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="m9 6 6 6-6 6" />
+            <path d="m9.5 6.5 5.5 5.5-5.5 5.5" />
         </svg>
     );
 }
 
 function IconSearch() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-        </svg>
+        <Svg width={2}>
+            <circle cx="10.8" cy="10.8" r="6.3" {...DUO} />
+            <circle cx="10.8" cy="10.8" r="6.3" />
+            <path d="m20 20-4.6-4.6" />
+        </Svg>
     );
 }
 
 function IconUtil() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <circle cx="12" cy="12" r="8" />
-            <path d="M12 12 12 4.5" />
-            <path d="M12 12 18.2 16" />
-        </svg>
+        <Svg>
+            <path d="M12 3.5a8.5 8.5 0 1 1-8.5 8.5H12Z" {...DUO} />
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="M12 3.5V12h8.5" />
+        </Svg>
     );
 }
 
 function IconMenu() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+        <Svg width={2}>
             <path d="M4 7h16" />
-            <path d="M4 12h16" />
+            <path d="M4 12h10" />
             <path d="M4 17h16" />
-        </svg>
+        </Svg>
     );
 }
 
 function IconCollapse({ collapsed }: { collapsed: boolean }) {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            {collapsed
-                ? <path d="m9 6 6 6-6 6" />
-                : <path d="m15 6-6 6 6 6" />}
-        </svg>
+        <Svg>
+            <rect x="3.5" y="4" width="17" height="16" rx="3.5" />
+            <path d="M9 4v16" />
+            <path d="M3.5 7.5A3.5 3.5 0 0 1 7 4h2v16H7a3.5 3.5 0 0 1-3.5-3.5Z" {...DUO} />
+            {collapsed ? <path d="m13.5 9.5 2.5 2.5-2.5 2.5" /> : <path d="m16 9.5-2.5 2.5 2.5 2.5" />}
+        </Svg>
     );
 }
 
 function IconPin({ docked }: { docked: boolean }) {
     return (
-        <svg viewBox="0 0 24 24" fill={docked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 17v5" />
-            <path d="M9 3h6l1 7-3 2-3-2z" />
-            <path d="M8 10h8" />
-        </svg>
+        <Svg>
+            <path d="M14.5 3.5 20.5 9.5" />
+            <path d="m15.8 4.8-4.6 4.1-3.7.4-1.2 1.2 7.2 7.2 1.2-1.2.4-3.7 4.1-4.6" fill="currentColor" fillOpacity={docked ? 0.9 : 0.16} />
+            <path d="m15.8 4.8-4.6 4.1-3.7.4-1.2 1.2 7.2 7.2 1.2-1.2.4-3.7 4.1-4.6" />
+            <path d="m9.6 14.4-5.6 5.6" />
+        </Svg>
     );
 }
 
@@ -608,195 +633,262 @@ function LegalHubPageBody() {
                 />
             ) : null}
             {createPortal(
-            <>
-            <button
-                type="button"
-                className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}${sideDocked ? ' is-docked' : ''}${pinDragging ? ' is-dragging' : ''}`}
-                style={{ top: pinTop }}
-                aria-expanded={sideOpen}
-                aria-label={sideDocked ? t('legalHub.unpinSidebar') : sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                title={sideDocked ? t('legalHub.unpinSidebar') : sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
-                onPointerDown={(event) => {
-                    if (event.button !== 0)
-                        return;
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    pinDrag.current = { y: event.clientY, top: pinTop };
-                    pinMoved.current = false;
-                    setPinDragging(true);
-                }}
-                onPointerMove={(event) => {
-                    const drag = pinDrag.current;
-                    if (drag == null)
-                        return;
-                    const next = clampPinTop(drag.top + (event.clientY - drag.y));
-                    if (Math.abs(event.clientY - drag.y) > 4)
-                        pinMoved.current = true;
-                    pinTopLive.current = next;
-                    setPinTop(next);
-                }}
-                onPointerUp={() => {
-                    if (pinDrag.current == null)
-                        return;
-                    pinDrag.current = null;
-                    setPinDragging(false);
-                    if (!pinMoved.current)
-                        return;
-                    try {
-                        localStorage.setItem(SIDE_PIN_KEY, String(pinTopLive.current));
-                    }
-                    catch {
-                    }
-                    window.setTimeout(() => {
-                        pinMoved.current = false;
-                    }, 0);
-                }}
-                onPointerCancel={() => {
-                    pinDrag.current = null;
-                    setPinDragging(false);
-                }}
-                onClick={() => {
-                    if (pinMoved.current) {
-                        pinMoved.current = false;
-                        return;
-                    }
-                    toggleSidePin();
-                }}
-            >
-                <IconCollapse collapsed={!sideOpen} />
-            </button>
-            <div
-                className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sideOpen ? ' is-open' : ''}`}
-                onClickCapture={(event) => {
-                    const target = event.target;
-                    if (!(target instanceof Element))
-                        return;
-                    if (target.closest('input, textarea, [data-side-keep]'))
-                        return;
-                    if (target.closest('button, a'))
-                        dismissSide();
-                }}
-            >
-            <aside className="lh-side" aria-label={t('legalHub.navAria')}>
-                <div className="lh-side__head">
-                    <span data-side-keep="">
-                        <AppBackButton iconOnly className="lh-side__back" />
-                    </span>
-                    <span className="lh-side__mark" aria-hidden>
-                        <IconMark />
-                    </span>
-                    <span className="lh-side__brand">{t('nav.legalHub')}</span>
-                </div>
-                <nav className="lh-side__nav">
-                    <div>
-                        <p className="lh-side__section">{t('legalHub.sideMine')}</p>
-                        <ul className="lh-side__list">
-                            {MINE_ITEMS.map((item) => {
-                                const Icon = item.icon;
-                                const selected = item.id === navSection && openProjectId == null;
-                                const count = item.id === 'myTasks' ? lateCount : reviewCount;
-                                const hot = item.id === 'myTasks' && lateCount > 0;
-                                const showCount = count > 0;
-                                const label = t(item.labelKey);
-                                const lateLabel = hot ? t('legalHub.boardLate').replace('{count}', String(lateCount)) : '';
-                                return (
-                                    <li key={item.id}>
+                <>
+                    <button
+                        type="button"
+                        className={`lh-side-pin${sideOpen ? ' is-open' : ''}${sideCollapsed ? ' is-collapsed' : ''}${sideDocked ? ' is-docked' : ''}${pinDragging ? ' is-dragging' : ''}`}
+                        style={{ top: pinTop }}
+                        aria-expanded={sideOpen}
+                        aria-label={sideDocked ? t('legalHub.unpinSidebar') : sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                        title={sideDocked ? t('legalHub.unpinSidebar') : sideOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                        onPointerDown={(event) => {
+                            if (event.button !== 0)
+                                return;
+                            event.currentTarget.setPointerCapture(event.pointerId);
+                            pinDrag.current = { y: event.clientY, top: pinTop };
+                            pinMoved.current = false;
+                            setPinDragging(true);
+                        }}
+                        onPointerMove={(event) => {
+                            const drag = pinDrag.current;
+                            if (drag == null)
+                                return;
+                            const next = clampPinTop(drag.top + (event.clientY - drag.y));
+                            if (Math.abs(event.clientY - drag.y) > 4)
+                                pinMoved.current = true;
+                            pinTopLive.current = next;
+                            setPinTop(next);
+                        }}
+                        onPointerUp={() => {
+                            if (pinDrag.current == null)
+                                return;
+                            pinDrag.current = null;
+                            setPinDragging(false);
+                            if (!pinMoved.current)
+                                return;
+                            try {
+                                localStorage.setItem(SIDE_PIN_KEY, String(pinTopLive.current));
+                            }
+                            catch {
+                            }
+                            window.setTimeout(() => {
+                                pinMoved.current = false;
+                            }, 0);
+                        }}
+                        onPointerCancel={() => {
+                            pinDrag.current = null;
+                            setPinDragging(false);
+                        }}
+                        onClick={() => {
+                            if (pinMoved.current) {
+                                pinMoved.current = false;
+                                return;
+                            }
+                            toggleSidePin();
+                        }}
+                    >
+                        <IconCollapse collapsed={!sideOpen} />
+                    </button>
+                    <div
+                        className={`lh-side-dock${sideCollapsed ? ' is-collapsed' : ''}${menuOpen ? ' is-menu' : ''}${sideOpen ? ' is-open' : ''}`}
+                        onClickCapture={(event) => {
+                            const target = event.target;
+                            if (!(target instanceof Element))
+                                return;
+                            if (target.closest('input, textarea, [data-side-keep]'))
+                                return;
+                            if (target.closest('button, a'))
+                                dismissSide();
+                        }}
+                    >
+                        <aside className="lh-side" aria-label={t('legalHub.navAria')}>
+                            <div className="lh-side__head">
+                                <span data-side-keep="">
+                                    <AppBackButton iconOnly className="lh-side__back" />
+                                </span>
+                                <span className="lh-side__mark" aria-hidden>
+                                    <IconMark />
+                                </span>
+                                <span className="lh-side__brand">{t('nav.legalHub')}</span>
+                            </div>
+                            <nav className="lh-side__nav">
+                                <div>
+                                    <p className="lh-side__section">{t('legalHub.sideMine')}</p>
+                                    <ul className="lh-side__list">
+                                        {MINE_ITEMS.map((item) => {
+                                            const Icon = item.icon;
+                                            const selected = item.id === navSection && openProjectId == null;
+                                            const count = item.id === 'myTasks' ? lateCount : reviewCount;
+                                            const hot = item.id === 'myTasks' && lateCount > 0;
+                                            const showCount = count > 0;
+                                            const label = t(item.labelKey);
+                                            const lateLabel = hot ? t('legalHub.boardLate').replace('{count}', String(lateCount)) : '';
+                                            return (
+                                                <li key={item.id}>
+                                                    <button
+                                                        type="button"
+                                                        className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
+                                                        aria-current={selected ? 'page' : undefined}
+                                                        aria-label={lateLabel ? `${label}, ${lateLabel}` : undefined}
+                                                        onClick={() => openSection(item.id)}
+                                                    >
+                                                        <span className={`lh-side__item-icon lh-side__tile is-${item.id === 'myTasks' ? 'indigo' : 'teal'}`} aria-hidden>
+                                                            <Icon />
+                                                            {showCount ? <i className={`lh-side__dot${hot ? ' lh-side__dot--hot' : ''}`} /> : null}
+                                                        </span>
+                                                        <span className="lh-side__item-label">{label}</span>
+                                                        {showCount ? (
+                                                            <span className={`lh-side__badge${hot ? ' lh-side__badge--hot' : ''}${item.id === 'reviewQueue' ? ' lh-side__badge--review' : ''}`} title={lateLabel || undefined} aria-hidden>{count}</span>
+                                                        ) : null}
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p className="lh-side__section">{t('legalHub.sideMatters')}</p>
+                                    <div className="lh-side__tools">
+                                        <label className="lh-side__find">
+                                            <span className="lh-side__find-icon" aria-hidden>
+                                                <IconSearch />
+                                            </span>
+                                            <input
+                                                type="search"
+                                                className="lh-side__find-input"
+                                                value={projectQuery}
+                                                placeholder={t('legalHub.projectSearch')}
+                                                aria-label={t('legalHub.projectSearch')}
+                                                onChange={(event) => setProjectQuery(event.target.value)}
+                                            />
+                                        </label>
                                         <button
                                             type="button"
-                                            className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
-                                            aria-current={selected ? 'page' : undefined}
-                                            aria-label={lateLabel ? `${label}, ${lateLabel}` : undefined}
-                                            onClick={() => openSection(item.id)}
+                                            className={`lh-side__settings${displayOpen ? ' is-on' : ''}`}
+                                            aria-label={t('legalHub.projectDisplay')}
+                                            aria-expanded={displayOpen}
+                                            title={t('legalHub.projectDisplay')}
+                                            onClick={() => {
+                                                dismissSide();
+                                                setDisplayOpen(true);
+                                            }}
                                         >
-                                            <span className="lh-side__item-icon" aria-hidden>
-                                                <Icon />
-                                                {showCount ? <i className={`lh-side__dot${hot ? ' lh-side__dot--hot' : ''}`} /> : null}
-                                            </span>
-                                            <span className="lh-side__item-label">{label}</span>
-                                            {showCount ? (
-                                                <span className={`lh-side__badge${hot ? ' lh-side__badge--hot' : ''}${item.id === 'reviewQueue' ? ' lh-side__badge--review' : ''}`} title={lateLabel || undefined} aria-hidden>{count}</span>
-                                            ) : null}
+                                            <IconSliders />
                                         </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                    <div>
-                        <p className="lh-side__section">{t('legalHub.sideMatters')}</p>
-                        <div className="lh-side__tools">
-                            <label className="lh-side__find">
-                                <span className="lh-side__find-icon" aria-hidden>
-                                    <IconSearch />
-                                </span>
-                                <input
-                                    type="search"
-                                    className="lh-side__find-input"
-                                    value={projectQuery}
-                                    placeholder={t('legalHub.projectSearch')}
-                                    aria-label={t('legalHub.projectSearch')}
-                                    onChange={(event) => setProjectQuery(event.target.value)}
-                                />
-                            </label>
-                            <button
-                                type="button"
-                                className={`lh-side__settings${displayOpen ? ' is-on' : ''}`}
-                                aria-label={t('legalHub.projectDisplay')}
-                                aria-expanded={displayOpen}
-                                title={t('legalHub.projectDisplay')}
-                                onClick={() => {
-                                    dismissSide();
-                                    setDisplayOpen(true);
-                                }}
-                            >
-                                <IconSliders />
-                            </button>
-                        </div>
-                        <ul className="lh-side__list">
-                            {visibleProjects.length === 0 && projectQuery.trim() ? (
-                                <li className="lh-side__find-empty">{t('legalHub.projectSearchEmpty')}</li>
-                            ) : null}
-                            {sidebarEntries.map((entry) => {
-                                const searching = projectQuery.trim().length > 0;
-                                if (entry.type === 'folder') {
-                                    const folder = entry.folder;
-                                    if (searching && entry.projects.length === 0)
-                                        return null;
-                                    const folded = folder.collapsed && !searching;
-                                    const itemKey = `folder:${folder.id}`;
-                                    return (
-                                        <li key={itemKey} className="lh-side__folder">
-                                            <SideDragRow
-                                                parent="root"
-                                                itemKey={itemKey}
-                                                searching={searching}
-                                                dropKey={sideDrop}
-                                                drag={sideDrag}
-                                                onOver={setSideDrop}
-                                                onEnd={() => {
-                                                    sideDrag.current = null;
-                                                    setSideDrop(null);
-                                                }}
-                                                onReorder={reorderSidebar}
+                                    </div>
+                                    <ul className="lh-side__list">
+                                        {visibleProjects.length === 0 && projectQuery.trim() ? (
+                                            <li className="lh-side__find-empty">{t('legalHub.projectSearchEmpty')}</li>
+                                        ) : null}
+                                        {sidebarEntries.map((entry) => {
+                                            const searching = projectQuery.trim().length > 0;
+                                            if (entry.type === 'folder') {
+                                                const folder = entry.folder;
+                                                if (searching && entry.projects.length === 0)
+                                                    return null;
+                                                const folded = folder.collapsed && !searching;
+                                                const itemKey = `folder:${folder.id}`;
+                                                return (
+                                                    <li key={itemKey} className="lh-side__folder">
+                                                        <SideDragRow
+                                                            parent="root"
+                                                            itemKey={itemKey}
+                                                            searching={searching}
+                                                            dropKey={sideDrop}
+                                                            drag={sideDrag}
+                                                            onOver={setSideDrop}
+                                                            onEnd={() => {
+                                                                sideDrag.current = null;
+                                                                setSideDrop(null);
+                                                            }}
+                                                            onReorder={reorderSidebar}
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                className="lh-side__folder-head"
+                                                                data-side-keep=""
+                                                                aria-expanded={!folded}
+                                                                onClick={() => toggleFolder(folder)}
+                                                            >
+                                                                <span className={folderSwatchClass(folder.color)} aria-hidden />
+                                                                <span className="lh-side__folder-name">{folder.name.trim() || t('legalHub.projectFolderNew')}</span>
+                                                                <em className="lh-side__folder-count">{entry.projects.length}</em>
+                                                            </button>
+                                                        </SideDragRow>
+                                                        {folded ? null : (
+                                                            <ul className="lh-side__list">
+                                                                <ClientGroups
+                                                                    projects={entry.projects}
+                                                                    parent={folder.id}
+                                                                    order={folder.clientOrder}
+                                                                    searching={searching}
+                                                                    open={openClients}
+                                                                    dropKey={sideDrop}
+                                                                    drag={sideDrag}
+                                                                    onOver={setSideDrop}
+                                                                    onEnd={() => {
+                                                                        sideDrag.current = null;
+                                                                        setSideDrop(null);
+                                                                    }}
+                                                                    onToggle={toggleClient}
+                                                                    onReorder={reorderSidebar}
+                                                                    onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
+                                                                    onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
+                                                                    openProjectId={openProjectId}
+                                                                    canOpen={canOpenProject}
+                                                                    lockedLabel={t('legalHub.projectLocked')}
+                                                                    onOpen={openMatter}
+                                                                />
+                                                            </ul>
+                                                        )}
+                                                    </li>
+                                                );
+                                            }
+                                            return (
+                                                <ClientGroups
+                                                    key={clientGroupKey(entry.client)}
+                                                    projects={entry.projects}
+                                                    parent="root"
+                                                    order={[entry.client]}
+                                                    searching={projectQuery.trim().length > 0}
+                                                    open={openClients}
+                                                    dropKey={sideDrop}
+                                                    drag={sideDrag}
+                                                    onOver={setSideDrop}
+                                                    onEnd={() => {
+                                                        sideDrag.current = null;
+                                                        setSideDrop(null);
+                                                    }}
+                                                    onToggle={toggleClient}
+                                                    onReorder={reorderSidebar}
+                                                    onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
+                                                    onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
+                                                    openProjectId={openProjectId}
+                                                    canOpen={canOpenProject}
+                                                    lockedLabel={t('legalHub.projectLocked')}
+                                                    onOpen={openMatter}
+                                                />
+                                            );
+                                        })}
+                                        <li className="lh-side__folder lh-side__archive">
+                                            <button
+                                                type="button"
+                                                className="lh-side__folder-head"
+                                                data-side-keep=""
+                                                aria-expanded={openClients.has('archive') || projectQuery.trim().length > 0}
+                                                onClick={() => toggleClient('archive')}
                                             >
-                                                <button
-                                                    type="button"
-                                                    className="lh-side__folder-head"
-                                                    data-side-keep=""
-                                                    aria-expanded={!folded}
-                                                    onClick={() => toggleFolder(folder)}
-                                                >
-                                                    <span className={folderSwatchClass(folder.color)} aria-hidden />
-                                                    <span className="lh-side__folder-name">{folder.name.trim() || t('legalHub.projectFolderNew')}</span>
-                                                    <em className="lh-side__folder-count">{entry.projects.length}</em>
-                                                </button>
-                                            </SideDragRow>
-                                            {folded ? null : (
+                                                <span className="lh-side__sw lh-side__sw--ink" aria-hidden />
+                                                <span className="lh-side__folder-name">{t('legalHub.archive')}</span>
+                                                <em className="lh-side__folder-count">{archivedProjects.length}</em>
+                                            </button>
+                                            {openClients.has('archive') || projectQuery.trim().length > 0 ? (
                                                 <ul className="lh-side__list">
                                                     <ClientGroups
-                                                        projects={entry.projects}
-                                                        parent={folder.id}
-                                                        order={folder.clientOrder}
-                                                        searching={searching}
+                                                        projects={archivedProjects}
+                                                        parent="archive"
+                                                        order={projectDisplay.archivedClients}
+                                                        searching={projectQuery.trim().length > 0}
                                                         open={openClients}
                                                         dropKey={sideDrop}
                                                         drag={sideDrag}
@@ -809,148 +901,81 @@ function LegalHubPageBody() {
                                                         onReorder={reorderSidebar}
                                                         onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
                                                         onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
+                                                        archived
+                                                        reorderable={false}
                                                         openProjectId={openProjectId}
                                                         canOpen={canOpenProject}
                                                         lockedLabel={t('legalHub.projectLocked')}
                                                         onOpen={openMatter}
                                                     />
                                                 </ul>
-                                            )}
+                                            ) : null}
                                         </li>
-                                    );
-                                }
-                                return (
-                                    <ClientGroups
-                                        key={clientGroupKey(entry.client)}
-                                        projects={entry.projects}
-                                        parent="root"
-                                        order={[entry.client]}
-                                        searching={projectQuery.trim().length > 0}
-                                        open={openClients}
-                                        dropKey={sideDrop}
-                                        drag={sideDrag}
-                                        onOver={setSideDrop}
-                                        onEnd={() => {
-                                            sideDrag.current = null;
-                                            setSideDrop(null);
-                                        }}
-                                        onToggle={toggleClient}
-                                        onReorder={reorderSidebar}
-                                        onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
-                                        onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
-                                        openProjectId={openProjectId}
-                                        canOpen={canOpenProject}
-                                        lockedLabel={t('legalHub.projectLocked')}
-                                        onOpen={openMatter}
-                                    />
-                                );
-                            })}
-                            <li className="lh-side__folder lh-side__archive">
+                                    </ul>
+                                </div>
+                                <ul className="lh-side__list lh-side__list--tail">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            className={`lh-side__item${navSection === 'projects' && openProjectId == null ? ' lh-side__item--active' : ''}`}
+                                            aria-current={navSection === 'projects' && openProjectId == null ? 'page' : undefined}
+                                            onClick={() => openSection('projects')}
+                                        >
+                                            <span className="lh-side__item-icon lh-side__tile is-amber" aria-hidden>
+                                                <IconMap />
+                                            </span>
+                                            <span className="lh-side__item-label">{t('legalHub.projects')}</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            type="button"
+                                            className={`lh-side__item${navSection === 'allTeam' ? ' lh-side__item--active' : ''}`}
+                                            aria-current={navSection === 'allTeam' ? 'page' : undefined}
+                                            onClick={() => openSection('allTeam')}
+                                        >
+                                            <span className="lh-side__item-icon lh-side__tile is-rose" aria-hidden>
+                                                <IconTeam />
+                                            </span>
+                                            <span className="lh-side__item-label">{t('legalHub.allTeam')}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <div className="lh-side__foot">
                                 <button
                                     type="button"
-                                    className="lh-side__folder-head"
+                                    className={`lh-side__collapse${sideDocked ? ' is-docked' : ''}`}
                                     data-side-keep=""
-                                    aria-expanded={openClients.has('archive') || projectQuery.trim().length > 0}
-                                    onClick={() => toggleClient('archive')}
+                                    aria-pressed={sideDocked}
+                                    aria-label={sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
+                                    title={sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
+                                    onClick={toggleSideDock}
                                 >
-                                    <span className="lh-side__sw lh-side__sw--ink" aria-hidden />
-                                    <span className="lh-side__folder-name">{t('legalHub.archive')}</span>
-                                    <em className="lh-side__folder-count">{archivedProjects.length}</em>
+                                    <IconPin docked={sideDocked} />
+                                    <span className="lh-side__collapse-label">
+                                        {sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
+                                    </span>
                                 </button>
-                                {openClients.has('archive') || projectQuery.trim().length > 0 ? (
-                                    <ul className="lh-side__list">
-                                        <ClientGroups
-                                            projects={archivedProjects}
-                                            parent="archive"
-                                            order={projectDisplay.archivedClients}
-                                            searching={projectQuery.trim().length > 0}
-                                            open={openClients}
-                                            dropKey={sideDrop}
-                                            drag={sideDrag}
-                                            onOver={setSideDrop}
-                                            onEnd={() => {
-                                                sideDrag.current = null;
-                                                setSideDrop(null);
-                                            }}
-                                            onToggle={toggleClient}
-                                            onReorder={reorderSidebar}
-                                            onMenu={(menu) => setSideMenu({ kind: 'client', ...menu })}
-                                            onProjectMenu={(menu) => setSideMenu({ kind: 'project', ...menu })}
-                                            archived
-                                            reorderable={false}
-                                            openProjectId={openProjectId}
-                                            canOpen={canOpenProject}
-                                            lockedLabel={t('legalHub.projectLocked')}
-                                            onOpen={openMatter}
-                                        />
-                                    </ul>
-                                ) : null}
-                            </li>
-                        </ul>
+                                <button
+                                    type="button"
+                                    className="lh-side__collapse"
+                                    data-side-keep=""
+                                    aria-expanded={!sideCollapsed}
+                                    aria-label={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
+                                    title={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
+                                    onClick={toggleSide}
+                                >
+                                    <IconCollapse collapsed={sideCollapsed} />
+                                    <span className="lh-side__collapse-label">
+                                        {sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
+                                    </span>
+                                </button>
+                            </div>
+                        </aside>
                     </div>
-                    <ul className="lh-side__list lh-side__list--tail">
-                        <li>
-                            <button
-                                type="button"
-                                className={`lh-side__item${navSection === 'projects' && openProjectId == null ? ' lh-side__item--active' : ''}`}
-                                aria-current={navSection === 'projects' && openProjectId == null ? 'page' : undefined}
-                                onClick={() => openSection('projects')}
-                            >
-                                <span className="lh-side__item-icon" aria-hidden>
-                                    <IconMap />
-                                </span>
-                                <span className="lh-side__item-label">{t('legalHub.projects')}</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                type="button"
-                                className={`lh-side__item${navSection === 'allTeam' ? ' lh-side__item--active' : ''}`}
-                                aria-current={navSection === 'allTeam' ? 'page' : undefined}
-                                onClick={() => openSection('allTeam')}
-                            >
-                                <span className="lh-side__item-icon" aria-hidden>
-                                    <IconTeam />
-                                </span>
-                                <span className="lh-side__item-label">{t('legalHub.allTeam')}</span>
-                            </button>
-                        </li>
-                    </ul>
-                </nav>
-                <div className="lh-side__foot">
-                    <button
-                        type="button"
-                        className={`lh-side__collapse${sideDocked ? ' is-docked' : ''}`}
-                        data-side-keep=""
-                        aria-pressed={sideDocked}
-                        aria-label={sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
-                        title={sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
-                        onClick={toggleSideDock}
-                    >
-                        <IconPin docked={sideDocked} />
-                        <span className="lh-side__collapse-label">
-                            {sideDocked ? t('legalHub.unpinSidebar') : t('legalHub.pinSidebar')}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        className="lh-side__collapse"
-                        data-side-keep=""
-                        aria-expanded={!sideCollapsed}
-                        aria-label={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
-                        title={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
-                        onClick={toggleSide}
-                    >
-                        <IconCollapse collapsed={sideCollapsed} />
-                        <span className="lh-side__collapse-label">
-                            {sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
-                        </span>
-                    </button>
-                </div>
-            </aside>
-            </div>
-            </>,
-            document.body,
+                </>,
+                document.body,
             )}
             <div className="lh-page__main">
                 <header className="lh-top">
@@ -1051,13 +1076,13 @@ function LegalHubPageBody() {
                         ) : (
                             <HeadActionsContext.Provider value={actionsSlot}>
                                 {section === 'myTasks' || section === 'reviewQueue' || openProjectId != null ? null : (
-                                <header className="lh-page__head">
-                                    <div className="lh-page__head-text">
-                                        <h1 className="lh-page__title">{t(sectionTitle)}</h1>
-                                        <p className="lh-page__hint">{t(SECTION_HINT[section])}</p>
-                                    </div>
-                                    <div className="lh-page__head-actions" ref={setActionsSlot} />
-                                </header>
+                                    <header className="lh-page__head">
+                                        <div className="lh-page__head-text">
+                                            <h1 className="lh-page__title">{t(sectionTitle)}</h1>
+                                            <p className="lh-page__hint">{t(SECTION_HINT[section])}</p>
+                                        </div>
+                                        <div className="lh-page__head-actions" ref={setActionsSlot} />
+                                    </header>
                                 )}
                                 {section === 'myTasks' ? (
                                     <LegalHubMyTasks
@@ -1109,13 +1134,13 @@ function LegalHubPageBody() {
                                                         <span className={folderSwatchClass(folder.color)} aria-hidden />
                                                         {folder.name.trim() || t('legalHub.projectFolderNew')}
                                                     </h2>
-                                        <ProjectList
-                                            projects={folderProjects}
-                                            order={folder.clientOrder}
-                                            canOpen={canOpenProject}
-                                            lockedLabel={t('legalHub.projectLocked')}
-                                            onOpen={openMatter}
-                                        />
+                                                    <ProjectList
+                                                        projects={folderProjects}
+                                                        order={folder.clientOrder}
+                                                        canOpen={canOpenProject}
+                                                        lockedLabel={t('legalHub.projectLocked')}
+                                                        onOpen={openMatter}
+                                                    />
                                                 </section>
                                             )
                                         ))}

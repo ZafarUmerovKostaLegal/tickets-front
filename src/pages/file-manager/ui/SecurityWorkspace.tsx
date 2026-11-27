@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { TimeTrackingUserRow } from '@entities/time-tracking';
 import { SearchableSelect } from '@shared/ui';
 import {
@@ -84,6 +85,8 @@ function Kpi({ icon, label, value, tone, hint }: { icon: IconName; label: string
     );
 }
 
+const CLOSED_KEY = 'fm.sxShowClosed';
+
 function MatterRail({ items, overview, matterId, onPick }: {
     items: MatterItem[];
     overview: Record<string, SecuritySummary>;
@@ -93,6 +96,42 @@ function MatterRail({ items, overview, matterId, onPick }: {
     const { tr, locale } = useFm();
     const [query, setQuery] = useState('');
     const [filter, setFilter] = useState<RailFilter>('all');
+    const [showClosed, setShowClosed] = useState(() => {
+        try {
+            return localStorage.getItem(CLOSED_KEY) === '1';
+        }
+        catch {
+            return false;
+        }
+    });
+    const listRef = useRef<HTMLDivElement | null>(null);
+    const closedCount = useMemo(() => items.filter((item) => item.closed).length, [items]);
+
+    const toggleClosed = () => {
+        setShowClosed((value) => {
+            try {
+                localStorage.setItem(CLOSED_KEY, value ? '0' : '1');
+            }
+            catch {}
+            return !value;
+        });
+    };
+
+    useEffect(() => {
+        listRef.current?.querySelector<HTMLElement>('.fm-sx-matter.is-on')?.scrollIntoView({ block: 'nearest' });
+    }, [matterId]);
+
+    const onListKey = (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')
+            return;
+        const buttons = [...(listRef.current?.querySelectorAll<HTMLButtonElement>('.fm-sx-matter') ?? [])];
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const next = buttons[index + (event.key === 'ArrowDown' ? 1 : -1)] ?? (index < 0 ? buttons[0] : null);
+        if (next) {
+            event.preventDefault();
+            next.focus();
+        }
+    };
 
     const counts = useMemo(() => {
         const out: Record<RailFilter, number> = { all: items.length, walls: 0, temporary: 0, folders: 0, pending: 0 };
@@ -122,6 +161,8 @@ function MatterRail({ items, overview, matterId, onPick }: {
                 return false;
             if (filter === 'pending' && !sum.pending)
                 return false;
+            if (item.closed && !showClosed && !text && item.id !== matterId)
+                return false;
             return !text || `${item.clientName} ${item.code} ${item.name}`.toLowerCase().includes(text);
         });
         const byClient = new Map<string, MatterItem[]>();
@@ -133,7 +174,7 @@ function MatterRail({ items, overview, matterId, onPick }: {
                 client,
                 rows: rows.sort((a, b) => Number(a.closed) - Number(b.closed) || a.name.localeCompare(b.name, locale)),
             }));
-    }, [items, overview, filter, query, locale]);
+    }, [items, overview, filter, query, locale, showClosed, matterId]);
 
     const filters: { id: RailFilter; label: string }[] = [
         { id: 'all', label: tr('securityX.railAll') },
@@ -155,20 +196,19 @@ function MatterRail({ items, overview, matterId, onPick }: {
                     placeholder={tr('securityX.searchMatter')} aria-label={tr('securityX.searchMatter')} />
             </label>
             <div className="fm-sx-rail__filters" role="radiogroup" aria-label={tr('securityX.mattersTitle')}>
-                {filters.map((item) => (
+                {filters.filter((item) => item.id === 'all' || counts[item.id] > 0 || filter === item.id).map((item) => (
                     <button key={item.id} type="button" role="radio" aria-checked={filter === item.id}
                         className={filter === item.id ? 'fm-sx-chip is-on' : 'fm-sx-chip'}
-                        disabled={item.id !== 'all' && counts[item.id] === 0}
                         onClick={() => setFilter(item.id)}>
                         {item.label}
                         <em>{counts[item.id]}</em>
                     </button>
                 ))}
             </div>
-            <div className="fm-sx-rail__list">
+            <div className="fm-sx-rail__list" ref={listRef} onKeyDown={onListKey}>
                 {groups.length === 0 ? <p className="fm-sx-muted">{tr('securityX.noMatters')}</p> : groups.map((group) => (
                     <section key={group.client}>
-                        <h4>{group.client}</h4>
+                        <h4 title={group.client}><span>{group.client}</span><em>{group.rows.length}</em></h4>
                         <ul>
                             {group.rows.map((item) => {
                                 const sum = overview[item.id] ?? EMPTY_SUMMARY;
@@ -177,17 +217,18 @@ function MatterRail({ items, overview, matterId, onPick }: {
                                         <button type="button"
                                             className={`fm-sx-matter${item.id === matterId ? ' is-on' : ''}${item.closed ? ' is-closed' : ''}`}
                                             aria-current={item.id === matterId ? 'true' : undefined}
+                                            title={`${item.code ? `${item.code} · ` : ''}${item.name}${item.closed ? ` · ${tr('securityX.closed')}` : ''}`}
                                             onClick={() => onPick(item.id)}>
                                             <span className="fm-sx-matter__name">
-                                                {item.code ? <code>{item.code}</code> : null}
+                                                {item.closed ? <Icon name="lock" className="fm-sx-matter__lock" /> : null}
                                                 <strong>{item.name}</strong>
+                                                {item.code ? <code>{item.code}</code> : null}
                                             </span>
                                             <span className="fm-sx-matter__marks">
                                                 {sum.walls ? <span className="fm-sx-mark is-deny" title={tr('securityX.kpiWalls')}><Icon name="shield" />{sum.walls}</span> : null}
                                                 {sum.temporary + sum.suspended ? <span className="fm-sx-mark is-temp" title={tr('securityX.kpiTemporary')}><Icon name="clock" />{sum.temporary + sum.suspended}</span> : null}
                                                 {sum.folders || sum.documents ? <span className="fm-sx-mark is-folder" title={tr('securityX.kpiFolders')}><Icon name="lock" />{sum.folders + (sum.documents ?? 0)}</span> : null}
                                                 {sum.pending ? <span className="fm-sx-mark is-pending" title={tr('securityX.railPending')}><Icon name="inbox" />{sum.pending}</span> : null}
-                                                {item.closed ? <span className="fm-sx-mark">{tr('securityX.closed')}</span> : null}
                                             </span>
                                         </button>
                                     </li>
@@ -197,6 +238,13 @@ function MatterRail({ items, overview, matterId, onPick }: {
                     </section>
                 ))}
             </div>
+            {closedCount ? (
+                <button type="button" className={showClosed ? 'fm-sx-rail__closed is-on' : 'fm-sx-rail__closed'}
+                    aria-pressed={showClosed} onClick={toggleClosed}>
+                    <Icon name="lock" />
+                    {tr(showClosed ? 'securityX.hideClosed' : 'securityX.showClosed', { n: closedCount })}
+                </button>
+            ) : null}
         </aside>
     );
 }

@@ -560,6 +560,8 @@ export const fileManagerPageMessages = {
         sharedHint: 'Вы видите здесь файлы коллег',
     },
     securityX: {
+        showClosed: 'Показать закрытые ({n})',
+        hideClosed: 'Скрыть закрытые ({n})',
         popTitle: 'Доступ к matter',
         mattersTitle: 'Matters',
         searchMatter: 'Клиент, код или название…',

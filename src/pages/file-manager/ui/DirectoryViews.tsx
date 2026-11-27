@@ -5,26 +5,27 @@ import { FmSelect } from './fmSelect';
 import { Icon, LevelBadge, useAction, useFm } from './fmShared';
 import { MatterAccessPopover } from './MatterAccessPopover';
 
-type DirectoryLayout = 'list' | 'tiles';
+export type DirectoryLayout = 'list' | 'tiles';
 const MATTERS_LAYOUT_KEY = 'fm.mattersLayout';
 const CLIENTS_LAYOUT_KEY = 'fm.clientsLayout';
 
-function readLayout(key: string): DirectoryLayout {
+export function readLayout(key: string, fallback: DirectoryLayout = 'list'): DirectoryLayout {
     try {
-        return localStorage.getItem(key) === 'tiles' ? 'tiles' : 'list';
+        const value = localStorage.getItem(key);
+        return value === 'tiles' || value === 'list' ? value : fallback;
     } catch {
-        return 'list';
+        return fallback;
     }
 }
 
-function writeLayout(key: string, layout: DirectoryLayout) {
+export function writeLayout(key: string, layout: DirectoryLayout) {
     try {
         localStorage.setItem(key, layout);
     } catch {
     }
 }
 
-function ViewToggle({ layout, onChange }: { layout: DirectoryLayout; onChange: (layout: DirectoryLayout) => void }) {
+export function ViewToggle({ layout, onChange }: { layout: DirectoryLayout; onChange: (layout: DirectoryLayout) => void }) {
     const { tr } = useFm();
     return (
         <div className="fm-view-toggle" role="group" aria-label={tr('directory.viewList')}>
@@ -130,7 +131,7 @@ export function ClientsView({ clients, onOpenClient, onChanged }: ClientsProps) 
                 ) : null}
                 <ViewToggle layout={layout} onChange={setClientsLayout} />
                 <span className="fm-toolbar__stats">
-                    {clients.stats ? tr('directory.clientsTotal', { count: clients.stats.clients }) : null}
+                    {clients.stats && clients.viewer.canManage ? tr('directory.clientsTotal', { count: clients.stats.clients }) : null}
                     <small>{tr('directory.filtered', { count: rows.length })}</small>
                 </span>
             </div>
@@ -409,7 +410,7 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                 ) : null}
                 <ViewToggle layout={layout} onChange={setMattersLayout} />
                 <span className="fm-toolbar__stats">
-                    {clients.stats ? tr('directory.directoryStats', { clients: clients.stats.clients, matters: clients.stats.matters }) : null}
+                    {clients.stats && clients.viewer.canManage ? tr('directory.directoryStats', { clients: clients.stats.clients, matters: clients.stats.matters }) : null}
                     <small>{tr('directory.filtered', { count: rows.length })}</small>
                 </span>
             </div>

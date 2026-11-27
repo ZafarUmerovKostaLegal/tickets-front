@@ -562,6 +562,8 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         sharedHint: 'You see colleagues’ files here',
     },
     securityX: {
+        showClosed: 'Show closed ({n})',
+        hideClosed: 'Hide closed ({n})',
         popTitle: 'Matter access',
         mattersTitle: 'Matters',
         searchMatter: 'Client, code or name…',
