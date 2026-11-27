@@ -580,40 +580,28 @@
   color: var(--app-muted, #94a3b8);
 }
 
-.tt-inv-reg-status--draft {
-  background: color-mix(in srgb, #94a3b8 12%, #fff);
-  border-color: color-mix(in srgb, #94a3b8 35%, var(--app-border, #e2e8f0));
-  color: #475569;
+.tt-inv-reg-status--draft { --tone: #94a3b8; --tone-text: #475569; }
+.tt-inv-reg-status--review { --tone: #f97316; --tone-text: #c2410c; }
+.tt-inv-reg-status--sent { --tone: #3b82f6; --tone-text: #1d4ed8; }
+.tt-inv-reg-status--issued { --tone: #0abab5; --tone-text: #0f766e; }
+.tt-inv-reg-status--transit { --tone: #eab308; --tone-text: #a16207; }
+.tt-inv-reg-status--partial { --tone: #84cc16; --tone-text: #4d7c0f; }
+.tt-inv-reg-status--paid { --tone: #22c55e; --tone-text: #15803d; }
+.tt-inv-reg-status--olga { --tone: #a855f7; --tone-text: #7e22ce; }
+.tt-inv-reg-status--overdue { --tone: #ef4444; --tone-text: #b91c1c; }
+.tt-inv-reg-status--canceled { --tone: #78716c; --tone-text: #57534e; }
+.tt-inv-reg-status--legacy { --tone: #ec4899; --tone-text: #be185d; }
+
+.tt-inv-reg-status__btn:not(.tt-inv-reg-status--empty) {
+  background: color-mix(in srgb, var(--tone) 12%, #fff);
+  border-color: color-mix(in srgb, var(--tone) 40%, var(--app-border, #e2e8f0));
+  color: var(--tone-text);
 }
 
-.tt-inv-reg-status--review {
-  background: color-mix(in srgb, #f59e0b 12%, #fff);
-  border-color: color-mix(in srgb, #f59e0b 40%, var(--app-border, #e2e8f0));
-  color: #b45309;
-}
-
-.tt-inv-reg-status--issued {
-  background: color-mix(in srgb, #3b82f6 12%, #fff);
-  border-color: color-mix(in srgb, #3b82f6 40%, var(--app-border, #e2e8f0));
-  color: #1d4ed8;
-}
-
-.tt-inv-reg-status--paid {
-  background: color-mix(in srgb, #22c55e 12%, #fff);
-  border-color: color-mix(in srgb, #22c55e 40%, var(--app-border, #e2e8f0));
-  color: #15803d;
-}
-
-.tt-inv-reg-status--canceled {
-  background: color-mix(in srgb, #64748b 12%, #fff);
-  border-color: color-mix(in srgb, #64748b 35%, var(--app-border, #e2e8f0));
-  color: #475569;
-}
-
-.tt-inv-reg-status--legacy {
-  background: color-mix(in srgb, #a855f7 10%, #fff);
-  border-color: color-mix(in srgb, #a855f7 35%, var(--app-border, #e2e8f0));
-  color: #7e22ce;
+body[data-theme='dark'] .tt-inv-reg-status__btn:not(.tt-inv-reg-status--empty) {
+  background: color-mix(in srgb, var(--tone) 18%, #0f172a);
+  border-color: color-mix(in srgb, var(--tone) 45%, #334155);
+  color: color-mix(in srgb, var(--tone) 70%, #fff);
 }
 
 .tt-inv-reg-status--empty {
@@ -853,12 +841,7 @@
   background: #94a3b8;
 }
 
-.tt-inv-reg-status__dot.tt-inv-reg-status--draft { background: #94a3b8; }
-.tt-inv-reg-status__dot.tt-inv-reg-status--review { background: #f59e0b; }
-.tt-inv-reg-status__dot.tt-inv-reg-status--issued { background: #3b82f6; }
-.tt-inv-reg-status__dot.tt-inv-reg-status--paid { background: #22c55e; }
-.tt-inv-reg-status__dot.tt-inv-reg-status--canceled { background: #64748b; }
-.tt-inv-reg-status__dot.tt-inv-reg-status--legacy { background: #a855f7; }
+.tt-inv-reg-status__dot:not(.tt-inv-reg-status--empty) { background: var(--tone); }
 .tt-inv-reg-status__dot.tt-inv-reg-status--empty { background: #cbd5e1; }
 
 body[data-theme='dark'] .tt-inv-reg-status__menu {
@@ -866,7 +849,7 @@ body[data-theme='dark'] .tt-inv-reg-status__menu {
   border-color: #334155;
 }
 
-body[data-theme='dark'] .tt-inv-reg-status__btn {
+body[data-theme='dark'] .tt-inv-reg-status__btn.tt-inv-reg-status--empty {
   background: #0f172a;
 }
 

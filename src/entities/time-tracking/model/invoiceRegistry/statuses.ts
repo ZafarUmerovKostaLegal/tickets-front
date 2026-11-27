@@ -74,19 +74,22 @@ export function collectRegistryStatusOptions(used: readonly string[]): string[] 
     return out;
 }
 
+const STATUS_TONES: Record<string, string> = {
+    'Черновик': 'draft',
+    'На согласовании с Клиентом': 'review',
+    'Отправлен': 'sent',
+    'Выставлен': 'issued',
+    'Оплата в пути': 'transit',
+    'Частично оплачен': 'partial',
+    'Оплачен': 'paid',
+    'Ольге направить': 'olga',
+    'Просрочен': 'overdue',
+    'Отменён': 'canceled',
+};
+
 export function registryStatusToneClass(value: string): string {
     const label = normalizeRegistryStatusLabel(value);
-    if (label === 'Черновик')
-        return 'tt-inv-reg-status--draft';
-    if (label === 'На согласовании с Клиентом' || label === 'Частично оплачен' || label === 'Просрочен')
-        return 'tt-inv-reg-status--review';
-    if (label === 'Выставлен' || label === 'Отправлен' || label === 'Оплата в пути')
-        return 'tt-inv-reg-status--issued';
-    if (label === 'Оплачен')
-        return 'tt-inv-reg-status--paid';
-    if (label === 'Отменён')
-        return 'tt-inv-reg-status--canceled';
-    if (label)
-        return 'tt-inv-reg-status--legacy';
-    return 'tt-inv-reg-status--empty';
+    if (!label)
+        return 'tt-inv-reg-status--empty';
+    return `tt-inv-reg-status--${STATUS_TONES[label] ?? 'legacy'}`;
 }

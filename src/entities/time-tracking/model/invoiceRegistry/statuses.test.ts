@@ -17,10 +17,10 @@ describe('registry status tones', () => {
     });
 
     it('colors every status a system invoice can show', () => {
-        expect(registryStatusToneClass('Отправлен')).toBe('tt-inv-reg-status--issued');
-        expect(registryStatusToneClass('Оплата в пути')).toBe('tt-inv-reg-status--issued');
-        expect(registryStatusToneClass('Частично оплачен')).toBe('tt-inv-reg-status--review');
-        expect(registryStatusToneClass('Просрочен')).toBe('tt-inv-reg-status--review');
+        expect(registryStatusToneClass('Отправлен')).toBe('tt-inv-reg-status--sent');
+        expect(registryStatusToneClass('Оплата в пути')).toBe('tt-inv-reg-status--transit');
+        expect(registryStatusToneClass('Частично оплачен')).toBe('tt-inv-reg-status--partial');
+        expect(registryStatusToneClass('Просрочен')).toBe('tt-inv-reg-status--overdue');
         expect(registryStatusToneClass('Отменён')).toBe('tt-inv-reg-status--canceled');
     });
 
@@ -31,8 +31,9 @@ describe('registry status tones', () => {
         expect(registryStatusToneClass('Оплачен клиентом')).toBe('tt-inv-reg-status--paid');
     });
 
-    it('keeps a free-text Excel note visibly different from the fixed list', () => {
-        expect(registryStatusToneClass('Ольге направила')).toBe('tt-inv-reg-status--legacy');
+    it('gives the Olga note its own tone and free-text notes another', () => {
+        expect(registryStatusToneClass('Ольге направила')).toBe('tt-inv-reg-status--olga');
+        expect(registryStatusToneClass('Жду подтверждения от клиента')).toBe('tt-inv-reg-status--legacy');
     });
 
     it('offers the old Excel phrases next to the fixed statuses', () => {
