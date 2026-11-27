@@ -358,6 +358,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         noResults: 'No documents found',
     },
     pane: {
+        resize: 'Resize the panel. Double-click to reset',
         empty: 'Select a document to see its preview and properties',
         preview: 'Preview',
         properties: 'Properties',

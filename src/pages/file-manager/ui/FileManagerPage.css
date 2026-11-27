@@ -1516,16 +1516,88 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 }
 
 .fm-pane {
+  position: relative;
   display: flex;
   flex-direction: column;
-  width: 400px;
+  width: var(--fm-pane-w, 400px);
   flex-shrink: 0;
   min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   border-left: 1px solid var(--fm-border);
   background: var(--fm-surface);
+}
+
+.fm-pane__scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.fm-pane__resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  z-index: 3;
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.fm-pane__resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--app-accent, #4f46e5);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.fm-pane__resizer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 4px;
+  height: 36px;
+  margin-top: -18px;
+  border-radius: 999px;
+  background: var(--fm-border);
+  transition: background 0.15s ease;
+}
+
+@media (hover: hover) {
+  .fm-pane__resizer:hover::after {
+    opacity: 0.7;
+  }
+
+  .fm-pane__resizer:hover::before {
+    background: var(--app-accent, #4f46e5);
+  }
+}
+
+.fm-pane__resizer:focus-visible {
+  outline: none;
+}
+
+.fm-pane__resizer:focus-visible::after,
+.fm-pane--resizing .fm-pane__resizer::after {
+  opacity: 1;
+}
+
+.fm-pane--resizing {
+  user-select: none;
+}
+
+.fm-pane--resizing iframe {
+  pointer-events: none;
 }
 
 .fm-pane__head {
@@ -1555,7 +1627,7 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
   font-size: 0.78rem;
 }
 
-.fm-pane > .fm-banner {
+.fm-pane__scroll > .fm-banner {
   margin: 0 0.9rem 0.6rem;
 }
 
@@ -2769,7 +2841,7 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 
 @media (max-width: 1280px) {
   .fm-pane {
-    width: 340px;
+    width: var(--fm-pane-w, 340px);
   }
 }
 
@@ -2784,7 +2856,7 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
     right: 0;
     bottom: 0;
     z-index: 5;
-    width: min(100%, 380px);
+    width: min(100%, var(--fm-pane-w, 380px));
     box-shadow: -12px 0 30px rgb(15 23 42 / 0.15);
   }
 

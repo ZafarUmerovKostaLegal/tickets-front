@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, RefObject } from 'react';
 import { filesApi, type DocumentDetail, type DocumentRow, type FolderRow } from '../api/filesApi';
 import { canEdit, formatBytes, formatDateTime } from '../lib/filesFormat';
 import { CHUNKED_THRESHOLD, uploadInChunks } from '../lib/chunkedUpload';
@@ -11,6 +12,7 @@ import type { SavedAttachment } from '../lib/previewKinds';
 import { documentSource } from './previewSources';
 import { ConfirmModal, FileBadge, Icon, LevelBadge, Modal, StateBlock, saveBlob, useAction, useFm, useLoad } from './fmShared';
 import { inertObjectUrl } from '@shared/lib/inertBlob';
+import { PANE_MIN, usePaneResize } from '../lib/usePaneResize';
 
 export const DOC_TYPES = ['agreement', 'correspondence', 'pleading', 'memo', 'corporate', 'poa', 'evidence', 'invoice', 'other'] as const;
 
@@ -201,6 +203,8 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
     const [confirm, setConfirm] = useState<'delete' | { version: number } | null>(null);
     const detail = useLoad(() => filesApi.document(documentId), [documentId]);
     const paneRef = useRef<HTMLElement>(null);
+    const asideRef = useRef<HTMLElement>(null);
+    const resize = usePaneResize(asideRef);
 
     useEffect(() => {
         paneRef.current?.scrollTo({ top: 0 });
@@ -283,7 +287,24 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
     };
 
     return (
-        <aside className="fm-pane" ref={paneRef} aria-label={tr('pane.properties')}>
+        <aside
+            className={`fm-pane${resize.dragging ? ' fm-pane--resizing' : ''}`}
+            ref={asideRef}
+            aria-label={tr('pane.properties')}
+            style={resize.width ? ({ '--fm-pane-w': `${resize.width}px` } as CSSProperties) : undefined}
+        >
+            <div
+                className="fm-pane__resizer"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={tr('pane.resize')}
+                title={tr('pane.resize')}
+                aria-valuemin={PANE_MIN}
+                aria-valuenow={Math.round(resize.width ?? asideRef.current?.getBoundingClientRect().width ?? 400)}
+                tabIndex={0}
+                {...resize.handleProps}
+            />
+            <div className="fm-pane__scroll" ref={paneRef as RefObject<HTMLDivElement>}>
             <StateBlock loading={detail.loading && !data} error={detail.error} onRetry={detail.reload}>
                 {doc && data ? (
                     <>
@@ -435,6 +456,7 @@ export function DocumentPane({ documentId, viewerId, folders = [], onChanged, on
                     </div>
                 </Modal>
             ) : null}
+            </div>
         </aside>
     );
 }
