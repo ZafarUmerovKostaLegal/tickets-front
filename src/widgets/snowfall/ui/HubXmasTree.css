@@ -1,19 +1,28 @@
 .hub-tree {
-    --hub-tree-green-hi: #2f7d5b;
-    --hub-tree-green-lo: #174a37;
-    --hub-tree-trunk: #7a5134;
-    --hub-tree-ruby: #8b2635;
-    --hub-tree-gold: #d4a24c;
-    --hub-tree-ice: #b9c9dd;
-    --hub-tree-wire: #e7c27a;
-    --hub-tree-light: #ffd27a;
-    --hub-tree-shadow: rgba(15, 23, 42, 0.12);
+    --hub-tree-green-hi: #3f8f5f;
+    --hub-tree-green-mid: #22633f;
+    --hub-tree-green-lo: #123d27;
+    --hub-tree-green-shade: #0c2c1c;
+    --hub-tree-rib: #5fae7c;
+    --hub-tree-rib-dark: #0f3521;
+    --hub-tree-snow: #ffffff;
+    --hub-tree-snow-shade: #dde6f0;
+    --hub-tree-ruby-hi: #e2475a;
+    --hub-tree-ruby-lo: #7a1424;
+    --hub-tree-gold-hi: #f6d27a;
+    --hub-tree-gold-lo: #a8701e;
+    --hub-tree-silver-hi: #eef2f7;
+    --hub-tree-silver-lo: #8c99aa;
+    --hub-tree-ice-hi: #a9d4f5;
+    --hub-tree-ice-lo: #2f6c9e;
+    --hub-tree-wire: #c9a35c;
+    --hub-tree-shadow: rgba(15, 23, 42, 0.14);
 
     position: absolute;
     right: 15rem;
-    bottom: -10px;
-    width: 124px;
-    height: 166px;
+    bottom: -12px;
+    width: 140px;
+    height: 186px;
     padding: 0;
     margin: 0;
     border: none;
@@ -23,12 +32,11 @@
 }
 
 body[data-theme='dark'] .hub-tree {
-    --hub-tree-green-hi: #3c9a72;
-    --hub-tree-green-lo: #1d5a43;
-    --hub-tree-trunk: #8f6444;
-    --hub-tree-ruby: #c0485a;
-    --hub-tree-ice: #d6e2f0;
-    --hub-tree-shadow: rgba(0, 0, 0, 0.35);
+    --hub-tree-green-hi: #4fa572;
+    --hub-tree-green-mid: #2b7349;
+    --hub-tree-green-lo: #174a30;
+    --hub-tree-snow-shade: #b8c6d6;
+    --hub-tree-shadow: rgba(0, 0, 0, 0.4);
 }
 
 .hub-tree:focus-visible {
@@ -53,73 +61,104 @@ body[data-theme='dark'] .hub-tree {
 }
 
 .hub-tree__shadow { fill: var(--hub-tree-shadow); }
-.hub-tree__trunk { fill: var(--hub-tree-trunk); }
+.hub-tree__drift { fill: url(#hub-tree-drift); }
+.hub-tree__bark { fill: none; stroke: rgba(40, 24, 12, 0.45); stroke-width: 0.8; stroke-linecap: round; }
 
 .hub-tree__tier,
 .hub-tree__ball,
 .hub-tree__gifts,
-.hub-tree__star {
+.hub-tree__star,
+.hub-tree__snow {
     transform-box: fill-box;
 }
 
 .hub-tree__tier {
     transform-origin: 50% 100%;
-    animation: hub-tree-grow 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) var(--d, 0s) both;
+    animation: hub-tree-grow 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) var(--d, 0s) both;
+}
+
+.hub-tree__tier-shade { fill: var(--hub-tree-green-shade); opacity: 0.8; }
+
+.hub-tree__ribs {
+    fill: none;
+    stroke: var(--hub-tree-rib);
+    stroke-width: 0.9;
+    stroke-linecap: round;
+    opacity: 0.55;
+}
+
+.hub-tree__ribs--dark { stroke: var(--hub-tree-rib-dark); opacity: 0.45; }
+
+.hub-tree__snow {
+    fill: var(--hub-tree-snow);
+    opacity: 0.92;
+    animation: hub-tree-fade 0.6s ease-out var(--d, 0s) both;
 }
 
 .hub-tree__garland {
     fill: none;
     stroke: var(--hub-tree-wire);
-    stroke-width: 1.1;
+    stroke-width: 0.7;
     stroke-linecap: round;
     stroke-dasharray: 1;
     stroke-dashoffset: 0;
-    animation: hub-tree-draw 0.5s ease-out var(--d, 0s) both;
+    animation: hub-tree-draw 0.45s ease-out var(--d, 0s) both;
 }
 
 .hub-tree__light {
-    fill: var(--hub-tree-light);
     animation:
-        hub-tree-pop 0.25s ease-out var(--d, 0s) both,
-        hub-tree-twinkle 2.4s ease-in-out calc(var(--d, 0s) + 0.3s + var(--tw, 0s)) infinite;
+        hub-tree-fade 0.25s ease-out var(--d, 0s) both,
+        hub-tree-twinkle 2.6s ease-in-out calc(var(--d, 0s) + 0.3s + var(--tw, 0s)) infinite;
 }
+
+.hub-tree__light--warm .hub-tree__bulb { fill: #fff1c9; }
+.hub-tree__light--gold .hub-tree__bulb { fill: #ffd36b; }
+.hub-tree__light--rose .hub-tree__bulb { fill: #ffb3a8; }
 
 .hub-tree__ball {
     transform-origin: 50% 0%;
     animation: hub-tree-hang 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
 }
 
-.hub-tree__thread {
-    stroke: var(--hub-tree-wire);
-    stroke-width: 0.6;
-}
-
-.hub-tree__ball--ruby .hub-tree__ball-fill { fill: var(--hub-tree-ruby); }
-.hub-tree__ball--gold .hub-tree__ball-fill { fill: var(--hub-tree-gold); }
-.hub-tree__ball--ice .hub-tree__ball-fill { fill: var(--hub-tree-ice); }
+.hub-tree__thread { stroke: var(--hub-tree-wire); stroke-width: 0.45; }
+.hub-tree__cap { fill: #d9b25e; }
 
 .hub-tree__gifts {
     transform-origin: 50% 100%;
     animation: hub-tree-grow 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
 }
 
-.hub-tree__gift--ruby { fill: var(--hub-tree-ruby); }
-.hub-tree__gift--gold { fill: var(--hub-tree-gold); }
-.hub-tree__ribbon { fill: var(--hub-tree-gold); }
-.hub-tree__ribbon--ruby { fill: var(--hub-tree-ruby); }
-.hub-tree__bow { fill: none; stroke: var(--hub-tree-gold); stroke-width: 1.4; }
+.hub-tree__gift--ruby { fill: #9e2236; }
+.hub-tree__gift--green { fill: #2f6d8f; }
+.hub-tree__gift--cream { fill: #f1e4c6; }
+.hub-tree__gift-lid { filter: brightness(1.15); }
+.hub-tree__ribbon { fill: #e8bd62; }
+.hub-tree__ribbon--ruby { fill: #b3283a; }
+.hub-tree__bow { fill: #e8bd62; stroke: #b8862f; stroke-width: 0.5; }
 
 .hub-tree__star {
     transform-origin: 50% 50%;
-    animation: hub-tree-star 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
+    animation: hub-tree-star 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
 }
 
-.hub-tree__star-fill { fill: var(--hub-tree-gold); }
+.hub-tree__star-fill { stroke: #b8801e; stroke-width: 0.5; stroke-linejoin: round; }
+.hub-tree__star-shine { fill: #fffbe8; opacity: 0.85; }
 
 .hub-tree__star-glow {
-    fill: var(--hub-tree-light);
-    opacity: 0.35;
-    animation: hub-tree-glow 2.8s ease-in-out calc(var(--d, 0s) + 0.7s) infinite;
+    animation: hub-tree-glow 2.8s ease-in-out calc(var(--d, 0s) + 0.8s) infinite;
+}
+
+.hub-tree__rays {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: hub-tree-spin 14s linear calc(var(--d, 0s) + 0.8s) infinite;
+}
+
+.hub-tree__rays line {
+    stroke: #ffe3a0;
+    stroke-width: 0.7;
+    stroke-linecap: round;
+    opacity: 0.55;
 }
 
 .hub-tree--paused *,
@@ -137,14 +176,14 @@ body[data-theme='dark'] .hub-tree {
     to { stroke-dashoffset: 0; }
 }
 
-@keyframes hub-tree-pop {
+@keyframes hub-tree-fade {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
 @keyframes hub-tree-twinkle {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+    50% { opacity: 0.4; }
 }
 
 @keyframes hub-tree-hang {
@@ -159,8 +198,12 @@ body[data-theme='dark'] .hub-tree {
 }
 
 @keyframes hub-tree-glow {
-    0%, 100% { opacity: 0.25; }
-    50% { opacity: 0.6; }
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+@keyframes hub-tree-spin {
+    to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
