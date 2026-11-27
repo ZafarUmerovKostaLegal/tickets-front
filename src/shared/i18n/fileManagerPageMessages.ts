@@ -150,6 +150,7 @@ export const fileManagerPageMessages = {
         file: 'Файл',
     },
     directory: {
+        accessManage: 'Настроить доступ: {name}',
         clientsSearch: 'Найти клиента…',
         mattersSearch: 'Найти matter по названию, коду или клиенту…',
         showArchived: 'Показывать архивных клиентов',
@@ -471,6 +472,11 @@ export const fileManagerPageMessages = {
         restrictedOn: 'Права папки на файл не действуют: его видят автор, партнёры и только отмеченные ниже.',
         restrictedOff: 'Файл открыт всем, у кого есть доступ к папке. Отдельные правила ниже главнее прав папки.',
         colRead: 'Видит',
+        levelLabel: 'Права на файл',
+        levelInherit: 'По папке',
+        levelNone: 'Нет доступа',
+        hintNone: 'Файл не виден: нет доступа ни к файлу, ни к папке',
+        hintOwner: 'Автор видит и изменяет свой файл',
         statusOwner: 'Автор файла',
         statusRead: 'Видит файл',
         statusDeny: 'Файл скрыт',
@@ -554,6 +560,7 @@ export const fileManagerPageMessages = {
         sharedHint: 'Вы видите здесь файлы коллег',
     },
     securityX: {
+        popTitle: 'Доступ к matter',
         mattersTitle: 'Matters',
         searchMatter: 'Клиент, код или название…',
         railAll: 'Все',

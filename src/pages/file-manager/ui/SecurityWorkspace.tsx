@@ -201,7 +201,7 @@ function MatterRail({ items, overview, matterId, onPick }: {
     );
 }
 
-function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () => void }) {
+export function PeopleTab({ data, onReload }: { data: SecurityResponse; onReload: () => void }) {
     const { tr, locale } = useFm();
     const act = useAction();
     const { users: catalogUsers, nameOf, positionOf } = usePeopleNames(tr('security.userFallback', { id: '{id}' }));

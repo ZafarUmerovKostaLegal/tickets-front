@@ -8,6 +8,12 @@ import { useAnimatedClose } from '../lib/useAnimatedClose';
 import { Icon, StateBlock, useAction, useFm, useLoad } from './fmShared';
 import './FolderAccessDrawer.css';
 
+type DocLevel = 'inherit' | 'read' | 'edit' | 'deny';
+
+const DOC_LEVELS: DocLevel[] = ['inherit', 'read', 'edit', 'deny'];
+const DOC_LEVEL_LABEL: Record<Exclude<DocLevel, 'inherit'>, string> = { read: 'colRead', edit: 'colEdit', deny: 'colDeny' };
+const DOC_LEVEL_ICON = { inherit: 'folder', read: 'eye', edit: 'edit', deny: 'lock' } as const;
+
 type Props = {
     documentId: string;
     onClose: () => void;
@@ -80,17 +86,18 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
             refresh();
     };
 
-    const setLevel = async (member: DocumentAccessMember, next: FolderAccessLevel | null) => {
-        if (next === null) {
-            const throughFolder = !data?.document.restricted && (member.viaFolder === 'read' || member.viaFolder === 'edit');
-            if (throughFolder)
-                await save(member, { level: 'deny' });
-            else if (member.entry)
+    const pickLevel = async (member: DocumentAccessMember, next: DocLevel, current: DocLevel) => {
+        if (next === current)
+            return;
+        if (next === 'inherit') {
+            if (member.entry)
                 await remove(member);
             return;
         }
         await save(member, { level: next });
     };
+
+    const levelHint = (level: DocLevel): string => (level === 'inherit' ? '' : tr(`matrixF.fileHint.${level}`));
 
     const status = (member: DocumentAccessMember): { text: string; tone: string } => {
         if (member.owner)
@@ -158,8 +165,16 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
                                     const fixed = member.owner || member.partner;
                                     const entry = member.entry;
                                     const expanded = openRow === member.userId;
-                                    const sees = member.effective === 'read' || member.effective === 'edit';
                                     const closedByFolder = member.viaFolder === 'deny';
+                                    const folderGrants = !doc.restricted && (member.viaFolder === 'read' || member.viaFolder === 'edit');
+                                    const selected: DocLevel = fixed ? 'edit' : entry?.level === 'read' || entry?.level === 'edit' || entry?.level === 'deny' ? entry.level : 'inherit';
+                                    const inheritHint = closedByFolder
+                                        ? tr('docAccess.folderClosed')
+                                        : folderGrants
+                                            ? tr('docAccess.viaFolder', { name: doc.folderName || tr('docAccess.root') })
+                                            : doc.restricted && member.viaFolder && member.viaFolder !== 'own'
+                                                ? tr('docAccess.folderIgnored')
+                                                : tr('docAccess.hintNone');
                                     return (
                                         <li key={member.userId} className={`fm-faccess__row is-${tone.tone}`}>
                                             <div className="fm-faccess__who">
@@ -168,29 +183,9 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
                                                     <strong>{member.name}</strong>
                                                     <small>{member.position || tr('security.noPosition')}</small>
                                                 </span>
-                                                <span className={`fm-faccess__chip is-${tone.tone}`}>{tone.text}</span>
-                                            </div>
-                                            <div className="fm-faccess__checks" role="group" aria-label={member.name}>
-                                                <label>
-                                                    <input type="checkbox" disabled={fixed || closedByFolder}
-                                                        checked={fixed || sees}
-                                                        onChange={(event) => void setLevel(member, event.target.checked ? 'read' : null)} />
-                                                    <span>{tr('docAccess.colRead')}</span>
-                                                </label>
-                                                <label>
-                                                    <input type="checkbox" disabled={fixed || closedByFolder}
-                                                        checked={fixed || member.effective === 'edit'}
-                                                        onChange={(event) => void setLevel(member, event.target.checked ? 'edit' : 'read')} />
-                                                    <span>{tr('folderAccess.colEdit')}</span>
-                                                </label>
-                                                <label className="is-danger">
-                                                    <input type="checkbox" disabled={fixed || closedByFolder}
-                                                        checked={!fixed && entry?.level === 'deny'}
-                                                        onChange={(event) => void (event.target.checked
-                                                            ? setLevel(member, 'deny')
-                                                            : entry ? remove(member) : Promise.resolve())} />
-                                                    <span>{tr('folderAccess.colDeny')}</span>
-                                                </label>
+                                                {fixed || tone.tone === 'deny' || tone.tone === 'none' ? (
+                                                    <span className={`fm-faccess__chip is-${tone.tone}`}>{tone.text}</span>
+                                                ) : null}
                                                 <button type="button" className={expanded ? 'fm-faccess__more is-on' : 'fm-faccess__more'}
                                                     disabled={fixed} aria-expanded={expanded}
                                                     title={tr('folderAccess.temporary')} aria-label={tr('folderAccess.temporary')}
@@ -201,15 +196,33 @@ export function DocumentAccessDrawer({ documentId, onClose, onChanged }: Props) 
                                                     <Icon name="clock" />
                                                 </button>
                                             </div>
-                                            {!fixed && !entry && member.viaFolder && member.viaFolder !== 'own' ? (
-                                                <p className="fm-faccess__hint">
-                                                    {closedByFolder
-                                                        ? tr('docAccess.folderClosed')
-                                                        : doc.restricted
-                                                            ? tr('docAccess.folderIgnored')
-                                                            : tr('docAccess.viaFolder', { name: doc.folderName || tr('docAccess.root') })}
-                                                </p>
-                                            ) : null}
+                                            <div className="fm-faccess__levels-row">
+                                                <div className="fm-faccess__levels" role="radiogroup" aria-label={`${tr('docAccess.levelLabel')}: ${member.name}`}>
+                                                    {DOC_LEVELS.map((level) => {
+                                                        const on = selected === level;
+                                                        const off = fixed || (closedByFolder && level !== 'deny');
+                                                        const label = level === 'inherit'
+                                                            ? tr(folderGrants ? 'docAccess.levelInherit' : 'docAccess.levelNone')
+                                                            : tr(`folderAccess.${DOC_LEVEL_LABEL[level]}`);
+                                                        return (
+                                                            <button key={level} type="button" role="radio" aria-checked={on} disabled={off}
+                                                                className={`fm-faccess__level is-${level === 'inherit' ? 'own' : level}${on ? ' is-on' : ''}`}
+                                                                title={levelHint(level)}
+                                                                onClick={() => void pickLevel(member, level, selected)}>
+                                                                <Icon name={DOC_LEVEL_ICON[level]} />
+                                                                <span>{label}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <p className="fm-faccess__hint">
+                                                {member.owner
+                                                    ? tr('docAccess.hintOwner')
+                                                    : member.partner
+                                                        ? tr('folderAccess.cell.partner')
+                                                        : selected === 'inherit' ? inheritHint : levelHint(selected)}
+                                            </p>
                                             {entry && (entry.until || isFuture(entry.suspendedUntil)) ? (
                                                 <div className="fm-faccess__temp">
                                                     {entry.until ? (

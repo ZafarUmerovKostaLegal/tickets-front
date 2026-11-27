@@ -239,7 +239,7 @@ test.describe('@e2e Файловый менеджер: доступ к папк�
         expect(matter.docPuts[0]).toEqual({ restricted: true });
         await expect(drawer.locator('.fm-faccess__row', { hasText: 'Lawyer L' })).toContainText('Не видит');
 
-        await drawer.locator('.fm-faccess__row', { hasText: 'Lawyer L' }).getByLabel('Видит').click();
+        await drawer.locator('.fm-faccess__row', { hasText: 'Lawyer L' }).getByRole('radio', { name: 'Чтение' }).click();
         await expect.poll(() => matter.docPuts.length).toBe(2);
         expect(matter.docPuts[1]).toMatchObject({ userId: 3, level: 'read' });
         if (SHOTS)

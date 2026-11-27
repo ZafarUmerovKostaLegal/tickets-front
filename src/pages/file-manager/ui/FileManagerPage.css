@@ -3624,7 +3624,7 @@ body[data-theme='dark'] .fm-level--deny { color: #fb7185; }
 }
 
 
-.fm-modal, .fm-upq {
+.fm-modal, .fm-upq, .fm-mxpop {
   --fm-accent: var(--app-accent, #1d2a6b);
   --fm-accent-soft: var(--app-accent-light-bg, #eef1fb);
   --fm-accent-border: var(--app-accent-border, #7eb6f5);

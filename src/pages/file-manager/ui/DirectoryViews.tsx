@@ -3,6 +3,7 @@ import { filesApi, type AccessLevel, type ClientsResponse, type MatterRow } from
 import { matchesFilter } from '../lib/filesFormat';
 import { FmSelect } from './fmSelect';
 import { Icon, LevelBadge, useAction, useFm } from './fmShared';
+import { MatterAccessPopover } from './MatterAccessPopover';
 
 type DirectoryLayout = 'list' | 'tiles';
 const MATTERS_LAYOUT_KEY = 'fm.mattersLayout';
@@ -319,6 +320,26 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
             onChanged();
     };
 
+    const [accessFor, setAccessFor] = useState<{ id: string; anchor: HTMLElement } | null>(null);
+    const accessBadge = (matter: { id: string; name: string; level: Parameters<typeof LevelBadge>[0]['level'] }) => {
+        if (matter.level !== 'manage')
+            return <LevelBadge level={matter.level} />;
+        const open = accessFor?.id === matter.id;
+        return (
+            <button type="button" className="fm-level-btn" aria-haspopup="dialog" aria-expanded={open}
+                aria-label={tr('directory.accessManage', { name: matter.name })}
+                title={tr('directory.accessManage', { name: matter.name })}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    const anchor = event.currentTarget;
+                    setAccessFor(open ? null : { id: matter.id, anchor });
+                }}
+                onKeyDown={(event) => event.stopPropagation()}>
+                <LevelBadge level={matter.level} />
+            </button>
+        );
+    };
+
     return (
         <section className="fm-docs fm-docs--padded">
             {client ? (
@@ -442,7 +463,7 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                                     {matter.closed ? tr('common.closed') : tr('directory.open')}
                                 </span>
                                 <span aria-hidden>·</span>
-                                <LevelBadge level={matter.level} />
+                                {accessBadge(matter)}
                                 <span className="fm-matter-card__docs">
                                     {matter.documents
                                         ? tr('directory.docsCount', { count: matter.documents })
@@ -494,7 +515,7 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                                         </span>
                                     </td>
                                     {!clientId ? <td>{matter.clientName}</td> : null}
-                                    <td><LevelBadge level={matter.level} /></td>
+                                    <td>{accessBadge(matter)}</td>
                                     <td>{matter.closed ? tr('common.closed') : tr('directory.open')}</td>
                                     <td className="fm-table__num">{matter.documents || '—'}</td>
                                 </tr>
@@ -503,6 +524,14 @@ export function MattersListView({ clients, clientId, mineOnly, onPickClient, onO
                     </table>
                 </div>
             )}
+            {accessFor ? (
+                <MatterAccessPopover
+                    matterId={accessFor.id}
+                    anchor={accessFor.anchor}
+                    onClose={() => setAccessFor(null)}
+                    onChanged={onChanged}
+                />
+            ) : null}
         </section>
     );
 }

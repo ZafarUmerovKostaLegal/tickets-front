@@ -152,6 +152,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         file: 'File',
     },
     directory: {
+        accessManage: 'Manage access: {name}',
         clientsSearch: 'Find a client…',
         mattersSearch: 'Find a matter by name, code or client…',
         showArchived: 'Show archived clients',
@@ -473,6 +474,11 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         restrictedOn: 'Folder permissions do not apply: only the author, partners and the people ticked below see it.',
         restrictedOff: 'Everyone with access to the folder sees the file. Rules below override folder permissions.',
         colRead: 'Sees',
+        levelLabel: 'File access',
+        levelInherit: 'As folder',
+        levelNone: 'No access',
+        hintNone: 'Hidden: no access to the file or its folder',
+        hintOwner: 'The author can view and edit their file',
         statusOwner: 'Author',
         statusRead: 'Sees the file',
         statusDeny: 'File hidden',
@@ -556,6 +562,7 @@ export const fileManagerPageMessagesEn: FileManagerPageMessages = {
         sharedHint: 'You see colleagues’ files here',
     },
     securityX: {
+        popTitle: 'Matter access',
         mattersTitle: 'Matters',
         searchMatter: 'Client, code or name…',
         railAll: 'All',
