@@ -140,7 +140,43 @@ export type CombinedReportLine = {
     hours: number;
     rate?: number;
     amount: number;
+    /** Fixed price per entry (My Mehnat registrations): shown in its own table, rate = price per entry. */
+    flatFee?: boolean;
 };
+
+export function isFlatFeeLine(line: Pick<CombinedReportLine, 'flatFee' | 'task'>): boolean {
+    return Boolean(line.flatFee) || /mehnat/i.test(line.task ?? '');
+}
+
+/** Rate actually charged on one line: the hourly rate, or the price of one entry for fixed-price tasks. */
+export function combinedLineRate(line: CombinedReportLine): number {
+    if (isFlatFeeLine(line))
+        return line.amount;
+    if (line.rate != null && Number.isFinite(line.rate) && line.rate > 0)
+        return line.rate;
+    return line.hours > 0 ? line.amount / line.hours : 0;
+}
+
+function sortLines(lines: CombinedReportLine[]): CombinedReportLine[] {
+    return [...lines].sort((a, b) => a.date.localeCompare(b.date)
+        || (a.initials || a.user).localeCompare(b.initials || b.user));
+}
+
+export function hourlyLines(lines: readonly CombinedReportLine[]): CombinedReportLine[] {
+    return sortLines(lines.filter((line) => !isFlatFeeLine(line)));
+}
+
+export function flatFeeLines(lines: readonly CombinedReportLine[]): CombinedReportLine[] {
+    return sortLines(lines.filter(isFlatFeeLine));
+}
+
+/** Title of the fixed-price table: the task name when all entries share it ("My Mehnat"). */
+export function flatFeeTableTitle(lines: readonly CombinedReportLine[]): string {
+    const tasks = [...new Set(lines.map((line) => (line.task ?? '').trim()).filter(Boolean))];
+    if (tasks.length === 1 && /mehnat/i.test(tasks[0]!))
+        return 'My Mehnat';
+    return tasks.length === 1 ? tasks[0]! : 'Fixed-fee services';
+}
 
 function noteFromTimeDescription(raw: string | null | undefined): string {
     const { taskLine, notes } = parseTimeEntryDescription(raw);
@@ -230,21 +266,61 @@ export type CombinedProjectSummaryRow = {
     hours: number;
     rate: number;
     amount: number;
+    /** Fixed-price entries in this row (hours are then 0 and rate is the price of one entry). */
+    entries?: number;
 };
+
+const roundRate = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * One row per person and rate: somebody billed at two rates gets two rows, fixed-price entries
+ * get their own row with the entry price as the rate — never an average of different rates.
+ */
+export function summaryRowsFromLines(
+    lines: readonly CombinedReportLine[],
+    titleOf: (line: CombinedReportLine) => string,
+): CombinedProjectSummaryRow[] {
+    const rows = new Map<string, CombinedProjectSummaryRow>();
+    for (const line of lines) {
+        const flat = isFlatFeeLine(line);
+        const rate = roundRate(combinedLineRate(line));
+        const key = `${line.initials || ''}|${line.user}|${flat ? 'flat' : 'hour'}|${rate}`;
+        const row = rows.get(key) ?? {
+            initials: line.initials || line.user,
+            name: line.user,
+            title: titleOf(line),
+            hours: 0,
+            rate,
+            amount: 0,
+            ...(flat ? { entries: 0 } : {}),
+        };
+        if (flat)
+            row.entries = (row.entries ?? 0) + 1;
+        else
+            row.hours += line.hours;
+        row.amount += line.amount;
+        rows.set(key, row);
+    }
+    const personOrder = new Map<string, number>();
+    for (const row of rows.values()) {
+        if (!personOrder.has(row.name))
+            personOrder.set(row.name, personOrder.size);
+    }
+    return [...rows.values()].sort((a, b) => (personOrder.get(a.name) ?? 0) - (personOrder.get(b.name) ?? 0)
+        || (a.entries != null ? 1 : 0) - (b.entries != null ? 1 : 0)
+        || b.rate - a.rate);
+}
+
+export function summaryRowHoursText(row: CombinedProjectSummaryRow, formatHours: (n: number) => string): string {
+    return row.entries != null ? `${row.entries} × entry` : formatHours(row.hours);
+}
 
 export type CombinedReportSnapshot = {
     feeTitle: string;
     currency: string;
     layout?: CombinedReportLayout;
     projects: Array<{ name: string; pageTitle?: string; lines: CombinedReportLine[]; summary?: CombinedProjectSummaryRow[] }>;
-    people: Array<{
-        initials: string;
-        name: string;
-        title: string;
-        hours: number;
-        rate: number;
-        amount: number;
-    }>;
+    people: CombinedProjectSummaryRow[];
     expenses: Array<{ description: string; date: string; amount: number; projectName?: string }>;
     shares: Array<{ name: string; percent: number; expenses?: number; total: number }>;
     totalHours: number;
@@ -316,54 +392,41 @@ export function buildCombinedReportSnapshot(input: {
     totalExpenses: number;
 }): CombinedReportSnapshot {
     const userById = new Map(input.users.map((user) => [user.id, user]));
-    const personTotals = new Map<number, { hours: number; amount: number }>();
-    for (const line of input.time) {
-        const prev = personTotals.get(line.authUserId) ?? { hours: 0, amount: 0 };
-        prev.hours += line.billableHours ?? line.hours;
-        prev.amount += line.billableAmount;
-        personTotals.set(line.authUserId, prev);
-    }
+    const titleByName = new Map<string, string>();
+    const projects = input.projects.flatMap((project) => {
+        const lines = input.time.filter((line) => line.projectId === project.id);
+        if (lines.length === 0)
+            return [];
+        return [{
+            name: project.name,
+            lines: lines.map((line): CombinedReportLine => {
+                const user = userById.get(line.authUserId);
+                const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
+                titleByName.set(name, user?.position?.trim() || '—');
+                const split = combinedTimeTaskAndNotes(line.description, line.taskName);
+                const hours = line.billableHours ?? line.hours;
+                const amount = line.billableAmount;
+                const flat = Boolean(line.flatFee) || /mehnat/i.test(split.task);
+                return {
+                    date: line.workDate.slice(0, 10),
+                    user: name,
+                    initials: initialsOf(name, user?.initials),
+                    task: split.task,
+                    description: split.description,
+                    hours,
+                    rate: flat ? amount : (hours > 0 ? amount / hours : 0),
+                    amount,
+                    ...(flat ? { flatFee: true } : {}),
+                };
+            }),
+        }];
+    });
     return {
         feeTitle: input.feeTitle.trim() || 'Fees for services',
         currency: input.currency || 'USD',
         layout: input.layout === 'perProject' ? 'perProject' : 'merged',
-        projects: input.projects.flatMap((project) => {
-            const lines = input.time.filter((line) => line.projectId === project.id);
-            if (lines.length === 0)
-                return [];
-            return [{
-                name: project.name,
-                lines: lines.map((line) => {
-                    const user = userById.get(line.authUserId);
-                    const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
-                    const split = combinedTimeTaskAndNotes(line.description, line.taskName);
-                    const hours = line.billableHours ?? line.hours;
-                    const amount = line.billableAmount;
-                    return {
-                        date: line.workDate.slice(0, 10),
-                        user: name,
-                        initials: initialsOf(name, user?.initials),
-                        task: split.task,
-                        description: split.description,
-                        hours,
-                        rate: hours > 0 ? amount / hours : 0,
-                        amount,
-                    };
-                }),
-            }];
-        }),
-        people: [...personTotals.entries()].map(([id, totals]) => {
-            const user = userById.get(id);
-            const name = user?.display_name?.trim() || user?.email?.trim() || String(id);
-            return {
-                initials: initialsOf(name, user?.initials),
-                name,
-                title: user?.position?.trim() || '—',
-                hours: totals.hours,
-                rate: totals.hours > 0 ? totals.amount / totals.hours : 0,
-                amount: totals.amount,
-            };
-        }),
+        projects,
+        people: summaryRowsFromLines(projects.flatMap((project) => project.lines), (line) => titleByName.get(line.user) || '—'),
         expenses: input.expenses.map((line) => ({
             description: line.description?.trim() || '—',
             date: line.expenseDate.slice(0, 10),
@@ -400,27 +463,54 @@ export function projectSummaryRows(report: CombinedReportSnapshot, projectIndex:
     const project = report.projects[projectIndex];
     if (!project)
         return [];
-    if (project.summary && project.summary.length > 0)
+    if (project.summary && project.summary.length > 0 && !isAveragedSummary(project.summary, project.lines))
         return project.summary;
-    const peopleByKey = new Map<string, CombinedProjectSummaryRow>();
-    for (const line of project.lines) {
-        const key = `${line.initials || ''}|${line.user}`;
-        const prev = peopleByKey.get(key) ?? {
-            initials: line.initials || line.user,
-            name: line.user,
-            title: report.people.find((person) => person.initials === line.initials || person.name === line.user)?.title || '—',
-            hours: 0,
-            rate: line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0),
-            amount: 0,
-        };
-        prev.hours += line.hours;
-        prev.amount += line.amount;
-        peopleByKey.set(key, prev);
-    }
-    return [...peopleByKey.values()].map((row) => ({
-        ...row,
-        rate: row.hours > 0 ? row.amount / row.hours : row.rate,
-    }));
+    return summaryRowsFromLines(project.lines, (line) => personTitle(report, line));
+}
+
+function personTitle(report: CombinedReportSnapshot, line: CombinedReportLine): string {
+    return report.people.find((person) => person.initials === line.initials || person.name === line.user)?.title || '—';
+}
+
+/**
+ * Snapshots saved before rates were split kept one row per person with an averaged rate
+ * (e.g. 1 455 952.38 for 1 500 000 per hour plus a 230 000 registration). Such rows are rebuilt;
+ * rows somebody edited by hand (their sums no longer match the lines) are kept as they are.
+ */
+function isAveragedSummary(rows: readonly CombinedProjectSummaryRow[], lines: readonly CombinedReportLine[]): boolean {
+    if (rows.some((row) => row.entries != null))
+        return false;
+    const names = rows.map((row) => row.name);
+    if (new Set(names).size !== names.length)
+        return false;
+    const split = summaryRowsFromLines(lines, () => '');
+    if (split.length <= rows.length)
+        return false;
+    return rows.every((row) => {
+        const own = lines.filter((line) => line.user === row.name);
+        const amount = own.reduce((sum, line) => sum + line.amount, 0);
+        const hours = own.reduce((sum, line) => sum + line.hours, 0);
+        return own.length > 0 && Math.abs(amount - row.amount) < 0.5 && Math.abs(hours - row.hours) < 0.01;
+    });
+}
+
+/** People table of the merged layout, with old averaged snapshots split by rate. */
+export function combinedPeopleRows(report: CombinedReportSnapshot): CombinedProjectSummaryRow[] {
+    const lines = report.projects.flatMap((project) => project.lines);
+    if (!isAveragedSummary(report.people, lines))
+        return report.people;
+    return summaryRowsFromLines(lines, (line) => personTitle(report, line));
+}
+
+export function patchCombinedPeople(
+    report: CombinedReportSnapshot,
+    rowIndex: number,
+    patch: Partial<CombinedProjectSummaryRow>,
+): CombinedReportSnapshot {
+    return {
+        ...report,
+        people: combinedPeopleRows(report).map((row, index) => (index === rowIndex ? { ...row, ...patch } : row)),
+    };
 }
 
 export function patchProjectSummary(
@@ -434,7 +524,7 @@ export function patchProjectSummary(
             return row;
         const next = { ...row, ...patch };
         if ((patch.hours != null || patch.rate != null) && patch.amount == null)
-            next.amount = next.hours * next.rate;
+            next.amount = (next.entries ?? next.hours) * next.rate;
         return next;
     });
     return {
@@ -445,11 +535,13 @@ export function patchProjectSummary(
     };
 }
 
+/** Hourly lines of every project (fixed-price entries go to their own table). */
 export function combinedReportDetailLines(snapshot: CombinedReportSnapshot): CombinedReportLine[] {
-    return snapshot.projects
-        .flatMap((project) => project.lines)
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date) || (a.initials || a.user).localeCompare(b.initials || b.user));
+    return hourlyLines(snapshot.projects.flatMap((project) => project.lines));
+}
+
+export function combinedReportFlatLines(snapshot: CombinedReportSnapshot): CombinedReportLine[] {
+    return flatFeeLines(snapshot.projects.flatMap((project) => project.lines));
 }
 
 export function applyCombinedExpenseAmounts(

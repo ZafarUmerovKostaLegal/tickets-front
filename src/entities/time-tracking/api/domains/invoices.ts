@@ -89,6 +89,8 @@ export type UnbilledTimeEntryDto = {
     currency: string;
     sourceCurrency?: string;
     packageCovered?: boolean;
+    /** Task billed at a fixed price per entry (e.g. My Mehnat), not by the hour. */
+    flatFee?: boolean;
     coveredHours?: number | null;
     overageHours?: number | null;
 };

@@ -10,7 +10,15 @@ import {
     WidthType,
 } from 'docx';
 import { KOSTA_LEGAL_FIRM, KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
-import { combinedReportDetailLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import {
+    combinedLineRate,
+    combinedPeopleRows,
+    combinedReportDetailLines,
+    combinedReportFlatLines,
+    flatFeeTableTitle,
+    summaryRowHoursText,
+    type CombinedReportSnapshot,
+} from '@pages/time-tracking/lib/combinedInvoice';
 import { combinedProjectTotals, hasProjectsSummary } from './combinedReportPreviewPages';
 
 const FONT = 'Calibri Light';
@@ -115,21 +123,36 @@ export function combinedReportDocxChildren(snapshot: CombinedReportSnapshot): (P
         }),
     ];
     const lines = combinedReportDetailLines(snapshot);
+    const flat = combinedReportFlatLines(snapshot);
+    const flatHours = flat.reduce((sum, line) => sum + line.hours, 0);
+    const flatFees = flat.reduce((sum, line) => sum + line.amount, 0);
     out.push(table(
         ['Date', 'Initials', 'Task', 'Description', 'Hours', `Amount (${cur})`],
         [
             ...lines.map((line) => [dateRu(line.date), line.initials || line.user, line.task || '—', line.description, line.hours.toFixed(2), money(line.amount)]),
-            ['Total', '', '', '', snapshot.totalHours.toFixed(2), money(snapshot.totalFees)],
+            ['Total', '', '', '', (snapshot.totalHours - flatHours).toFixed(2), money(snapshot.totalFees - flatFees)],
         ],
         [14, 10, 16, 36, 8, 16],
         4,
     ));
+    if (flat.length > 0) {
+        out.push(heading(flatFeeTableTitle(flat)));
+        out.push(table(
+            ['Date', 'Initials', 'Task', 'Description', 'Per entry', 'Rate', `Amount (${cur})`],
+            [
+                ...flat.map((line) => [dateRu(line.date), line.initials || line.user, line.task || '—', line.description, '1.00', money(combinedLineRate(line)), money(line.amount)]),
+                ['Total', '', '', '', flat.length.toFixed(2), '', money(flatFees)],
+            ],
+            [13, 9, 14, 28, 9, 11, 16],
+            4,
+        ));
+    }
     out.push(heading('Summary of Services'));
     out.push(table(
         ['Initials', 'Name', 'Title', 'Rate', 'Hours', `Rate (${cur})`, 'Amount'],
         [
-            ...snapshot.people.map((person) => [person.initials, person.name, person.title, money(person.rate), person.hours.toFixed(2), money(person.rate), money(person.amount)]),
-            ['Total', '', '', '', snapshot.totalHours.toFixed(2), '', money(snapshot.totalFees)],
+            ...combinedPeopleRows(snapshot).map((person) => [person.initials, person.name, person.title, money(person.rate), summaryRowHoursText(person, (n) => n.toFixed(2)), money(person.rate), money(person.amount)]),
+            ['Total', '', '', '', (snapshot.totalHours - flatHours).toFixed(2), '', money(snapshot.totalFees)],
         ],
         [10, 18, 16, 13, 9, 16, 18],
         3,

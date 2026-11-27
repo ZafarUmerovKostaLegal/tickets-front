@@ -1,6 +1,17 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import { combinedReportDetailLines, projectExpenseIndexes, projectSummaryRows, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
-import { combinedProjectTotals, planCombinedReportPreviewPages } from './combinedReportPreviewPages';
+import {
+    combinedLineRate,
+    combinedPeopleRows,
+    combinedReportDetailLines,
+    combinedReportFlatLines,
+    flatFeeTableTitle,
+    projectExpenseIndexes,
+    projectSummaryRows,
+    summaryRowHoursText,
+    type CombinedReportLine,
+    type CombinedReportSnapshot,
+} from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedProjectTotals, planCombinedReportPreviewPages, sortedProjectFlatLines, sortedProjectLines } from './combinedReportPreviewPages';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
 import { COVER_LETTERHEAD_LOGO_ASPECT } from './invoiceCoverLogoRaster';
 import { formatTimeReportHours } from './invoiceTimeReportModel';
@@ -65,6 +76,9 @@ function blocks(snapshot: CombinedReportSnapshot): Block[] {
     const invoiced = snapshot.totalFees + snapshot.totalExpenses;
     const out: Block[] = [];
     const lines = combinedReportDetailLines(snapshot);
+    const flat = combinedReportFlatLines(snapshot);
+    const flatHours = flat.reduce((sum, line) => sum + line.hours, 0);
+    const flatFees = flat.reduce((sum, line) => sum + line.amount, 0);
     out.push({
         headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', `Amount (${cur})`],
         weights: [14, 10, 16, 36, 8, 16],
@@ -73,19 +87,21 @@ function blocks(snapshot: CombinedReportSnapshot): Block[] {
             ...lines.map((line) => ({
                 cells: [dateRu(line.date), line.initials || line.user, line.task || '—', line.description, line.hours.toFixed(2), money(line.amount)],
             })),
-            { bold: true, cells: ['Total', '', '', '', snapshot.totalHours.toFixed(2), money(snapshot.totalFees)] },
+            { bold: true, cells: ['Total', '', '', '', (snapshot.totalHours - flatHours).toFixed(2), money(snapshot.totalFees - flatFees)] },
         ],
     });
+    if (flat.length > 0)
+        out.push(flatBlock(flat, cur, money));
     out.push({
         title: 'Summary of Services',
         headers: ['Initials', 'Name', 'Title', 'Rate', 'Hours', `Rate (${cur})`, 'Amount'],
         weights: [10, 18, 16, 13, 9, 16, 18],
         right: new Set([3, 4, 5, 6]),
         rows: [
-            ...snapshot.people.map((person) => ({
-                cells: [person.initials, person.name, person.title, money(person.rate), person.hours.toFixed(2), money(person.rate), money(person.amount)],
+            ...combinedPeopleRows(snapshot).map((person) => ({
+                cells: [person.initials, person.name, person.title, money(person.rate), summaryRowHoursText(person, (n) => n.toFixed(2)), money(person.rate), money(person.amount)],
             })),
-            { bold: true, cells: ['Total', '', '', '', snapshot.totalHours.toFixed(2), '', money(snapshot.totalFees)] },
+            { bold: true, cells: ['Total', '', '', '', (snapshot.totalHours - flatHours).toFixed(2), '', money(snapshot.totalFees)] },
         ],
     });
     out.push({
@@ -114,6 +130,22 @@ function blocks(snapshot: CombinedReportSnapshot): Block[] {
     return out;
 }
 
+function flatBlock(lines: CombinedReportLine[], cur: string, num: (n: number) => string, showTotal = true): Block {
+    const total = lines.reduce((sum, line) => sum + line.amount, 0);
+    return {
+        title: flatFeeTableTitle(lines),
+        headers: ['Date', 'Initials', 'Task', 'Description', 'Per entry', 'Rate', `Amount (${cur})`],
+        weights: [13, 9, 14, 28, 9, 11, 16],
+        right: new Set([4, 5, 6]),
+        rows: [
+            ...lines.map((line) => ({
+                cells: [dateRu(line.date), line.initials || line.user, line.task || '—', line.description || '—', num(1), num(combinedLineRate(line)), num(line.amount)],
+            })),
+            ...(showTotal ? [{ bold: true, cells: ['', '', '', `Total (${cur})`, num(lines.length), '', num(total)] }] : []),
+        ],
+    };
+}
+
 const SL = 20;
 const SR = 20;
 const ST = 22;
@@ -133,8 +165,10 @@ const SHEET_STYLE: TableStyle = { title: RED, titleSize: 10, total: RED };
 const REPORT_STYLE: TableStyle = { title: INK, titleSize: 11, total: INK };
 const TITLE_GAP = 20;
 
+const LETTERHEAD_H = 52;
+
 type PageOp =
-    | { kind: 'chrome'; title: string | null }
+    | { kind: 'chrome'; title: string | null; letterhead?: boolean }
     | { kind: 'gap' }
     | { kind: 'title'; text: string; align: 'left' | 'right' }
     | { kind: 'thead'; headers: string[]; weights: number[]; right: Set<number> }
@@ -187,16 +221,28 @@ function sheetRowLayout(
     return { lines, height: 5 + count * SHEET_LINE + 4 };
 }
 
-function chromeHeight(title: string | null, fontBold: PDFFont): number {
-    const height = 30;
+function chromeHeight(title: string | null, fontBold: PDFFont, letterhead = false): number {
+    const height = 30 + (letterhead ? LETTERHEAD_H : 0);
     if (!title)
         return height;
     const lines = wrapAt(title.toUpperCase(), fontBold, sheetTableW(), 9);
     return height + lines.length * 11 + 6;
 }
 
-function drawChrome(page: PDFPage, fontBold: PDFFont, title: string | null): number {
+function drawChrome(page: PDFPage, fontBold: PDFFont, title: string | null, letterhead: { logo: Logo; font: PDFFont } | null = null): number {
     let y = H - ST;
+    if (letterhead) {
+        const logoH = 36;
+        if (letterhead.logo)
+            page.drawImage(letterhead.logo, { x: SL, y: y - logoH, width: logoH * COVER_LETTERHEAD_LOGO_ASPECT, height: logoH });
+        let cy = y - 4;
+        for (const line of KOSTA_LEGAL_LETTERHEAD_LINES) {
+            const tw = letterhead.font.widthOfTextAtSize(line, 6);
+            page.drawText(line, { x: W - SR - tw, y: cy, size: 6, font: letterhead.font, color: MUTED });
+            cy -= 8;
+        }
+        y -= LETTERHEAD_H;
+    }
     const size = 8;
     const padX = 6;
     const padY = 3;
@@ -217,11 +263,6 @@ function drawChrome(page: PDFPage, fontBold: PDFFont, title: string | null): num
         y -= lines.length * 11 + 6;
     }
     return y;
-}
-
-function sortedProjectLines(snapshot: CombinedReportSnapshot, projectIndex: number) {
-    return [...(snapshot.projects[projectIndex]?.lines ?? [])].sort((a, b) => a.date.localeCompare(b.date)
-        || (a.initials || a.user).localeCompare(b.initials || b.user));
 }
 
 function sheetBlocks(
@@ -246,7 +287,7 @@ function sheetBlocks(
                 line.task || '—',
                 line.description || '—',
                 sheetNum(line.hours),
-                sheetNum(line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0)),
+                sheetNum(combinedLineRate(line)),
                 sheetNum(line.amount),
             ],
         }));
@@ -261,7 +302,7 @@ function sheetBlocks(
     }
     if (showSummary) {
         const people = projectSummaryRows(snapshot, projectIndex);
-        const summaryHours = people.reduce((sum, person) => sum + person.hours, 0);
+        const summaryHours = people.reduce((sum, person) => sum + (person.entries != null ? 0 : person.hours), 0);
         const summaryFees = people.reduce((sum, person) => sum + person.amount, 0);
         out.push({
             headers: ['Initials', 'Name', 'Title', 'Hours', `Rate (${cur})`, `Amount (${cur})`],
@@ -269,7 +310,7 @@ function sheetBlocks(
             right: new Set([3, 4, 5]),
             rows: [
                 ...people.map((person) => ({
-                    cells: [person.initials, person.name, person.title, sheetNum(person.hours), sheetNum(person.rate), sheetNum(person.amount)],
+                    cells: [person.initials, person.name, person.title, summaryRowHoursText(person, sheetNum), sheetNum(person.rate), sheetNum(person.amount)],
                 })),
                 { bold: true, cells: ['', '', `Total (${cur})`, sheetNum(summaryHours), '', sheetNum(summaryFees)] },
             ],
@@ -333,9 +374,9 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
     const slices = planCombinedReportPreviewPages(snapshot).filter((slice) => slice.projectIndex >= 0);
     const pages: PageOp[][] = [];
     let y = 0;
-    const open = (title: string | null) => {
-        pages.push([{ kind: 'chrome', title }]);
-        y = H - ST - chromeHeight(title, fontBold);
+    const open = (title: string | null, letterhead = false) => {
+        pages.push([{ kind: 'chrome', title, letterhead }]);
+        y = H - ST - chromeHeight(title, fontBold, letterhead);
     };
     const push = (op: PageOp, height: number) => {
         pages[pages.length - 1]!.push(op);
@@ -346,14 +387,20 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
         const title = slice.showMasthead
             ? (project?.pageTitle?.trim() || `${snapshot.feeTitle} (${project?.name ?? ''})`).toUpperCase()
             : null;
-        open(title);
+        open(title, slice.showLetterhead);
         const showTime = slice.showTimeTotal || slice.timeTo > slice.timeFrom;
+        const showFlat = slice.showFlatTotal || slice.flatTo > slice.flatFrom;
+        const flatLines = sortedProjectFlatLines(snapshot, slice.projectIndex);
         const showExpenses = slice.showExpensesTotal || slice.expensesTo > slice.expensesFrom;
         const expenseBlock = showExpenses
             ? expenseSheetBlock(snapshot, slice.projectIndex, slice.expensesFrom, slice.expensesTo, slice.showExpensesTotal)
             : null;
         const blocks: Block[] = [
-            ...sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal),
+            ...sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, false),
+            ...(showFlat
+                ? [flatBlock(flatLines.slice(Math.max(0, slice.flatFrom), Math.max(0, slice.flatTo)), snapshot.currency || 'USD', sheetNum, slice.showFlatTotal)]
+                : []),
+            ...sheetBlocks(snapshot, slice.projectIndex, 0, 0, false, false, slice.showPeopleTotal),
             ...(expenseBlock ? [expenseBlock] : []),
             ...(slice.showProjectsSummary ? [projectsSummaryBlock(snapshot)] : []),
         ];
@@ -470,14 +517,19 @@ function drawSheetOps(
     font: PDFFont,
     fontBold: PDFFont,
     ops: PageOp[],
-    { startY = H - ST, frame = SHEET_FRAME, style = SHEET_STYLE }: { startY?: number; frame?: Frame; style?: TableStyle } = {},
+    { startY = H - ST, frame = SHEET_FRAME, style = SHEET_STYLE, letterhead = null }: {
+        startY?: number;
+        frame?: Frame;
+        style?: TableStyle;
+        letterhead?: { logo: Logo; font: PDFFont } | null;
+    } = {},
 ): void {
     let y = startY;
     const left = frame.left;
     const tableW = frame.width;
     for (const op of ops) {
         if (op.kind === 'chrome') {
-            y = drawChrome(page, fontBold, op.title);
+            y = drawChrome(page, fontBold, op.title, op.letterhead ? letterhead : null);
             continue;
         }
         if (op.kind === 'gap') {
@@ -540,7 +592,7 @@ export function drawCombinedReportPages(
     if (snapshot.layout === 'perProject') {
         for (const ops of planPerProjectPages(snapshot, font, fontBold)) {
             const page = doc.addPage([W, H]);
-            drawSheetOps(page, font, fontBold, ops);
+            drawSheetOps(page, font, fontBold, ops, { letterhead: { logo, font } });
         }
         return;
     }

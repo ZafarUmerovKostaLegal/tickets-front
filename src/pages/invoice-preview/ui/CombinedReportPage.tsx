@@ -1,8 +1,20 @@
 import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
-import { combinedProjectTotals, planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
-import { patchProjectSummary, projectExpenseIndexes, projectSummaryRows, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedProjectTotals, planCombinedReportPreviewPages, sortedProjectFlatLines, sortedProjectLines } from '../lib/combinedReportPreviewPages';
+import {
+    combinedLineRate,
+    combinedPeopleRows,
+    flatFeeTableTitle,
+    isFlatFeeLine,
+    patchCombinedPeople,
+    patchProjectSummary,
+    projectExpenseIndexes,
+    projectSummaryRows,
+    summaryRowHoursText,
+    type CombinedReportLine,
+    type CombinedReportSnapshot,
+} from '@pages/time-tracking/lib/combinedInvoice';
 import { formatTimeReportHours } from '../lib/invoiceTimeReportModel';
 import './InvoiceTimeReportPage.css';
 
@@ -138,7 +150,18 @@ function NumCell({
 
 type DetailRef = { key: string; line: CombinedReportLine; projectIndex: number; lineIndex: number };
 
-function detailRefs(report: CombinedReportSnapshot): DetailRef[] {
+function Letterhead() {
+    return (
+        <header className="tt-inv-creport__head tt-inv-tr__letterhead">
+            <img className="tt-inv-creport__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
+            <address>
+                {KOSTA_LEGAL_LETTERHEAD_LINES.map((line) => <span key={line}>{line}</span>)}
+            </address>
+        </header>
+    );
+}
+
+function detailRefs(report: CombinedReportSnapshot, flat = false): DetailRef[] {
     return report.projects
         .flatMap((project, projectIndex) => project.lines.map((line, lineIndex) => ({
             key: `${projectIndex}-${lineIndex}`,
@@ -146,6 +169,7 @@ function detailRefs(report: CombinedReportSnapshot): DetailRef[] {
             projectIndex,
             lineIndex,
         })))
+        .filter((ref) => isFlatFeeLine(ref.line) === flat)
         .sort((a, b) => a.line.date.localeCompare(b.line.date)
             || (a.line.initials || a.line.user).localeCompare(b.line.initials || b.line.user));
 }
@@ -172,19 +196,27 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
     const showExpenses = slice.showExpensesTotal || slice.expensesTo > slice.expensesFrom;
     const showShares = slice.showSharesTotal || slice.sharesTo > slice.sharesFrom;
     const timeRows = detailRefs(report).slice(slice.timeFrom, slice.timeTo);
+    const flatRefs = detailRefs(report, true);
+    const people = combinedPeopleRows(report);
+    const flatHours = flatRefs.reduce((sum, ref) => sum + (Number(ref.line.hours) || 0), 0);
+    const flatFees = flatRefs.reduce((sum, ref) => sum + (Number(ref.line.amount) || 0), 0);
+    const hasFlat = flatRefs.length > 0;
+    const showFlatMerged = slice.showFlatTotal || slice.flatTo > slice.flatFrom;
     if (slice.projectIndex >= 0) {
         const project = report.projects[slice.projectIndex];
-        const projectLines = [...(project?.lines ?? [])].sort((a, b) => a.date.localeCompare(b.date)
-            || (a.initials || a.user).localeCompare(b.initials || b.user));
+        const projectLines = sortedProjectLines(report, slice.projectIndex);
         const visibleLines = projectLines.slice(slice.timeFrom, slice.timeTo);
+        const flatLines = sortedProjectFlatLines(report, slice.projectIndex);
+        const showFlat = slice.showFlatTotal || slice.flatTo > slice.flatFrom;
         const title = project?.pageTitle?.trim() || `${report.feeTitle} (${project?.name ?? ''})`;
         const projectPeople = projectSummaryRows(report, slice.projectIndex);
         const projectHours = projectLines.reduce((sum, line) => sum + line.hours, 0);
         const projectFees = projectLines.reduce((sum, line) => sum + line.amount, 0);
-        const summaryHours = projectPeople.reduce((sum, person) => sum + person.hours, 0);
+        const summaryHours = projectPeople.reduce((sum, person) => sum + (person.entries != null ? 0 : person.hours), 0);
         const summaryFees = projectPeople.reduce((sum, person) => sum + person.amount, 0);
         return (
             <div className={`tt-inv-tr tt-inv-tr--sheet${editable ? ' tt-inv-tr--editable' : ''}`}>
+                {slice.showLetterhead ? <Letterhead /> : null}
                 <div className="tt-inv-tr__top">
                     <span className="tt-inv-tr__confidential">Private and confidential</span>
                 </div>
@@ -229,7 +261,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                             <TextCell editable={editable} ariaLabel="Task" value={line.task || ''} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { task: v })} />
                                             <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { description: v })} />
                                             <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Hours" value={line.hours} format={formatTimeReportHours} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { hours: v })} />
-                                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0))}</td>
+                                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(combinedLineRate(line))}</td>
                                             <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Amount" value={line.amount} format={(n) => formatTimeReportHours(n)} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { amount: v })} />
                                         </tr>
                                     );
@@ -247,6 +279,17 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                             ) : null}
                         </table>
                     </div>
+                ) : null}
+                {showFlat ? (
+                    <FlatFeeSheet
+                        lines={flatLines}
+                        from={slice.flatFrom}
+                        to={slice.flatTo}
+                        showTotal={slice.showFlatTotal}
+                        cur={cur}
+                        editable={editable}
+                        onPatch={(line, patch) => patchLine(slice.projectIndex, project?.lines.indexOf(line) ?? -1, patch)}
+                    />
                 ) : null}
                 {slice.showPeopleTotal ? (
                     <div className="tt-inv-tr__table-wrap">
@@ -267,7 +310,9 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                         <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { initials: v }))} />
                                         <TextCell editable={editable} ariaLabel="Name" value={person.name} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { name: v }))} />
                                         <TextCell editable={editable} ariaLabel="Title" value={person.title} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { title: v }))} />
-                                        <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Hours" value={person.hours} format={formatTimeReportHours} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { hours: v }))} />
+                                        {person.entries != null
+                                            ? <td className="tt-inv-tr__cell--num">{summaryRowHoursText(person, formatTimeReportHours)}</td>
+                                            : <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Hours" value={person.hours} format={formatTimeReportHours} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { hours: v }))} />}
                                         <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { rate: v }))} />
                                         <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Amount" value={person.amount} format={money} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { amount: v }))} />
                                     </tr>
@@ -439,23 +484,64 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                 <tr>
                                     <td colSpan={4}>Total</td>
                                     <NumCell
-                                        editable={editable}
+                                        editable={editable && !hasFlat}
                                         foot
                                         className="num"
                                         ariaLabel="Total hours"
-                                        value={report.totalHours}
+                                        value={report.totalHours - flatHours}
                                         format={hours}
-                                        onChange={(v) => emit({ ...report, totalHours: v })}
+                                        onChange={(v) => emit({ ...report, totalHours: v + flatHours })}
                                     />
                                     <NumCell
-                                        editable={editable}
+                                        editable={editable && !hasFlat}
                                         foot
                                         className="num"
                                         ariaLabel="Total amount"
-                                        value={report.totalFees}
+                                        value={report.totalFees - flatFees}
                                         format={money}
-                                        onChange={(v) => emit({ ...report, totalFees: v })}
+                                        onChange={(v) => emit({ ...report, totalFees: v + flatFees })}
                                     />
+                                </tr>
+                            </tfoot>
+                        ) : null}
+                    </table>
+                </section>
+            ) : null}
+            {showFlatMerged ? (
+                <section className="tt-inv-creport__block">
+                    <h2>{flatFeeTableTitle(flatRefs.map((ref) => ref.line))}</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Initials</th>
+                                <th>Task</th>
+                                <th>Description</th>
+                                <th className="num">Per entry</th>
+                                <th className="num">Rate ({cur})</th>
+                                <th className="num">Amount ({cur})</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {flatRefs.slice(Math.max(0, slice.flatFrom), Math.max(0, slice.flatTo)).map(({ key, line, projectIndex, lineIndex }) => (
+                                <tr key={key}>
+                                    <TextCell editable={editable} ariaLabel="Date" value={dateRu(line.date)} onChange={(v) => patchLine(projectIndex, lineIndex, { date: commitDate(v) })} />
+                                    <TextCell editable={editable} ariaLabel="Initials" value={line.initials || line.user} onChange={(v) => patchLine(projectIndex, lineIndex, { initials: v })} />
+                                    <TextCell editable={editable} ariaLabel="Task" value={line.task || ''} onChange={(v) => patchLine(projectIndex, lineIndex, { task: v })} />
+                                    <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => patchLine(projectIndex, lineIndex, { description: v })} />
+                                    <td className="num">{hours(1)}</td>
+                                    <td className="num">{money(combinedLineRate(line))}</td>
+                                    <NumCell editable={editable} className="num" ariaLabel="Amount" value={line.amount} format={money} onChange={(v) => patchLine(projectIndex, lineIndex, { amount: v, rate: v })} />
+                                </tr>
+                            ))}
+                        </tbody>
+                        {slice.showFlatTotal ? (
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={4}>Total</td>
+                                    <td className="num">{hours(flatRefs.length)}</td>
+                                    <td />
+                                    <td className="num">{money(flatFees)}</td>
                                 </tr>
                             </tfoot>
                         ) : null}
@@ -478,44 +564,24 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                             </tr>
                         </thead>
                         <tbody>
-                            {report.people.slice(Math.max(0, slice.peopleFrom), Math.max(0, slice.peopleTo)).map((person, offset) => {
+                            {people.slice(Math.max(0, slice.peopleFrom), Math.max(0, slice.peopleTo)).map((person, offset) => {
                                 const index = Math.max(0, slice.peopleFrom) + offset;
                                 return (
                                     <tr key={`person-${index}`}>
-                                        <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, initials: v } : row),
-                                        })}
+                                        <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit(patchCombinedPeople(report, index, { initials: v }))}
                                         />
-                                        <TextCell editable={editable} ariaLabel="Name" value={person.name} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, name: v } : row),
-                                        })}
+                                        <TextCell editable={editable} ariaLabel="Name" value={person.name} onChange={(v) => emit(patchCombinedPeople(report, index, { name: v }))}
                                         />
-                                        <TextCell editable={editable} ariaLabel="Title" value={person.title} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, title: v } : row),
-                                        })}
+                                        <TextCell editable={editable} ariaLabel="Title" value={person.title} onChange={(v) => emit(patchCombinedPeople(report, index, { title: v }))}
                                         />
-                                        <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, rate: v } : row),
-                                        })}
+                                        <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit(patchCombinedPeople(report, index, { rate: v }))}
                                         />
-                                        <NumCell editable={editable} className="num" ariaLabel="Hours" value={person.hours} format={hours} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, hours: v } : row),
-                                        })}
+                                        {person.entries != null
+                                            ? <td className="num">{summaryRowHoursText(person, hours)}</td>
+                                            : <NumCell editable={editable} className="num" ariaLabel="Hours" value={person.hours} format={hours} onChange={(v) => emit(patchCombinedPeople(report, index, { hours: v }))} />}
+                                        <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit(patchCombinedPeople(report, index, { rate: v }))}
                                         />
-                                        <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, rate: v } : row),
-                                        })}
-                                        />
-                                        <NumCell editable={editable} className="num" ariaLabel="Amount" value={person.amount} format={money} onChange={(v) => emit({
-                                            ...report,
-                                            people: report.people.map((row, i) => i === index ? { ...row, amount: v } : row),
-                                        })}
+                                        <NumCell editable={editable} className="num" ariaLabel="Amount" value={person.amount} format={money} onChange={(v) => emit(patchCombinedPeople(report, index, { amount: v }))}
                                         />
                                     </tr>
                                 );
@@ -530,9 +596,9 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                         foot
                                         className="num"
                                         ariaLabel="Summary hours"
-                                        value={report.totalHours}
+                                        value={report.totalHours - flatHours}
                                         format={hours}
-                                        onChange={(v) => emit({ ...report, totalHours: v })}
+                                        onChange={(v) => emit({ ...report, totalHours: v + flatHours })}
                                     />
                                     <td />
                                     <NumCell
@@ -744,6 +810,59 @@ function ProjectsSummary({ report, cur }: { report: CombinedReportSnapshot; cur:
                         <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(total.total)}</td>
                     </tr>
                 </tfoot>
+            </table>
+        </div>
+    );
+}
+
+function FlatFeeSheet({ lines, from, to, showTotal, cur, editable, onPatch }: {
+    lines: CombinedReportLine[];
+    from: number;
+    to: number;
+    showTotal: boolean;
+    cur: string;
+    editable: boolean;
+    onPatch: (line: CombinedReportLine, patch: Partial<CombinedReportLine>) => void;
+}) {
+    const total = lines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+    return (
+        <div className="tt-inv-tr__table-wrap">
+            <h2 className="tt-inv-tr__subtitle">{flatFeeTableTitle(lines)}</h2>
+            <table className="tt-inv-tr__table">
+                <thead className="tt-inv-tr__thead">
+                    <tr>
+                        <th style={{ width: '12%' }}>Date</th>
+                        <th style={{ width: '8%' }}>Initials</th>
+                        <th style={{ width: '16%' }}>Task</th>
+                        <th style={{ width: '30%' }}>Description</th>
+                        <th className="num" style={{ width: '10%' }}>Per entry</th>
+                        <th className="num" style={{ width: '12%' }}>Rate</th>
+                        <th className="num" style={{ width: '12%' }}>Amount ({cur})</th>
+                    </tr>
+                </thead>
+                <tbody className="tt-inv-tr__tbody">
+                    {lines.slice(Math.max(0, from), Math.max(0, to)).map((line, index) => (
+                        <tr key={`${line.date}-${line.initials}-${from + index}`}>
+                            <TextCell editable={editable} ariaLabel="Date" value={dateRu(line.date)} onChange={(v) => onPatch(line, { date: commitDate(v) })} />
+                            <TextCell editable={editable} ariaLabel="Initials" value={line.initials || line.user} onChange={(v) => onPatch(line, { initials: v })} />
+                            <TextCell editable={editable} ariaLabel="Task" value={line.task || ''} onChange={(v) => onPatch(line, { task: v })} />
+                            <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => onPatch(line, { description: v })} />
+                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(1)}</td>
+                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(combinedLineRate(line))}</td>
+                            <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Amount" value={line.amount} format={formatTimeReportHours} onChange={(v) => onPatch(line, { amount: v, rate: v })} />
+                        </tr>
+                    ))}
+                </tbody>
+                {showTotal ? (
+                    <tfoot className="tt-inv-tr__tfoot">
+                        <tr>
+                            <td colSpan={4}>Total ({cur})</td>
+                            <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(lines.length)}</td>
+                            <td />
+                            <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(total)}</td>
+                        </tr>
+                    </tfoot>
+                ) : null}
             </table>
         </div>
     );
