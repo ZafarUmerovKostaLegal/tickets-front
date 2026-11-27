@@ -38,6 +38,7 @@ export const enMessages = {
         searchPlaceholder: 'Find a section…',
         searchEmpty: 'No sections found',
         greetingSubtitle: 'Choose a section below or use the search bar in the header.',
+        treeRedecorate: 'Decorate the tree again',
         greeting: {
             morning: 'Good morning',
             afternoon: 'Good afternoon',

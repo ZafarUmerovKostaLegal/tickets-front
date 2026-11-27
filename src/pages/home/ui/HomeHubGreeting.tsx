@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
+import { HubXmasTree } from '@widgets/snowfall/ui/HubXmasTree';
 import './HomeHubGreeting.css';
 
 function getGreetingKey(hour: number): 'morning' | 'afternoon' | 'evening' {
@@ -22,7 +23,7 @@ function getFirstName(displayName: string | null | undefined, email: string | un
     return fallback;
 }
 
-export function HomeHubGreeting() {
+export function HomeHubGreeting({ festive = false }: { festive?: boolean }) {
     const { t, locale } = useI18n();
     const { user, loading } = useCurrentUser();
 
@@ -63,6 +64,7 @@ export function HomeHubGreeting() {
             <time className="home-hub-greeting__date" dateTime={now.toISOString()}>
                 {formattedDate}
             </time>
+            {festive ? <HubXmasTree label={t('homeHub.treeRedecorate')} /> : null}
         </header>
     );
 }

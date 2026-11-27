@@ -38,6 +38,7 @@ export const ruMessages: Messages = {
         searchPlaceholder: 'Найти раздел…',
         searchEmpty: 'Разделы не найдены',
         greetingSubtitle: 'Выберите нужный раздел ниже или воспользуйтесь поиском в шапке.',
+        treeRedecorate: 'Нарядить ёлку заново',
         greeting: {
             morning: 'Доброе утро',
             afternoon: 'Доброго дня',
@@ -1318,6 +1319,7 @@ export type Messages = {
         searchPlaceholder: string;
         searchEmpty: string;
         greetingSubtitle: string;
+        treeRedecorate: string;
         greeting: Record<'morning' | 'afternoon' | 'evening', string>;
         sections: Record<'daily' | 'finance' | 'team', string>;
     };

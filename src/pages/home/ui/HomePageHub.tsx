@@ -53,7 +53,7 @@ export function HomePageHub() {
             {snowy ? <GarlandString /> : null}
             <main className={`home-page__main home-page__main--hub${snowy ? ' home-page__main--hub-festive' : ''}`}>
                 <div className="home-page__main-inner home-page__main-inner--hub">
-                    <HomeHubGreeting />
+                    <HomeHubGreeting festive={snowy} />
                     <HomeNavTiles searchQuery={searchQuery} />
                 </div>
             </main>

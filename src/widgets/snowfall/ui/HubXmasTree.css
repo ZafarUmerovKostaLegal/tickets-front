@@ -1,0 +1,178 @@
+.hub-tree {
+    --hub-tree-green-hi: #2f7d5b;
+    --hub-tree-green-lo: #174a37;
+    --hub-tree-trunk: #7a5134;
+    --hub-tree-ruby: #8b2635;
+    --hub-tree-gold: #d4a24c;
+    --hub-tree-ice: #b9c9dd;
+    --hub-tree-wire: #e7c27a;
+    --hub-tree-light: #ffd27a;
+    --hub-tree-shadow: rgba(15, 23, 42, 0.12);
+
+    position: absolute;
+    right: 15rem;
+    bottom: -10px;
+    width: 124px;
+    height: 166px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body[data-theme='dark'] .hub-tree {
+    --hub-tree-green-hi: #3c9a72;
+    --hub-tree-green-lo: #1d5a43;
+    --hub-tree-trunk: #8f6444;
+    --hub-tree-ruby: #c0485a;
+    --hub-tree-ice: #d6e2f0;
+    --hub-tree-shadow: rgba(0, 0, 0, 0.35);
+}
+
+.hub-tree:focus-visible {
+    outline: 2px solid var(--app-accent-focus, var(--app-accent, #4f46e5));
+    outline-offset: 4px;
+    border-radius: 12px;
+}
+
+.hub-tree__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    transition: transform 0.25s ease;
+    transform-origin: 50% 100%;
+}
+
+@media (hover: hover) {
+    .hub-tree:hover .hub-tree__svg {
+        transform: translateY(-2px) scale(1.03);
+    }
+}
+
+.hub-tree__shadow { fill: var(--hub-tree-shadow); }
+.hub-tree__trunk { fill: var(--hub-tree-trunk); }
+
+.hub-tree__tier,
+.hub-tree__ball,
+.hub-tree__gifts,
+.hub-tree__star {
+    transform-box: fill-box;
+}
+
+.hub-tree__tier {
+    transform-origin: 50% 100%;
+    animation: hub-tree-grow 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) var(--d, 0s) both;
+}
+
+.hub-tree__garland {
+    fill: none;
+    stroke: var(--hub-tree-wire);
+    stroke-width: 1.1;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: hub-tree-draw 0.5s ease-out var(--d, 0s) both;
+}
+
+.hub-tree__light {
+    fill: var(--hub-tree-light);
+    animation:
+        hub-tree-pop 0.25s ease-out var(--d, 0s) both,
+        hub-tree-twinkle 2.4s ease-in-out calc(var(--d, 0s) + 0.3s + var(--tw, 0s)) infinite;
+}
+
+.hub-tree__ball {
+    transform-origin: 50% 0%;
+    animation: hub-tree-hang 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
+}
+
+.hub-tree__thread {
+    stroke: var(--hub-tree-wire);
+    stroke-width: 0.6;
+}
+
+.hub-tree__ball--ruby .hub-tree__ball-fill { fill: var(--hub-tree-ruby); }
+.hub-tree__ball--gold .hub-tree__ball-fill { fill: var(--hub-tree-gold); }
+.hub-tree__ball--ice .hub-tree__ball-fill { fill: var(--hub-tree-ice); }
+
+.hub-tree__gifts {
+    transform-origin: 50% 100%;
+    animation: hub-tree-grow 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
+}
+
+.hub-tree__gift--ruby { fill: var(--hub-tree-ruby); }
+.hub-tree__gift--gold { fill: var(--hub-tree-gold); }
+.hub-tree__ribbon { fill: var(--hub-tree-gold); }
+.hub-tree__ribbon--ruby { fill: var(--hub-tree-ruby); }
+.hub-tree__bow { fill: none; stroke: var(--hub-tree-gold); stroke-width: 1.4; }
+
+.hub-tree__star {
+    transform-origin: 50% 50%;
+    animation: hub-tree-star 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both;
+}
+
+.hub-tree__star-fill { fill: var(--hub-tree-gold); }
+
+.hub-tree__star-glow {
+    fill: var(--hub-tree-light);
+    opacity: 0.35;
+    animation: hub-tree-glow 2.8s ease-in-out calc(var(--d, 0s) + 0.7s) infinite;
+}
+
+.hub-tree--paused *,
+.hub-tree--paused {
+    animation-play-state: paused !important;
+}
+
+@keyframes hub-tree-grow {
+    from { opacity: 0; transform: scale(0.4); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hub-tree-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes hub-tree-pop {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes hub-tree-twinkle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes hub-tree-hang {
+    0% { opacity: 0; transform: translateY(-14px) scale(0.3); }
+    60% { opacity: 1; transform: translateY(1px) scale(1.12); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes hub-tree-star {
+    from { opacity: 0; transform: scale(0) rotate(-180deg); }
+    to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes hub-tree-glow {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hub-tree *,
+    .hub-tree__svg {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+@media (max-width: 1099px) {
+    .hub-tree {
+        display: none;
+    }
+}
