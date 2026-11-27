@@ -732,7 +732,7 @@ function LegalHubPageBody() {
                                                         aria-label={lateLabel ? `${label}, ${lateLabel}` : undefined}
                                                         onClick={() => openSection(item.id)}
                                                     >
-                                                        <span className={`lh-side__item-icon lh-side__tile is-${item.id === 'myTasks' ? 'indigo' : 'teal'}`} aria-hidden>
+                                                        <span className="lh-side__item-icon lh-side__tile" aria-hidden>
                                                             <Icon />
                                                             {showCount ? <i className={`lh-side__dot${hot ? ' lh-side__dot--hot' : ''}`} /> : null}
                                                         </span>
@@ -921,7 +921,7 @@ function LegalHubPageBody() {
                                             aria-current={navSection === 'projects' && openProjectId == null ? 'page' : undefined}
                                             onClick={() => openSection('projects')}
                                         >
-                                            <span className="lh-side__item-icon lh-side__tile is-amber" aria-hidden>
+                                            <span className="lh-side__item-icon lh-side__tile" aria-hidden>
                                                 <IconMap />
                                             </span>
                                             <span className="lh-side__item-label">{t('legalHub.projects')}</span>
@@ -934,7 +934,7 @@ function LegalHubPageBody() {
                                             aria-current={navSection === 'allTeam' ? 'page' : undefined}
                                             onClick={() => openSection('allTeam')}
                                         >
-                                            <span className="lh-side__item-icon lh-side__tile is-rose" aria-hidden>
+                                            <span className="lh-side__item-icon lh-side__tile" aria-hidden>
                                                 <IconTeam />
                                             </span>
                                             <span className="lh-side__item-label">{t('legalHub.allTeam')}</span>
