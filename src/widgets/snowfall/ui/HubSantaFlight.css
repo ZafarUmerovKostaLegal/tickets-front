@@ -1,0 +1,162 @@
+.hub-santa {
+    --hub-santa-fur: #8a5a3b;
+    --hub-santa-fur-light: #c99a72;
+    --hub-santa-antler: #5b3a26;
+    --hub-santa-red: #b3283a;
+    --hub-santa-sleigh: #8b2635;
+    --hub-santa-gold: #d4a24c;
+    --hub-santa-snow: #ffffff;
+    --hub-santa-skin: #f2c9a8;
+    --hub-santa-sack: #a77b4f;
+    --hub-santa-spark: #ffd27a;
+    --hub-santa-w: 260px;
+
+    position: absolute;
+    top: 1.75rem;
+    left: 0;
+    right: 0;
+    height: 76px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+
+body[data-theme='dark'] .hub-santa {
+    --hub-santa-fur: #a8734f;
+    --hub-santa-fur-light: #ddb38d;
+    --hub-santa-antler: #d8c3a5;
+    --hub-santa-red: #d0394c;
+    --hub-santa-sleigh: #b3364a;
+    --hub-santa-snow: #f1f5f9;
+}
+
+.hub-santa__flight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--hub-santa-w);
+    transform: translate3d(calc(100vw + 40px), 0, 0);
+    animation: hub-santa-fly 34s linear 4s infinite;
+    will-change: transform;
+}
+
+.hub-santa__bob {
+    animation: hub-santa-bob 1.6s ease-in-out infinite alternate;
+}
+
+.hub-santa__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.hub-santa__fur { fill: var(--hub-santa-fur); }
+.hub-santa__belly { fill: none; stroke: var(--hub-santa-fur-light); stroke-width: 2; stroke-linecap: round; }
+.hub-santa__eye { fill: #1f1a17; }
+.hub-santa__nose { fill: #3b2a20; }
+.hub-santa__nose--lead { fill: #e0303f; }
+.hub-santa__nose-glow { fill: #ff5a64; opacity: 0.35; animation: hub-santa-glow 1.2s ease-in-out infinite alternate; }
+
+.hub-santa__antler,
+.hub-santa__legs path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.hub-santa__antler { stroke: var(--hub-santa-antler); stroke-width: 1.4; }
+.hub-santa__legs path { stroke: var(--hub-santa-fur); stroke-width: 2.4; }
+
+.hub-santa__legs {
+    transform-box: fill-box;
+    transform-origin: 50% 0%;
+    animation: hub-santa-gallop 0.5s ease-in-out infinite alternate;
+}
+
+.hub-santa__legs--back { animation-delay: -0.25s; }
+
+.hub-santa__harness,
+.hub-santa__reins {
+    fill: none;
+    stroke: var(--hub-santa-gold);
+    stroke-width: 1;
+    stroke-linecap: round;
+}
+
+.hub-santa__harness { stroke-width: 1.6; }
+.hub-santa__runner,
+.hub-santa__strut,
+.hub-santa__curl {
+    fill: none;
+    stroke: var(--hub-santa-gold);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+
+.hub-santa__strut { stroke-width: 1.6; }
+.hub-santa__sleigh { fill: var(--hub-santa-sleigh); }
+.hub-santa__sleigh-trim { fill: none; stroke: var(--hub-santa-gold); stroke-width: 1.2; }
+.hub-santa__sack { fill: var(--hub-santa-sack); }
+.hub-santa__sack-tie { fill: none; stroke: var(--hub-santa-gold); stroke-width: 1.4; stroke-linecap: round; }
+.hub-santa__gift { fill: var(--hub-santa-gold); }
+.hub-santa__gift-ribbon { stroke: var(--hub-santa-red); stroke-width: 1.6; }
+.hub-santa__suit,
+.hub-santa__hat { fill: var(--hub-santa-red); }
+.hub-santa__arm { fill: none; stroke: var(--hub-santa-red); stroke-width: 4; stroke-linecap: round; }
+.hub-santa__mitt { fill: #2b2b2b; }
+.hub-santa__face { fill: var(--hub-santa-skin); }
+.hub-santa__beard,
+.hub-santa__pom { fill: var(--hub-santa-snow); }
+.hub-santa__trim { fill: none; stroke: var(--hub-santa-snow); stroke-width: 2.6; stroke-linecap: round; }
+
+.hub-santa__spark {
+    fill: var(--hub-santa-spark);
+    animation: hub-santa-spark 0.9s ease-in-out var(--d, 0s) infinite alternate;
+}
+
+.hub-santa--paused,
+.hub-santa--paused * {
+    animation-play-state: paused !important;
+}
+
+@keyframes hub-santa-fly {
+    0% { transform: translate3d(calc(100vw + 40px), 18px, 0); }
+    20% { transform: translate3d(calc(50vw - var(--hub-santa-w) / 2), 0, 0); }
+    40% { transform: translate3d(calc(-1 * var(--hub-santa-w) - 40px), 14px, 0); }
+    100% { transform: translate3d(calc(-1 * var(--hub-santa-w) - 40px), 14px, 0); }
+}
+
+@keyframes hub-santa-bob {
+    from { transform: translateY(-3px) rotate(-1.5deg); }
+    to { transform: translateY(3px) rotate(1deg); }
+}
+
+@keyframes hub-santa-gallop {
+    from { transform: rotate(-16deg); }
+    to { transform: rotate(14deg); }
+}
+
+@keyframes hub-santa-spark {
+    from { opacity: 0.15; }
+    to { opacity: 0.95; }
+}
+
+@keyframes hub-santa-glow {
+    from { opacity: 0.2; }
+    to { opacity: 0.6; }
+}
+
+@media (max-width: 767px) {
+    .hub-santa {
+        --hub-santa-w: 170px;
+        top: 1.25rem;
+        height: 52px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hub-santa {
+        display: none;
+    }
+}

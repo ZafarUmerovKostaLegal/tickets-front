@@ -5,6 +5,7 @@ import { HomeNavTiles } from './HomeNavTiles';
 import { HomeHubTopBar } from './HomeHubTopBar';
 import { HomeHubGreeting } from './HomeHubGreeting';
 import { GarlandString } from '@widgets/snowfall/ui/GarlandString';
+import { HubSantaFlight } from '@widgets/snowfall/ui/HubSantaFlight';
 import './HomePage.css';
 
 export function HomePageHub() {
@@ -52,6 +53,7 @@ export function HomePageHub() {
             <HomeHubTopBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
             {snowy ? <GarlandString /> : null}
             <main className={`home-page__main home-page__main--hub${snowy ? ' home-page__main--hub-festive' : ''}`}>
+                {snowy ? <HubSantaFlight /> : null}
                 <div className="home-page__main-inner home-page__main-inner--hub">
                     <HomeHubGreeting festive={snowy} />
                     <HomeNavTiles searchQuery={searchQuery} />

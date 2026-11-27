@@ -348,6 +348,7 @@ export function ExpensesCashPage() {
     const allowed = isPartnerOrgRole(user?.role, user?.position);
     const [state, setState] = useState<CashState | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [exporting, setExporting] = useState(false);
     const [busy, setBusy] = useState(false);
     const [form, setForm] = useState<FormKind | null>(null);
     const [editing, setEditing] = useState<CashMovement | null>(null);
@@ -559,6 +560,24 @@ export function ExpensesCashPage() {
         }
         return [...map.entries()];
     }, [state, filter, debouncedQuery, searchHits, activeRange]);
+
+    const exportExcel = async () => {
+        setExporting(true);
+        try {
+            const rows = groups.flatMap(([, list]) => list);
+            const period = activeRange
+                ? (periodLabel || [activeRange.from, activeRange.to].filter(Boolean).join(' — '))
+                : '';
+            const { exportCashToExcel } = await import('@entities/expenses/lib/exportCash');
+            await exportCashToExcel(rows, { period, balance: state?.balance ?? null });
+        }
+        catch (err: unknown) {
+            showToast({ message: err instanceof Error ? err.message : 'Не удалось выгрузить в Excel', variant: 'error' });
+        }
+        finally {
+            setExporting(false);
+        }
+    };
 
     if (loading)
         return (
@@ -995,6 +1014,17 @@ export function ExpensesCashPage() {
                                     </label>
                                 </div>
                             ) : null}
+                            <button
+                                type="button"
+                                className="exp-cash__export"
+                                disabled={exporting || groups.length === 0}
+                                onClick={() => void exportExcel()}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                                    <path d="M12 4v11M7 10l5 5 5-5M5 19h14" />
+                                </svg>
+                                {exporting ? 'Выгрузка…' : 'Выгрузить в Excel'}
+                            </button>
                         </div>
                     </div>
                     {groups.length === 0 ? (
