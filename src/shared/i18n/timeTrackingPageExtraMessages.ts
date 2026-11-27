@@ -98,7 +98,7 @@ export const timeTrackingPageExtraMessages = {
             bankCode: 'МФО / код банка',
             swift: 'SWIFT',
             correspondentBank: 'Банк корреспондент',
-            correspondentAccount: 'Счёт корреспондента (Лоро)',
+            correspondentAccount: 'Счёт корреспондента',
             correspondentBik: 'БИК',
             isDefault: 'Использовать по умолчанию в счетах',
             extendedSection: 'Расширенные реквизиты',

@@ -78,7 +78,7 @@ describe('legalFirmBankingRows', () => {
             'swift',
         ]);
         expect(rows.find((r) => r.field === 'accountNumber')?.label).toBe('Р/с (руб.)');
-        expect(rows.find((r) => r.field === 'correspondentAccount')?.label).toBe('Счёт (Лоро)');
+        expect(rows.find((r) => r.field === 'correspondentAccount')?.label).toBe('Счёт');
         expect(rows.find((r) => r.field === 'correspondentBik')?.label).toBe('БИК');
         expect(rows.find((r) => r.field === 'bankCode')?.label).toBe('МФО');
         expect(rows.find((r) => r.field === 'bankName')?.label).toBe('Основной банк получателя');

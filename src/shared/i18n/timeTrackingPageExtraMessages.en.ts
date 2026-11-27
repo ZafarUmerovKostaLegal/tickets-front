@@ -100,7 +100,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             bankCode: 'MFO / bank code',
             swift: 'SWIFT',
             correspondentBank: 'Correspondent bank',
-            correspondentAccount: 'Correspondent / Loro account',
+            correspondentAccount: 'Correspondent account',
             correspondentBik: 'BIC',
             isDefault: 'Use as default on invoices',
             extendedSection: 'Extended details',
