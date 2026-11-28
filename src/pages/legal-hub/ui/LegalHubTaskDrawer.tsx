@@ -155,7 +155,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
     onReviewed?: (patch: { status?: TaskStatusId; boardColumn: string; reviewerId?: number; done?: boolean; approval?: boolean; assigneeId?: number }) => void;
 }) {
     const { t, locale } = useI18n();
-    const { userId, directory } = useLegalHubView();
+    const { userId, staff } = useLegalHubView();
     const formId = useId();
     const seed = taskDrawerDetail(task);
     const stored = task as HubTask & { instructions?: string; internalOn?: string };
@@ -196,7 +196,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose, onReviewed }: {
         : PERSON_LABEL[task.owner]);
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
-    const reviewers = directory.filter((person) => person.id === reviewerId || person.id !== userId);
+    const reviewers = staff.filter((person) => person.id === reviewerId || person.id !== userId);
     const requestClose = useCallback(() => {
         setClosing((already) => {
             if (already)

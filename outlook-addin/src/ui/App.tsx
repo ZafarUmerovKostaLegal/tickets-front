@@ -20,7 +20,7 @@ import {
   type Location,
   type Suggestion,
 } from '../api';
-import { loginWithHub, logoutHub, signInSilently, signinDetails } from '../auth/authApi';
+import { isMobileOutlook, loginWithCode, loginWithHub, logoutHub, signInSilently, signinDetails, type PairingTicket } from '../auth/authApi';
 import { officeHost, officePlatform, officeVersion, reportSigninProblem, startPresence } from '../presence';
 import { clearLegacyOutlookTokens, type AuthProfile } from '../auth/session';
 import { filterClients, folderPath, locationKey, mergeSuggestions, type SuggestedLocation } from '../explorer';
@@ -101,6 +101,9 @@ export function App({ host }: { host: Office.HostType | null }) {
   const [signInBusy, setSignInBusy] = useState(false);
   const [signInError, setSignInError] = useState('');
   const [signInDetails, setSignInDetails] = useState('');
+  const [pairTicket, setPairTicket] = useState<PairingTicket | null>(null);
+  const [pairBusy, setPairBusy] = useState(false);
+  const pairAbort = useRef<AbortController | null>(null);
 
   const ui = useRef(readUi());
   const [tab, setTab] = useState<Tab>(ui.current.tab);
@@ -229,6 +232,38 @@ export function App({ host }: { host: Office.HostType | null }) {
       setSignInBusy(false);
     }
   };
+
+  const startCodeSignIn = async () => {
+    pairAbort.current?.abort();
+    const controller = new AbortController();
+    pairAbort.current = controller;
+    setPairBusy(true);
+    setSignInError('');
+    setSignInDetails('');
+    try {
+      const me = await loginWithCode((ticket) => {
+        setPairBusy(false);
+        setPairTicket(ticket);
+      }, controller.signal);
+      setProfile(me);
+      setPhase('ready');
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setSignInError(errorText(error));
+    } finally {
+      if (pairAbort.current === controller) {
+        pairAbort.current = null;
+        setPairTicket(null);
+        setPairBusy(false);
+      }
+    }
+  };
+
+  const cancelCodeSignIn = () => {
+    pairAbort.current?.abort();
+  };
+
+  useEffect(() => () => pairAbort.current?.abort(), []);
 
   const logout = async () => {
     await logoutHub();
@@ -656,7 +691,20 @@ export function App({ host }: { host: Office.HostType | null }) {
     );
   }
   if (phase === 'signin')
-    return <SignInScreen busy={signInBusy} error={signInError} details={signInDetails} onSignIn={() => void signIn()} />;
+    return (
+      <SignInScreen busy={signInBusy} error={signInError} details={signInDetails} onSignIn={() => void signIn()}
+        preferCode={isMobileOutlook()}
+        code={{
+          ticket: pairTicket,
+          busy: pairBusy,
+          onStart: () => void startCodeSignIn(),
+          onOpen: () => {
+            if (pairTicket)
+              openInBrowser(pairTicket.verifyUrl);
+          },
+          onCancel: cancelCodeSignIn,
+        }} />
+    );
 
   const filtered = filterClients(clients, filter, { hideClosed });
   const selectedKey = target ? locationKey(target) : null;

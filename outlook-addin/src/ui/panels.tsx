@@ -247,19 +247,19 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
         )}
       </div>
 
-      <div className="kf-filebar__what" role="group" aria-label="Что сохранить">
+      <div className="kf-filebar__what kf-seg" role="group" aria-label="Что сохранить">
         <label className={`kf-chip${options.message && !options.thread ? ' is-on' : ''}`}>
           <input type="radio" name="kf-what" checked={options.message && !options.thread} onChange={() => setOptions({ ...options, message: true, thread: false })} />
-          <Icon name="mail" size={13} />Письмо
+          <Icon name="mail" size={13} /><span>Письмо</span>
         </label>
         <label className={`kf-chip${options.thread ? ' is-on' : ''}`}>
           <input type="radio" name="kf-what" checked={options.thread} onChange={() => setOptions({ ...options, message: false, thread: true })} />
-          <Icon name="thread" size={13} />Вся переписка
+          <Icon name="thread" size={13} /><span>Переписка</span>
         </label>
         {canAttach ? (
           <label className={`kf-chip${!options.message && !options.thread ? ' is-on' : ''}`}>
             <input type="radio" name="kf-what" checked={!options.message && !options.thread} onChange={() => setOptions({ ...options, message: false, thread: false })} />
-            Только вложения
+            <Icon name="clip" size={13} /><span>Вложения</span>
           </label>
         ) : null}
       </div>
@@ -282,7 +282,7 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
         >
           <Icon name="chevron" size={12} className={attachOpen || onlyAttachments ? 'is-open' : ''} />
           <Icon name="clip" size={13} />
-          Вложения отдельными файлами
+          <span className="kf-attach__label">Вложения отдельными файлами</span>
           <span className="kf-attach__count">{options.attachments.length} из {item.attachments.length}</span>
         </button>
       ) : null}
@@ -359,7 +359,7 @@ export function FileBar({ target, item, options, setOptions, busy, alreadyHere, 
           </button>
         ) : null}
       </div>
-      {alreadyHere ? <p className="kf-filebar__note">Это письмо уже есть в этом matter — копию Kosta не создаст. Можно сохранить вложения или всю переписку (она обновится новой версией).</p> : null}
+      {alreadyHere ? <p className="kf-filebar__note">Письмо уже есть в этом matter — копию Kosta не создаст. Вложения и всю переписку сохранить можно: переписка обновится новой версией.</p> : null}
     </div>
   );
 }

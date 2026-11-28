@@ -30,6 +30,7 @@ export const routes = {
     expensesPartnersReport: '/expenses/partners/report',
     rules: '/rules',
     help: '/help',
+    outlookPair: '/outlook-pair',
     callSchedule: '/call-schedule',
     correspondence: '/correspondence',
     correspondenceOutgoingCreate: '/correspondence/outgoing/new',

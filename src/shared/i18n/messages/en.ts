@@ -1299,4 +1299,18 @@ export const enMessages = {
             noEvents: 'No calendar events',
         },
     },
+    outlookPair: {
+        title: 'Sign in to Kosta File for Outlook',
+        lead: 'Confirm the sign-in if the code matches the one shown in Outlook on your phone or computer.',
+        codeLabel: 'Code from Outlook',
+        device: 'Device',
+        confirm: 'Confirm sign-in',
+        confirming: 'Confirming…',
+        doneTitle: 'Done',
+        doneText: 'Go back to Outlook — you will be signed in automatically in a few seconds.',
+        notFound: 'The code was not found or has expired. Request a new code in Outlook.',
+        failed: 'Could not confirm the sign-in. Please try again.',
+        cancel: 'Go home',
+        warning: 'Never confirm a code someone else sent you: they would get access to your files.',
+    },
 } satisfies Messages;

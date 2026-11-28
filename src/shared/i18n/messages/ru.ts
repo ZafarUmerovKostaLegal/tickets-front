@@ -1299,6 +1299,20 @@ export const ruMessages: Messages = {
             noEvents: 'Нет событий в календаре',
         },
     },
+    outlookPair: {
+        title: 'Вход в Kosta File для Outlook',
+        lead: 'Подтвердите вход, если код совпадает с кодом в Outlook на вашем телефоне или компьютере.',
+        codeLabel: 'Код из Outlook',
+        device: 'Устройство',
+        confirm: 'Подтвердить вход',
+        confirming: 'Подтверждаем…',
+        doneTitle: 'Готово',
+        doneText: 'Вернитесь в Outlook — вход выполнится автоматически через пару секунд.',
+        notFound: 'Код не найден или устарел. Запросите новый код в Outlook.',
+        failed: 'Не удалось подтвердить вход. Попробуйте ещё раз.',
+        cancel: 'На главную',
+        warning: 'Не подтверждайте код, который вам прислал кто-то другой: он получит доступ к вашим файлам.',
+    },
 };
 
 export type Messages = {
@@ -2374,5 +2388,19 @@ export type Messages = {
             openDayAria: string;
             noEvents: string;
         };
+    };
+    outlookPair: {
+        title: string;
+        lead: string;
+        codeLabel: string;
+        device: string;
+        confirm: string;
+        confirming: string;
+        doneTitle: string;
+        doneText: string;
+        notFound: string;
+        failed: string;
+        cancel: string;
+        warning: string;
     };
 };

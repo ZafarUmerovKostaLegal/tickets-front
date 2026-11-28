@@ -1683,13 +1683,13 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
     onCreate: (task: MineTask) => void;
 }) {
     const { t } = useI18n();
-    const { directory, projects: hubProjects, userId, me } = useLegalHubView();
+    const { staff, projects: hubProjects, userId, me } = useLegalHubView();
     const openProjects = useMemo(
         () => hubProjects.filter((project) => userId != null && project.accessIds.includes(userId)),
         [hubProjects, userId],
     );
-    const assignees = useMemo(() => (me == null ? [] : directory), [me, directory]);
-    const reviewers = useMemo(() => (me == null ? [] : directory.filter((person) => person.id !== me.id)), [me, directory]);
+    const assignees = useMemo(() => (me == null ? [] : staff), [me, staff]);
+    const reviewers = useMemo(() => (me == null ? [] : staff.filter((person) => person.id !== me.id)), [me, staff]);
     const showOwner = assignees.some((person) => person.id !== me?.id);
     const [title, setTitle] = useState('');
     const [projectId, setProjectId] = useState(() => {

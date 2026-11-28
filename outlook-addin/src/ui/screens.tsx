@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { currentAuthMethod } from '../auth/authApi';
+import { useEffect, useRef, useState } from 'react';
+import { currentAuthMethod, type PairingTicket } from '../auth/authApi';
 import { ssoState } from '../auth/naa';
 import type { MailboxDto } from '../api';
 import type { AuthProfile } from '../auth/session';
@@ -40,17 +40,60 @@ export function Brand({ sub }: { sub?: string }) {
   );
 }
 
-export function SignInScreen({ busy, error, details, onSignIn }: { busy: boolean; error: string; details: string; onSignIn: () => void }) {
+export type CodeSignIn = {
+  ticket: PairingTicket | null;
+  busy: boolean;
+  onStart: () => void;
+  onOpen: () => void;
+  onCancel: () => void;
+};
+
+function CodePanel({ code }: { code: CodeSignIn }) {
+  const [copied, setCopied] = useState(false);
+  const ticket = code.ticket;
+  if (!ticket)
+    return null;
+  const copy = () => {
+    void navigator.clipboard?.writeText(ticket.verifyUrl).then(() => setCopied(true), () => undefined);
+  };
+  return (
+    <section className="kf-pair" aria-live="polite">
+      <p>Откройте ссылку в браузере, где вы вошли в Kosta Hub, и подтвердите код:</p>
+      <strong className="kf-pair__code">{ticket.code}</strong>
+      <button type="button" className="kf-btn kf-btn--primary kf-btn--wide" onClick={code.onOpen}>Открыть Kosta Hub</button>
+      <button type="button" className="kf-btn kf-btn--wide" onClick={copy}>{copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}</button>
+      <p className="kf-pair__wait"><span className="kf-pair__dot" aria-hidden="true" />Ждём подтверждения… Код действует 10 минут.</p>
+      <button type="button" className="kf-pair__cancel" onClick={code.onCancel}>Отмена</button>
+    </section>
+  );
+}
+
+export function SignInScreen({ busy, error, details, onSignIn, code, preferCode }: {
+  busy: boolean;
+  error: string;
+  details: string;
+  onSignIn: () => void;
+  code: CodeSignIn;
+  preferCode: boolean;
+}) {
+  const microsoft = (
+    <button key="ms" type="button" className={`kf-btn kf-btn--wide${preferCode ? '' : ' kf-btn--primary'}`} disabled={busy || code.busy} onClick={onSignIn}>
+      {busy ? 'Входим…' : 'Войти через Microsoft'}
+    </button>
+  );
+  const byCode = (
+    <button key="code" type="button" className={`kf-btn kf-btn--wide${preferCode ? ' kf-btn--primary' : ''}`} disabled={busy || code.busy} onClick={code.onStart}>
+      {code.busy ? 'Получаем код…' : 'Войти по коду через Kosta Hub'}
+    </button>
+  );
   return (
     <main className="kf-signin">
       <Brand />
       <h1>Войдите один раз</h1>
       <p>
-        Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера. Вход выполняется той же учётной записью Microsoft, что и Outlook, и запоминается.
+        Kosta File сохраняет письма, вложения и документы Office в matters файлового менеджера. Вход запоминается.
       </p>
-      <button type="button" className="kf-btn kf-btn--primary kf-btn--wide" disabled={busy} onClick={onSignIn}>
-        {busy ? 'Входим…' : 'Войти через Microsoft'}
-      </button>
+      {code.ticket ? <CodePanel code={code} /> : (preferCode ? [byCode, microsoft] : [microsoft, byCode])}
       {error ? <p className="kf-alert kf-alert--error" role="alert">{error}</p> : null}
       {error && details ? (
         <details className="kf-signin__details">
@@ -59,7 +102,13 @@ export function SignInScreen({ busy, error, details, onSignIn }: { busy: boolean
           <p>Отчёт об ошибке уже отправлен администратору.</p>
         </details>
       ) : null}
-      <p className="kf-signin__hint">Откроется окно входа Microsoft. Если хост спросит Allow / Разрешить — нажмите, затем войдите своей учётной записью.</p>
+      {code.ticket ? null : (
+        <p className="kf-signin__hint">
+          {preferCode
+            ? 'На телефоне удобнее вход по коду: подтвердите его в Kosta Hub в браузере, и Outlook войдёт сам.'
+            : 'Если окно входа Microsoft не открывается, войдите по коду через Kosta Hub.'}
+        </p>
+      )}
     </main>
   );
 }

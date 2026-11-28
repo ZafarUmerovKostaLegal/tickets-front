@@ -270,7 +270,7 @@ function secondsLeft(expiresOn: Date | null | undefined): number {
   return expiresOn ? Math.max(60, Math.round((expiresOn.getTime() - Date.now()) / 1000)) : 3600;
 }
 
-export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'unknown';
+export type AuthMethod = 'token' | 'cookie' | 'sso' | 'dialog' | 'code' | 'unknown';
 
 let authMethod: AuthMethod = 'unknown';
 
@@ -386,6 +386,87 @@ export async function loginWithHub(): Promise<AuthProfile> {
     signinSteps.push(`Окно входа: ${describeLoginError(error)}`);
     throw error;
   }
+}
+
+export type PairingTicket = { code: string; verifyUrl: string; expiresAt: number };
+
+const HUB_WEB_FALLBACK = 'https://tickets.kostalegal.com';
+
+function pairUrl(path: string): string {
+  const origin = gatewayOrigin();
+  return origin ? `${origin}/api/v1/auth/outlook/pair/${path}` : '';
+}
+
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener('abort', stop);
+      resolve();
+    }, ms);
+    const stop = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal.addEventListener('abort', stop, { once: true });
+  });
+}
+
+export function isMobileOutlook(): boolean {
+  try {
+    const platform = String(Office?.context?.platform ?? '').toLowerCase();
+    return platform === 'ios' || platform === 'android';
+  } catch {
+    return false;
+  }
+}
+
+export async function loginWithCode(onTicket: (ticket: PairingTicket) => void, signal: AbortSignal): Promise<AuthProfile> {
+  const startUrl = pairUrl('start');
+  if (!startUrl)
+    throw new Error('Укажите File Manager API в настройках');
+  const response = await fetch(startUrl, { method: 'POST', headers: { Accept: 'application/json' }, signal });
+  if (!response.ok)
+    throw new Error(`Не удалось получить код входа (HTTP ${response.status})`);
+  const start = await response.json() as { pairId: string; secret: string; code: string; expiresIn: number; interval?: number; verifyUrl?: string };
+  const plain = start.code.replace(/-/g, '');
+  const verifyUrl = start.verifyUrl || `${HUB_WEB_FALLBACK}/outlook-pair?code=${encodeURIComponent(plain)}`;
+  const expiresAt = Date.now() + start.expiresIn * 1000;
+  onTicket({ code: start.code, verifyUrl, expiresAt });
+  const step = Math.max(1, start.interval ?? 2) * 1000;
+  while (Date.now() < expiresAt) {
+    await pause(step, signal);
+    let poll: Response;
+    try {
+      poll = await fetch(pairUrl('poll'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ pairId: start.pairId, secret: start.secret }),
+        signal,
+      });
+    } catch (error) {
+      if (signal.aborted)
+        throw error;
+      continue;
+    }
+    if (poll.status === 410)
+      throw new Error('Код устарел. Получите новый код.');
+    if (poll.status === 403)
+      throw new Error('Учётная запись заблокирована в Kosta Hub');
+    if (!poll.ok)
+      continue;
+    const body = await poll.json() as { status?: string; access_token?: string };
+    if (body.status === 'ok' && body.access_token) {
+      storeHubAccessToken(body.access_token);
+      const me = await fetchHubMe();
+      authMethod = 'code';
+      return me;
+    }
+  }
+  throw new Error('Код устарел. Получите новый код.');
 }
 
 async function loginWithDialog(): Promise<AuthProfile> {

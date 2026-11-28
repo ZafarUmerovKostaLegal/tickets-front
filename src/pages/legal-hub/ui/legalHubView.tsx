@@ -28,8 +28,6 @@ export type LegalHubProject = {
 type LegalHubViewValue = {
     people: LegalHubPerson[];
     staff: LegalHubPerson[];
-    /** Every active colleague: anyone can give a task to anyone. */
-    directory: LegalHubPerson[];
     me: LegalHubPerson | null;
     memberIds: number[];
     projects: LegalHubProject[];
@@ -118,20 +116,6 @@ function mergeUsers(primary: TimeTrackingUserRow[], extra: TimeTrackingUserRow[]
     return [...byId.values()];
 }
 
-function collectDirectory(users: TimeTrackingUserRow[], staff: LegalHubPerson[]): LegalHubPerson[] {
-    const out = new Map<number, LegalHubPerson>(staff.map((person) => [person.id, person]));
-    for (const row of users) {
-        if (row.is_blocked || row.is_archived || out.has(row.id))
-            continue;
-        const name = (row.display_name || row.email || '').trim();
-        if (!name)
-            continue;
-        const position = (row.position ?? '').trim();
-        out.set(row.id, { id: row.id, name, code: personCode(name, row.initials), position, rank: legalHubPositionRank(position, row.role ?? null) });
-    }
-    return [...out.values()].sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, 'ru'));
-}
-
 function projectsOfTeam(
     rows: TimeManagerClientProjectRow[],
     partnerId: number,
@@ -165,7 +149,6 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
     const userId = user?.id ?? null;
     const [people, setPeople] = useState<LegalHubPerson[]>([]);
     const [staff, setStaff] = useState<LegalHubPerson[]>([]);
-    const [directory, setDirectory] = useState<LegalHubPerson[]>([]);
     const [me, setMe] = useState<LegalHubPerson | null>(null);
     const [projects, setProjects] = useState<LegalHubProject[]>([]);
     const [viewAsId, setViewAsId] = useState<number | null>(null);
@@ -176,7 +159,6 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         if (userId == null || user == null) {
             setPeople([]);
             setStaff([]);
-            setDirectory([]);
             setMe(null);
             setProjects([]);
             return undefined;
@@ -206,7 +188,6 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
                 const actor = roster.find((person) => person.id === userId) ?? roster[0] ?? null;
                 const clientNames = new Map(clients.map((client) => [client.id, client.name.trim()]));
                 setStaff(roster);
-                setDirectory(collectDirectory(users, roster));
                 setMe(actor);
                 setPeople(actor == null ? [] : roster.filter((person) => person.id !== actor.id && canAssignLegalHubTask(actor, person)));
                 setProjects(projectsOfTeam(projectRows, userId, roster.filter((person) => person.id !== userId).map((person) => person.id), clientNames));
@@ -215,8 +196,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
                 if (!cancelled) {
                     setPeople([]);
                     setStaff([]);
-                    setDirectory([]);
-                    setMe(null);
+                            setMe(null);
                     setProjects([]);
                 }
             }
@@ -236,7 +216,6 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         return {
             people,
             staff,
-            directory,
             me,
             memberIds: staff.map((person) => person.id),
             projects,
@@ -244,7 +223,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
             viewAs,
             setViewAsId,
         };
-    }, [directory, me, people, projects, staff, userId, viewAsId]);
+    }, [me, people, projects, staff, userId, viewAsId]);
 
     return <LegalHubViewContext.Provider value={value}>{children}</LegalHubViewContext.Provider>;
 }

@@ -55,6 +55,7 @@ const UserEditPage = lazy(() => import('@pages/user-edit').then(m => ({ default:
 const TodoPage = lazy(() => import('@pages/todo').then(m => ({ default: m.TodoPage })));
 const RulesPage = lazy(() => import('@pages/rules').then(m => ({ default: m.RulesPage })));
 const HelpPage = lazy(() => import('@pages/help').then(m => ({ default: m.HelpPage })));
+const OutlookPairPage = lazy(() => import('@pages/outlook-pair').then(m => ({ default: m.OutlookPairPage })));
 const KostaDailyPage = lazy(() => import('@pages/kosta-daily').then(m => ({ default: m.KostaDailyPage })));
 const ContactsPage = lazy(() => import('@pages/contacts').then(m => ({ default: m.ContactsPage })));
 const InternalCommunicationPage = lazy(() => import('@pages/internal-communication').then(m => ({ default: m.InternalCommunicationPage })));
@@ -194,6 +195,7 @@ const router = createBrowserRouter([
             { path: routes.todo, element: withProtected(<EnsureTodoI18n fallback={<LazyFallback />}><TodoPage /></EnsureTodoI18n>) },
             { path: routes.rules, element: withProtected(<RulesPage />) },
             { path: routes.help, element: withProtected(<HelpPage />) },
+            { path: routes.outlookPair, element: withProtected(<OutlookPairPage />) },
             { path: routes.kostaDaily, element: withProtected(<KostaDailyPage />) },
             { path: routes.contacts, element: withProtected(<AdminOnlyModuleRoute>
                     <EnsureContactsI18n fallback={<LazyFallback />}><ContactsPage /></EnsureContactsI18n>
